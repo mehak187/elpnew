@@ -5,7 +5,7 @@ export const CLIENT_STATUSES = ["Active", "Inactive", "Merged"];
 export const CLIENT_STATUS_VARIANT = {
   Active: "success",
   Inactive: "secondary",
-  Merged: "default",
+  Merged: "outline",
 };
 
 /**

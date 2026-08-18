@@ -66,7 +66,7 @@ export default function Header({ onNavClick, activeNav }) {
           </SheetTrigger>
           <SheetContent side="left" className="w-72 p-0">
             <SheetHeader className="p-4 border-b">
-              <SheetTitle className="font-serif text-3xl font-bold tracking-[0.12em] text-[#A61C1F]">
+              <SheetTitle className="font-serif text-3xl font-bold tracking-[0.12em] text-primary">
                 YANDS
               </SheetTitle>
             </SheetHeader>
@@ -99,7 +99,7 @@ export default function Header({ onNavClick, activeNav }) {
 
         {/* Logo */}
         <Link to="/" className="flex items-center">
-          <span className="font-serif text-3xl font-bold tracking-[0.12em] text-[#A61C1F]">
+          <span className="font-serif text-3xl font-bold tracking-[0.12em] text-primary">
             YANDS
           </span>
         </Link>
