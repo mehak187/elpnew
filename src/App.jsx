@@ -1,0 +1,84 @@
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import MainLayout from "@/components/layout/MainLayout";
+
+// Root Pages
+import Dashboard from "@/pages/Dashboard";
+import References from "@/pages/References";
+import Reports from "@/pages/Reports";
+
+// Profile Module
+import ProfileInfo from "@/pages/profile/ProfileInfo";
+import Tasks from "@/pages/profile/Tasks";
+
+// Clients Module
+import ClientsList from "@/pages/clients/ClientsList";
+import ClientDetails from "@/pages/clients/ClientDetails";
+
+// Corporate Module
+import CorporateList from "@/pages/corporate/CorporateList";
+
+// Employees Module
+import EmployeesList from "@/pages/employees/EmployeesList";
+import EmployeeForm from "@/pages/employees/EmployeeForm";
+import EmployeeView from "@/pages/employees/EmployeeView";
+
+// Finance Module
+import InvoicesList from "@/pages/finance/InvoicesList";
+
+// Litigation Module
+import LitigationList from "@/pages/litigation/LitigationList";
+import Registration from "@/pages/litigation/Registration";
+import CourtHearing from "@/pages/litigation/CourtHearing";
+import PostJudgement from "@/pages/litigation/PostJudgement";
+import Execution from "@/pages/litigation/Execution";
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<MainLayout />}>
+          {/* Default redirect to dashboard */}
+          <Route index element={<Navigate to="/dashboard" replace />} />
+
+          {/* Root Pages */}
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="references" element={<References />} />
+          <Route path="reports" element={<Reports />} />
+
+          {/* Profile Module */}
+          <Route path="profile" element={<ProfileInfo />} />
+          <Route path="profile/tasks" element={<Tasks />} />
+
+          {/* Clients Module */}
+          <Route path="clients" element={<ClientsList />} />
+          <Route path="clients/create" element={<ClientDetails />} />
+          <Route path="clients/:id" element={<ClientDetails />} />
+
+          {/* Corporate Module */}
+          <Route path="corporate" element={<CorporateList />} />
+
+          {/* Employees Module */}
+          <Route path="employees" element={<EmployeesList />} />
+          <Route path="employees/create" element={<EmployeeForm />} />
+          <Route path="employees/:id" element={<EmployeeView />} />
+          <Route path="employees/:id/edit" element={<EmployeeForm />} />
+
+          {/* Finance Module */}
+          <Route path="finance" element={<InvoicesList />} />
+
+          {/* Litigation Module */}
+          <Route path="litigation" element={<LitigationList />} />
+          <Route path="litigation/register" element={<Registration />} />
+          <Route path="litigation/:id/hearing" element={<CourtHearing />} />
+          <Route path="litigation/:id/judgement" element={<PostJudgement />} />
+          <Route path="litigation/:id/execution" element={<Execution />} />
+
+          {/* Archive - placeholder */}
+          <Route path="archive" element={<Dashboard />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;

@@ -1,0 +1,39 @@
+if nationality is Oman
+Photo
+Nationality
+EMPLOYEE NAME
+Date of Joining
+Branch
+Educational level
+DEPARTMENT
+Job Designation
+NATIONAL IDENTITY EXPIRE
+
+if any other country
+Photo
+Nationality
+EMPLOYEE NAME
+Date of Joining
+Branch
+Educational level
+DEPARTMENT
+Job Designation
+NATIONAL IDENTITY EXPIRE
+PASSPORT EXPIRE
+VISA EXPIRE
+LAWYER CARD EXPIRE
+
+
+
+table contents
+
+Employee No.
+Employee Name
+Branch
+Date of Joining
+Gender
+Nationality	
+Department	
+Designation	
+Salary
+Actions:edit view delete
