@@ -130,4 +130,9 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Tailwind v4 no longer gives buttons a pointer cursor. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
 }
