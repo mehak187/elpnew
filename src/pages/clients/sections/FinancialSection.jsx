@@ -95,9 +95,6 @@ export default function FinancialSection({
             %
           </span>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Numbers only. Enter 10 for a rate of 10%.
-        </p>
       </div>
 
       {/* Pay Fees on Their Behalf */}

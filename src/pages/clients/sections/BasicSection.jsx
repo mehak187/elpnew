@@ -58,10 +58,6 @@ export default function BasicSection({
             ))}
           </SelectContent>
         </Select>
-        <p className="text-xs text-muted-foreground">
-          Set automatically from the client&apos;s open cases. Admins can
-          override it.
-        </p>
       </div>
 
       {/* Date of Registration */}
