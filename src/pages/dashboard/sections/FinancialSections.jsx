@@ -51,7 +51,7 @@ export function UnbilledCases() {
                 {Math.abs(daysUntil(item.completed))} days ago)
               </p>
             </div>
-            <span className="shrink-0 text-sm font-semibold">
+            <span className="w-24 shrink-0 text-right text-sm font-semibold">
               {money(item.estimate)}
             </span>
           </Row>

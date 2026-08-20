@@ -16,10 +16,10 @@ const LAST_MONTH = clientCaseActivity[clientCaseActivity.length - 1].month + "-2
 
 function Metric({ label, value }) {
   return (
-    <Card>
-      <CardContent className="p-4">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="mt-1 text-lg font-bold text-primary">{value}</p>
+    <Card className="h-full">
+      <CardContent className="flex h-full flex-col justify-between p-4">
+        <p className="text-xs leading-snug text-muted-foreground">{label}</p>
+        <p className="mt-2 text-lg font-bold text-primary">{value}</p>
       </CardContent>
     </Card>
   );

@@ -307,7 +307,7 @@ export function StoppedClients() {
                 active
               </p>
             </div>
-            <span className="shrink-0 text-xs font-semibold text-red-600">
+            <span className="w-20 shrink-0 text-right text-xs font-semibold text-red-600">
               {client.daysSince} days
             </span>
           </Row>
@@ -367,7 +367,7 @@ export function TopClients() {
                 </p>
               </div>
             </div>
-            <span className="shrink-0 text-sm font-semibold">
+            <span className="w-20 shrink-0 text-right text-sm font-semibold">
               {client[rank]} cases
             </span>
           </Row>
@@ -397,7 +397,7 @@ export function NewClients() {
                 First case {formatDate(client.firstCaseAt)}
               </p>
             </div>
-            <span className="shrink-0 text-sm font-semibold">
+            <span className="w-20 shrink-0 text-right text-sm font-semibold">
               {client.cases} cases
             </span>
           </Row>

@@ -71,10 +71,10 @@ export function StatCard({ label, value, previous, to, icon: Icon, format }) {
       }}
       className="transition-colors hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring"
     >
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-xs text-muted-foreground">{label}</p>
+      <CardContent className="h-full p-4">
+        <div className="flex h-full items-start justify-between gap-2">
+          <div className="flex min-w-0 flex-1 flex-col">
+            <p className="text-xs leading-snug text-muted-foreground">{label}</p>
             <p className="mt-1 text-xl font-bold">
               {format ? format(rawValue(value)) : value}
             </p>
@@ -161,12 +161,12 @@ export function Tile({ label, value, to, onClick, tone }) {
       onClick={go}
       disabled={!go}
       className={cn(
-        "rounded-lg border p-3 text-left transition-colors",
+        "flex h-full flex-col justify-between rounded-lg border p-3 text-left transition-colors",
         go && "hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring"
       )}
     >
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className={cn("mt-1 text-lg font-bold", TONE[tone] || "text-primary")}>
+      <p className="text-xs leading-snug text-muted-foreground">{label}</p>
+      <p className={cn("mt-2 text-lg font-bold", TONE[tone] || "text-primary")}>
         {value}
       </p>
     </button>
