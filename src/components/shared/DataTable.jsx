@@ -27,6 +27,7 @@ import {
   Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toCsv, downloadCsv } from "@/lib/csv";
 
 export default function DataTable({
   columns,
@@ -39,6 +40,7 @@ export default function DataTable({
   pageSize = 100,
   isLoading = false,
   showExport = true,
+  exportFileName = "export.csv",
   onAdd,
   addLabel = "Add",
   filters,
@@ -143,8 +145,17 @@ export default function DataTable({
           </Select>
 
           {showExport && (
-            <Button variant="outline" size="icon" className="shrink-0" title="Export to Excel">
+            <Button
+              variant="outline"
+              size="icon"
+              className="shrink-0"
+              title="Export to CSV"
+              onClick={() =>
+                downloadCsv(toCsv(columns, filteredData), exportFileName)
+              }
+            >
               <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+              <span className="sr-only">Export to CSV</span>
             </Button>
           )}
 

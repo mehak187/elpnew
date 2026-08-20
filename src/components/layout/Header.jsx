@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   User,
   ChevronDown,
@@ -49,6 +49,7 @@ const navItems = [
 ];
 
 export default function Header({ onNavClick, activeNav }) {
+  const navigate = useNavigate();
   const location = useLocation();
   const { firmInfo } = useFirm();
 
@@ -92,7 +93,17 @@ export default function Header({ onNavClick, activeNav }) {
                 );
               })}
               <Separator className="my-4" />
-              <button className="flex items-center gap-3 px-4 py-3 rounded-md text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors">
+              <Link
+                to="/settings/password"
+                className="flex items-center gap-3 px-4 py-3 rounded-md text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-secondary-foreground transition-colors"
+              >
+                <KeyRound className="h-4 w-4" />
+                Change Password
+              </Link>
+              <button
+                onClick={() => navigate("/sign-in")}
+                className="flex items-center gap-3 px-4 py-3 rounded-md text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
+              >
                 <LogOut className="h-4 w-4" />
                 Sign Out
               </button>
@@ -162,12 +173,17 @@ export default function Header({ onNavClick, activeNav }) {
                 Company Settings
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer">
-              <KeyRound className="mr-2 h-4 w-4" />
-              Change Password
+            <DropdownMenuItem className="cursor-pointer" asChild>
+              <Link to="/settings/password">
+                <KeyRound className="mr-2 h-4 w-4" />
+                Change Password
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive">
+            <DropdownMenuItem
+              className="cursor-pointer text-destructive focus:text-destructive"
+              onClick={() => navigate("/sign-in")}
+            >
               <LogOut className="mr-2 h-4 w-4" />
               Sign Out
             </DropdownMenuItem>

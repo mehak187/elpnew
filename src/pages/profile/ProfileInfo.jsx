@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Save, User, Mail, Phone, Building, Calendar, BadgeCheck } from "lucide-react";
 
 export default function ProfileInfo() {
+  const [saved, setSaved] = useState(false);
   const [formData, setFormData] = useState({
     name_en: "Mohammed Al Yahyaei",
     name_ar: "محمد اليحيائي",
@@ -192,9 +193,12 @@ export default function ProfileInfo() {
 
           {/* Save Button */}
           <div className="flex justify-center sm:justify-end mt-6 sm:mt-8">
-            <Button className="w-full sm:w-auto">
+            <Button
+              className="w-full sm:w-auto"
+              onClick={() => setSaved(true)}
+            >
               <Save className="mr-2 h-4 w-4" />
-              Save Changes
+              {saved ? "Saved" : "Save Changes"}
             </Button>
           </div>
         </CardContent>
