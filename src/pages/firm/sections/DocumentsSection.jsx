@@ -68,6 +68,7 @@ export default function DocumentsSection({ initialStatusFilter, canEdit }) {
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState(initialStatusFilter || "all");
   const [relatedFilter, setRelatedFilter] = useState("all");
+  const [relatedIdFilter, setRelatedIdFilter] = useState("all");
   const [expiryFilter, setExpiryFilter] = useState("all");
 
   const setField = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
@@ -92,12 +93,25 @@ export default function DocumentsSection({ initialStatusFilter, canEdit }) {
         if (statusFilter !== "all" && document.status !== statusFilter) return false;
         if (relatedFilter !== "all" && document.relatedKind !== relatedFilter)
           return false;
+        if (
+          relatedIdFilter !== "all" &&
+          String(document.relatedId) !== relatedIdFilter
+        )
+          return false;
         if (expiryFilter === "has" && !document.expiryDate) return false;
         if (expiryFilter === "none" && document.expiryDate) return false;
         return true;
       })
       .sort((a, b) => (b.documentDate || "").localeCompare(a.documentDate || ""));
-  }, [documents, search, typeFilter, statusFilter, relatedFilter, expiryFilter]);
+  }, [
+    documents,
+    search,
+    typeFilter,
+    statusFilter,
+    relatedFilter,
+    relatedIdFilter,
+    expiryFilter,
+  ]);
 
   // Section 2 asks for notification when a document nears its expiry date.
   const expiringSoon = documents
@@ -190,7 +204,13 @@ export default function DocumentsSection({ initialStatusFilter, canEdit }) {
             </SelectContent>
           </Select>
 
-          <Select value={relatedFilter} onValueChange={setRelatedFilter}>
+          <Select
+            value={relatedFilter}
+            onValueChange={(value) => {
+              setRelatedFilter(value);
+              setRelatedIdFilter("all");
+            }}
+          >
             <SelectTrigger className="h-9 w-36 text-xs">
               <SelectValue />
             </SelectTrigger>
@@ -203,6 +223,38 @@ export default function DocumentsSection({ initialStatusFilter, canEdit }) {
               ))}
             </SelectContent>
           </Select>
+
+          {relatedFilter === "client" && (
+            <Select value={relatedIdFilter} onValueChange={setRelatedIdFilter}>
+              <SelectTrigger className="h-9 w-44 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All clients</SelectItem>
+                {clients.map((client) => (
+                  <SelectItem key={client.id} value={String(client.id)}>
+                    {client.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {relatedFilter === "case" && (
+            <Select value={relatedIdFilter} onValueChange={setRelatedIdFilter}>
+              <SelectTrigger className="h-9 w-44 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All cases</SelectItem>
+                {cases.map((legalCase) => (
+                  <SelectItem key={legalCase.id} value={String(legalCase.id)}>
+                    Case {legalCase.caseNo}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           <Select value={expiryFilter} onValueChange={setExpiryFilter}>
             <SelectTrigger className="h-9 w-40 text-xs">

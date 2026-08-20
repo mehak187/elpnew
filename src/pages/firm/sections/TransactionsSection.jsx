@@ -11,7 +11,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Lock, ArrowDownLeft, ArrowUpRight, ArrowLeftRight } from "lucide-react";
+import {
+  Lock,
+  ArrowDownLeft,
+  ArrowUpRight,
+  ArrowLeftRight,
+  Banknote,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFirm } from "@/lib/firm/context";
 import {
@@ -28,15 +34,21 @@ const TYPE_VARIANT = {
   Opening: "secondary",
   Income: "success",
   Expense: "destructive",
+  Payment: "destructive",
   "Transfer In": "success",
   "Transfer Out": "warning",
 };
 
+// An outgoing payment and an office expense both leave the account, so they
+// are recorded the same way and only differ by the kind stamped on the row.
 const RECORD_MODES = [
   { key: "income", label: "Income", icon: ArrowDownLeft },
   { key: "expense", label: "Expense", icon: ArrowUpRight },
+  { key: "payment", label: "Payment", icon: Banknote },
   { key: "transfer", label: "Transfer", icon: ArrowLeftRight },
 ];
+
+const OUTGOING = { expense: "Expense", payment: "Payment" };
 
 /**
  * Sections 5, 6 and 7 of the specification.
@@ -93,7 +105,7 @@ export default function TransactionsSection({ initialAccountId, canRecord }) {
     Number(amount) > 0 &&
     (mode === "income"
       ? Boolean(invoiceId)
-      : mode === "expense"
+      : OUTGOING[mode]
       ? Boolean(description)
       : Boolean(toAccountId) && toAccountId !== accountId);
 
@@ -106,13 +118,14 @@ export default function TransactionsSection({ initialAccountId, canRecord }) {
         date,
         bankAccountId: Number(accountId),
       });
-    } else if (mode === "expense") {
+    } else if (OUTGOING[mode]) {
       addExpense({
         description,
         reference,
         amount: value,
         date,
         bankAccountId: Number(accountId),
+        kind: OUTGOING[mode],
       });
     } else {
       addTransfer({
@@ -203,7 +216,7 @@ export default function TransactionsSection({ initialAccountId, canRecord }) {
                 </div>
               )}
 
-              {mode === "expense" && (
+              {OUTGOING[mode] && (
                 <>
                   <div className="space-y-2">
                     <Label htmlFor="txDescription">Description *</Label>
@@ -211,7 +224,11 @@ export default function TransactionsSection({ initialAccountId, canRecord }) {
                       id="txDescription"
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      placeholder="e.g. Office Expense"
+                      placeholder={
+                        mode === "payment"
+                          ? "e.g. Court fee paid on behalf of client"
+                          : "e.g. Office Expense"
+                      }
                     />
                   </div>
                   <div className="space-y-2">
@@ -220,7 +237,7 @@ export default function TransactionsSection({ initialAccountId, canRecord }) {
                       id="txReference"
                       value={reference}
                       onChange={(e) => setReference(e.target.value)}
-                      placeholder="e.g. EXP-005"
+                      placeholder={mode === "payment" ? "e.g. PAY-001" : "e.g. EXP-005"}
                     />
                   </div>
                 </>
