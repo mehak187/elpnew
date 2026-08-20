@@ -51,7 +51,7 @@ export function RecentCaseUpdates() {
                 {item.caseNo} &middot; {item.client} &middot; {item.by}
               </p>
             </div>
-            <span className="shrink-0 text-xs text-muted-foreground">
+            <span className="w-24 shrink-0 text-right text-xs text-muted-foreground">
               {item.at}
             </span>
           </Row>

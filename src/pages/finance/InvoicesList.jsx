@@ -26,7 +26,7 @@ const invoices = [
 const buildColumns = (onView, onDownload) => [
   { key: "invoice_no", header: "Invoice No.", width: "12%", cellClassName: "text-left font-medium" },
   { key: "client", header: "Client", width: "20%" },
-  { key: "amount", header: "Amount", width: "12%", cellClassName: "text-right font-medium" },
+  { key: "amount", header: "Amount", width: "12%", className: "text-right", cellClassName: "text-right font-medium" },
   { key: "date", header: "Invoice Date", width: "12%" },
   { key: "due_date", header: "Due Date", width: "12%" },
   {

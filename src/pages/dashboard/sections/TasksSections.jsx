@@ -114,7 +114,7 @@ export function OverdueTasks() {
                 {formatDate(task.dueDate)}
               </p>
             </div>
-            <span className="shrink-0 text-xs font-semibold text-red-700">
+            <span className="w-20 shrink-0 text-right text-xs font-semibold text-red-700">
               {task.daysOverdue} {task.daysOverdue === 1 ? "day" : "days"} late
             </span>
           </Row>

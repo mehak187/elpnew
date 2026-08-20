@@ -29,10 +29,10 @@ function summarise(invoices) {
 
 function SummaryTile({ label, value, tone }) {
   return (
-    <Card>
-      <CardContent className="p-4">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className={"mt-1 text-lg font-bold " + (tone || "text-primary")}>
+    <Card className="h-full">
+      <CardContent className="flex h-full flex-col justify-between p-4">
+        <p className="text-xs leading-snug text-muted-foreground">{label}</p>
+        <p className={"mt-2 text-lg font-bold " + (tone || "text-primary")}>
           {value}
         </p>
       </CardContent>
@@ -59,6 +59,8 @@ export default function InvoicesSection() {
       key: "amount",
       header: "Invoice Amount",
       width: "16%",
+      className: "text-right",
+      cellClassName: "text-right",
       render: (value, row) => (
         <div>
           <p className="font-medium">{money(value)}</p>
