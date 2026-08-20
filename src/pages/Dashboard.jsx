@@ -1,203 +1,190 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   LayoutDashboard,
-  Users,
   Scale,
-  Briefcase,
+  Users,
+  Inbox,
+  FilePlus,
+  Receipt,
   Wallet,
-  TrendingUp,
-  Clock,
-  CheckCircle,
-  AlertCircle,
 } from "lucide-react";
+import { canView, ROLES, SECTION_KEYS as K } from "@/lib/permissions";
 
-const stats = [
-  { title: "Active Cases", value: "24", change: "+3 this month", icon: Scale, color: "text-blue-600" },
-  { title: "Total Clients", value: "156", change: "+12 this month", icon: Users, color: "text-emerald-600" },
-  { title: "Corporate Matters", value: "18", change: "+5 this month", icon: Briefcase, color: "text-purple-600" },
-  { title: "Pending Invoices", value: "OMR 45,200", change: "8 invoices", icon: Wallet, color: "text-amber-600" },
-];
+import { StatCard } from "./dashboard/widgets";
+import {
+  summaryStats,
+  bottomSummary,
+  money,
+  CURRENT_USER,
+} from "./dashboard/dashboardData";
 
-const recentCases = [
-  { case_no: "2024/001", client: "ABC Holdings LLC", type: "Civil", status: "Court Hearing" },
-  { case_no: "2024/002", client: "XYZ Investments", type: "Commercial", status: "Registration" },
-  { case_no: "2024/003", client: "Ali Mohammed", type: "Labor", status: "Post Judgement" },
-  { case_no: "2024/004", client: "Global Trade Co", type: "Civil", status: "Execution" },
-];
+import { QuickSearch, QuickActions, TodaysBrief } from "./dashboard/sections/TopSections";
+import { TodaysHearings, UpcomingHearings } from "./dashboard/sections/HearingsSections";
+import { Deadlines, AppealDeadlineAlerts } from "./dashboard/sections/DeadlinesSection";
+import { MyTasks, OverdueTasks } from "./dashboard/sections/TasksSections";
+import {
+  UrgentActions,
+  CasesRequiringAttention,
+  MissingDocuments,
+} from "./dashboard/sections/AlertsSections";
+import {
+  CourtNotifications,
+  RecentCaseUpdates,
+  RecentJudgments,
+} from "./dashboard/sections/CourtSections";
+import { CasesByStage } from "./dashboard/sections/CasesByStageSection";
+import { ExecutionFollowUp } from "./dashboard/sections/ExecutionSection";
+import { FinancialSnapshot, UnbilledCases } from "./dashboard/sections/FinancialSections";
+import {
+  CasesReceivedByClient,
+  CaseFlowTrend,
+  StoppedClients,
+  TopClients,
+  NewClients,
+} from "./dashboard/sections/CaseFlowSections";
+import { TeamWorkload, ClientFollowUp } from "./dashboard/sections/TeamAndClientSections";
 
-const upcomingTasks = [
-  { task: "Prepare documents for case 2024/001", due: "Tomorrow", priority: "High" },
-  { task: "Client meeting - ABC Holdings", due: "Dec 18", priority: "Medium" },
-  { task: "Submit appeal documents", due: "Dec 20", priority: "High" },
-  { task: "Review contract for Tech Ventures", due: "Dec 22", priority: "Low" },
-];
+/** Two-column row that collapses to one column, skipping any hidden child. */
+function Pair({ children }) {
+  const visible = children.filter(Boolean);
+  if (visible.length === 0) return null;
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 sm:gap-6">{visible}</div>
+  );
+}
 
 export default function Dashboard() {
+  // Auth is not wired up yet, so the role is switchable here to make the
+  // permission rules visible. It becomes the signed-in user's role later.
+  const [role, setRole] = useState(CURRENT_USER.role);
+  const can = (key) => canView(role, key);
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Page Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-2 sm:p-3 rounded-xl bg-secondary">
-          <LayoutDashboard className="h-5 w-5 sm:h-6 sm:w-6 text-secondary-foreground" />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl bg-secondary p-2 sm:p-3">
+            <LayoutDashboard className="h-5 w-5 text-secondary-foreground sm:h-6 sm:w-6" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-primary sm:text-2xl">Dashboard</h1>
+            <p className="text-xs text-muted-foreground sm:text-sm">
+              Welcome back, {CURRENT_USER.name}
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-primary">
-            Dashboard
-          </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            Welcome back, Mohammed Al Yahyaei
-          </p>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Viewing as</span>
+          <Select value={role} onValueChange={setRole}>
+            <SelectTrigger className="h-9 w-48 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(ROLES).map(([key, label]) => (
+                <SelectItem key={key} value={key}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <Card key={stat.title}>
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">{stat.title}</p>
-                  <p className="text-xl sm:text-2xl font-bold mt-1">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                    <TrendingUp className="h-3 w-3 text-emerald-500" />
-                    {stat.change}
-                  </p>
-                </div>
-                <div className={`p-3 rounded-xl bg-secondary ${stat.color}`}>
-                  <stat.icon className="h-5 w-5 sm:h-6 sm:w-6" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      {/* Quick search and quick actions */}
+      <div className="space-y-3">
+        <QuickSearch />
+        {can(K.quickActions) && <QuickActions />}
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* Recent Cases */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-              <Scale className="h-4 w-4 text-secondary-foreground" />
-              Recent Cases
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="space-y-3">
-              {recentCases.map((item) => (
-                <div
-                  key={item.case_no}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                >
-                  <div className="space-y-1">
-                    <p className="font-medium text-sm">{item.case_no}</p>
-                    <p className="text-xs text-muted-foreground">{item.client}</p>
-                  </div>
-                  <div className="text-right space-y-1">
-                    <Badge variant="outline" className="text-xs">{item.type}</Badge>
-                    <p className="text-xs">
-                      <Badge
-                        variant={
-                          item.status === "Registration"
-                            ? "secondary"
-                            : item.status === "Court Hearing"
-                            ? "brand"
-                            : item.status === "Post Judgement"
-                            ? "warning"
-                            : "default"
-                        }
-                        className="text-xs"
-                      >
-                        {item.status}
-                      </Badge>
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+      {can(K.brief) && <TodaysBrief currentUser={CURRENT_USER.name} />}
 
-        {/* Upcoming Tasks */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-              <Clock className="h-4 w-4 text-secondary-foreground" />
-              Upcoming Tasks
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="space-y-3">
-              {upcomingTasks.map((item, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                >
-                  <div className="flex items-start gap-3">
-                    {item.priority === "High" ? (
-                      <AlertCircle className="h-4 w-4 text-red-500 mt-0.5" />
-                    ) : item.priority === "Medium" ? (
-                      <Clock className="h-4 w-4 text-amber-500 mt-0.5" />
-                    ) : (
-                      <CheckCircle className="h-4 w-4 text-emerald-500 mt-0.5" />
-                    )}
-                    <div>
-                      <p className="font-medium text-sm">{item.task}</p>
-                      <p className="text-xs text-muted-foreground">Due: {item.due}</p>
-                    </div>
-                  </div>
-                  <Badge
-                    variant={
-                      item.priority === "High"
-                        ? "destructive"
-                        : item.priority === "Medium"
-                        ? "warning"
-                        : "secondary"
-                    }
-                    className="text-xs"
-                  >
-                    {item.priority}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Top summary cards */}
+      {can(K.summary) && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <StatCard label="Active Cases" value={summaryStats.activeCases.value} previous={summaryStats.activeCases.previous} to={summaryStats.activeCases.to} icon={Scale} />
+          <StatCard label="Total Clients" value={summaryStats.totalClients.value} previous={summaryStats.totalClients.previous} to={summaryStats.totalClients.to} icon={Users} />
+          <StatCard label="Cases Received This Month" value={summaryStats.casesReceivedThisMonth.value} previous={summaryStats.casesReceivedThisMonth.previous} to={summaryStats.casesReceivedThisMonth.to} icon={Inbox} />
+          <StatCard label="New Cases This Month" value={summaryStats.newCasesThisMonth.value} previous={summaryStats.newCasesThisMonth.previous} to={summaryStats.newCasesThisMonth.to} icon={FilePlus} />
+          <StatCard label="Pending Invoices" value={summaryStats.pendingInvoices.value} previous={summaryStats.pendingInvoices.previous} to={summaryStats.pendingInvoices.to} icon={Receipt} />
+          <StatCard label="Outstanding Amount" value={summaryStats.outstandingAmount.value} previous={summaryStats.outstandingAmount.previous} to={summaryStats.outstandingAmount.to} icon={Wallet} format={money} />
+        </div>
+      )}
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-xs text-muted-foreground">Cases Won</p>
-            <p className="text-2xl font-bold text-emerald-600">18</p>
-            <p className="text-xs text-muted-foreground">This Year</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-xs text-muted-foreground">Cases Lost</p>
-            <p className="text-2xl font-bold text-red-600">3</p>
-            <p className="text-xs text-muted-foreground">This Year</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-xs text-muted-foreground">Pending</p>
-            <p className="text-2xl font-bold text-amber-600">24</p>
-            <p className="text-xs text-muted-foreground">Active Cases</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-xs text-muted-foreground">Success Rate</p>
-            <p className="text-2xl font-bold text-primary">86%</p>
-            <p className="text-xs text-muted-foreground">This Year</p>
-          </CardContent>
-        </Card>
-      </div>
+      <Pair>
+        {can(K.todaysHearings) && <TodaysHearings key="today" />}
+        {can(K.upcomingHearings) && <UpcomingHearings key="upcoming" />}
+      </Pair>
+
+      <Pair>
+        {can(K.deadlines) && <Deadlines key="deadlines" />}
+        {can(K.deadlines) && <AppealDeadlineAlerts key="appeals" />}
+      </Pair>
+
+      <Pair>
+        {can(K.myTasks) && <MyTasks key="tasks" role={role} currentUser={CURRENT_USER.name} />}
+        {can(K.overdueTasks) && <OverdueTasks key="overdue" />}
+      </Pair>
+
+      <Pair>
+        {can(K.urgentActions) && <UrgentActions key="urgent" />}
+        {can(K.casesAttention) && <CasesRequiringAttention key="attention" />}
+      </Pair>
+
+      <Pair>
+        {can(K.missingDocuments) && <MissingDocuments key="docs" />}
+        {can(K.courtNotifications) && <CourtNotifications key="notifications" />}
+      </Pair>
+
+      <Pair>
+        {can(K.recentUpdates) && <RecentCaseUpdates key="updates" />}
+        {can(K.recentJudgments) && <RecentJudgments key="judgments" />}
+      </Pair>
+
+      <Pair>
+        {can(K.casesByStage) && <CasesByStage key="stages" />}
+        {can(K.clientFollowUp) && <ClientFollowUp key="clientFollowUp" />}
+      </Pair>
+
+      {can(K.execution) && <ExecutionFollowUp />}
+
+      {can(K.financial) && <FinancialSnapshot />}
+      {can(K.unbilled) && <UnbilledCases />}
+
+      {/* Case flow - management view of where the work is coming from */}
+      {can(K.caseFlow) && (
+        <>
+          <CasesReceivedByClient />
+          <Pair>
+            <CaseFlowTrend key="trend" />
+            <TopClients key="top" />
+          </Pair>
+          <Pair>
+            <StoppedClients key="stopped" />
+            <NewClients key="new" />
+          </Pair>
+        </>
+      )}
+
+      {can(K.teamWorkload) && <TeamWorkload />}
+
+      {/* Bottom summary */}
+      {can(K.bottomSummary) && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <StatCard label="Hearings This Month" value={bottomSummary.hearingsThisMonth.value} to={bottomSummary.hearingsThisMonth.to} />
+          <StatCard label="Judgments Issued" value={bottomSummary.judgmentsIssued.value} to={bottomSummary.judgmentsIssued.to} />
+          <StatCard label="Open Execution Files" value={bottomSummary.openExecutionFiles.value} to={bottomSummary.openExecutionFiles.to} />
+          <StatCard label="Overdue Tasks" value={bottomSummary.overdueTasks.value} to={bottomSummary.overdueTasks.to} />
+        </div>
+      )}
     </div>
   );
 }

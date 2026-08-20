@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import BarTrendChart from "@/components/shared/BarTrendChart";
 import { clientCaseActivity, clientActivitySummary } from "../clientMockData";
 
 const MONTH_LABEL = (month) => {
@@ -21,85 +22,6 @@ function Metric({ label, value }) {
         <p className="mt-1 text-lg font-bold text-primary">{value}</p>
       </CardContent>
     </Card>
-  );
-}
-
-/**
- * Cases received per month. One series, so the heading names it and no legend
- * is needed; the value is read off hover or the tallest bar's direct label.
- */
-function CasesReceivedChart({ rows }) {
-  const [hovered, setHovered] = useState(null);
-  const peak = Math.max(...rows.map((r) => r.received), 1);
-
-  if (!rows.length) {
-    return (
-      <p className="py-8 text-center text-sm text-muted-foreground">
-        No case activity in the selected period.
-      </p>
-    );
-  }
-
-  return (
-    <div>
-      <div className="relative flex h-52 items-end gap-[2px]">
-        {rows.map((row) => {
-          const isPeak = row.received === peak;
-          const isHovered = hovered === row.month;
-          return (
-            <div
-              key={row.month}
-              className="group relative flex flex-1 flex-col items-center justify-end"
-              onMouseEnter={() => setHovered(row.month)}
-              onMouseLeave={() => setHovered(null)}
-            >
-              {(isHovered || (isPeak && hovered === null)) && (
-                <span className="absolute -top-1 z-10 whitespace-nowrap rounded border bg-background px-2 py-1 text-xs font-medium shadow-sm">
-                  {row.received} {row.received === 1 ? "case" : "cases"}
-                </span>
-              )}
-              <div
-                className="w-full rounded-t bg-primary transition-opacity"
-                style={{
-                  height: Math.max((row.received / peak) * 100, row.received ? 3 : 0) + "%",
-                  opacity: hovered === null || isHovered ? 1 : 0.45,
-                }}
-              />
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Axis - recessive, and thinned out so labels never collide */}
-      <div className="mt-2 flex gap-[2px] border-t pt-2">
-        {rows.map((row, i) => (
-          <div key={row.month} className="flex-1 text-center">
-            <span className="text-[10px] text-muted-foreground">
-              {rows.length <= 8 || i % 2 === 0 ? MONTH_LABEL(row.month) : ""}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* Same numbers in text, for screen readers and for copying out */}
-      <table className="sr-only">
-        <caption>Cases received per month</caption>
-        <thead>
-          <tr>
-            <th>Month</th>
-            <th>Cases received</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.month}>
-              <td>{MONTH_LABEL(row.month)}</td>
-              <td>{row.received}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
   );
 }
 
@@ -188,7 +110,10 @@ export default function AnalyticsSection() {
           <p className="mb-4 text-xs text-muted-foreground">
             Cases received per month across the selected period.
           </p>
-          <CasesReceivedChart rows={rows} />
+          <BarTrendChart
+            rows={rows.map((r) => ({ label: MONTH_LABEL(r.month), value: r.received }))}
+            unit="case"
+          />
         </CardContent>
       </Card>
     </div>
