@@ -164,17 +164,16 @@ export const invoices = [
 export const initialPayments = [
   { id: 1, invoiceId: 1, amount: 1000, date: dayOffset(-195), bankAccountId: 1 },
   { id: 2, invoiceId: 2, amount: 500, date: dayOffset(-120), bankAccountId: 1 },
-  { id: 3, invoiceId: 3, amount: 500, date: dayOffset(-290), bankAccountId: 2 },
   { id: 4, invoiceId: 4, amount: 2200, date: dayOffset(-70), bankAccountId: 2 },
   { id: 5, invoiceId: 5, amount: 900, date: dayOffset(-30), bankAccountId: 1 },
   { id: 6, invoiceId: 7, amount: 900, date: dayOffset(-6), bankAccountId: 1 },
 ];
 
 export const initialExpenses = [
-  { id: 1, description: "Office Expense", reference: "EXP-001", amount: 500, date: dayOffset(-190), bankAccountId: 1 },
-  { id: 2, description: "Court Fees", reference: "EXP-002", amount: 320, date: dayOffset(-100), bankAccountId: 1 },
-  { id: 3, description: "Staff Salaries", reference: "EXP-003", amount: 2400, date: dayOffset(-40), bankAccountId: 2 },
-  { id: 4, description: "Software Subscription", reference: "EXP-004", amount: 180, date: dayOffset(-20), bankAccountId: 1 },
+  { id: 1, description: "Office Expense", reference: "EXP-001", amount: 500, date: dayOffset(-190), bankAccountId: 1, kind: "Expense" },
+  { id: 2, description: "Court Fees", reference: "EXP-002", amount: 320, date: dayOffset(-100), bankAccountId: 1, kind: "Expense" },
+  { id: 3, description: "Staff Salaries", reference: "EXP-003", amount: 2400, date: dayOffset(-40), bankAccountId: 2, kind: "Expense" },
+  { id: 4, description: "Software Subscription", reference: "EXP-004", amount: 180, date: dayOffset(-20), bankAccountId: 1, kind: "Expense" },
 ];
 
 export const initialTransfers = [
@@ -237,7 +236,7 @@ export function accountTransactions(account, { payments, expenses, transfers, in
         date: e.date,
         description: e.description,
         reference: e.reference,
-        type: "Expense",
+        type: e.kind || "Expense",
         amount: -e.amount,
       });
     });

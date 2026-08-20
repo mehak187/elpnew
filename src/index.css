@@ -26,6 +26,7 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -66,6 +67,7 @@
   --accent-foreground: oklch(0.42 0.15 26);
   /* Destructive sits at a warmer hue so danger never reads as brand */
   --destructive: oklch(0.55 0.19 45);
+  --destructive-foreground: oklch(0.99 0 0);
   --border: oklch(0.90 0 0);
   --input: oklch(0.90 0 0);
   --ring: oklch(0.55 0.16 26);
@@ -102,6 +104,7 @@
   --accent: oklch(0.30 0.05 28);
   --accent-foreground: oklch(0.93 0.015 30);
   --destructive: oklch(0.68 0.18 45);
+  --destructive-foreground: oklch(0.16 0 0);
   --border: oklch(0.30 0 0);
   --input: oklch(0.30 0 0);
   --ring: oklch(0.55 0.14 26);

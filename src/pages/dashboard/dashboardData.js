@@ -30,19 +30,19 @@ export const CURRENT_USER = { name: "Mohammed Al Yahyaei", role: "admin" };
 /* ---------------------------------------------------------------- summary */
 
 export const summaryStats = {
-  activeCases: { value: 248, previous: 231, to: "/litigation" },
+  activeCases: { value: 248, previous: 231, to: "/litigation?status=Active" },
   totalClients: { value: 156, previous: 144, to: "/clients" },
-  casesReceivedThisMonth: { value: 185, previous: 165, to: "/litigation" },
-  newCasesThisMonth: { value: 42, previous: 51, to: "/litigation" },
-  pendingInvoices: { value: 23, previous: 19, to: "/finance" },
-  outstandingAmount: { value: 128450, previous: 141200, to: "/finance" },
+  casesReceivedThisMonth: { value: 185, previous: 165, to: "/litigation?newWithin=30" },
+  newCasesThisMonth: { value: 42, previous: 51, to: "/litigation?newWithin=30&stage=Registration" },
+  pendingInvoices: { value: 23, previous: 19, to: "/finance?status=Pending" },
+  outstandingAmount: { value: 128450, previous: 141200, to: "/finance?status=Pending" },
 };
 
 export const bottomSummary = {
-  hearingsThisMonth: { value: 64, to: "/litigation" },
-  judgmentsIssued: { value: 11, to: "/litigation" },
-  openExecutionFiles: { value: 37, to: "/litigation" },
-  overdueTasks: { value: 7, to: "/profile/tasks" },
+  hearingsThisMonth: { value: 64, to: "/litigation?stage=Under Litigation" },
+  judgmentsIssued: { value: 11, to: "/litigation?stage=Judgment Issued" },
+  openExecutionFiles: { value: 37, to: "/litigation?stage=Execution" },
+  overdueTasks: { value: 7, to: "/profile/tasks?overdue=1" },
 };
 
 /* --------------------------------------------------------------- hearings */

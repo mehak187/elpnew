@@ -20,7 +20,7 @@ export function ExecutionFollowUp() {
             label={indicator.label}
             value={indicator.value}
             tone={indicator.tone}
-            to="/litigation"
+            to="/litigation?stage=Execution"
           />
         ))}
         <Tile

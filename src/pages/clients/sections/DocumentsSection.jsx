@@ -93,7 +93,7 @@ export default function DocumentsSection() {
           onClick={() =>
             window.open(row.fileUrl, "_blank", "noopener,noreferrer")
           }
-          className="flex items-center gap-2 text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring rounded"
+          className="flex items-start gap-2 text-left text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring rounded"
         >
           <FileText className="h-4 w-4 shrink-0" />
           {value}

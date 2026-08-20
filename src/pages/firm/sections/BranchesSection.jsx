@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Info } from "lucide-react";
+import { ReadOnlyNotice } from "@/components/shared/panels";
 import { useFirm } from "@/lib/firm/context";
 import { nextBranchNumber } from "../firmData";
 
@@ -17,7 +18,7 @@ const emptyBranch = { name: "", address: "", phone: "" };
  * stored on the branch record - case numbering reads it from there, which is
  * why a new branch never requires a change to the numbering logic.
  */
-export default function BranchesSection() {
+export default function BranchesSection({ canEdit }) {
   const { branches, addBranch } = useFirm();
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState(emptyBranch);
@@ -36,13 +37,15 @@ export default function BranchesSection() {
         <p className="text-sm text-muted-foreground">
           {branches.length} {branches.length === 1 ? "branch" : "branches"}
         </p>
-        <Button size="sm" onClick={() => setAdding((v) => !v)}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          Add Branch
-        </Button>
+        {canEdit && (
+          <Button size="sm" onClick={() => setAdding((v) => !v)}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Add Branch
+          </Button>
+        )}
       </div>
 
-      {adding && (
+      {adding && canEdit && (
         <Card>
           <CardContent className="space-y-4 p-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -107,6 +110,13 @@ export default function BranchesSection() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {!canEdit && (
+        <ReadOnlyNotice>
+          Branches are maintained by Management / Admin. Your role can view
+          the list but not add to it.
+        </ReadOnlyNotice>
       )}
 
       <Card>

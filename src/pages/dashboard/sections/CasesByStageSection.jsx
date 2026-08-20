@@ -19,7 +19,9 @@ export function CasesByStage() {
           <button
             key={stage.stage}
             type="button"
-            onClick={() => navigate("/litigation")}
+            onClick={() =>
+              navigate("/litigation?stage=" + encodeURIComponent(stage.stage))
+            }
             className="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted/60 focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <span className="w-44 shrink-0 truncate text-sm">{stage.stage}</span>

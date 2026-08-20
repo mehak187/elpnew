@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/select";
 import DataTable from "@/components/shared/DataTable";
 import { Users, Plus, FileText, ScrollText, Edit, Trash2 } from "lucide-react";
+import ActiveFilters from "@/components/shared/ActiveFilters";
+import { useListFilter } from "@/lib/useListFilter";
 import { CLIENT_TYPES } from "@/lib/constants";
 import {
   CLIENT_STATUSES,
@@ -376,15 +378,22 @@ const clients = [
 
 export default function ClientsList() {
   const navigate = useNavigate();
+  const URL_FILTERS = {
+    status: { label: "Status", match: (row, value) => row.status === value },
+    type: { label: "Type", match: (row, value) => row.type === value },
+  };
+
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("none");
+  const { active, apply, clear } = useListFilter(URL_FILTERS);
 
   // Filter and sort clients
-  const processedClients = clients
-    .map(client => ({ ...client, status: deriveClientStatus(client) }))
+  const processedClients = apply(
+    clients.map(client => ({ ...client, status: deriveClientStatus(client) }))
+  )
     .filter(client => {
       if (typeFilter !== "all" && client.type !== typeFilter) return false;
       if (statusFilter !== "all" && client.status !== statusFilter) return false;
@@ -599,6 +608,12 @@ export default function ClientsList() {
           Add Client
         </Button>
       </div>
+
+      <ActiveFilters
+        filters={active}
+        onClear={clear}
+        resultCount={processedClients.length}
+      />
 
       <Card>
         <CardContent className="p-4 sm:p-6">

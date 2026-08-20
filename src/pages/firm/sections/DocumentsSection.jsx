@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Search, FileText, X, AlertTriangle } from "lucide-react";
+import { ReadOnlyNotice } from "@/components/shared/panels";
 import { useFirm } from "@/lib/firm/context";
 import {
   DOCUMENT_TYPES,
@@ -56,7 +57,7 @@ const relatedLabel = (document) => {
  * so a document cannot sit in the list claiming to be Active after its date has
  * passed. Documents without an expiry date simply stay Active.
  */
-export default function DocumentsSection({ initialStatusFilter }) {
+export default function DocumentsSection({ initialStatusFilter, canEdit }) {
   const { documents, addDocument, removeDocument } = useFirm();
 
   const [adding, setAdding] = useState(false);
@@ -67,6 +68,7 @@ export default function DocumentsSection({ initialStatusFilter }) {
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState(initialStatusFilter || "all");
   const [relatedFilter, setRelatedFilter] = useState("all");
+  const [relatedIdFilter, setRelatedIdFilter] = useState("all");
   const [expiryFilter, setExpiryFilter] = useState("all");
 
   const setField = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
@@ -91,12 +93,25 @@ export default function DocumentsSection({ initialStatusFilter }) {
         if (statusFilter !== "all" && document.status !== statusFilter) return false;
         if (relatedFilter !== "all" && document.relatedKind !== relatedFilter)
           return false;
+        if (
+          relatedIdFilter !== "all" &&
+          String(document.relatedId) !== relatedIdFilter
+        )
+          return false;
         if (expiryFilter === "has" && !document.expiryDate) return false;
         if (expiryFilter === "none" && document.expiryDate) return false;
         return true;
       })
       .sort((a, b) => (b.documentDate || "").localeCompare(a.documentDate || ""));
-  }, [documents, search, typeFilter, statusFilter, relatedFilter, expiryFilter]);
+  }, [
+    documents,
+    search,
+    typeFilter,
+    statusFilter,
+    relatedFilter,
+    relatedIdFilter,
+    expiryFilter,
+  ]);
 
   // Section 2 asks for notification when a document nears its expiry date.
   const expiringSoon = documents
@@ -189,7 +204,13 @@ export default function DocumentsSection({ initialStatusFilter }) {
             </SelectContent>
           </Select>
 
-          <Select value={relatedFilter} onValueChange={setRelatedFilter}>
+          <Select
+            value={relatedFilter}
+            onValueChange={(value) => {
+              setRelatedFilter(value);
+              setRelatedIdFilter("all");
+            }}
+          >
             <SelectTrigger className="h-9 w-36 text-xs">
               <SelectValue />
             </SelectTrigger>
@@ -203,6 +224,38 @@ export default function DocumentsSection({ initialStatusFilter }) {
             </SelectContent>
           </Select>
 
+          {relatedFilter === "client" && (
+            <Select value={relatedIdFilter} onValueChange={setRelatedIdFilter}>
+              <SelectTrigger className="h-9 w-44 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All clients</SelectItem>
+                {clients.map((client) => (
+                  <SelectItem key={client.id} value={String(client.id)}>
+                    {client.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {relatedFilter === "case" && (
+            <Select value={relatedIdFilter} onValueChange={setRelatedIdFilter}>
+              <SelectTrigger className="h-9 w-44 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All cases</SelectItem>
+                {cases.map((legalCase) => (
+                  <SelectItem key={legalCase.id} value={String(legalCase.id)}>
+                    Case {legalCase.caseNo}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           <Select value={expiryFilter} onValueChange={setExpiryFilter}>
             <SelectTrigger className="h-9 w-40 text-xs">
               <SelectValue />
@@ -214,15 +267,17 @@ export default function DocumentsSection({ initialStatusFilter }) {
             </SelectContent>
           </Select>
 
-          <Button size="sm" onClick={() => setAdding((v) => !v)}>
-            <Plus className="mr-1.5 h-4 w-4" />
-            Add Document
-          </Button>
+          {canEdit && (
+            <Button size="sm" onClick={() => setAdding((v) => !v)}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              Add Document
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Add document */}
-      {adding && (
+      {adding && canEdit && (
         <Card>
           <CardContent className="space-y-4 p-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -437,7 +492,7 @@ export default function DocumentsSection({ initialStatusFilter }) {
                         onClick={() =>
                           window.open(document.fileUrl, "_blank", "noopener,noreferrer")
                         }
-                        className="flex items-center gap-2 font-medium text-primary underline-offset-2 hover:underline"
+                        className="flex items-start gap-2 text-left font-medium text-primary underline-offset-2 hover:underline"
                       >
                         <FileText className="h-4 w-4 shrink-0" />
                         {document.name}
@@ -468,15 +523,17 @@ export default function DocumentsSection({ initialStatusFilter }) {
                     {document.notes || "-"}
                   </td>
                   <td className="p-3 text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      onClick={() => removeDocument(document.id)}
-                    >
-                      <X className="h-4 w-4" />
-                      <span className="sr-only">Remove {document.name}</span>
-                    </Button>
+                    {canEdit && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeDocument(document.id)}
+                      >
+                        <X className="h-4 w-4" />
+                        <span className="sr-only">Remove {document.name}</span>
+                      </Button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -489,6 +546,13 @@ export default function DocumentsSection({ initialStatusFilter }) {
         Documents are flagged as Expiring Soon within {EXPIRY_WARNING_DAYS} days
         of their expiry date.
       </p>
+
+      {!canEdit && (
+        <ReadOnlyNotice>
+          Documents are maintained by Management / Admin and Accounting. Your
+          role can search and open them but not add or remove them.
+        </ReadOnlyNotice>
+      )}
     </div>
   );
 }

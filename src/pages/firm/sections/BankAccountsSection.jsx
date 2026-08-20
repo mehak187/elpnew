@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Info } from "lucide-react";
+import { ReadOnlyNotice } from "@/components/shared/panels";
 import { useFirm } from "@/lib/firm/context";
 import { accountBalance, invoices, money } from "../firmData";
 
@@ -23,7 +24,7 @@ const emptyAccount = {
  * requires - a user cannot type a balance that the transaction history does not
  * support.
  */
-export default function BankAccountsSection({ onNavigateSection }) {
+export default function BankAccountsSection({ onNavigateSection, canEdit }) {
   const firm = useFirm();
   const { bankAccounts, addBankAccount, setAccountActive } = firm;
   const ledgers = {
@@ -57,13 +58,15 @@ export default function BankAccountsSection({ onNavigateSection }) {
           <span className="text-muted-foreground">Total across accounts: </span>
           <span className="font-bold text-primary">{money(totalBalance)}</span>
         </p>
-        <Button size="sm" onClick={() => setAdding((v) => !v)}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          Add Bank Account
-        </Button>
+        {canEdit && (
+          <Button size="sm" onClick={() => setAdding((v) => !v)}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Add Bank Account
+          </Button>
+        )}
       </div>
 
-      {adding && (
+      {adding && canEdit && (
         <Card>
           <CardContent className="space-y-4 p-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -169,13 +172,15 @@ export default function BankAccountsSection({ onNavigateSection }) {
                     </Badge>
                   </td>
                   <td className="p-3 text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setAccountActive(account.id, !account.active)}
-                    >
-                      {account.active ? "Disable" : "Enable"}
-                    </Button>
+                    {canEdit && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAccountActive(account.id, !account.active)}
+                      >
+                        {account.active ? "Disable" : "Enable"}
+                      </Button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -184,9 +189,18 @@ export default function BankAccountsSection({ onNavigateSection }) {
         </CardContent>
       </Card>
 
-      <p className="text-xs text-muted-foreground">
-        Select a current balance to open that account&apos;s transaction history.
-      </p>
+      {canEdit ? (
+        <p className="text-xs text-muted-foreground">
+          Select a current balance to open that account&apos;s transaction
+          history.
+        </p>
+      ) : (
+        <ReadOnlyNotice>
+          Bank accounts are maintained by Management / Admin. Your role can
+          view balances and open the transaction history, but not add or
+          disable an account.
+        </ReadOnlyNotice>
+      )}
     </div>
   );
 }

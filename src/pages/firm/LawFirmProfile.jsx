@@ -11,7 +11,12 @@ import {
 } from "@/components/ui/select";
 import { Building2, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ROLES, canRecordFinance } from "@/lib/permissions";
+import {
+  ROLES,
+  canRecordFinance,
+  canEditFirmSettings,
+  canManageDocuments,
+} from "@/lib/permissions";
 import { useFirm } from "@/lib/firm/context";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 
@@ -51,6 +56,11 @@ export default function LawFirmProfile() {
   };
 
   const current = SECTIONS.find((s) => s.key === activeSection);
+
+  // Every role may read the whole profile; the role decides what can be changed.
+  const isAdmin = canEditFirmSettings(role);
+  const canRecord = canRecordFinance(role);
+  const canEditDocuments = canManageDocuments(role);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -129,18 +139,28 @@ export default function LawFirmProfile() {
               {activeSection === "overview" && (
                 <OverviewSection onNavigateSection={goToSection} />
               )}
-              {activeSection === "information" && <FirmInformationSection />}
-              {activeSection === "documents" && (
-                <DocumentsSection initialStatusFilter={sectionArgs.status} />
+              {activeSection === "information" && (
+                <FirmInformationSection canEdit={isAdmin} />
               )}
-              {activeSection === "branches" && <BranchesSection />}
+              {activeSection === "documents" && (
+                <DocumentsSection
+                  initialStatusFilter={sectionArgs.status}
+                  canEdit={canEditDocuments}
+                />
+              )}
+              {activeSection === "branches" && (
+                <BranchesSection canEdit={isAdmin} />
+              )}
               {activeSection === "bank" && (
-                <BankAccountsSection onNavigateSection={goToSection} />
+                <BankAccountsSection
+                  onNavigateSection={goToSection}
+                  canEdit={isAdmin}
+                />
               )}
               {activeSection === "transactions" && (
                 <TransactionsSection
                   initialAccountId={sectionArgs.accountId}
-                  canRecord={canRecordFinance(role)}
+                  canRecord={canRecord}
                 />
               )}
             </CardContent>

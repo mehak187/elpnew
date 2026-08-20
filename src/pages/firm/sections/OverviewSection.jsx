@@ -1,7 +1,16 @@
-import { Briefcase, Users, Wallet, Landmark, FileText } from "lucide-react";
+import { Briefcase, Users, Wallet, Landmark, FileText, Scale } from "lucide-react";
+import { Fragment } from "react";
 import { SectionCard, Tile } from "@/components/shared/panels";
 import { useFirm } from "@/lib/firm/context";
-import { overviewFigures, money } from "../firmData";
+import {
+  overviewFigures,
+  money,
+  clients,
+  cases,
+  invoices,
+  clientTotals,
+  caseTotals,
+} from "../firmData";
 
 /**
  * Section 9 of the specification. Every figure here is computed from the same
@@ -17,9 +26,9 @@ export default function OverviewSection({ onNavigateSection }) {
       <SectionCard title="Cases" icon={Briefcase}>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Tile label="Total Cases" value={figures.cases.total} to="/litigation" />
-          <Tile label="Active Cases" value={figures.cases.active} tone="good" to="/litigation" />
-          <Tile label="Closed Cases" value={figures.cases.closed} to="/litigation" />
-          <Tile label="New Cases" value={figures.cases.newCases} tone="info" to="/litigation" />
+          <Tile label="Active Cases" value={figures.cases.active} tone="good" to="/litigation?status=Active" />
+          <Tile label="Closed Cases" value={figures.cases.closed} to="/litigation?status=Closed" />
+          <Tile label="New Cases" value={figures.cases.newCases} tone="info" to="/litigation?newWithin=30" />
         </div>
 
         <p className="mb-2 mt-4 text-xs font-medium text-muted-foreground">
@@ -31,7 +40,7 @@ export default function OverviewSection({ onNavigateSection }) {
               key={branch.id}
               label={branch.name + " (" + branch.branchNumber + ")"}
               value={count}
-              to="/litigation"
+              to={"/litigation?branch=" + encodeURIComponent(branch.name)}
             />
           ))}
         </div>
@@ -40,18 +49,80 @@ export default function OverviewSection({ onNavigateSection }) {
       <SectionCard title="Clients" icon={Users}>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Tile label="Total Clients" value={figures.clients.total} to="/clients" />
-          <Tile label="Active Clients" value={figures.clients.active} tone="good" to="/clients" />
-          <Tile label="Clients with Open Cases" value={figures.clients.withOpenCases} to="/clients" />
-          <Tile label="Clients with Outstanding Payments" value={figures.clients.withOutstanding} tone="warning" to="/clients" />
+          <Tile label="Active Clients" value={figures.clients.active} tone="good" to="/clients?status=Active" />
+          <Tile label="Clients with Open Cases" value={figures.clients.withOpenCases} to="/clients?status=Active" />
+          <Tile label="Clients with Outstanding Payments" value={figures.clients.withOutstanding} tone="warning" to="/finance?status=Pending" />
         </div>
       </SectionCard>
 
       <SectionCard title="Financial" icon={Wallet}>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Tile label="Total Invoiced" value={money(figures.financial.totalInvoiced)} to="/finance" />
-          <Tile label="Total Paid" value={money(figures.financial.totalPaid)} tone="good" to="/finance" />
-          <Tile label="Total Outstanding" value={money(figures.financial.totalOutstanding)} tone="high" to="/finance" />
+          <Tile label="Total Paid" value={money(figures.financial.totalPaid)} tone="good" to="/finance?status=Paid" />
+          <Tile label="Total Outstanding" value={money(figures.financial.totalOutstanding)} tone="high" to="/finance?status=Pending" />
           <Tile label="Total Expenses" value={money(figures.financial.totalExpenses)} tone="warning" onClick={() => onNavigateSection("transactions")} />
+        </div>
+      </SectionCard>
+
+      {/* Section 8: what each client and case has been invoiced, paid and owes */}
+      <SectionCard title="Client and Case Balances" icon={Scale}>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[560px] text-sm">
+            <thead>
+              <tr className="border-b text-left text-xs text-muted-foreground">
+                <th className="pb-2 font-medium">Client / Case</th>
+                <th className="pb-2 text-right font-medium">Total Invoiced</th>
+                <th className="pb-2 text-right font-medium">Total Paid</th>
+                <th className="pb-2 text-right font-medium">Outstanding</th>
+              </tr>
+            </thead>
+            <tbody>
+              {clients.map((client) => {
+                const totals = clientTotals(client.id, firm);
+                if (!totals.invoiced) return null;
+                const clientCases = cases.filter(
+                  (c) =>
+                    c.clientId === client.id &&
+                    invoices.some((i) => i.caseId === c.id)
+                );
+                return (
+                  <Fragment key={client.id}>
+                    <tr className="border-b">
+                      <td className="py-2 font-medium">{client.name}</td>
+                      <td className="py-2 text-right font-semibold">
+                        {money(totals.invoiced)}
+                      </td>
+                      <td className="py-2 text-right text-green-600">
+                        {money(totals.paid)}
+                      </td>
+                      <td className="py-2 text-right text-red-600">
+                        {money(totals.outstanding)}
+                      </td>
+                    </tr>
+                    {clientCases.map((legalCase) => {
+                      const perCase = caseTotals(legalCase.id, firm);
+                      return (
+                        <tr key={legalCase.id} className="border-b last:border-0">
+                          <td className="py-2 pl-6 text-muted-foreground">
+                            Case {legalCase.caseNo}
+                          </td>
+                          <td className="py-2 text-right text-muted-foreground">
+                            {money(perCase.invoiced)}
+                          </td>
+                          <td className="py-2 text-right text-muted-foreground">
+                            {money(perCase.paid)}
+                          </td>
+                          <td className="py-2 text-right text-muted-foreground">
+                            {money(perCase.outstanding)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </SectionCard>
 

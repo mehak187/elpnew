@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FirmContext } from "./context";
 import {
   initialFirmInfo,
@@ -22,6 +22,12 @@ export default function FirmProvider({ children }) {
   const [payments, setPayments] = useState(initialPayments);
   const [expenses, setExpenses] = useState(initialExpenses);
   const [transfers, setTransfers] = useState(initialTransfers);
+
+  // The firm name is stored once and displayed everywhere it appears, the
+  // browser tab included.
+  useEffect(() => {
+    document.title = firmInfo.nameEn || "Law Firm";
+  }, [firmInfo.nameEn]);
 
   const value = useMemo(
     () => ({
