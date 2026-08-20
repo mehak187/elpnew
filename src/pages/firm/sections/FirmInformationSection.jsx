@@ -1,6 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { ReadOnlyNotice } from "@/components/shared/panels";
 import { useFirm } from "@/lib/firm/context";
 import { daysUntil, formatDate, EXPIRY_WARNING_DAYS } from "../firmData";
 
@@ -12,7 +13,7 @@ import { daysUntil, formatDate, EXPIRY_WARNING_DAYS } from "../firmData";
  * the name shown in the page header updates as it is typed - the name is stored
  * once and read everywhere rather than re-entered per section.
  */
-export default function FirmInformationSection() {
+export default function FirmInformationSection({ canEdit }) {
   const { firmInfo, updateFirmInfo } = useFirm();
 
   const set = (field) => (e) => updateFirmInfo({ [field]: e.target.value });
@@ -28,6 +29,7 @@ export default function FirmInformationSection() {
             id="firmNameAr"
             value={firmInfo.nameAr}
             onChange={set("nameAr")}
+            disabled={!canEdit}
             placeholder="أدخل اسم المكتب بالعربية"
             dir="rtl"
           />
@@ -39,6 +41,7 @@ export default function FirmInformationSection() {
             id="firmNameEn"
             value={firmInfo.nameEn}
             onChange={set("nameEn")}
+            disabled={!canEdit}
             placeholder="Enter name in English"
           />
         </div>
@@ -49,6 +52,7 @@ export default function FirmInformationSection() {
             id="firmAddress"
             value={firmInfo.address}
             onChange={set("address")}
+            disabled={!canEdit}
             placeholder="Enter the firm address"
           />
         </div>
@@ -61,6 +65,7 @@ export default function FirmInformationSection() {
             id="mojLicenseNo"
             value={firmInfo.mojLicenseNo}
             onChange={set("mojLicenseNo")}
+            disabled={!canEdit}
             placeholder="Enter licence number"
           />
         </div>
@@ -71,6 +76,7 @@ export default function FirmInformationSection() {
             id="crNumber"
             value={firmInfo.crNumber}
             onChange={set("crNumber")}
+            disabled={!canEdit}
             placeholder="Enter CR number"
           />
         </div>
@@ -82,6 +88,7 @@ export default function FirmInformationSection() {
             type="date"
             value={firmInfo.crExpiryDate}
             onChange={set("crExpiryDate")}
+            disabled={!canEdit}
           />
           {crDays !== null && (
             <div className="pt-1">
@@ -101,10 +108,17 @@ export default function FirmInformationSection() {
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        The firm name recorded here is what the rest of the system displays. It
-        is not entered again anywhere else.
-      </p>
+      {canEdit ? (
+        <p className="text-xs text-muted-foreground">
+          The firm name recorded here is what the rest of the system displays.
+          It is not entered again anywhere else.
+        </p>
+      ) : (
+        <ReadOnlyNotice>
+          Firm details are maintained by Management / Admin. Your role can view
+          them but not change them.
+        </ReadOnlyNotice>
+      )}
     </div>
   );
 }

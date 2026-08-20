@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Search, FileText, X, AlertTriangle } from "lucide-react";
+import { ReadOnlyNotice } from "@/components/shared/panels";
 import { useFirm } from "@/lib/firm/context";
 import {
   DOCUMENT_TYPES,
@@ -56,7 +57,7 @@ const relatedLabel = (document) => {
  * so a document cannot sit in the list claiming to be Active after its date has
  * passed. Documents without an expiry date simply stay Active.
  */
-export default function DocumentsSection({ initialStatusFilter }) {
+export default function DocumentsSection({ initialStatusFilter, canEdit }) {
   const { documents, addDocument, removeDocument } = useFirm();
 
   const [adding, setAdding] = useState(false);
@@ -214,15 +215,17 @@ export default function DocumentsSection({ initialStatusFilter }) {
             </SelectContent>
           </Select>
 
-          <Button size="sm" onClick={() => setAdding((v) => !v)}>
-            <Plus className="mr-1.5 h-4 w-4" />
-            Add Document
-          </Button>
+          {canEdit && (
+            <Button size="sm" onClick={() => setAdding((v) => !v)}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              Add Document
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Add document */}
-      {adding && (
+      {adding && canEdit && (
         <Card>
           <CardContent className="space-y-4 p-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -468,15 +471,17 @@ export default function DocumentsSection({ initialStatusFilter }) {
                     {document.notes || "-"}
                   </td>
                   <td className="p-3 text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      onClick={() => removeDocument(document.id)}
-                    >
-                      <X className="h-4 w-4" />
-                      <span className="sr-only">Remove {document.name}</span>
-                    </Button>
+                    {canEdit && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeDocument(document.id)}
+                      >
+                        <X className="h-4 w-4" />
+                        <span className="sr-only">Remove {document.name}</span>
+                      </Button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -489,6 +494,13 @@ export default function DocumentsSection({ initialStatusFilter }) {
         Documents are flagged as Expiring Soon within {EXPIRY_WARNING_DAYS} days
         of their expiry date.
       </p>
+
+      {!canEdit && (
+        <ReadOnlyNotice>
+          Documents are maintained by Management / Admin and Accounting. Your
+          role can search and open them but not add or remove them.
+        </ReadOnlyNotice>
+      )}
     </div>
   );
 }

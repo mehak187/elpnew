@@ -104,3 +104,8 @@ export function canEditFirmSettings(role) {
 export function canRecordFinance(role) {
   return role === "admin" || role === "accounting";
 }
+
+// Firm and client paperwork is maintained by administration and accounting.
+export function canManageDocuments(role) {
+  return role === "admin" || role === "accounting";
+}
