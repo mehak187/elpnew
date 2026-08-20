@@ -17,6 +17,7 @@ import { FileCheck, ArrowLeft, Save, Upload } from "lucide-react";
 export default function PostJudgement() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [judgementFile, setJudgementFile] = useState(null);
   const [formData, setFormData] = useState({
     judgement_date: "2024-12-10",
     judgement_type: "In Favor",
@@ -194,9 +195,17 @@ export default function PostJudgement() {
                 <p className="text-sm text-muted-foreground">
                   Drag and drop judgement documents here, or click to browse
                 </p>
-                <Button variant="outline" size="sm" className="mt-2">
-                  Browse Files
-                </Button>
+                <label className="mt-2 inline-flex cursor-pointer items-center justify-center rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground">
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    className="hidden"
+                    onChange={(e) =>
+                      e.target.files[0] && setJudgementFile(e.target.files[0])
+                    }
+                  />
+                  {judgementFile ? judgementFile.name : "Browse Files"}
+                </label>
               </div>
             </div>
 

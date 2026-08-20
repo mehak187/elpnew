@@ -17,6 +17,8 @@ import ClientDetails from "@/pages/clients/ClientDetails";
 
 // Company Settings
 import LawFirmProfile from "@/pages/firm/LawFirmProfile";
+import ChangePassword from "@/pages/settings/ChangePassword";
+import SignIn from "@/pages/settings/SignIn";
 
 // Corporate Module
 import CorporateList from "@/pages/corporate/CorporateList";
@@ -47,6 +49,8 @@ function App() {
 
             {/* Company Settings */}
             <Route path="settings/firm" element={<LawFirmProfile />} />
+            <Route path="settings/password" element={<ChangePassword />} />
+            <Route path="sign-in" element={<SignIn />} />
 
             {/* Root Pages */}
             <Route path="dashboard" element={<Dashboard />} />

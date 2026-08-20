@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import DataTable from "@/components/shared/DataTable";
 import ActiveFilters from "@/components/shared/ActiveFilters";
+import RecordDialog from "@/components/shared/RecordDialog";
+import { toCsv, downloadCsv } from "@/lib/csv";
 import { useListFilter } from "@/lib/useListFilter";
 
 const FILTERS = {
@@ -21,7 +23,7 @@ const invoices = [
   { id: 5, invoice_no: "INV/2024/005", client: "Ali Mohammed", amount: "OMR 800.000", date: "2024-11-20", due_date: "2024-12-20", status: "Paid" },
 ];
 
-const columns = [
+const buildColumns = (onView, onDownload) => [
   { key: "invoice_no", header: "Invoice No.", width: "12%", cellClassName: "text-left font-medium" },
   { key: "client", header: "Client", width: "20%" },
   { key: "amount", header: "Amount", width: "12%", cellClassName: "text-right font-medium" },
@@ -49,12 +51,25 @@ const columns = [
     key: "actions",
     header: "Actions",
     width: "12%",
-    render: () => (
+    disableFilter: true,
+    render: (_, row) => (
       <div className="flex items-center justify-center gap-1">
-        <Button variant="ghost" size="icon" className="h-8 w-8">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          title="View invoice"
+          onClick={() => onView(row)}
+        >
           <Eye className="h-4 w-4" />
         </Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          title="Download invoice"
+          onClick={() => onDownload(row)}
+        >
           <FileText className="h-4 w-4" />
         </Button>
       </div>
@@ -62,7 +77,26 @@ const columns = [
   },
 ];
 
+const INVOICE_FIELDS = [
+  { key: "invoice_no", label: "Invoice No.", readOnly: true },
+  { key: "client", label: "Client" },
+  { key: "amount", label: "Amount" },
+  { key: "date", label: "Invoice Date" },
+  { key: "due_date", label: "Due Date" },
+  { key: "status", label: "Status" },
+];
+
 export default function InvoicesList() {
+  const [selected, setSelected] = useState(null);
+
+  const columns = buildColumns(
+    (row) => setSelected(row),
+    (row) =>
+      downloadCsv(
+        toCsv(INVOICE_FIELDS.map((f) => ({ key: f.key, header: f.label })), [row]),
+        row.invoice_no.replace(/\//g, "-") + ".csv"
+      )
+  );
   const navigate = useNavigate();
   const [pageSize, setPageSize] = useState(100);
   const [currentPage, setCurrentPage] = useState(1);
@@ -92,6 +126,16 @@ export default function InvoicesList() {
           Create Invoice
         </Button>
       </div>
+
+      <RecordDialog
+        open={Boolean(selected)}
+        onOpenChange={(open) => !open && setSelected(null)}
+        title="Invoice"
+        description={selected ? selected.invoice_no : ""}
+        record={selected}
+        fields={INVOICE_FIELDS}
+        readOnly
+      />
 
       <ActiveFilters
         filters={active}

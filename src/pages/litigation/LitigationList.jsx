@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -92,13 +92,20 @@ const columns = [
     key: "actions",
     header: "Actions",
     width: "12%",
-    render: () => (
+    disableFilter: true,
+    render: (_, row) => (
       <div className="flex items-center justify-center gap-1">
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <Eye className="h-4 w-4" />
+        <Button variant="ghost" size="icon" className="h-8 w-8" asChild title="Open hearing">
+          <Link to={"/litigation/" + row.id + "/hearing"}>
+            <Eye className="h-4 w-4" />
+            <span className="sr-only">Open case {row.case_no}</span>
+          </Link>
         </Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <Edit className="h-4 w-4" />
+        <Button variant="ghost" size="icon" className="h-8 w-8" asChild title="Post judgement">
+          <Link to={"/litigation/" + row.id + "/judgement"}>
+            <Edit className="h-4 w-4" />
+            <span className="sr-only">Edit case {row.case_no}</span>
+          </Link>
         </Button>
       </div>
     )
