@@ -133,6 +133,7 @@ export function Row({ to, onClick, children, className }) {
       disabled={!go}
       className={cn(
         "flex w-full items-center justify-between gap-3 rounded-lg bg-muted/50 p-3 text-left transition-colors",
+        "[&>*:first-child]:min-w-0 [&>*:first-child]:flex-1",
         go && "hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring",
         className
       )}

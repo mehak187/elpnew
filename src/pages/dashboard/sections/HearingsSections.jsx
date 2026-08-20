@@ -33,7 +33,10 @@ export function TodaysHearings() {
                 </p>
               </div>
             </div>
-            <Badge variant={HEARING_STATUS_VARIANT[hearing.status]}>
+            <Badge
+              variant={HEARING_STATUS_VARIANT[hearing.status]}
+              className="shrink-0"
+            >
               {hearing.status}
             </Badge>
           </Row>
@@ -76,8 +79,8 @@ export function UpcomingHearings() {
                   </p>
                 </div>
               </div>
-              <span className="shrink-0 text-xs text-muted-foreground">
-                in {days} {days === 1 ? "day" : "days"}
+              <span className="w-20 shrink-0 text-right text-xs text-muted-foreground">
+                {days === 0 ? "Today" : "in " + days + (days === 1 ? " day" : " days")}
               </span>
             </Row>
           );
