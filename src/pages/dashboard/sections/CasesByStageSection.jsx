@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Layers } from "lucide-react";
-import { SectionCard } from "../widgets";
+import { SectionCard } from "@/components/shared/panels";
 import { casesByStage } from "../dashboardData";
 
 export function CasesByStage() {

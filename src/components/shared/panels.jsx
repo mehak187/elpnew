@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Minus, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { changePercent } from "./dashboardData";
+import { changePercent } from "@/lib/metrics";
 
 /**
  * Priority indicator. The dot is never the only signal - a label always sits
@@ -144,7 +144,7 @@ export function Row({ to, onClick, children, className }) {
 }
 
 /** Small labelled count used inside compact grids. */
-export function Tile({ label, value, to, tone }) {
+export function Tile({ label, value, to, onClick, tone }) {
   const navigate = useNavigate();
   const TONE = {
     high: "text-red-600",
@@ -152,15 +152,16 @@ export function Tile({ label, value, to, tone }) {
     good: "text-green-600",
     info: "text-blue-600",
   };
+  const go = onClick || (to ? () => navigate(to) : undefined);
 
   return (
     <button
       type="button"
-      onClick={() => to && navigate(to)}
-      disabled={!to}
+      onClick={go}
+      disabled={!go}
       className={cn(
         "rounded-lg border p-3 text-left transition-colors",
-        to && "hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring"
+        go && "hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring"
       )}
     >
       <p className="text-xs text-muted-foreground">{label}</p>

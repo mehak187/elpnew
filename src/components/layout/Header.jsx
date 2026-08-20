@@ -4,6 +4,7 @@ import {
   ChevronDown,
   LogOut,
   KeyRound,
+  Building2,
   Briefcase,
   Scale,
   Wallet,
@@ -35,6 +36,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { useFirm } from "@/lib/firm/context";
 
 const navItems = [
   { name: "Active Cases", path: "/litigation", icon: Scale, key: "litigation" },
@@ -48,6 +50,7 @@ const navItems = [
 
 export default function Header({ onNavClick, activeNav }) {
   const location = useLocation();
+  const { firmInfo } = useFirm();
 
   const isActive = (key) => {
     return activeNav === key || location.pathname.startsWith(`/${key}`);
@@ -67,7 +70,7 @@ export default function Header({ onNavClick, activeNav }) {
           <SheetContent side="left" className="w-72 p-0">
             <SheetHeader className="p-4 border-b">
               <SheetTitle className="font-serif text-3xl font-bold tracking-[0.12em] text-primary">
-                YANDS
+                {firmInfo.nameEn}
               </SheetTitle>
             </SheetHeader>
             <nav className="flex flex-col p-2">
@@ -100,7 +103,7 @@ export default function Header({ onNavClick, activeNav }) {
         {/* Logo */}
         <Link to="/" className="flex items-center">
           <span className="font-serif text-3xl font-bold tracking-[0.12em] text-primary">
-            YANDS
+            {firmInfo.nameEn}
           </span>
         </Link>
 
@@ -153,6 +156,12 @@ export default function Header({ onNavClick, activeNav }) {
               Mohammed Al Yahyaei
             </DropdownMenuItem>
             <DropdownMenuSeparator className="sm:hidden" />
+            <DropdownMenuItem className="cursor-pointer" asChild>
+              <Link to="/settings/firm">
+                <Building2 className="mr-2 h-4 w-4" />
+                Company Settings
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem className="cursor-pointer">
               <KeyRound className="mr-2 h-4 w-4" />
               Change Password

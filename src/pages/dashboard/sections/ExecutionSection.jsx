@@ -1,5 +1,5 @@
 import { Landmark } from "lucide-react";
-import { SectionCard, Tile } from "../widgets";
+import { SectionCard, Tile } from "@/components/shared/panels";
 import { executionIndicators, amountsCollected, money } from "../dashboardData";
 
 export function ExecutionFollowUp() {

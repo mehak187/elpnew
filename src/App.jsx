@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
+import FirmProvider from "@/lib/firm/FirmProvider";
 
 // Root Pages
 import Dashboard from "@/pages/Dashboard";
@@ -13,6 +14,9 @@ import Tasks from "@/pages/profile/Tasks";
 // Clients Module
 import ClientsList from "@/pages/clients/ClientsList";
 import ClientDetails from "@/pages/clients/ClientDetails";
+
+// Company Settings
+import LawFirmProfile from "@/pages/firm/LawFirmProfile";
 
 // Corporate Module
 import CorporateList from "@/pages/corporate/CorporateList";
@@ -34,50 +38,55 @@ import Execution from "@/pages/litigation/Execution";
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<MainLayout />}>
-          {/* Default redirect to dashboard */}
-          <Route index element={<Navigate to="/dashboard" replace />} />
+    <FirmProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<MainLayout />}>
+            {/* Default redirect to dashboard */}
+            <Route index element={<Navigate to="/dashboard" replace />} />
 
-          {/* Root Pages */}
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="references" element={<References />} />
-          <Route path="reports" element={<Reports />} />
+            {/* Company Settings */}
+            <Route path="settings/firm" element={<LawFirmProfile />} />
 
-          {/* Profile Module */}
-          <Route path="profile" element={<ProfileInfo />} />
-          <Route path="profile/tasks" element={<Tasks />} />
+            {/* Root Pages */}
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="references" element={<References />} />
+            <Route path="reports" element={<Reports />} />
 
-          {/* Clients Module */}
-          <Route path="clients" element={<ClientsList />} />
-          <Route path="clients/create" element={<ClientDetails />} />
-          <Route path="clients/:id" element={<ClientDetails />} />
+            {/* Profile Module */}
+            <Route path="profile" element={<ProfileInfo />} />
+            <Route path="profile/tasks" element={<Tasks />} />
 
-          {/* Corporate Module */}
-          <Route path="corporate" element={<CorporateList />} />
+            {/* Clients Module */}
+            <Route path="clients" element={<ClientsList />} />
+            <Route path="clients/create" element={<ClientDetails />} />
+            <Route path="clients/:id" element={<ClientDetails />} />
 
-          {/* Employees Module */}
-          <Route path="employees" element={<EmployeesList />} />
-          <Route path="employees/create" element={<EmployeeForm />} />
-          <Route path="employees/:id" element={<EmployeeView />} />
-          <Route path="employees/:id/edit" element={<EmployeeForm />} />
+            {/* Corporate Module */}
+            <Route path="corporate" element={<CorporateList />} />
 
-          {/* Finance Module */}
-          <Route path="finance" element={<InvoicesList />} />
+            {/* Employees Module */}
+            <Route path="employees" element={<EmployeesList />} />
+            <Route path="employees/create" element={<EmployeeForm />} />
+            <Route path="employees/:id" element={<EmployeeView />} />
+            <Route path="employees/:id/edit" element={<EmployeeForm />} />
 
-          {/* Litigation Module */}
-          <Route path="litigation" element={<LitigationList />} />
-          <Route path="litigation/register" element={<Registration />} />
-          <Route path="litigation/:id/hearing" element={<CourtHearing />} />
-          <Route path="litigation/:id/judgement" element={<PostJudgement />} />
-          <Route path="litigation/:id/execution" element={<Execution />} />
+            {/* Finance Module */}
+            <Route path="finance" element={<InvoicesList />} />
 
-          {/* Archive - placeholder */}
-          <Route path="archive" element={<Dashboard />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+            {/* Litigation Module */}
+            <Route path="litigation" element={<LitigationList />} />
+            <Route path="litigation/register" element={<Registration />} />
+            <Route path="litigation/:id/hearing" element={<CourtHearing />} />
+            <Route path="litigation/:id/judgement" element={<PostJudgement />} />
+            <Route path="litigation/:id/execution" element={<Execution />} />
+
+            {/* Archive - placeholder */}
+            <Route path="archive" element={<Dashboard />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </FirmProvider>
   );
 }
 

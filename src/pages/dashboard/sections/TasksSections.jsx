@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ListChecks, AlarmClock } from "lucide-react";
-import { SectionCard, Row, PriorityDot, EmptyState } from "../widgets";
+import { SectionCard, Row, PriorityDot, EmptyState } from "@/components/shared/panels";
 import { tasks, overdueTasks, teamWorkload, formatDate, daysUntil } from "../dashboardData";
 import { scopedToOwnWork } from "@/lib/permissions";
 

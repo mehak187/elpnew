@@ -1,5 +1,5 @@
 import { Users, PhoneCall } from "lucide-react";
-import { SectionCard, Row, PriorityDot, EmptyState } from "../widgets";
+import { SectionCard, Row, PriorityDot, EmptyState } from "@/components/shared/panels";
 import { teamWorkload, clientFollowUp } from "../dashboardData";
 
 /** Requirement 27 - who is carrying how much. */

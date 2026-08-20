@@ -1,5 +1,5 @@
 import { Zap, AlertCircle, FileWarning } from "lucide-react";
-import { SectionCard, Row, PriorityDot, EmptyState } from "../widgets";
+import { SectionCard, Row, PriorityDot, EmptyState } from "@/components/shared/panels";
 import {
   urgentActions,
   casesRequiringAttention,

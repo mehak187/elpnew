@@ -1,5 +1,5 @@
 import { Wallet, ReceiptText } from "lucide-react";
-import { SectionCard, Tile, Row, EmptyState } from "../widgets";
+import { SectionCard, Tile, Row, EmptyState } from "@/components/shared/panels";
 import {
   financialSnapshot,
   unbilledCases,

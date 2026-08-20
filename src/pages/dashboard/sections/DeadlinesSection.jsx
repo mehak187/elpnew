@@ -1,7 +1,7 @@
 import { Timer, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { urgencyOf } from "@/lib/deadlines";
-import { SectionCard, Row, PriorityDot, EmptyState } from "../widgets";
+import { SectionCard, Row, PriorityDot, EmptyState } from "@/components/shared/panels";
 import { deadlines, appealDeadlines, daysUntil, formatDate } from "../dashboardData";
 
 const BORDER = {

@@ -23,15 +23,7 @@ export const formatDate = (dateStr) =>
 export const money = (amount) =>
   "OMR " + Math.round(amount).toLocaleString("en-GB");
 
-/**
- * Percentage change between two periods. A previous period of zero has no
- * meaningful percentage, so it is reported as new flow instead of a bogus
- * figure or a division by zero.
- */
-export function changePercent(current, previous) {
-  if (!previous) return { isNew: current > 0, value: null };
-  return { isNew: false, value: Math.round(((current - previous) / previous) * 100) };
-}
+export { changePercent } from "@/lib/metrics";
 
 export const CURRENT_USER = { name: "Mohammed Al Yahyaei", role: "admin" };
 

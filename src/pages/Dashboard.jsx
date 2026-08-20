@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { canView, ROLES, SECTION_KEYS as K } from "@/lib/permissions";
 
-import { StatCard } from "./dashboard/widgets";
+import { StatCard } from "@/components/shared/panels";
 import {
   summaryStats,
   bottomSummary,

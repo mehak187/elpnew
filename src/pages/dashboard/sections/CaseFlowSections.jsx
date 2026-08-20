@@ -13,7 +13,7 @@ import {
 import BarTrendChart from "@/components/shared/BarTrendChart";
 import { TrendingUp, TrendingDown, Activity, UserMinus, Trophy, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SectionCard, Row, EmptyState } from "../widgets";
+import { SectionCard, Row, EmptyState } from "@/components/shared/panels";
 import {
   clientCaseFlow,
   CASE_FLOW_PERIODS,

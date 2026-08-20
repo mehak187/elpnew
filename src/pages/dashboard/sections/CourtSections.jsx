@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Bell, History, Scale } from "lucide-react";
-import { SectionCard, Row, EmptyState } from "../widgets";
+import { SectionCard, Row, EmptyState } from "@/components/shared/panels";
 import {
   courtNotifications,
   recentCaseUpdates,

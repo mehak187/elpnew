@@ -91,3 +91,16 @@ export function canView(role, sectionKey) {
 export function scopedToOwnWork(role) {
   return role === "lawyer";
 }
+
+/* ------------------------------------------------- Law Firm Profile access */
+
+// Firm identity and structure are administrative; only admin may change them.
+export function canEditFirmSettings(role) {
+  return role === "admin";
+}
+
+// Section 7 asks that balances and financial records cannot be altered by
+// unauthorised users, so recording money is limited to these two roles.
+export function canRecordFinance(role) {
+  return role === "admin" || role === "accounting";
+}

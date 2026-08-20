@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Gavel, CalendarClock } from "lucide-react";
-import { SectionCard, Row, EmptyState } from "../widgets";
+import { SectionCard, Row, EmptyState } from "@/components/shared/panels";
 import { todaysHearings, upcomingHearings, formatDate, daysUntil } from "../dashboardData";
 
 const HEARING_STATUS_VARIANT = {
