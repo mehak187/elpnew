@@ -4,6 +4,24 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import DataTable from "@/components/shared/DataTable";
+import ActiveFilters from "@/components/shared/ActiveFilters";
+import { useListFilter } from "@/lib/useListFilter";
+
+const isOverdue = (row) =>
+  row.status !== "Completed" &&
+  Boolean(row.due_date) &&
+  new Date(row.due_date) < new Date(new Date().toDateString());
+
+const FILTERS = {
+  status: { label: "Status", match: (row, value) => row.status === value },
+  priority: { label: "Priority", match: (row, value) => row.priority === value },
+  // Anything past its due date and not yet finished.
+  overdue: {
+    label: "Overdue",
+    display: () => "only",
+    match: (row) => isOverdue(row),
+  },
+};
 import { Calendar, ListTodo } from "lucide-react";
 
 // Sample data
@@ -109,6 +127,9 @@ const columns = [
 export default function Tasks() {
   const [pageSize, setPageSize] = useState(100);
   const [currentPage, setCurrentPage] = useState(1);
+  const { active, apply, clear } = useListFilter(FILTERS);
+
+  const visibleTasks = apply(tasks);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -127,14 +148,20 @@ export default function Tasks() {
         </div>
       </div>
 
+      <ActiveFilters
+        filters={active}
+        onClear={clear}
+        resultCount={visibleTasks.length}
+      />
+
       <Card>
         <CardContent className="p-4 sm:p-6">
           <DataTable
             columns={columns}
-            data={tasks}
+            data={visibleTasks}
             searchPlaceholder="Search tasks..."
             currentPage={currentPage}
-            totalPages={Math.ceil(tasks.length / pageSize)}
+            totalPages={Math.ceil(visibleTasks.length / pageSize)}
             pageSize={pageSize}
             onPageChange={setCurrentPage}
             onPageSizeChange={setPageSize}

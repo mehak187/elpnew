@@ -102,7 +102,7 @@ export function OverdueTasks() {
         {overdueTasks.map((task) => (
           <Row
             key={task.id}
-            to="/profile/tasks"
+            to="/profile/tasks?overdue=1"
             className="border-l-4 border-l-red-500 bg-red-50 hover:bg-red-100"
           >
             <div className="min-w-0">

@@ -138,7 +138,7 @@ export function TodaysBrief({ currentUser }) {
     { count: myOpenTasks, label: "Tasks", icon: ListChecks, to: "/profile/tasks" },
     { count: nearDeadlines, label: "Deadlines", icon: Timer, to: "/litigation" },
     { count: todaysNotifications, label: "Court Updates", icon: Bell, to: "/litigation" },
-    { count: overdueTasks.length, label: "Overdue", icon: AlarmClock, to: "/profile/tasks", alert: true },
+    { count: overdueTasks.length, label: "Overdue", icon: AlarmClock, to: "/profile/tasks?overdue=1", alert: true },
   ];
 
   return (

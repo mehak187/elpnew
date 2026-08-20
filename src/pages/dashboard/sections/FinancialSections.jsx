@@ -15,10 +15,10 @@ export function FinancialSnapshot() {
     <SectionCard title="Financial Snapshot" icon={Wallet}>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Tile label="Total Invoices" value={f.totalInvoices} to="/finance" />
-        <Tile label="Paid Invoices" value={f.paidInvoices} tone="good" to="/finance" />
-        <Tile label="Pending Invoices" value={f.pendingInvoices} tone="warning" to="/finance" />
+        <Tile label="Paid Invoices" value={f.paidInvoices} tone="good" to="/finance?status=Paid" />
+        <Tile label="Pending Invoices" value={f.pendingInvoices} tone="warning" to="/finance?status=Pending" />
         <Tile label="Collected This Month" value={money(f.collectedThisMonth)} tone="good" to="/finance" />
-        <Tile label="Outstanding Amount" value={money(f.outstandingAmount)} tone="high" to="/finance" />
+        <Tile label="Outstanding Amount" value={money(f.outstandingAmount)} tone="high" to="/finance?status=Overdue" />
         <Tile label="Unbilled Legal Work" value={money(f.unbilledWork)} tone="warning" to="/finance" />
         <Tile label="Expenses" value={money(f.expenses)} to="/finance" />
       </div>

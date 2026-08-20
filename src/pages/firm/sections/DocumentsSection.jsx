@@ -492,7 +492,7 @@ export default function DocumentsSection({ initialStatusFilter, canEdit }) {
                         onClick={() =>
                           window.open(document.fileUrl, "_blank", "noopener,noreferrer")
                         }
-                        className="flex items-center gap-2 font-medium text-primary underline-offset-2 hover:underline"
+                        className="flex items-start gap-2 text-left font-medium text-primary underline-offset-2 hover:underline"
                       >
                         <FileText className="h-4 w-4 shrink-0" />
                         {document.name}

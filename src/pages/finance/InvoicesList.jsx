@@ -4,6 +4,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import DataTable from "@/components/shared/DataTable";
+import ActiveFilters from "@/components/shared/ActiveFilters";
+import { useListFilter } from "@/lib/useListFilter";
+
+const FILTERS = {
+  status: { label: "Status", match: (row, value) => row.status === value },
+  client: { label: "Client", match: (row, value) => row.client === value },
+};
 import { Wallet, Plus, Eye, Edit, FileText } from "lucide-react";
 
 const invoices = [
@@ -59,6 +66,9 @@ export default function InvoicesList() {
   const navigate = useNavigate();
   const [pageSize, setPageSize] = useState(100);
   const [currentPage, setCurrentPage] = useState(1);
+  const { active, apply, clear } = useListFilter(FILTERS);
+
+  const visibleInvoices = apply(invoices);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -83,14 +93,20 @@ export default function InvoicesList() {
         </Button>
       </div>
 
+      <ActiveFilters
+        filters={active}
+        onClear={clear}
+        resultCount={visibleInvoices.length}
+      />
+
       <Card>
         <CardContent className="p-4 sm:p-6">
           <DataTable
             columns={columns}
-            data={invoices}
+            data={visibleInvoices}
             searchPlaceholder="Search invoices..."
             currentPage={currentPage}
-            totalPages={Math.ceil(invoices.length / pageSize)}
+            totalPages={Math.ceil(visibleInvoices.length / pageSize)}
             pageSize={pageSize}
             onPageChange={setCurrentPage}
             onPageSizeChange={setPageSize}
