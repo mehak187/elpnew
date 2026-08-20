@@ -5,6 +5,8 @@ import {
   LogOut,
   KeyRound,
   Building2,
+  ListTree,
+  LayoutDashboard,
   Briefcase,
   Scale,
   Wallet,
@@ -18,6 +20,8 @@ import {
   NavigationMenuItem,
   NavigationMenuList,
   NavigationMenuLink,
+  NavigationMenuTrigger,
+  NavigationMenuContent,
 } from "@/components/ui/navigation-menu";
 import {
   DropdownMenu,
@@ -38,10 +42,36 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useFirm } from "@/lib/firm/context";
 
-const navItems = [
-  { name: "Active Cases", path: "/litigation", icon: Scale, key: "litigation" },
-  { name: "Clients", path: "/clients", icon: Users, key: "clients" },
-  // { name: "My Profile", path: "/profile", icon: UserCircle, key: "profile" },
+/**
+ * Header navigation.
+ *
+ * An entry with `items` is a section that opens as a menu; one with `path` is a
+ * plain link. Further pages for Private List go in its `items` array - nothing
+ * else has to change.
+ */
+const navSections = [
+  { name: "Active Cases", path: "/litigation", key: "litigation", icon: Scale },
+  {
+    name: "Private List",
+    key: "private",
+    icon: ListTree,
+    items: [
+      {
+        name: "Dashboard",
+        path: "/dashboard",
+        key: "dashboard",
+        icon: LayoutDashboard,
+        description: "Daily operations and management overview",
+      },
+      {
+        name: "Clients",
+        path: "/clients",
+        key: "clients",
+        icon: Users,
+        description: "Client directory and profiles",
+      },
+    ],
+  },
   // { name: "Corporate Matters", path: "/corporate", icon: Briefcase, key: "corporate" },
   // { name: "Invoices", path: "/finance", icon: Wallet, key: "finance" },
   // { name: "Employees", path: "/employees", icon: Users, key: "employees" },
@@ -56,6 +86,12 @@ export default function Header({ onNavClick, activeNav }) {
   const isActive = (key) => {
     return activeNav === key || location.pathname.startsWith(`/${key}`);
   };
+
+  // A section highlights when any page inside it is open.
+  const isSectionActive = (section) =>
+    section.items
+      ? section.items.some((item) => isActive(item.key))
+      : isActive(section.key);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background">
@@ -75,23 +111,44 @@ export default function Header({ onNavClick, activeNav }) {
               </SheetTitle>
             </SheetHeader>
             <nav className="flex flex-col p-2">
-              {navItems.map((item) => {
-                return (
+              {navSections.map((section) =>
+                section.items ? (
+                  <div key={section.key} className="mt-2">
+                    <p className="px-4 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {section.name}
+                    </p>
+                    {section.items.map((item) => (
+                      <Link
+                        key={item.key}
+                        to={item.path}
+                        onClick={() => onNavClick && onNavClick(item.key)}
+                        className={cn(
+                          "flex items-center mt-1 gap-3 px-4 py-3 rounded-md text-nowrap text-sm font-medium transition-colors",
+                          isActive(item.key)
+                            ? "bg-secondary text-secondary-foreground"
+                            : "text-muted-foreground hover:bg-secondary hover:text-secondary-foreground"
+                        )}
+                      >
+                        {item.name}
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
                   <Link
-                    key={item.key}
-                    to={item.path}
-                    onClick={() => onNavClick && onNavClick(item.key)}
+                    key={section.key}
+                    to={section.path}
+                    onClick={() => onNavClick && onNavClick(section.key)}
                     className={cn(
                       "flex items-center mt-1 gap-3 px-4 py-3 rounded-md text-nowrap text-sm font-medium transition-colors",
-                      isActive(item.key)
+                      isActive(section.key)
                         ? "bg-secondary text-secondary-foreground"
                         : "text-muted-foreground hover:bg-secondary hover:text-secondary-foreground"
                     )}
                   >
-                    {item.name}
+                    {section.name}
                   </Link>
-                );
-              })}
+                )
+              )}
               <Separator className="my-4" />
               <Link
                 to="/settings/password"
@@ -121,27 +178,77 @@ export default function Header({ onNavClick, activeNav }) {
         {/* Desktop Navigation - left aligned, next to logo */}
         <NavigationMenu className="hidden lg:flex ml-8" viewport={false}>
           <NavigationMenuList className="gap-2">
-            {navItems.map((item) => {
-              const active = isActive(item.key);
-              return (
-                <NavigationMenuItem key={item.key}>
-                  <Link
-                    to={item.path}
-                    onClick={() => onNavClick && onNavClick(item.key)}
-                  >
-                    <NavigationMenuLink
-                      className={cn(
-                        "inline-flex items-center gap-2 h-9 rounded-md px-3 py-2 text-sm text-nowrap font-medium transition-colors",
-                        "hover:bg-secondary hover:text-secondary-foreground",
-                        "focus:bg-secondary focus:text-secondary-foreground focus:outline-none",
-                        active
-                          ? "bg-secondary text-secondary-foreground font-semibold"
-                          : "text-muted-foreground"
-                      )}
+            {navSections.map((section) => {
+              const active = isSectionActive(section);
+
+              // A plain link
+              if (!section.items) {
+                return (
+                  <NavigationMenuItem key={section.key}>
+                    <Link
+                      to={section.path}
+                      onClick={() => onNavClick && onNavClick(section.key)}
                     >
-                      <span>{item.name}</span>
-                    </NavigationMenuLink>
-                  </Link>
+                      <NavigationMenuLink
+                        className={cn(
+                          "inline-flex items-center gap-2 h-9 rounded-md px-3 py-2 text-sm text-nowrap font-medium transition-colors",
+                          "hover:bg-secondary hover:text-secondary-foreground",
+                          "focus:bg-secondary focus:text-secondary-foreground focus:outline-none",
+                          active
+                            ? "bg-secondary text-secondary-foreground font-semibold"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        <span>{section.name}</span>
+                      </NavigationMenuLink>
+                    </Link>
+                  </NavigationMenuItem>
+                );
+              }
+
+              // A section that opens as a menu
+              return (
+                <NavigationMenuItem key={section.key}>
+                  <NavigationMenuTrigger
+                    className={cn(
+                      "h-9 px-3 py-2 text-sm font-medium",
+                      active
+                        ? "bg-secondary text-secondary-foreground font-semibold"
+                        : "text-muted-foreground"
+                    )}
+                  >
+                    {section.name}
+                  </NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <ul className="w-72 p-2">
+                      {section.items.map((item) => (
+                        <li key={item.key}>
+                          <NavigationMenuLink asChild>
+                            <Link
+                              to={item.path}
+                              onClick={() => onNavClick && onNavClick(item.key)}
+                              className={cn(
+                                "flex items-start gap-3 rounded-md p-3 transition-colors",
+                                isActive(item.key)
+                                  ? "bg-secondary text-secondary-foreground"
+                                  : "hover:bg-secondary hover:text-secondary-foreground"
+                              )}
+                            >
+                              <item.icon className="mt-0.5 h-4 w-4 shrink-0" />
+                              <span>
+                                <span className="block text-sm font-medium">
+                                  {item.name}
+                                </span>
+                                <span className="block text-xs text-muted-foreground">
+                                  {item.description}
+                                </span>
+                              </span>
+                            </Link>
+                          </NavigationMenuLink>
+                        </li>
+                      ))}
+                    </ul>
+                  </NavigationMenuContent>
                 </NavigationMenuItem>
               );
             })}
