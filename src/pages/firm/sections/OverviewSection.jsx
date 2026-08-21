@@ -167,11 +167,6 @@ export default function OverviewSection({ onNavigateSection }) {
           />
         </div>
       </SectionCard>
-
-      <p className="text-xs text-muted-foreground">
-        Figures are calculated from the firm&apos;s branches, cases, invoices,
-        payments and documents. Selecting any of them opens the related detail.
-      </p>
     </div>
   );
 }

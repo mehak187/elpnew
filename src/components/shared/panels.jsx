@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, Minus, ChevronRight, Lock } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { changePercent } from "@/lib/metrics";
 
@@ -176,15 +176,5 @@ export function Tile({ label, value, to, onClick, tone }) {
 export function EmptyState({ children }) {
   return (
     <p className="py-6 text-center text-sm text-muted-foreground">{children}</p>
-  );
-}
-
-/** Shown in place of an edit control when the current role may only look. */
-export function ReadOnlyNotice({ children }) {
-  return (
-    <div className="flex items-start gap-2 rounded-md border bg-muted/50 p-3 text-xs text-muted-foreground">
-      <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-      <span>{children}</span>
-    </div>
   );
 }

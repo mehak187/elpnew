@@ -3,8 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Info } from "lucide-react";
-import { ReadOnlyNotice } from "@/components/shared/panels";
+import { Plus } from "lucide-react";
 import { useFirm } from "@/lib/firm/context";
 import { nextBranchNumber } from "../firmData";
 
@@ -91,15 +90,6 @@ export default function BranchesSection({ canEdit }) {
               </div>
             </div>
 
-            <div className="flex items-start gap-2 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
-              <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <span>
-                Branch Number {assignedNumber} is assigned automatically and
-                cannot be edited. It is saved with the branch and later used to
-                build the case file number.
-              </span>
-            </div>
-
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setAdding(false)}>
                 Cancel
@@ -110,13 +100,6 @@ export default function BranchesSection({ canEdit }) {
             </div>
           </CardContent>
         </Card>
-      )}
-
-      {!canEdit && (
-        <ReadOnlyNotice>
-          Branches are maintained by Management / Admin. Your role can view
-          the list but not add to it.
-        </ReadOnlyNotice>
       )}
 
       <Card>

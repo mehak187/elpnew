@@ -13,7 +13,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Search, FileText, X, AlertTriangle } from "lucide-react";
-import { ReadOnlyNotice } from "@/components/shared/panels";
 import { useFirm } from "@/lib/firm/context";
 import {
   DOCUMENT_TYPES,
@@ -441,11 +440,6 @@ export default function DocumentsSection({ initialStatusFilter, canEdit }) {
               </div>
             </div>
 
-            <p className="text-xs text-muted-foreground">
-              Status is set automatically from the expiry date. Leave the expiry
-              date empty for documents that do not expire.
-            </p>
-
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setAdding(false)}>
                 Cancel
@@ -541,18 +535,6 @@ export default function DocumentsSection({ initialStatusFilter, canEdit }) {
           </table>
         </CardContent>
       </Card>
-
-      <p className="text-xs text-muted-foreground">
-        Documents are flagged as Expiring Soon within {EXPIRY_WARNING_DAYS} days
-        of their expiry date.
-      </p>
-
-      {!canEdit && (
-        <ReadOnlyNotice>
-          Documents are maintained by Management / Admin and Accounting. Your
-          role can search and open them but not add or remove them.
-        </ReadOnlyNotice>
-      )}
     </div>
   );
 }

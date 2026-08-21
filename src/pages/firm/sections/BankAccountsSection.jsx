@@ -4,8 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Info } from "lucide-react";
-import { ReadOnlyNotice } from "@/components/shared/panels";
+import { Plus } from "lucide-react";
 import { useFirm } from "@/lib/firm/context";
 import { accountBalance, invoices, money } from "../firmData";
 
@@ -110,15 +109,6 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
               </div>
             </div>
 
-            <div className="flex items-start gap-2 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
-              <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <span>
-                The opening balance is recorded as the first transaction. The
-                current balance is then calculated from every transaction after
-                it and cannot be edited by hand.
-              </span>
-            </div>
-
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setAdding(false)}>
                 Cancel
@@ -189,18 +179,7 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
         </CardContent>
       </Card>
 
-      {canEdit ? (
-        <p className="text-xs text-muted-foreground">
-          Select a current balance to open that account&apos;s transaction
-          history.
-        </p>
-      ) : (
-        <ReadOnlyNotice>
-          Bank accounts are maintained by Management / Admin. Your role can
-          view balances and open the transaction history, but not add or
-          disable an account.
-        </ReadOnlyNotice>
-      )}
+
     </div>
   );
 }
