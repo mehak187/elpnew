@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,16 +35,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/shared/panels";
-import {
-  GENERAL_TYPES,
-  DEDICATED_TYPES,
-  isPathComplete,
-} from "@/lib/expenses/taxonomy";
-import ExpenseClassificationPicker from "./ExpenseClassificationPicker";
+import { DEDICATED_TYPES } from "@/lib/expenses/taxonomy";
+import { useExpenses } from "@/lib/expenses/context";
 import { findType } from "./links";
 import {
-  initialInvoices,
-  suppliers,
   PAYMENT_METHODS,
   CREATOR_ROLES,
   STATUS,
@@ -60,28 +55,6 @@ import {
   formatDate,
   money,
 } from "./expenseData";
-
-const emptyLine = () => ({
-  id: Math.floor(performance.now() * 1000),
-  typeKey: "",
-  path: [],
-  linkKind: null,
-  linkId: null,
-  description: "",
-  amountBeforeTax: "",
-  taxAmount: "",
-});
-
-const emptyInvoice = () => ({
-  invoiceDate: dayOffset(0),
-  invoiceNumber: "",
-  supplier: "",
-  invoiceFile: "",
-  supportingDocuments: [],
-  notes: "",
-  creatorRole: "employee",
-  lines: [emptyLine()],
-});
 
 /** The route this invoice takes, with the step it has reached marked. */
 function Route({ invoice }) {
@@ -134,10 +107,8 @@ function Route({ invoice }) {
 }
 
 export default function GeneralInvoices() {
-  const [invoices, setInvoices] = useState(initialInvoices);
-  const [composing, setComposing] = useState(false);
-  const [draft, setDraft] = useState(emptyInvoice());
-  const [error, setError] = useState("");
+  const navigate = useNavigate();
+  const { invoices, updateInvoice } = useExpenses();
 
   // Reason capture for a return or rejection, and the payment dialog.
   const [reasonFor, setReasonFor] = useState(null);
@@ -150,89 +121,14 @@ export default function GeneralInvoices() {
     reference: "",
   });
 
-  const updateLine = (id, changes) =>
-    setDraft((prev) => ({
-      ...prev,
-      lines: prev.lines.map((l) => (l.id === id ? { ...l, ...changes } : l)),
-    }));
-
-  const lineComplete = (line) => {
-    const type = findType(line.typeKey);
-    const classified = isPathComplete(type, line.path);
-    const described = type?.requiresDescription
-      ? line.description.trim().length > 0
-      : true;
-    return classified && described && Number(line.amountBeforeTax) > 0;
-  };
-
-  const draftNet = draft.lines.reduce(
-    (sum, l) => sum + (Number(l.amountBeforeTax) || 0),
-    0
-  );
-  const draftTax = draft.lines.reduce(
-    (sum, l) => sum + (Number(l.taxAmount) || 0),
-    0
-  );
-
-  const submit = () => {
-    if (!draft.invoiceNumber.trim()) return setError("Enter the invoice number.");
-    if (!draft.supplier) return setError("Select the supplier.");
-    if (!draft.invoiceFile) return setError("Attach the invoice.");
-    if (!draft.lines.every(lineComplete))
-      return setError(
-        "Every row needs a full classification and an amount before tax. Other Expenses also needs a description."
-      );
-
-    // An admin-raised invoice skips the accountant entirely.
-    const status = firstReviewFor(draft.creatorRole);
-
-    setInvoices((prev) => [
-      {
-        ...draft,
-        id: prev.reduce((max, i) => Math.max(max, i.id), 0) + 1,
-        reference: "GIN-2026-" + String(prev.length + 1).padStart(3, "0"),
-        createdBy: "Mohammed Al Yahyaei",
-        status,
-        payments: [],
-        history: [
-          {
-            at: dayOffset(0),
-            by: "Mohammed Al Yahyaei",
-            action:
-              draft.creatorRole === "admin"
-                ? "Submitted by Admin - accountant step skipped"
-                : "Submitted",
-            reason: "",
-          },
-        ],
-        lines: draft.lines.map((l) => ({
-          ...l,
-          amountBeforeTax: Number(l.amountBeforeTax),
-          taxAmount: Number(l.taxAmount) || 0,
-        })),
-      },
-      ...prev,
-    ]);
-    setDraft(emptyInvoice());
-    setComposing(false);
-    setError("");
-  };
-
   const record = (invoice, status, action, note = "") =>
-    setInvoices((prev) =>
-      prev.map((i) =>
-        i.id === invoice.id
-          ? {
-              ...i,
-              status,
-              history: [
-                ...i.history,
-                { at: dayOffset(0), by: "Current user", action, reason: note },
-              ],
-            }
-          : i
-      )
-    );
+    updateInvoice(invoice.id, {
+      status,
+      history: [
+        ...invoice.history,
+        { at: dayOffset(0), by: "Current user", action, reason: note },
+      ],
+    });
 
   const approve = (invoice) => {
     if (invoice.status === "accountant") {
@@ -246,34 +142,29 @@ export default function GeneralInvoices() {
     const amount = Number(payment.amount);
     if (!(amount > 0) || !payment.method) return;
 
-    setInvoices((prev) =>
-      prev.map((i) => {
-        if (i.id !== payingFor.id) return i;
-        const updated = {
-          ...i,
-          payments: [
-            ...i.payments,
-            { id: i.payments.length + 1, ...payment, amount },
-          ],
-        };
-        return {
-          ...updated,
-          status: settlementStatus(updated),
-          history: [
-            ...i.history,
-            {
-              at: payment.date,
-              by: "Finance",
-              action:
-                settlementStatus(updated) === "paid"
-                  ? "Payment recorded in full"
-                  : "Part payment recorded",
-              reason: "",
-            },
-          ],
-        };
-      })
-    );
+    const updated = {
+      ...payingFor,
+      payments: [
+        ...payingFor.payments,
+        { id: payingFor.payments.length + 1, ...payment, amount },
+      ],
+    };
+    updateInvoice(payingFor.id, {
+      payments: updated.payments,
+      status: settlementStatus(updated),
+      history: [
+        ...payingFor.history,
+        {
+          at: payment.date,
+          by: "Finance",
+          action:
+            settlementStatus(updated) === "paid"
+              ? "Payment recorded in full"
+              : "Part payment recorded",
+          reason: "",
+        },
+      ],
+    });
     setPayingFor(null);
     setPayment({ date: dayOffset(0), amount: "", method: "", reference: "" });
   };
@@ -295,7 +186,7 @@ export default function GeneralInvoices() {
             </p>
           </div>
         </div>
-        <Button onClick={() => setComposing((v) => !v)}>
+        <Button onClick={() => navigate("/expense-requests/create")}>
           <Plus className="mr-1.5 h-4 w-4" />
           New General Invoice
         </Button>
@@ -334,278 +225,6 @@ export default function GeneralInvoices() {
           </Badge>
         ))}
       </div>
-
-      {/* --------------------------------------------------- new invoice */}
-      {composing && (
-        <Card>
-          <CardContent className="space-y-6 p-4 sm:p-6">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="invoiceDate">Invoice Date *</Label>
-                <Input
-                  id="invoiceDate"
-                  type="date"
-                  value={draft.invoiceDate}
-                  onChange={(e) =>
-                    setDraft({ ...draft, invoiceDate: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="invoiceNumber">Invoice Number *</Label>
-                <Input
-                  id="invoiceNumber"
-                  value={draft.invoiceNumber}
-                  onChange={(e) =>
-                    setDraft({ ...draft, invoiceNumber: e.target.value })
-                  }
-                  placeholder="Supplier invoice number"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="supplier">Supplier *</Label>
-                <Select
-                  value={draft.supplier}
-                  onValueChange={(value) => setDraft({ ...draft, supplier: value })}
-                >
-                  <SelectTrigger id="supplier">
-                    <SelectValue placeholder="Please Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {suppliers.map((name) => (
-                      <SelectItem key={name} value={name}>
-                        {name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Attach Invoice *</Label>
-                {draft.invoiceFile ? (
-                  <div className="flex h-9 items-center justify-between gap-2 rounded-md bg-muted px-3">
-                    <span className="truncate text-sm">{draft.invoiceFile}</span>
-                    <button
-                      type="button"
-                      onClick={() => setDraft({ ...draft, invoiceFile: "" })}
-                      className="shrink-0 text-muted-foreground hover:text-destructive"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                      <span className="sr-only">Remove invoice</span>
-                    </button>
-                  </div>
-                ) : (
-                  <label className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed px-3 text-sm text-muted-foreground hover:bg-muted/50">
-                    <Paperclip className="h-3.5 w-3.5" />
-                    Attach invoice
-                    <Input
-                      type="file"
-                      className="hidden"
-                      onChange={(e) =>
-                        e.target.files[0] &&
-                        setDraft({ ...draft, invoiceFile: e.target.files[0].name })
-                      }
-                    />
-                  </label>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label>Supporting Documents</Label>
-                <label className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed px-3 text-sm text-muted-foreground hover:bg-muted/50">
-                  <Paperclip className="h-3.5 w-3.5" />
-                  {draft.supportingDocuments.length
-                    ? draft.supportingDocuments.length + " attached"
-                    : "Add documents"}
-                  <Input
-                    type="file"
-                    className="hidden"
-                    onChange={(e) =>
-                      e.target.files[0] &&
-                      setDraft({
-                        ...draft,
-                        supportingDocuments: [
-                          ...draft.supportingDocuments,
-                          e.target.files[0].name,
-                        ],
-                      })
-                    }
-                  />
-                </label>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="creatorRole">Raised By *</Label>
-                <Select
-                  value={draft.creatorRole}
-                  onValueChange={(value) =>
-                    setDraft({ ...draft, creatorRole: value })
-                  }
-                >
-                  <SelectTrigger id="creatorRole">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CREATOR_ROLES.map((role) => (
-                      <SelectItem key={role.key} value={role.key}>
-                        {role.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Classification and amounts, one row per expense line */}
-            <div className="space-y-4">
-              {draft.lines.map((line, index) => {
-                const type = findType(line.typeKey);
-                // Amounts and notes stay hidden until the row is classified.
-                const classified = isPathComplete(type, line.path);
-                return (
-                  <div key={line.id} className="rounded-lg border p-4">
-                    <div className="mb-3 flex items-center justify-between">
-                      <p className="text-sm font-medium">Row {index + 1}</p>
-                      <div className="flex items-center gap-3">
-                        {classified && (
-                          <span className="text-xs text-muted-foreground">
-                            Line total {money(lineTotal(line))}
-                          </span>
-                        )}
-                        {draft.lines.length > 1 && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                            onClick={() =>
-                              setDraft({
-                                ...draft,
-                                lines: draft.lines.filter((l) => l.id !== line.id),
-                              })
-                            }
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Remove row {index + 1}</span>
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      <ExpenseClassificationPicker
-                        types={GENERAL_TYPES}
-                        idPrefix={"line-" + line.id}
-                        value={line}
-                        onChange={(next) => updateLine(line.id, next)}
-                      />
-
-                      {classified && (
-                      <div className="space-y-2">
-                        <Label htmlFor={"net-" + line.id}>
-                          Amount Before Tax (OMR) *
-                        </Label>
-                        <Input
-                          id={"net-" + line.id}
-                          type="number"
-                          min="0"
-                          value={line.amountBeforeTax}
-                          onChange={(e) =>
-                            updateLine(line.id, { amountBeforeTax: e.target.value })
-                          }
-                          placeholder="0"
-                        />
-                      </div>
-                      )}
-
-                      {classified && (
-                      <div className="space-y-2">
-                        <Label htmlFor={"tax-" + line.id}>Tax Amount (OMR)</Label>
-                        <Input
-                          id={"tax-" + line.id}
-                          type="number"
-                          min="0"
-                          value={line.taxAmount}
-                          onChange={(e) =>
-                            updateLine(line.id, { taxAmount: e.target.value })
-                          }
-                          placeholder="0"
-                        />
-                      </div>
-                      )}
-
-                      {classified && (
-                      <div className="space-y-2 sm:col-span-2 lg:col-span-3">
-                        <Label htmlFor={"desc-" + line.id}>
-                          Expense Description / Notes
-                          {type?.requiresDescription && " *"}
-                        </Label>
-                        <Input
-                          id={"desc-" + line.id}
-                          value={line.description}
-                          onChange={(e) =>
-                            updateLine(line.id, { description: e.target.value })
-                          }
-                          placeholder={
-                            type?.requiresDescription
-                              ? "Required - explain this expense"
-                              : "What is being claimed"
-                          }
-                          className={cn(
-                            type?.requiresDescription &&
-                              !line.description.trim() &&
-                              "border-amber-400"
-                          )}
-                        />
-                      </div>
-                      )}
-
-                      {!classified && (
-                        <p className="text-xs text-muted-foreground sm:col-span-2 lg:col-span-3">
-                          Choose the expense type, category and subcategory to
-                          continue.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setDraft({ ...draft, lines: [...draft.lines, emptyLine()] })
-                }
-              >
-                <Plus className="mr-1.5 h-4 w-4" />
-                Add Row
-              </Button>
-              <div className="text-sm">
-                <span className="text-muted-foreground">
-                  Before tax {money(draftNet)} · Tax {money(draftTax)} ·{" "}
-                </span>
-                <span className="font-bold text-primary">
-                  Total {money(draftNet + draftTax)}
-                </span>
-              </div>
-            </div>
-
-            {error && <p className="text-sm text-destructive">{error}</p>}
-
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setComposing(false)}>
-                Cancel
-              </Button>
-              <Button onClick={submit}>Submit Invoice</Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* ------------------------------------------------------- invoices */}
       <div className="space-y-4">

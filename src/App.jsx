@@ -25,6 +25,7 @@ import SignIn from "@/pages/settings/SignIn";
 import ExpensesPage from "@/pages/expenses/ExpensesPage";
 import ExpenseForm from "@/pages/expenses/ExpenseForm";
 import GeneralInvoices from "@/pages/expenses/GeneralInvoices";
+import NewInvoice from "@/pages/expenses/NewInvoice";
 
 // Corporate Module
 import CorporateList from "@/pages/corporate/CorporateList";
@@ -63,6 +64,10 @@ function App() {
               <Route path="expenses" element={<ExpensesPage />} />
               <Route path="expenses/create" element={<ExpenseForm />} />
               <Route path="expense-requests" element={<GeneralInvoices />} />
+              <Route
+                path="expense-requests/create"
+                element={<NewInvoice />}
+              />
 
               {/* Root Pages */}
               <Route path="dashboard" element={<Dashboard />} />

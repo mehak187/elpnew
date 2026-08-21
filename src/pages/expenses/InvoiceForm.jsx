@@ -1,0 +1,404 @@
+import { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ReceiptText,
+  FileText,
+  CreditCard,
+  Plus,
+  Trash2,
+  Paperclip,
+  X,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { GENERAL_TYPES, isPathComplete } from "@/lib/expenses/taxonomy";
+import ExpenseClassificationPicker from "./ExpenseClassificationPicker";
+import { findType } from "./links";
+import { suppliers, CREATOR_ROLES, dayOffset, money } from "./expenseData";
+
+/** A titled block of fields, with an optional action in its header. */
+function FormSection({ icon: Icon, title, action, children }) {
+  return (
+    <Card>
+      <div className="flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-6">
+        <div className="flex items-center gap-3">
+          <div className="rounded-lg bg-secondary p-2">
+            {Icon && <Icon className="h-4 w-4 text-secondary-foreground" />}
+          </div>
+          <h2 className="font-semibold text-primary">{title}</h2>
+        </div>
+        {action}
+      </div>
+      <CardContent className="p-4 sm:p-6">{children}</CardContent>
+    </Card>
+  );
+}
+
+const emptyLine = () => ({
+  id: Math.floor(performance.now() * 1000),
+  typeKey: "",
+  path: [],
+  linkKind: null,
+  linkId: null,
+  description: "",
+  amountBeforeTax: "",
+  taxAmount: "",
+});
+
+const lineTotalOf = (line) =>
+  (Number(line.amountBeforeTax) || 0) + (Number(line.taxAmount) || 0);
+
+export default function InvoiceForm({ onCancel, onSubmit }) {
+  const [invoiceDate, setInvoiceDate] = useState(dayOffset(0));
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [supplier, setSupplier] = useState("");
+  const [invoiceFile, setInvoiceFile] = useState("");
+  const [supportingDocuments, setSupportingDocuments] = useState([]);
+  const [creatorRole, setCreatorRole] = useState("employee");
+  const [lines, setLines] = useState([emptyLine()]);
+  const [error, setError] = useState("");
+
+  const updateLine = (id, changes) =>
+    setLines((prev) => prev.map((l) => (l.id === id ? { ...l, ...changes } : l)));
+
+  const lineComplete = (line) => {
+    const type = findType(line.typeKey);
+    const described = type?.requiresDescription
+      ? line.description.trim().length > 0
+      : true;
+    return (
+      isPathComplete(type, line.path) &&
+      described &&
+      Number(line.amountBeforeTax) > 0
+    );
+  };
+
+  const net = lines.reduce((sum, l) => sum + (Number(l.amountBeforeTax) || 0), 0);
+  const tax = lines.reduce((sum, l) => sum + (Number(l.taxAmount) || 0), 0);
+  const total = net + tax;
+
+  const submit = () => {
+    if (!invoiceNumber.trim()) return setError("Enter the invoice number.");
+    if (!supplier) return setError("Select the supplier.");
+    if (!invoiceFile) return setError("Attach the invoice.");
+    if (!lines.every(lineComplete))
+      return setError(
+        "Every row needs a full classification and an amount before tax. Other Expenses also needs a description."
+      );
+
+    onSubmit({
+      invoiceDate,
+      invoiceNumber,
+      supplier,
+      invoiceFile,
+      supportingDocuments,
+      creatorRole,
+      lines: lines.map((l) => ({
+        ...l,
+        amountBeforeTax: Number(l.amountBeforeTax),
+        taxAmount: Number(l.taxAmount) || 0,
+      })),
+    });
+  };
+
+  return (
+    <div className="space-y-4 sm:space-y-6">
+      {/* ------------------------------------------------------ Invoice Data */}
+      <FormSection icon={ReceiptText} title="Invoice Data">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="invoiceDate">Invoice Date *</Label>
+            <Input
+              id="invoiceDate"
+              type="date"
+              value={invoiceDate}
+              onChange={(e) => setInvoiceDate(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="invoiceNumber">Invoice Number *</Label>
+            <Input
+              id="invoiceNumber"
+              value={invoiceNumber}
+              onChange={(e) => setInvoiceNumber(e.target.value)}
+              placeholder="Supplier invoice number"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="supplier">Supplier *</Label>
+            <Select value={supplier} onValueChange={setSupplier}>
+              <SelectTrigger id="supplier">
+                <SelectValue placeholder="Please Select" />
+              </SelectTrigger>
+              <SelectContent>
+                {suppliers.map((name) => (
+                  <SelectItem key={name} value={name}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Attach Invoice *</Label>
+            {invoiceFile ? (
+              <div className="flex h-9 items-center justify-between gap-2 rounded-md bg-muted px-3">
+                <span className="truncate text-sm">{invoiceFile}</span>
+                <button
+                  type="button"
+                  onClick={() => setInvoiceFile("")}
+                  className="shrink-0 text-muted-foreground hover:text-destructive"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  <span className="sr-only">Remove invoice</span>
+                </button>
+              </div>
+            ) : (
+              <label className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed px-3 text-sm text-muted-foreground hover:bg-muted/50">
+                <Paperclip className="h-3.5 w-3.5" />
+                Attach invoice
+                <Input
+                  type="file"
+                  className="hidden"
+                  onChange={(e) =>
+                    e.target.files[0] && setInvoiceFile(e.target.files[0].name)
+                  }
+                />
+              </label>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Supporting Documents</Label>
+            <label className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed px-3 text-sm text-muted-foreground hover:bg-muted/50">
+              <Paperclip className="h-3.5 w-3.5" />
+              {supportingDocuments.length
+                ? supportingDocuments.length + " attached"
+                : "Add documents"}
+              <Input
+                type="file"
+                className="hidden"
+                onChange={(e) =>
+                  e.target.files[0] &&
+                  setSupportingDocuments((prev) => [
+                    ...prev,
+                    e.target.files[0].name,
+                  ])
+                }
+              />
+            </label>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="creatorRole">Raised By *</Label>
+            <Select value={creatorRole} onValueChange={setCreatorRole}>
+              <SelectTrigger id="creatorRole">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CREATOR_ROLES.map((role) => (
+                  <SelectItem key={role.key} value={role.key}>
+                    {role.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </FormSection>
+
+      {/* --------------------------------------------------- Expense Details */}
+      <FormSection
+        icon={FileText}
+        title="Expense Details"
+        action={
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            title="Add a row"
+            onClick={() => setLines((prev) => [...prev, emptyLine()])}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        }
+      >
+        <div className="space-y-5">
+          {lines.map((line, index) => {
+            const type = findType(line.typeKey);
+            const classified = isPathComplete(type, line.path);
+
+            return (
+              <div
+                key={line.id}
+                className={cn(index > 0 && "border-t pt-5", "space-y-4")}
+              >
+                {lines.length > 1 && (
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Row {index + 1}
+                    </p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      onClick={() =>
+                        setLines((prev) => prev.filter((l) => l.id !== line.id))
+                      }
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Remove row {index + 1}</span>
+                    </Button>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
+                  <ExpenseClassificationPicker
+                    types={GENERAL_TYPES}
+                    idPrefix={"line-" + line.id}
+                    value={line}
+                    onChange={(next) => updateLine(line.id, next)}
+                  />
+
+                  {classified && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor={"net-" + line.id}>
+                          Amount Before Tax (OMR) *
+                        </Label>
+                        <Input
+                          id={"net-" + line.id}
+                          type="number"
+                          min="0"
+                          value={line.amountBeforeTax}
+                          onChange={(e) =>
+                            updateLine(line.id, { amountBeforeTax: e.target.value })
+                          }
+                          placeholder="0.00"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor={"tax-" + line.id}>Tax Amount (OMR)</Label>
+                        <Input
+                          id={"tax-" + line.id}
+                          type="number"
+                          min="0"
+                          value={line.taxAmount}
+                          onChange={(e) =>
+                            updateLine(line.id, { taxAmount: e.target.value })
+                          }
+                          placeholder="0.00"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor={"linetotal-" + line.id}>
+                          Total Amount (OMR)
+                        </Label>
+                        <Input
+                          id={"linetotal-" + line.id}
+                          value={lineTotalOf(line).toFixed(2)}
+                          readOnly
+                          disabled
+                          className="bg-muted"
+                        />
+                      </div>
+
+                      <div className="space-y-2 sm:col-span-2 lg:col-span-3">
+                        <Label htmlFor={"desc-" + line.id}>
+                          Expense Description / Notes
+                          {type?.requiresDescription && " *"}
+                        </Label>
+                        <Input
+                          id={"desc-" + line.id}
+                          value={line.description}
+                          onChange={(e) =>
+                            updateLine(line.id, { description: e.target.value })
+                          }
+                          placeholder="What is being claimed"
+                          className={cn(
+                            type?.requiresDescription &&
+                              !line.description.trim() &&
+                              "border-amber-400"
+                          )}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {!classified && (
+                    <p className="self-end pb-2 text-sm text-muted-foreground sm:col-span-2 lg:col-span-3">
+                      Choose the expense type, category and subcategory to
+                      continue.
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </FormSection>
+
+      {/* ------------------------------------------------------------ Totals */}
+      <FormSection icon={CreditCard} title="Total Amount">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="netTotal">Amount Before Tax (OMR)</Label>
+            <Input
+              id="netTotal"
+              value={net.toFixed(2)}
+              readOnly
+              disabled
+              className="bg-muted"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="taxTotal">Tax Amount (OMR)</Label>
+            <Input
+              id="taxTotal"
+              value={tax.toFixed(2)}
+              readOnly
+              disabled
+              className="bg-muted"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="invoiceTotal">Total Amount (OMR)</Label>
+            <Input
+              id="invoiceTotal"
+              value={total.toFixed(2)}
+              readOnly
+              disabled
+              className="bg-muted font-bold text-primary"
+            />
+          </div>
+        </div>
+      </FormSection>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button onClick={submit}>Submit Invoice &mdash; {money(total)}</Button>
+      </div>
+    </div>
+  );
+}
