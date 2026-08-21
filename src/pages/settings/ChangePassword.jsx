@@ -275,14 +275,6 @@ export default function ChangePassword() {
           </form>
         </CardContent>
       </Card>
-
-      <div className="flex items-start gap-2 px-1 text-xs text-muted-foreground">
-        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        <span>
-          Use a password you do not use anywhere else. You will stay signed in on
-          this device after changing it.
-        </span>
-      </div>
     </div>
   );
 }

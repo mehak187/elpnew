@@ -86,10 +86,6 @@ export default function SignIn() {
               Sign In
             </Button>
           </form>
-
-          <p className="text-center text-xs text-muted-foreground">
-            Authentication is not connected yet. Any details sign you in.
-          </p>
         </CardContent>
       </Card>
     </div>

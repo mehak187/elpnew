@@ -1,7 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ReadOnlyNotice } from "@/components/shared/panels";
 import { useFirm } from "@/lib/firm/context";
 import { daysUntil, formatDate, EXPIRY_WARNING_DAYS } from "../firmData";
 
@@ -108,17 +107,7 @@ export default function FirmInformationSection({ canEdit }) {
         </div>
       </div>
 
-      {canEdit ? (
-        <p className="text-xs text-muted-foreground">
-          The firm name recorded here is what the rest of the system displays.
-          It is not entered again anywhere else.
-        </p>
-      ) : (
-        <ReadOnlyNotice>
-          Firm details are maintained by Management / Admin. Your role can view
-          them but not change them.
-        </ReadOnlyNotice>
-      )}
+
     </div>
   );
 }

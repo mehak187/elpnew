@@ -365,11 +365,6 @@ export default function TransactionsSection({ initialAccountId, canRecord }) {
           </table>
         </CardContent>
       </Card>
-
-      <p className="text-xs text-muted-foreground">
-        The balance column is the running total of every row above it. Recording
-        income or an expense is the only way the balance changes.
-      </p>
     </div>
   );
 }

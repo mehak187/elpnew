@@ -1,4 +1,5 @@
 import { Input } from "@/components/ui/input";
+import { MessageCircle, Mail } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -38,6 +39,13 @@ export default function ContactSection({ formData, onChange, onSelectChange }) {
         />
       </div>
 
+      {/* Communication Methods */}
+      <div className="space-y-2 sm:col-span-2 lg:col-span-3">
+        <p className="text-sm font-semibold text-primary">
+          Communication Methods
+        </p>
+      </div>
+
       {/* Language of Communication */}
       <div className="space-y-2">
         <Label htmlFor="languageOfCommunication">
@@ -59,6 +67,66 @@ export default function ContactSection({ formData, onChange, onSelectChange }) {
           </SelectContent>
         </Select>
       </div>
+
+      {/* Instant WhatsApp Notification */}
+      <div className="space-y-2">
+        <Label
+          htmlFor="whatsappNotification"
+          className="flex items-center gap-1.5"
+        >
+          <MessageCircle className="h-3.5 w-3.5 text-muted-foreground" />
+          Instant WhatsApp Notification
+        </Label>
+        <Select
+          value={formData.whatsappNotification}
+          onValueChange={(value) => onSelectChange("whatsappNotification", value)}
+        >
+          <SelectTrigger id="whatsappNotification">
+            <SelectValue placeholder="Please Select" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Yes">Yes</SelectItem>
+            <SelectItem value="No">No</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Instant Email Notification */}
+      <div className="space-y-2">
+        <Label htmlFor="emailNotification" className="flex items-center gap-1.5">
+          <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+          Instant Email Notification
+        </Label>
+        <Select
+          value={formData.emailNotification}
+          onValueChange={(value) => onSelectChange("emailNotification", value)}
+        >
+          <SelectTrigger id="emailNotification">
+            <SelectValue placeholder="Please Select" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Yes">Yes</SelectItem>
+            <SelectItem value="No">No</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Both channels fire on every saved update, so say so plainly. */}
+      {(formData.whatsappNotification === "Yes" ||
+        formData.emailNotification === "Yes") && (
+        <div className="sm:col-span-2 lg:col-span-3">
+          <p className="rounded-md border-l-4 border-l-blue-500 bg-blue-50 px-3 py-2 text-xs text-blue-900">
+            Every update saved against this client is sent immediately by
+            {formData.whatsappNotification === "Yes" &&
+            formData.emailNotification === "Yes"
+              ? " WhatsApp and email"
+              : formData.whatsappNotification === "Yes"
+              ? " WhatsApp"
+              : " email"}
+            .
+          </p>
+        </div>
+      )}
     </div>
   );
 }

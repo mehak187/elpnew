@@ -43,7 +43,13 @@ const SECTIONS = [
     key: "contact",
     label: "Contact Details",
     form: true,
-    required: () => ["mobile", "email", "languageOfCommunication"],
+    required: () => [
+      "mobile",
+      "email",
+      "languageOfCommunication",
+      "whatsappNotification",
+      "emailNotification",
+    ],
   },
   {
     key: "financial",
@@ -67,11 +73,11 @@ const SECTIONS = [
 
 // Mock client data - in real app, this would come from API
 const clientsData = [
-  { id: 1, clientNo: "1", type: "Commercial Company", clientName: "ABC Holdings LLC", arabicName: "شركة ABC القابضة", referenceNo: "REF-2024-001", dateOfRegistration: "2024-01-15", referenceExpiryDate: "2025-06-15", poaExpiryDate: "2025-12-31", vatinNo: "OM123456789", email: "john@abc.com", mobile: "+968 2411 1111", receivingBank: "Bank Muscat", receivingAccount: "1234567890", commissionRate: "10", payFeesOnBehalf: "Yes", paymentDelayPeriod: "30", paymentDelayCustomDays: "", languageOfCommunication: "English", closeDate: "", activeCases: 3, mergedIntoClientNo: null, statusOverride: null },
-  { id: 2, clientNo: "2", type: "Individual", clientName: "Fatima Rashid", arabicName: "فاطمة راشد", referenceNo: "REF-2024-002", dateOfRegistration: "2024-02-20", referenceExpiryDate: "2025-11-05", poaExpiryDate: "2026-03-12", vatinNo: "", email: "fatima@email.com", mobile: "+968 9234 5678", receivingBank: "National Bank of Oman", receivingAccount: "0987654321", commissionRate: "7.5", payFeesOnBehalf: "No", paymentDelayPeriod: "15", paymentDelayCustomDays: "", languageOfCommunication: "Arabic", closeDate: "", activeCases: 1, mergedIntoClientNo: null, statusOverride: null },
-  { id: 3, clientNo: "3", type: "Commercial Company", clientName: "Al Madina Trading", arabicName: "شركة المدينة للتجارة", referenceNo: "REF-2024-003", dateOfRegistration: "2024-03-10", referenceExpiryDate: "2025-07-22", poaExpiryDate: "2026-02-10", vatinNo: "OM987654321", email: "ahmed@almadina.com", mobile: "+968 2422 2222", receivingBank: "Bank Dhofar", receivingAccount: "5678901234", commissionRate: "12", payFeesOnBehalf: "Yes", paymentDelayPeriod: "60", paymentDelayCustomDays: "", languageOfCommunication: "Both", closeDate: "", activeCases: 2, mergedIntoClientNo: null, statusOverride: null },
-  { id: 4, clientNo: "4", type: "Commercial Company", clientName: "Gulf Construction Co", arabicName: "شركة الخليج للإنشاءات", referenceNo: "REF-2024-004", dateOfRegistration: "2024-04-05", referenceExpiryDate: "2025-09-12", poaExpiryDate: "2026-04-05", vatinNo: "OM456789123", email: "khalid@gulfconst.com", mobile: "+968 2433 3333", receivingBank: "Oman Arab Bank", receivingAccount: "3456789012", commissionRate: "10", payFeesOnBehalf: "No", paymentDelayPeriod: "custom", paymentDelayCustomDays: "75", languageOfCommunication: "English", closeDate: "", activeCases: 1, mergedIntoClientNo: null, statusOverride: null },
-  { id: 5, clientNo: "5", type: "Individual", clientName: "Ahmed Al Lawati", arabicName: "أحمد اللواتي", referenceNo: "REF-2024-005", dateOfRegistration: "2024-05-01", referenceExpiryDate: "2025-03-08", poaExpiryDate: "2025-09-22", vatinNo: "", email: "ahmed.lawati@email.com", mobile: "+968 9345 6789", receivingBank: "Bank Muscat", receivingAccount: "7890123456", commissionRate: "8", payFeesOnBehalf: "No", paymentDelayPeriod: "45", paymentDelayCustomDays: "", languageOfCommunication: "Both", closeDate: "", activeCases: 0, mergedIntoClientNo: "1", statusOverride: null },
+  { id: 1, clientNo: "1", type: "Commercial Company", clientName: "ABC Holdings LLC", arabicName: "شركة ABC القابضة", referenceNo: "REF-2024-001", dateOfRegistration: "2024-01-15", referenceExpiryDate: "2025-06-15", poaExpiryDate: "2025-12-31", vatinNo: "OM123456789", email: "john@abc.com", mobile: "+968 2411 1111", receivingBank: "Bank Muscat", receivingAccount: "1234567890", commissionRate: "10", payFeesOnBehalf: "Yes", paymentDelayPeriod: "30", paymentDelayCustomDays: "", languageOfCommunication: "English", whatsappNotification: "Yes", emailNotification: "No", closeDate: "", activeCases: 3, mergedIntoClientNo: null, statusOverride: null },
+  { id: 2, clientNo: "2", type: "Individual", clientName: "Fatima Rashid", arabicName: "فاطمة راشد", referenceNo: "REF-2024-002", dateOfRegistration: "2024-02-20", referenceExpiryDate: "2025-11-05", poaExpiryDate: "2026-03-12", vatinNo: "", email: "fatima@email.com", mobile: "+968 9234 5678", receivingBank: "National Bank of Oman", receivingAccount: "0987654321", commissionRate: "7.5", payFeesOnBehalf: "No", paymentDelayPeriod: "15", paymentDelayCustomDays: "", languageOfCommunication: "Arabic", whatsappNotification: "Yes", emailNotification: "No", closeDate: "", activeCases: 1, mergedIntoClientNo: null, statusOverride: null },
+  { id: 3, clientNo: "3", type: "Commercial Company", clientName: "Al Madina Trading", arabicName: "شركة المدينة للتجارة", referenceNo: "REF-2024-003", dateOfRegistration: "2024-03-10", referenceExpiryDate: "2025-07-22", poaExpiryDate: "2026-02-10", vatinNo: "OM987654321", email: "ahmed@almadina.com", mobile: "+968 2422 2222", receivingBank: "Bank Dhofar", receivingAccount: "5678901234", commissionRate: "12", payFeesOnBehalf: "Yes", paymentDelayPeriod: "60", paymentDelayCustomDays: "", languageOfCommunication: "Both", whatsappNotification: "Yes", emailNotification: "No", closeDate: "", activeCases: 2, mergedIntoClientNo: null, statusOverride: null },
+  { id: 4, clientNo: "4", type: "Commercial Company", clientName: "Gulf Construction Co", arabicName: "شركة الخليج للإنشاءات", referenceNo: "REF-2024-004", dateOfRegistration: "2024-04-05", referenceExpiryDate: "2025-09-12", poaExpiryDate: "2026-04-05", vatinNo: "OM456789123", email: "khalid@gulfconst.com", mobile: "+968 2433 3333", receivingBank: "Oman Arab Bank", receivingAccount: "3456789012", commissionRate: "10", payFeesOnBehalf: "No", paymentDelayPeriod: "custom", paymentDelayCustomDays: "75", languageOfCommunication: "English", whatsappNotification: "Yes", emailNotification: "No", closeDate: "", activeCases: 1, mergedIntoClientNo: null, statusOverride: null },
+  { id: 5, clientNo: "5", type: "Individual", clientName: "Ahmed Al Lawati", arabicName: "أحمد اللواتي", referenceNo: "REF-2024-005", dateOfRegistration: "2024-05-01", referenceExpiryDate: "2025-03-08", poaExpiryDate: "2025-09-22", vatinNo: "", email: "ahmed.lawati@email.com", mobile: "+968 9345 6789", receivingBank: "Bank Muscat", receivingAccount: "7890123456", commissionRate: "8", payFeesOnBehalf: "No", paymentDelayPeriod: "45", paymentDelayCustomDays: "", languageOfCommunication: "Both", whatsappNotification: "Yes", emailNotification: "No", closeDate: "", activeCases: 0, mergedIntoClientNo: "1", statusOverride: null },
 ];
 
 const toFormData = (record) =>
@@ -94,6 +100,8 @@ const toFormData = (record) =>
         paymentDelayPeriod: record.paymentDelayPeriod || "",
         paymentDelayCustomDays: record.paymentDelayCustomDays || "",
         languageOfCommunication: record.languageOfCommunication || "",
+        whatsappNotification: record.whatsappNotification || "No",
+        emailNotification: record.emailNotification || "No",
         closeDate: record.closeDate || "",
       };
 
@@ -114,6 +122,8 @@ const emptyFormData = {
   paymentDelayPeriod: "",
   paymentDelayCustomDays: "",
   languageOfCommunication: "",
+  whatsappNotification: "No",
+  emailNotification: "No",
   closeDate: "",
 };
 

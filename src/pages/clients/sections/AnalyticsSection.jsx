@@ -47,11 +47,6 @@ export default function AnalyticsSection() {
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-muted-foreground">
-        Based on cases and transactions only. Invoices and payment status are
-        deliberately excluded.
-      </p>
-
       {/* Lifetime activity */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <Metric
