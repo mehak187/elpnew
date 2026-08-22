@@ -47,13 +47,13 @@ import { useFirm } from "@/lib/firm/context";
  * Header navigation.
  *
  * An entry with `items` is a section that opens as a menu; one with `path` is a
- * plain link. Further pages for Private List go in its `items` array - nothing
+ * plain link. Further pages for the Partner Menu go in its `items` array - nothing
  * else has to change.
  */
 const navSections = [
   { name: "Active Cases", path: "/litigation", key: "litigation", icon: Scale },
   {
-    name: "Private List",
+    name: "Partner Menu",
     key: "private",
     icon: ListTree,
     items: [
@@ -70,13 +70,6 @@ const navSections = [
         key: "clients",
         icon: Users,
         description: "Client directory and profiles",
-      },
-      {
-        name: "Expenses",
-        path: "/expenses",
-        key: "expenses",
-        icon: Wallet,
-        description: "Expense types, categories and recorded expenses",
       },
     ],
   },

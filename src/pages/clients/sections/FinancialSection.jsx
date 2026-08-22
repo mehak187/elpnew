@@ -9,13 +9,6 @@ import {
 } from "@/components/ui/select";
 import { RECEIVING_BANKS, PAYMENT_DELAY_OPTIONS } from "@/lib/constants";
 
-// Digits and at most one decimal point - the % is drawn by the field, never typed.
-const toRate = (raw) => {
-  const cleaned = raw.replace(/[^\d.]/g, "");
-  const [whole, ...rest] = cleaned.split(".");
-  return rest.length ? `${whole}.${rest.join("")}` : whole;
-};
-
 export default function FinancialSection({
   formData,
   clientType,
@@ -23,7 +16,7 @@ export default function FinancialSection({
   onSelectChange,
 }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
       {/* VATIN No. - entities only, individuals have none */}
       {clientType !== "Individual" && (
         <div className="space-y-2">
@@ -70,31 +63,6 @@ export default function FinancialSection({
           placeholder="Enter account number"
           required
         />
-      </div>
-
-      {/* Commission Rate - the user types 10, the field shows the % */}
-      <div className="space-y-2">
-        <Label htmlFor="commissionRate">Commission Rate</Label>
-        <div className="relative">
-          <Input
-            id="commissionRate"
-            name="commissionRate"
-            type="text"
-            inputMode="decimal"
-            value={formData.commissionRate}
-            onChange={(e) =>
-              onSelectChange("commissionRate", toRate(e.target.value))
-            }
-            placeholder="0"
-            className="pr-8"
-          />
-          <span
-            aria-hidden="true"
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none select-none"
-          >
-            %
-          </span>
-        </div>
       </div>
 
       {/* Pay Fees on Their Behalf */}

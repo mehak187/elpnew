@@ -113,7 +113,7 @@ export default function CourtHearing() {
           <CardContent className="p-4 sm:p-6">
             <form onSubmit={handleSubmit} className="space-y-4">
               <h3 className="font-semibold text-primary">Add New Hearing</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="date">Hearing Date *</Label>
                   <Input

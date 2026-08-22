@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -18,35 +19,53 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ArrowRight, Check, Info } from "lucide-react";
-import { clientDirectory, MERGE_TRANSFER_ITEMS } from "../clientMockData";
+import SearchableSelect from "@/components/shared/SearchableSelect";
+import { ArrowRight, Check } from "lucide-react";
+import { clientRecords } from "../clientRecords";
+import { MERGE_TRANSFER_ITEMS } from "../clientMockData";
 
 // Stands in for the signed-in user until auth is wired up.
 const CURRENT_USER = "Mohammed Al Yahyaei";
 
-const nameOf = (clientNo) =>
-  clientDirectory.find((c) => c.clientNo === clientNo)?.clientName || "";
-
-export default function MergeSection() {
+export default function MergeSection({ client }) {
   const navigate = useNavigate();
-  const [oldClientOne, setOldClientOne] = useState("");
-  const [oldClientTwo, setOldClientTwo] = useState("");
-  const [targetClient, setTargetClient] = useState("");
+
+  // The profile being viewed is always the first of the two, so it is stated
+  // rather than chosen.
+  const [otherId, setOtherId] = useState("");
+  const [survivorId, setSurvivorId] = useState(String(client.id));
+  const [resultingName, setResultingName] = useState(client.clientName);
+  const [nameEdited, setNameEdited] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [result, setResult] = useState(null);
 
-  const oldClients = [oldClientOne, oldClientTwo].filter(Boolean);
+  const other = clientRecords.find((c) => String(c.id) === otherId) || null;
+  const survivorOptions = [client, other].filter(Boolean);
 
-  // A client cannot be merged into itself, and the same record cannot sit on
-  // both sides of the merge.
-  const isTargetValid = targetClient && !oldClients.includes(targetClient);
-  const canMerge =
-    oldClientOne && oldClientTwo && oldClientOne !== oldClientTwo && isTargetValid;
+  /* The name follows whichever client survives, until it is typed over. */
+  const chooseSurvivor = (id) => {
+    setSurvivorId(id);
+    if (!nameEdited) {
+      const picked = survivorOptions.find((c) => String(c.id) === id);
+      if (picked) setResultingName(picked.clientName);
+    }
+  };
+
+  const chooseOther = (id) => {
+    setOtherId(id);
+    // Picking a different second client cannot leave it selected as survivor.
+    if (survivorId !== String(client.id)) {
+      setSurvivorId(String(client.id));
+      if (!nameEdited) setResultingName(client.clientName);
+    }
+  };
+
+  const canMerge = other && resultingName.trim();
 
   const handleMerge = () => {
     setResult({
-      mergedFrom: oldClients.map(nameOf),
-      mergedInto: nameOf(targetClient),
+      mergedFrom: [client.clientName, other.clientName],
+      resultingName: resultingName.trim(),
       mergeDate: new Date().toISOString().slice(0, 10),
       performedBy: CURRENT_USER,
     });
@@ -56,19 +75,20 @@ export default function MergeSection() {
   if (result) {
     return (
       <Card>
-        <CardContent className="p-6 space-y-4">
+        <CardContent className="space-y-4 p-6">
           <div className="flex items-center gap-2 text-green-600">
             <Check className="h-5 w-5" />
             <h3 className="font-semibold">Merge completed</h3>
           </div>
+
           <div className="space-y-1 text-sm">
             <p>
               <span className="text-muted-foreground">Merged clients: </span>
-              {result.mergedFrom.join(", ")}
+              {result.mergedFrom.join(" + ")}
             </p>
             <p>
-              <span className="text-muted-foreground">Merged into: </span>
-              <span className="font-medium">{result.mergedInto}</span>
+              <span className="text-muted-foreground">Resulting client: </span>
+              <span className="font-medium">{result.resultingName}</span>
             </p>
             <p>
               <span className="text-muted-foreground">Merge date: </span>
@@ -79,13 +99,32 @@ export default function MergeSection() {
               {result.performedBy}
             </p>
           </div>
+
+          <div className="rounded-md border bg-muted/30 p-4">
+            <p className="mb-2 text-sm font-medium">
+              Moved to {result.resultingName}
+            </p>
+            <ul className="grid grid-cols-1 gap-1 text-sm text-muted-foreground sm:grid-cols-2 lg:grid-cols-3">
+              {MERGE_TRANSFER_ITEMS.map((item) => (
+                <li key={item} className="flex items-center gap-2">
+                  <Check className="h-3 w-3 shrink-0 text-green-600" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+
           <p className="text-sm text-muted-foreground">
-            The old clients were kept, not deleted. Their status is now Merged
-            and each profile shows which client it was merged into.
+            Both original clients were kept, not deleted. Their status is now
+            Merged and each profile shows where its records went.
           </p>
-          <Button variant="outline" onClick={() => setResult(null)}>
-            Merge another pair
-          </Button>
+
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setResult(null)}>
+              Merge another client
+            </Button>
+            <Button onClick={() => navigate("/clients")}>Back to Clients</Button>
+          </div>
         </CardContent>
       </Card>
     );
@@ -94,56 +133,52 @@ export default function MergeSection() {
   return (
     <div className="space-y-6">
       <Card>
-        <CardContent className="p-4 space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <CardContent className="space-y-4 p-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-2">
-              <Label htmlFor="oldClientOne">Old Client 1 *</Label>
-              <Select value={oldClientOne} onValueChange={setOldClientOne}>
-                <SelectTrigger id="oldClientOne">
-                  <SelectValue placeholder="Select client" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clientDirectory.map((client) => (
-                    <SelectItem key={client.clientNo} value={client.clientNo}>
-                      {client.clientNo} - {client.clientName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="oldClientOne">Old Client 1</Label>
+              <Input
+                id="oldClientOne"
+                value={client.clientNo + " - " + client.clientName}
+                readOnly
+                disabled
+                className="bg-muted"
+              />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="oldClientTwo">Old Client 2 *</Label>
-              <Select value={oldClientTwo} onValueChange={setOldClientTwo}>
-                <SelectTrigger id="oldClientTwo">
-                  <SelectValue placeholder="Select client" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clientDirectory
-                    .filter((client) => client.clientNo !== oldClientOne)
-                    .map((client) => (
-                      <SelectItem key={client.clientNo} value={client.clientNo}>
-                        {client.clientNo} - {client.clientName}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                id="oldClientTwo"
+                value={otherId}
+                onValueChange={chooseOther}
+                options={clientRecords
+                  .filter((c) => c.id !== client.id)
+                  .map((c) => ({
+                    value: String(c.id),
+                    label: c.clientNo + " - " + c.clientName,
+                  }))}
+                placeholder="Select client"
+                searchPlaceholder="Search by number or name..."
+              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="targetClient">Resulting Client *</Label>
-              <Select value={targetClient} onValueChange={setTargetClient}>
-                <SelectTrigger id="targetClient">
+              <Label htmlFor="survivor">Resulting Client *</Label>
+              <Select
+                value={survivorId}
+                onValueChange={chooseSurvivor}
+                disabled={!other}
+              >
+                <SelectTrigger id="survivor">
                   <SelectValue placeholder="Select client" />
                 </SelectTrigger>
                 <SelectContent>
-                  {clientDirectory
-                    .filter((client) => !oldClients.includes(client.clientNo))
-                    .map((client) => (
-                      <SelectItem key={client.clientNo} value={client.clientNo}>
-                        {client.clientNo} - {client.clientName}
-                      </SelectItem>
-                    ))}
+                  {survivorOptions.map((option) => (
+                    <SelectItem key={option.id} value={String(option.id)}>
+                      {option.clientNo} - {option.clientName}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <button
@@ -154,24 +189,20 @@ export default function MergeSection() {
                 Or create a new client
               </button>
             </div>
-          </div>
 
-          {/* What the merge will move */}
-          <div className="rounded-md border bg-muted/30 p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Info className="h-4 w-4 text-muted-foreground" />
-              <p className="text-sm font-medium">
-                Everything below is transferred to the resulting client
-              </p>
+            {/* Defaults to the surviving client's name, but can be changed. */}
+            <div className="space-y-2">
+              <Label htmlFor="resultingName">Resulting Client Name *</Label>
+              <Input
+                id="resultingName"
+                value={resultingName}
+                onChange={(e) => {
+                  setResultingName(e.target.value);
+                  setNameEdited(true);
+                }}
+                placeholder="Enter the name to keep"
+              />
             </div>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1 text-sm text-muted-foreground">
-              {MERGE_TRANSFER_ITEMS.map((item) => (
-                <li key={item} className="flex items-center gap-2">
-                  <ArrowRight className="h-3 w-3 shrink-0" />
-                  {item}
-                </li>
-              ))}
-            </ul>
           </div>
 
           <div className="flex justify-end">
@@ -191,24 +222,31 @@ export default function MergeSection() {
           <DialogHeader>
             <DialogTitle>Confirm merge</DialogTitle>
             <DialogDescription>
-              This links all history from the selected clients to the resulting
-              client. It is recorded against your name and cannot be undone from
-              this screen.
+              Everything below moves to the resulting client. It is recorded
+              against your name and cannot be undone from this screen.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 text-sm">
-            <p>
-              <span className="text-muted-foreground">Merging: </span>
-              {oldClients.map(nameOf).join(" + ")}
+
+          <div className="space-y-3 text-sm">
+            <p className="flex flex-wrap items-center gap-2">
+              <span>{client.clientName}</span>
+              <span className="text-muted-foreground">+</span>
+              <span>{other?.clientName}</span>
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">{resultingName}</span>
             </p>
-            <p>
-              <span className="text-muted-foreground">Into: </span>
-              <span className="font-medium">{nameOf(targetClient)}</span>
-            </p>
+
+            <ul className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
+              {MERGE_TRANSFER_ITEMS.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+
             <p className="text-muted-foreground">
-              The old clients are kept and marked as Merged.
+              Both original clients are kept and marked as Merged.
             </p>
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmOpen(false)}>
               Cancel

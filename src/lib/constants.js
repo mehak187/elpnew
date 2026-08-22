@@ -59,3 +59,51 @@ export const INVOICE_STATUS_VARIANT = {
   Overdue: "destructive",
   Cancelled: "outline",
 };
+
+/**
+ * Dial codes for the phone fields.
+ *
+ * Oman leads the list because it is the default, and the Gulf states follow
+ * since they are the common case here; the rest are alphabetical.
+ */
+export const DEFAULT_DIAL_CODE = "+968";
+
+export const COUNTRY_DIAL_CODES = [
+  { code: "OM", name: "Oman", dial: "+968", flag: "🇴🇲" },
+  { code: "AE", name: "United Arab Emirates", dial: "+971", flag: "🇦🇪" },
+  { code: "SA", name: "Saudi Arabia", dial: "+966", flag: "🇸🇦" },
+  { code: "QA", name: "Qatar", dial: "+974", flag: "🇶🇦" },
+  { code: "KW", name: "Kuwait", dial: "+965", flag: "🇰🇼" },
+  { code: "BH", name: "Bahrain", dial: "+973", flag: "🇧🇭" },
+  { code: "YE", name: "Yemen", dial: "+967", flag: "🇾🇪" },
+  { code: "AU", name: "Australia", dial: "+61", flag: "🇦🇺" },
+  { code: "BD", name: "Bangladesh", dial: "+880", flag: "🇧🇩" },
+  { code: "CA", name: "Canada", dial: "+1", flag: "🇨🇦" },
+  { code: "CN", name: "China", dial: "+86", flag: "🇨🇳" },
+  { code: "EG", name: "Egypt", dial: "+20", flag: "🇪🇬" },
+  { code: "FR", name: "France", dial: "+33", flag: "🇫🇷" },
+  { code: "DE", name: "Germany", dial: "+49", flag: "🇩🇪" },
+  { code: "IN", name: "India", dial: "+91", flag: "🇮🇳" },
+  { code: "ID", name: "Indonesia", dial: "+62", flag: "🇮🇩" },
+  { code: "IQ", name: "Iraq", dial: "+964", flag: "🇮🇶" },
+  { code: "IR", name: "Iran", dial: "+98", flag: "🇮🇷" },
+  { code: "IT", name: "Italy", dial: "+39", flag: "🇮🇹" },
+  { code: "JO", name: "Jordan", dial: "+962", flag: "🇯🇴" },
+  { code: "KE", name: "Kenya", dial: "+254", flag: "🇰🇪" },
+  { code: "LB", name: "Lebanon", dial: "+961", flag: "🇱🇧" },
+  { code: "MY", name: "Malaysia", dial: "+60", flag: "🇲🇾" },
+  { code: "MA", name: "Morocco", dial: "+212", flag: "🇲🇦" },
+  { code: "NL", name: "Netherlands", dial: "+31", flag: "🇳🇱" },
+  { code: "PK", name: "Pakistan", dial: "+92", flag: "🇵🇰" },
+  { code: "PH", name: "Philippines", dial: "+63", flag: "🇵🇭" },
+  { code: "RU", name: "Russia", dial: "+7", flag: "🇷🇺" },
+  { code: "SG", name: "Singapore", dial: "+65", flag: "🇸🇬" },
+  { code: "ZA", name: "South Africa", dial: "+27", flag: "🇿🇦" },
+  { code: "LK", name: "Sri Lanka", dial: "+94", flag: "🇱🇰" },
+  { code: "SD", name: "Sudan", dial: "+249", flag: "🇸🇩" },
+  { code: "SY", name: "Syria", dial: "+963", flag: "🇸🇾" },
+  { code: "TH", name: "Thailand", dial: "+66", flag: "🇹🇭" },
+  { code: "TR", name: "Turkey", dial: "+90", flag: "🇹🇷" },
+  { code: "GB", name: "United Kingdom", dial: "+44", flag: "🇬🇧" },
+  { code: "US", name: "United States", dial: "+1", flag: "🇺🇸" },
+];

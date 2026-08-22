@@ -155,7 +155,7 @@ export default function Reports() {
       </Card>
 
       {/* Reports Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4">
         {filteredReports.map((report) => (
           <Card key={report.id} className="hover:shadow-lg transition-shadow">
             <CardContent className="p-4 sm:p-6">

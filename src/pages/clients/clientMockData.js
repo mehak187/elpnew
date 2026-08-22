@@ -61,40 +61,46 @@ export const clientLinkedCases = [
     id: 1,
     fileNo: "21",
     opponent: "Al Noor Trading LLC",
-    caseDetails: "Investment and Trade - Primary (Dispute)",
-    stage: "Case Registration",
-    status: "Review documents",
+    court: "Muscat Primary Court",
+    litigationLevel: "Primary",
+    stageNumber: 1,
+    caseStage: "Case Registration",
+    caseStatus: "Active",
     updateDate: "2025-01-12",
-    update: "-",
+    update: "Reviewing documents",
   },
   {
     id: 2,
     fileNo: "34",
     opponent: "Muscat Logistics SAOC",
-    caseDetails: "Commercial - Appeal (Contract)",
-    stage: "Court Hearing",
-    status: "Awaiting hearing date",
+    court: "Court of Appeal",
+    litigationLevel: "Appeal",
+    stageNumber: 2,
+    caseStage: "Court Hearing",
+    caseStatus: "Active",
     updateDate: "2025-02-03",
-    update: "Memo submitted",
+    update: "Memo submitted, awaiting hearing date",
   },
   {
     id: 3,
     fileNo: "47",
     opponent: "Salim Al Hinai",
-    caseDetails: "Labour - Primary (Claim)",
-    stage: "Post Judgement",
-    status: "Judgement issued",
+    court: "Labour Court",
+    litigationLevel: "Primary",
+    stageNumber: 3,
+    caseStage: "Post Judgement",
+    caseStatus: "Closed",
     updateDate: "2024-12-19",
-    update: "Awaiting execution",
+    update: "Judgement issued, awaiting execution",
   },
 ];
 
 export const clientInvoices = [
-  { id: 1, date: "2024-02-15", invoiceNo: "INV-2024-011", details: "Retainer - Q1 2024", amount: 4500, paidAmount: 4500, status: "Paid", notes: "" },
-  { id: 2, date: "2024-05-02", invoiceNo: "INV-2024-042", details: "Court fees - file 21", amount: 1200, paidAmount: 600, status: "Partially Paid", notes: "Balance agreed for June." },
-  { id: 3, date: "2024-08-19", invoiceNo: "INV-2024-088", details: "Retainer - Q3 2024", amount: 4500, paidAmount: 0, status: "Unpaid", notes: "" },
-  { id: 4, date: "2024-10-01", invoiceNo: "INV-2024-102", details: "Appeal filing - file 34", amount: 2750, paidAmount: 0, status: "Overdue", notes: "Reminder sent twice." },
-  { id: 5, date: "2024-11-11", invoiceNo: "INV-2024-119", details: "Duplicate issue", amount: 800, paidAmount: 0, status: "Cancelled", notes: "Raised in error." },
+  { id: 1, date: "2024-02-15", invoiceNo: "INV-2024-011", dueDate: "2024-03-16", details: "Retainer - Q1 2024", amount: 4500, paidAmount: 4500, status: "Paid", notes: "" },
+  { id: 2, date: "2024-05-02", invoiceNo: "INV-2024-042", dueDate: "2024-06-01", details: "Court fees - file 21", amount: 1200, paidAmount: 600, status: "Partially Paid", notes: "Balance agreed for June." },
+  { id: 3, date: "2024-08-19", invoiceNo: "INV-2024-088", dueDate: "2024-09-18", details: "Retainer - Q3 2024", amount: 4500, paidAmount: 0, status: "Unpaid", notes: "" },
+  { id: 4, date: "2024-10-01", invoiceNo: "INV-2024-102", dueDate: "2024-10-31", details: "Appeal filing - file 34", amount: 2750, paidAmount: 0, status: "Overdue", notes: "Reminder sent twice." },
+  { id: 5, date: "2024-11-11", invoiceNo: "INV-2024-119", dueDate: "2024-12-11", details: "Duplicate issue", amount: 800, paidAmount: 0, status: "Cancelled", notes: "Raised in error." },
 ];
 
 // Case activity, month by month. Deliberately holds no financial data - the
@@ -143,4 +149,18 @@ export const MERGE_TRANSFER_ITEMS = [
   "Documents",
   "Contracts",
   "Notes",
+];
+
+/** Who a commission can be paid to. */
+export const commissionPayees = [
+  "Ahmed Al Habsi (Referrer)",
+  "Muscat Legal Consultants",
+  "Yusuf Al Kindi (Partner)",
+  "External Agent",
+];
+
+/** Commissions already settled for this client. */
+export const commissionPayments = [
+  { id: 1, paidOn: "2024-07-05", fromDate: "2024-01-01", toDate: "2024-06-30", payableTo: "Ahmed Al Habsi (Referrer)", legalFees: 5000, percent: 10, amount: 500 },
+  { id: 2, paidOn: "2025-01-12", fromDate: "2024-07-01", toDate: "2024-12-31", payableTo: "Muscat Legal Consultants", legalFees: 3200, percent: 7.5, amount: 240 },
 ];

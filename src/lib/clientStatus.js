@@ -1,6 +1,24 @@
 // Client status model, per the client's Phase 1 specification.
 
+/** Today as a plain YYYY-MM-DD in the user's own timezone. */
+const todayIso = () => {
+  const now = new Date();
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 10);
+};
+
 export const CLIENT_STATUSES = ["Active", "Inactive", "Merged"];
+
+/**
+ * The statuses an admin may set by hand.
+ *
+ * Merged is deliberately absent: it is only ever the outcome of a merge, run
+ * from the Merge Clients screen, so it is never something to pick from a list.
+ */
+export const MANUAL_CLIENT_STATUSES = CLIENT_STATUSES.filter(
+  (status) => status !== "Merged"
+);
 
 export const CLIENT_STATUS_VARIANT = {
   Active: "success",
@@ -24,6 +42,11 @@ export const CLIENT_STATUS_VARIANT = {
  */
 export function deriveClientStatus(client) {
   if (client.mergedIntoClientNo) return "Merged";
+  // A deactivation date takes effect on the day it is reached, and outranks a
+  // manual override - the date was set deliberately, for that day.
+  if (client.deactivationDate && client.deactivationDate <= todayIso()) {
+    return "Inactive";
+  }
   if (client.statusOverride) return client.statusOverride;
   return client.activeCases > 0 ? "Active" : "Inactive";
 }

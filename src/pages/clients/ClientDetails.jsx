@@ -2,14 +2,18 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { UserPlus, Save, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CLIENT_STATUS_VARIANT, deriveClientStatus } from "@/lib/clientStatus";
+import { DEFAULT_DIAL_CODE } from "@/lib/constants";
+import { deriveClientStatus } from "@/lib/clientStatus";
+import { findClient } from "./clientRecords";
+import { StatusDot } from "@/components/shared/panels";
 
 import BasicSection from "./sections/BasicSection";
 import ContactSection from "./sections/ContactSection";
 import FinancialSection from "./sections/FinancialSection";
+import CommissionSection from "./sections/CommissionSection";
+import ClientManagementSection from "./sections/ClientManagementSection";
 import DocumentsSection from "./sections/DocumentsSection";
 import LinkedCasesSection from "./sections/LinkedCasesSection";
 import InvoicesSection from "./sections/InvoicesSection";
@@ -28,7 +32,7 @@ import MergeSection from "./sections/MergeSection";
 const SECTIONS = [
   {
     key: "basic",
-    label: "Basic",
+    label: "Basic Info",
     form: true,
     required: () => [
       "dateOfRegistration",
@@ -36,6 +40,7 @@ const SECTIONS = [
       "englishName",
       "referenceNo",
       "referenceExpiryDate",
+      "poaNo",
       "poaExpiryDate",
     ],
   },
@@ -65,20 +70,14 @@ const SECTIONS = [
     ],
   },
   { key: "documents", label: "Documents", existingOnly: true },
-  { key: "cases", label: "Linked Cases", existingOnly: true },
+  { key: "cases", label: "Cases", existingOnly: true },
   { key: "invoices", label: "Invoices", existingOnly: true },
+  { key: "commission", label: "Commission", existingOnly: true },
+  { key: "management", label: "Client Management", existingOnly: true },
   { key: "analytics", label: "Client Analytics", existingOnly: true },
   { key: "merge", label: "Merge Clients", existingOnly: true },
 ];
 
-// Mock client data - in real app, this would come from API
-const clientsData = [
-  { id: 1, clientNo: "1", type: "Commercial Company", clientName: "ABC Holdings LLC", arabicName: "شركة ABC القابضة", referenceNo: "REF-2024-001", dateOfRegistration: "2024-01-15", referenceExpiryDate: "2025-06-15", poaExpiryDate: "2025-12-31", vatinNo: "OM123456789", email: "john@abc.com", mobile: "+968 2411 1111", receivingBank: "Bank Muscat", receivingAccount: "1234567890", commissionRate: "10", payFeesOnBehalf: "Yes", paymentDelayPeriod: "30", paymentDelayCustomDays: "", languageOfCommunication: "English", whatsappNotification: "Yes", emailNotification: "No", closeDate: "", activeCases: 3, mergedIntoClientNo: null, statusOverride: null },
-  { id: 2, clientNo: "2", type: "Individual", clientName: "Fatima Rashid", arabicName: "فاطمة راشد", referenceNo: "REF-2024-002", dateOfRegistration: "2024-02-20", referenceExpiryDate: "2025-11-05", poaExpiryDate: "2026-03-12", vatinNo: "", email: "fatima@email.com", mobile: "+968 9234 5678", receivingBank: "National Bank of Oman", receivingAccount: "0987654321", commissionRate: "7.5", payFeesOnBehalf: "No", paymentDelayPeriod: "15", paymentDelayCustomDays: "", languageOfCommunication: "Arabic", whatsappNotification: "Yes", emailNotification: "No", closeDate: "", activeCases: 1, mergedIntoClientNo: null, statusOverride: null },
-  { id: 3, clientNo: "3", type: "Commercial Company", clientName: "Al Madina Trading", arabicName: "شركة المدينة للتجارة", referenceNo: "REF-2024-003", dateOfRegistration: "2024-03-10", referenceExpiryDate: "2025-07-22", poaExpiryDate: "2026-02-10", vatinNo: "OM987654321", email: "ahmed@almadina.com", mobile: "+968 2422 2222", receivingBank: "Bank Dhofar", receivingAccount: "5678901234", commissionRate: "12", payFeesOnBehalf: "Yes", paymentDelayPeriod: "60", paymentDelayCustomDays: "", languageOfCommunication: "Both", whatsappNotification: "Yes", emailNotification: "No", closeDate: "", activeCases: 2, mergedIntoClientNo: null, statusOverride: null },
-  { id: 4, clientNo: "4", type: "Commercial Company", clientName: "Gulf Construction Co", arabicName: "شركة الخليج للإنشاءات", referenceNo: "REF-2024-004", dateOfRegistration: "2024-04-05", referenceExpiryDate: "2025-09-12", poaExpiryDate: "2026-04-05", vatinNo: "OM456789123", email: "khalid@gulfconst.com", mobile: "+968 2433 3333", receivingBank: "Oman Arab Bank", receivingAccount: "3456789012", commissionRate: "10", payFeesOnBehalf: "No", paymentDelayPeriod: "custom", paymentDelayCustomDays: "75", languageOfCommunication: "English", whatsappNotification: "Yes", emailNotification: "No", closeDate: "", activeCases: 1, mergedIntoClientNo: null, statusOverride: null },
-  { id: 5, clientNo: "5", type: "Individual", clientName: "Ahmed Al Lawati", arabicName: "أحمد اللواتي", referenceNo: "REF-2024-005", dateOfRegistration: "2024-05-01", referenceExpiryDate: "2025-03-08", poaExpiryDate: "2025-09-22", vatinNo: "", email: "ahmed.lawati@email.com", mobile: "+968 9345 6789", receivingBank: "Bank Muscat", receivingAccount: "7890123456", commissionRate: "8", payFeesOnBehalf: "No", paymentDelayPeriod: "45", paymentDelayCustomDays: "", languageOfCommunication: "Both", whatsappNotification: "Yes", emailNotification: "No", closeDate: "", activeCases: 0, mergedIntoClientNo: "1", statusOverride: null },
-];
 
 const toFormData = (record) =>
   !record
@@ -90,8 +89,10 @@ const toFormData = (record) =>
         referenceNo: record.referenceNo || "",
         referenceExpiryDate: record.referenceExpiryDate || "",
         vatinNo: record.vatinNo || "",
+        poaNo: record.poaNo || "",
         poaExpiryDate: record.poaExpiryDate || "",
         email: record.email || "",
+        mobileDialCode: record.mobileDialCode || DEFAULT_DIAL_CODE,
         mobile: record.mobile || "",
         receivingBank: record.receivingBank || "",
         receivingAccount: record.receivingAccount || "",
@@ -102,7 +103,7 @@ const toFormData = (record) =>
         languageOfCommunication: record.languageOfCommunication || "",
         whatsappNotification: record.whatsappNotification || "No",
         emailNotification: record.emailNotification || "No",
-        closeDate: record.closeDate || "",
+        deactivationDate: record.deactivationDate || "",
       };
 
 const emptyFormData = {
@@ -112,8 +113,10 @@ const emptyFormData = {
   referenceNo: "",
   referenceExpiryDate: "",
   vatinNo: "",
+  poaNo: "",
   poaExpiryDate: "",
   email: "",
+  mobileDialCode: DEFAULT_DIAL_CODE,
   mobile: "",
   receivingBank: "",
   receivingAccount: "",
@@ -124,7 +127,7 @@ const emptyFormData = {
   languageOfCommunication: "",
   whatsappNotification: "No",
   emailNotification: "No",
-  closeDate: "",
+  deactivationDate: "",
 };
 
 export default function ClientDetails() {
@@ -132,9 +135,7 @@ export default function ClientDetails() {
   const { id } = useParams();
   const isExisting = Boolean(id);
 
-  const record = isExisting
-    ? clientsData.find((c) => c.id === parseInt(id))
-    : null;
+  const record = isExisting ? findClient(id) : null;
 
   const [clientType, setClientType] = useState(() => record?.type || "Individual");
   const [statusOverride, setStatusOverride] = useState(
@@ -226,14 +227,9 @@ export default function ClientDetails() {
             </div>
           )}
           <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-xl sm:text-2xl font-bold text-primary">
-                {title}
-              </h1>
-              {status && (
-                <Badge variant={CLIENT_STATUS_VARIANT[status]}>{status}</Badge>
-              )}
-            </div>
+            <h1 className="text-xl sm:text-2xl font-bold text-primary">
+              {title}
+            </h1>
             <p className="text-xs sm:text-sm text-muted-foreground">
               {isExisting
                 ? "Client profile and related records"
@@ -253,9 +249,9 @@ export default function ClientDetails() {
 
       <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 items-start">
         {/* Section navigation */}
-        <Card className="w-full lg:w-60 lg:shrink-0">
+        <Card className="w-full lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:w-60 lg:shrink-0 lg:overflow-y-auto">
           <CardContent className="p-3">
-            <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="mb-2 border-b px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Client Details
             </p>
             <nav className="flex flex-row lg:flex-col gap-1 overflow-x-auto">
@@ -281,10 +277,13 @@ export default function ClientDetails() {
         <div className="w-full flex-1 space-y-4">
           <Card>
             <CardContent className="p-4 sm:p-6">
-              <div className="border-b pb-3 mb-6">
+              <div className="mb-6 flex items-center gap-4 border-b pb-3">
                 <h2 className="text-base font-semibold text-primary">
                   {current.label}
                 </h2>
+                {activeSection === "basic" && (
+                  <StatusDot status={status} isGood={status === "Active"} />
+                )}
               </div>
 
               {/* Editable sections share one form and one save button */}
@@ -293,11 +292,9 @@ export default function ClientDetails() {
                   <BasicSection
                     formData={formData}
                     clientType={clientType}
-                    statusOverride={statusOverride}
                     agreementFile={agreementFile}
                     onChange={handleChange}
                     onClientTypeChange={setClientType}
-                    onStatusOverrideChange={setStatusOverride}
                     onAgreementFileChange={handleFileChange}
                     onRemoveAgreementFile={() => setAgreementFile(null)}
                   />
@@ -319,11 +316,19 @@ export default function ClientDetails() {
                 )}
               </form>
 
-              {activeSection === "documents" && <DocumentsSection />}
+              {activeSection === "commission" && <CommissionSection />}
+              {activeSection === "documents" && (
+                <DocumentsSection formData={formData} onChange={handleChange} />
+              )}
               {activeSection === "cases" && <LinkedCasesSection />}
               {activeSection === "invoices" && <InvoicesSection />}
+              {activeSection === "management" && record && (
+                <ClientManagementSection client={record} />
+              )}
               {activeSection === "analytics" && <AnalyticsSection />}
-              {activeSection === "merge" && <MergeSection />}
+              {activeSection === "merge" && record && (
+                <MergeSection client={record} />
+              )}
             </CardContent>
           </Card>
         </div>

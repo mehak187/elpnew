@@ -178,3 +178,25 @@ export function EmptyState({ children }) {
     <p className="py-6 text-center text-sm text-muted-foreground">{children}</p>
   );
 }
+
+/**
+ * A status as plain text with a coloured dot, rather than a filled badge.
+ *
+ * Green when the record is in its healthy state, red otherwise - the client
+ * asked for exactly two signals, not one per status value.
+ */
+export function StatusDot({ status, isGood }) {
+  if (!status) return null;
+  return (
+    <span className="inline-flex items-center gap-1.5 text-sm">
+      {status}
+      <span
+        aria-hidden="true"
+        className={cn(
+          "h-2.5 w-2.5 shrink-0 rounded-full",
+          isGood ? "bg-green-500" : "bg-red-500"
+        )}
+      />
+    </span>
+  );
+}

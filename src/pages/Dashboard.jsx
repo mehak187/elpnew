@@ -109,7 +109,7 @@ export default function Dashboard() {
 
       {/* Top summary cards */}
       {can(K.summary) && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
           <StatCard label="Active Cases" value={summaryStats.activeCases.value} previous={summaryStats.activeCases.previous} to={summaryStats.activeCases.to} icon={Scale} />
           <StatCard label="Total Clients" value={summaryStats.totalClients.value} previous={summaryStats.totalClients.previous} to={summaryStats.totalClients.to} icon={Users} />
           <StatCard label="Cases Received This Month" value={summaryStats.casesReceivedThisMonth.value} previous={summaryStats.casesReceivedThisMonth.previous} to={summaryStats.casesReceivedThisMonth.to} icon={Inbox} />
