@@ -35,7 +35,7 @@ const emptyUpload = {
   linkedFileNo: "",
 };
 
-export default function DocumentsSection() {
+export default function DocumentsSection({ formData, onChange }) {
   const [documents, setDocuments] = useState(clientDocuments);
   const [file, setFile] = useState(null);
   const [draft, setDraft] = useState(emptyUpload);
@@ -45,6 +45,9 @@ export default function DocumentsSection() {
   // Expiry only applies to the two document types that carry one.
   const expiryLabel = DOCUMENT_EXPIRY_LABELS[draft.documentType];
   const needsOfficeFile = draft.documentType === "Special Contract";
+  // A power of attorney carries the client's own POA number and expiry, so
+  // those two fields are edited here and in Basic Info as one value.
+  const isPowerOfAttorney = draft.documentType === "Power of Attorney";
 
   const setField = (name, value) =>
     setDraft((prev) => ({ ...prev, [name]: value }));
@@ -63,7 +66,7 @@ export default function DocumentsSection() {
         fileName: file.name,
         fileUrl: URL.createObjectURL(file),
         uploadDate: new Date().toISOString().slice(0, 10),
-        expiryDate: draft.expiryDate,
+        expiryDate: isPowerOfAttorney ? formData.poaExpiryDate : draft.expiryDate,
         status: DOCUMENT_STATUSES[0],
         notes: draft.notes,
         linkedFileNo: draft.linkedFileNo || null,
@@ -74,7 +77,10 @@ export default function DocumentsSection() {
   };
 
   const canSave =
-    file && draft.documentType && (!needsOfficeFile || draft.linkedFileNo);
+    file &&
+    draft.documentType &&
+    (!needsOfficeFile || draft.linkedFileNo) &&
+    (!isPowerOfAttorney || (formData.poaNo && formData.poaExpiryDate));
 
   const columns = [
     {
@@ -179,8 +185,36 @@ export default function DocumentsSection() {
               )}
             </div>
 
-            {/* Expiry date, only for the types that have one */}
-            {expiryLabel && (
+{/* A power of attorney reads and writes the client's own POA fields, so
+                editing either here or in Basic Info changes the same value. */}
+            {isPowerOfAttorney && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="documentPoaNo">POA No. *</Label>
+                  <Input
+                    id="documentPoaNo"
+                    name="poaNo"
+                    value={formData.poaNo}
+                    onChange={onChange}
+                    placeholder="Enter POA number"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="documentPoaExpiry">POA Expiry Date *</Label>
+                  <Input
+                    id="documentPoaExpiry"
+                    name="poaExpiryDate"
+                    type="date"
+                    value={formData.poaExpiryDate}
+                    onChange={onChange}
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Expiry date, for the other type that carries one */}
+            {expiryLabel && !isPowerOfAttorney && (
               <div className="space-y-2">
                 <Label htmlFor="documentExpiry">{expiryLabel} *</Label>
                 <Input

@@ -315,7 +315,9 @@ export default function ClientDetails() {
               </form>
 
               {activeSection === "commission" && <CommissionSection />}
-              {activeSection === "documents" && <DocumentsSection />}
+              {activeSection === "documents" && (
+                <DocumentsSection formData={formData} onChange={handleChange} />
+              )}
               {activeSection === "cases" && <LinkedCasesSection />}
               {activeSection === "invoices" && <InvoicesSection />}
               {activeSection === "analytics" && <AnalyticsSection />}
