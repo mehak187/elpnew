@@ -590,7 +590,7 @@ export default function ClientsList() {
           <DataTable
             columns={columns}
             data={processedClients}
-            searchPlaceholder="Search clients..."
+            searchPlaceholder="Ask anything..."
             enableColumnSearch={false}
             onAdd={() => navigate('/clients/create')}
             addLabel="Add Client"

@@ -19,15 +19,16 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
-  Search,
   ChevronLeft,
   ChevronRight,
   FileSpreadsheet,
   Loader2,
   Plus,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toCsv, downloadCsv } from "@/lib/csv";
+import { smartSearch } from "@/lib/search/smartSearch";
 
 export default function DataTable({
   columns,
@@ -64,23 +65,9 @@ export default function DataTable({
     }));
   };
 
-  // Global search across every searchable column. Skipped when the parent
+  // Contextual search over every value on the row. Skipped when the parent
   // handles searching itself via onSearch.
-  const searchTerm = onSearch ? "" : searchValue.trim().toLowerCase();
-  const searchableKeys = columns
-    .filter((c) => c.key !== "actions" && !c.disableFilter)
-    .map((c) => c.key);
-
-  const searchedData = searchTerm
-    ? data.filter((row) =>
-        searchableKeys.some((key) => {
-          const cellValue = row[key];
-          if (cellValue === null || cellValue === undefined) return false;
-          if (typeof cellValue === "object") return false;
-          return String(cellValue).toLowerCase().includes(searchTerm);
-        })
-      )
-    : data;
+  const searchedData = onSearch ? data : smartSearch(data, searchValue);
 
   // Filter data based on column filters
   const filteredData = enableColumnSearch ? searchedData.filter(row => {
@@ -106,8 +93,8 @@ export default function DataTable({
       <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
 
         {/* Global Search */}
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <div className="relative w-full sm:w-80 lg:w-96">
+          <Sparkles className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
           <Input
             type="search"
             value={searchValue}
