@@ -2,24 +2,18 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import DataTable from "@/components/shared/DataTable";
-import { Users, Plus, FileText, ScrollText, Edit, Trash2 } from "lucide-react";
+import { Users, Plus, FileText } from "lucide-react";
+import { cn } from "@/lib/utils";
 import ActiveFilters from "@/components/shared/ActiveFilters";
 import { useListFilter } from "@/lib/useListFilter";
-import { CLIENT_TYPES } from "@/lib/constants";
-import {
-  CLIENT_STATUSES,
-  CLIENT_STATUS_VARIANT,
-  deriveClientStatus,
-} from "@/lib/clientStatus";
+import { deriveClientStatus } from "@/lib/clientStatus";
+
+// Demo expiry dates are generated around today so the expired and still-valid
+// states are both visible whenever the app is run.
+const DAY = 24 * 60 * 60 * 1000;
+const dayOffset = (days) =>
+  new Date(Date.now() + days * DAY).toISOString().slice(0, 10);
 
 const clients = [
   // 15 Active Clients
@@ -29,8 +23,9 @@ const clients = [
     type: "Bank",
     clientName: "ABC Holdings LLC",
     referenceNo: "REF-2024-001",
-    referenceExpiryDate: "2025-06-15",
-    poaExpiryDate: "2025-12-31",
+    referenceExpiryDate: dayOffset(-140),
+    poaNo: "6565777",
+    poaExpiryDate: dayOffset(90),
     attachments: { poaCopy: "/documents/sample-poa.pdf", referenceCopy: "/documents/sample-reference.pdf" },
     activeCases: 3,
     mergedIntoClientNo: null,
@@ -43,8 +38,9 @@ const clients = [
     type: "Individual",
     clientName: "Fatima Rashid",
     referenceNo: "REF-2024-002",
-    referenceExpiryDate: "2025-11-05",
-    poaExpiryDate: "2026-03-12",
+    referenceExpiryDate: dayOffset(60),
+    poaNo: "6565914",
+    poaExpiryDate: dayOffset(-25),
     attachments: { poaCopy: false, referenceCopy: false },
     activeCases: 1,
     mergedIntoClientNo: null,
@@ -57,8 +53,9 @@ const clients = [
     type: "Finance Company",
     clientName: "Al Madina Trading",
     referenceNo: "REF-2024-003",
-    referenceExpiryDate: "2025-07-22",
-    poaExpiryDate: "2026-02-10",
+    referenceExpiryDate: dayOffset(-35),
+    poaNo: "6566051",
+    poaExpiryDate: dayOffset(240),
     attachments: { poaCopy: false, referenceCopy: "/documents/sample-reference.pdf" },
     activeCases: 2,
     mergedIntoClientNo: null,
@@ -71,8 +68,9 @@ const clients = [
     type: "Insurance Company",
     clientName: "Gulf Construction Co",
     referenceNo: "REF-2024-004",
-    referenceExpiryDate: "2025-09-12",
-    poaExpiryDate: "2026-04-05",
+    referenceExpiryDate: dayOffset(210),
+    poaNo: "6566188",
+    poaExpiryDate: dayOffset(-110),
     attachments: { poaCopy: "/documents/sample-poa.pdf", referenceCopy: false },
     activeCases: 1,
     mergedIntoClientNo: null,
@@ -85,8 +83,9 @@ const clients = [
     type: "Individual",
     clientName: "Ahmed Al Lawati",
     referenceNo: "REF-2024-005",
-    referenceExpiryDate: "2025-03-08",
-    poaExpiryDate: "2025-09-22",
+    referenceExpiryDate: dayOffset(95),
+    poaNo: "6566325",
+    poaExpiryDate: dayOffset(45),
     attachments: { poaCopy: false, referenceCopy: "/documents/sample-reference.pdf" },
     activeCases: 4,
     mergedIntoClientNo: null,
@@ -99,8 +98,9 @@ const clients = [
     type: "Telecom Company",
     clientName: "Muscat Finance LLC",
     referenceNo: "REF-2024-006",
-    referenceExpiryDate: "2025-06-25",
-    poaExpiryDate: "2025-12-15",
+    referenceExpiryDate: dayOffset(-8),
+    poaNo: "6566462",
+    poaExpiryDate: dayOffset(180),
     attachments: { poaCopy: "/documents/sample-poa.pdf", referenceCopy: "/documents/sample-reference.pdf" },
     activeCases: 2,
     mergedIntoClientNo: null,
@@ -113,8 +113,9 @@ const clients = [
     type: "Individual",
     clientName: "Salim Al Rawahi",
     referenceNo: "REF-2024-007",
-    referenceExpiryDate: "2025-04-02",
-    poaExpiryDate: "2025-10-08",
+    referenceExpiryDate: dayOffset(320),
+    poaNo: "6566599",
+    poaExpiryDate: dayOffset(-55),
     attachments: { poaCopy: "/documents/sample-poa.pdf", referenceCopy: false },
     activeCases: 1,
     mergedIntoClientNo: null,
@@ -127,8 +128,9 @@ const clients = [
     type: "Real Estate Company",
     clientName: "Salalah Port Services",
     referenceNo: "REF-2024-008",
-    referenceExpiryDate: "2025-08-28",
-    poaExpiryDate: "2026-03-20",
+    referenceExpiryDate: dayOffset(155),
+    poaNo: "6566736",
+    poaExpiryDate: dayOffset(300),
     attachments: { poaCopy: false, referenceCopy: "/documents/sample-reference.pdf" },
     activeCases: 3,
     mergedIntoClientNo: null,
@@ -141,8 +143,9 @@ const clients = [
     type: "Individual",
     clientName: "Layla Al Balushi",
     referenceNo: "REF-2024-009",
-    referenceExpiryDate: "2025-01-15",
-    poaExpiryDate: "2025-07-10",
+    referenceExpiryDate: dayOffset(-70),
+    poaNo: "6566873",
+    poaExpiryDate: dayOffset(70),
     attachments: { poaCopy: "/documents/sample-poa.pdf", referenceCopy: "/documents/sample-reference.pdf" },
     activeCases: 1,
     mergedIntoClientNo: null,
@@ -155,8 +158,9 @@ const clients = [
     type: "Automotive Company",
     clientName: "Nizwa Cement Factory",
     referenceNo: "REF-2024-010",
-    referenceExpiryDate: "2025-10-05",
-    poaExpiryDate: "2026-05-15",
+    referenceExpiryDate: dayOffset(410),
+    poaNo: "6567010",
+    poaExpiryDate: dayOffset(-15),
     attachments: { poaCopy: "/documents/sample-poa.pdf", referenceCopy: false },
     activeCases: 2,
     mergedIntoClientNo: null,
@@ -169,8 +173,9 @@ const clients = [
     type: "Individual",
     clientName: "Hassan Al Jabri",
     referenceNo: "REF-2024-011",
-    referenceExpiryDate: "2025-05-18",
-    poaExpiryDate: "2025-11-30",
+    referenceExpiryDate: dayOffset(25),
+    poaNo: "6567147",
+    poaExpiryDate: dayOffset(365),
     attachments: { poaCopy: false, referenceCopy: "/documents/sample-reference.pdf" },
     activeCases: 5,
     mergedIntoClientNo: null,
@@ -183,8 +188,9 @@ const clients = [
     type: "Commercial Company",
     clientName: "Sohar Aluminum",
     referenceNo: "REF-2024-012",
-    referenceExpiryDate: "2025-07-08",
-    poaExpiryDate: "2026-01-25",
+    referenceExpiryDate: dayOffset(-190),
+    poaNo: "6567284",
+    poaExpiryDate: dayOffset(110),
     attachments: { poaCopy: "/documents/sample-poa.pdf", referenceCopy: "/documents/sample-reference.pdf" },
     activeCases: 1,
     mergedIntoClientNo: null,
@@ -197,8 +203,9 @@ const clients = [
     type: "Individual",
     clientName: "Nadia Al Harthi",
     referenceNo: "REF-2024-013",
-    referenceExpiryDate: "2025-02-12",
-    poaExpiryDate: "2025-08-28",
+    referenceExpiryDate: dayOffset(130),
+    poaNo: "6567421",
+    poaExpiryDate: dayOffset(-95),
     attachments: { poaCopy: "/documents/sample-poa.pdf", referenceCopy: false },
     activeCases: 2,
     mergedIntoClientNo: null,
@@ -211,8 +218,9 @@ const clients = [
     type: "Other Entities",
     clientName: "Oman Telecommunications",
     referenceNo: "REF-2024-014",
-    referenceExpiryDate: "2025-09-20",
-    poaExpiryDate: "2026-04-12",
+    referenceExpiryDate: dayOffset(-140),
+    poaNo: "6567558",
+    poaExpiryDate: dayOffset(90),
     attachments: { poaCopy: false, referenceCopy: "/documents/sample-reference.pdf" },
     activeCases: 1,
     mergedIntoClientNo: null,
@@ -225,8 +233,9 @@ const clients = [
     type: "Individual",
     clientName: "Yousuf Al Kindi",
     referenceNo: "REF-2024-015",
-    referenceExpiryDate: "2025-04-28",
-    poaExpiryDate: "2025-10-15",
+    referenceExpiryDate: dayOffset(60),
+    poaNo: "6567695",
+    poaExpiryDate: dayOffset(-25),
     attachments: { poaCopy: "/documents/sample-poa.pdf", referenceCopy: "/documents/sample-reference.pdf" },
     activeCases: 3,
     mergedIntoClientNo: null,
@@ -240,8 +249,9 @@ const clients = [
     type: "Individual",
     clientName: "Ali Mohammed",
     referenceNo: "REF-2024-016",
-    referenceExpiryDate: "2025-03-20",
-    poaExpiryDate: "2025-09-15",
+    referenceExpiryDate: dayOffset(-35),
+    poaNo: "6567832",
+    poaExpiryDate: dayOffset(240),
     attachments: { poaCopy: "/documents/sample-poa.pdf", referenceCopy: false },
     activeCases: 0,
     mergedIntoClientNo: null,
@@ -254,8 +264,9 @@ const clients = [
     type: "Bank",
     clientName: "XYZ Investments",
     referenceNo: "REF-2024-017",
-    referenceExpiryDate: "2025-08-10",
-    poaExpiryDate: "2026-01-20",
+    referenceExpiryDate: dayOffset(210),
+    poaNo: "6567969",
+    poaExpiryDate: dayOffset(-110),
     attachments: { poaCopy: false, referenceCopy: "/documents/sample-reference.pdf" },
     activeCases: 0,
     mergedIntoClientNo: "1",
@@ -268,8 +279,9 @@ const clients = [
     type: "Finance Company",
     clientName: "Global Trade Co",
     referenceNo: "REF-2024-018",
-    referenceExpiryDate: "2025-01-25",
-    poaExpiryDate: "2025-07-30",
+    referenceExpiryDate: dayOffset(95),
+    poaNo: "6568106",
+    poaExpiryDate: dayOffset(45),
     attachments: { poaCopy: "/documents/sample-poa.pdf", referenceCopy: "/documents/sample-reference.pdf" },
     activeCases: 0,
     mergedIntoClientNo: null,
@@ -282,8 +294,9 @@ const clients = [
     type: "Insurance Company",
     clientName: "Oman Steel Industries",
     referenceNo: "REF-2024-019",
-    referenceExpiryDate: "2025-04-18",
-    poaExpiryDate: "2025-10-25",
+    referenceExpiryDate: dayOffset(-8),
+    poaNo: "6568243",
+    poaExpiryDate: dayOffset(180),
     attachments: { poaCopy: "/documents/sample-poa.pdf", referenceCopy: "/documents/sample-reference.pdf" },
     activeCases: 0,
     mergedIntoClientNo: null,
@@ -296,8 +309,9 @@ const clients = [
     type: "Individual",
     clientName: "Khalid Al Busaidi",
     referenceNo: "REF-2024-020",
-    referenceExpiryDate: "2025-02-28",
-    poaExpiryDate: "2025-08-14",
+    referenceExpiryDate: dayOffset(320),
+    poaNo: "6568380",
+    poaExpiryDate: dayOffset(-55),
     attachments: { poaCopy: "/documents/sample-poa.pdf", referenceCopy: false },
     activeCases: 0,
     mergedIntoClientNo: "3",
@@ -310,8 +324,9 @@ const clients = [
     type: "Individual",
     clientName: "Maryam Al Hinai",
     referenceNo: "REF-2024-021",
-    referenceExpiryDate: "2025-05-30",
-    poaExpiryDate: "2025-11-18",
+    referenceExpiryDate: dayOffset(155),
+    poaNo: "6568517",
+    poaExpiryDate: dayOffset(300),
     attachments: { poaCopy: "/documents/sample-poa.pdf", referenceCopy: "/documents/sample-reference.pdf" },
     activeCases: 0,
     mergedIntoClientNo: null,
@@ -324,8 +339,9 @@ const clients = [
     type: "Telecom Company",
     clientName: "Bank Muscat SAOG",
     referenceNo: "REF-2024-022",
-    referenceExpiryDate: "2025-06-10",
-    poaExpiryDate: "2025-12-28",
+    referenceExpiryDate: dayOffset(-70),
+    poaNo: "6568654",
+    poaExpiryDate: dayOffset(70),
     attachments: { poaCopy: "/documents/sample-poa.pdf", referenceCopy: false },
     activeCases: 0,
     mergedIntoClientNo: null,
@@ -338,8 +354,9 @@ const clients = [
     type: "Individual",
     clientName: "Amira Al Siyabi",
     referenceNo: "REF-2024-023",
-    referenceExpiryDate: "2025-03-25",
-    poaExpiryDate: "2025-09-08",
+    referenceExpiryDate: dayOffset(410),
+    poaNo: "6568791",
+    poaExpiryDate: dayOffset(-15),
     attachments: { poaCopy: false, referenceCopy: "/documents/sample-reference.pdf" },
     activeCases: 0,
     mergedIntoClientNo: null,
@@ -352,8 +369,9 @@ const clients = [
     type: "Real Estate Company",
     clientName: "PDO Petroleum",
     referenceNo: "REF-2024-024",
-    referenceExpiryDate: "2025-08-15",
-    poaExpiryDate: "2026-02-22",
+    referenceExpiryDate: dayOffset(25),
+    poaNo: "6568928",
+    poaExpiryDate: dayOffset(365),
     attachments: { poaCopy: "/documents/sample-poa.pdf", referenceCopy: "/documents/sample-reference.pdf" },
     activeCases: 0,
     mergedIntoClientNo: null,
@@ -366,8 +384,9 @@ const clients = [
     type: "Individual",
     clientName: "Rashid Al Wahaibi",
     referenceNo: "REF-2024-025",
-    referenceExpiryDate: "2025-01-30",
-    poaExpiryDate: "2025-07-18",
+    referenceExpiryDate: dayOffset(-190),
+    poaNo: "6569065",
+    poaExpiryDate: dayOffset(110),
     attachments: { poaCopy: "/documents/sample-poa.pdf", referenceCopy: false },
     activeCases: 0,
     mergedIntoClientNo: null,
@@ -375,6 +394,82 @@ const clients = [
     closeDate: "2024-03-12"
   },
 ];
+
+/** Has this date already passed? */
+const hasExpired = (date) => {
+  if (!date) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return new Date(date) < today;
+};
+
+/** A date, with a red dot beside it once it has expired. */
+function ExpiryDate({ date }) {
+  if (!date) return <span className="text-xs text-muted-foreground">-</span>;
+  const expired = hasExpired(date);
+  return (
+    <p
+      className={cn(
+        "flex items-center gap-1.5 text-xs",
+        expired ? "font-medium text-red-600" : "text-muted-foreground"
+      )}
+    >
+      {date}
+      {expired && (
+        <>
+          <span
+            aria-hidden="true"
+            className="h-2 w-2 shrink-0 rounded-full bg-red-500"
+          />
+          <span className="sr-only">Expired</span>
+        </>
+      )}
+    </p>
+  );
+}
+
+/**
+ * The one format an uploaded document is ever shown in - the same icon and the
+ * same word, wherever it appears.
+ */
+function DocumentLink({ url }) {
+  if (!url) return null;
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        window.open(url, "_blank", "noopener,noreferrer");
+      }}
+      className="flex items-center gap-1.5 rounded text-xs font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+    >
+      <FileText className="h-3.5 w-3.5 shrink-0" />
+      Document
+    </button>
+  );
+}
+
+/** Plain text with a small coloured dot, rather than a filled badge. */
+const STATUS_DOT = {
+  Active: "bg-green-500",
+  Inactive: "bg-muted-foreground",
+  Merged: "bg-blue-500",
+};
+
+function StatusText({ status }) {
+  return (
+    <span className="flex items-center gap-1.5 text-sm">
+      {status}
+      <span
+        aria-hidden="true"
+        className={cn(
+          "h-2 w-2 shrink-0 rounded-full",
+          STATUS_DOT[status] || "bg-muted-foreground"
+        )}
+      />
+    </span>
+  );
+}
 
 export default function ClientsList() {
   const navigate = useNavigate();
@@ -385,47 +480,20 @@ export default function ClientsList() {
 
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("none");
   const { active, apply, clear } = useListFilter(URL_FILTERS);
 
-  // Filter and sort clients
+  // Inactive and merged clients sit at the end of the list.
   const processedClients = apply(
     clients.map(client => ({ ...client, status: deriveClientStatus(client) }))
-  )
-    .filter(client => {
-      if (typeFilter !== "all" && client.type !== typeFilter) return false;
-      if (statusFilter !== "all" && client.status !== statusFilter) return false;
-      return true;
-    })
-    .sort((a, b) => {
-      // First priority: Move inactive and merged clients to the end
-      const aIsInactive = a.status !== "Active";
-      const bIsInactive = b.status !== "Active";
+  ).sort((a, b) => {
+    const aIsInactive = a.status !== "Active";
+    const bIsInactive = b.status !== "Active";
+    if (aIsInactive && !bIsInactive) return 1;
+    if (!aIsInactive && bIsInactive) return -1;
+    return 0;
+  });
 
-      if (aIsInactive && !bIsInactive) return 1; // a goes to end
-      if (!aIsInactive && bIsInactive) return -1; // b goes to end
-
-      // Second priority: Sort by date only if a sort option is selected
-      if (sortBy !== "none" && !aIsInactive && !bIsInactive) {
-        if (sortBy === "poaExpiryDate") {
-          return new Date(a.poaExpiryDate) - new Date(b.poaExpiryDate);
-        } else if (sortBy === "referenceExpiryDate") {
-          return new Date(a.referenceExpiryDate) - new Date(b.referenceExpiryDate);
-        }
-      }
-
-      return 0;
-    });
-
-  // Attached copies open in a new tab
-  const openDocument = (e, url) => {
-    e.stopPropagation();
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
-
-  // Column definitions with custom filter components
+  // Column definitions
   const columns = [
     {
       key: "clientNo",
@@ -447,142 +515,44 @@ export default function ClientsList() {
     {
       key: "type",
       header: "Type",
-      width: "12%",
-      filterComponent: (
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="h-8 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            {CLIENT_TYPES.map((type) => (
-              <SelectItem key={type} value={type}>
-                {type}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )
+      width: "12%"
     },
     {
       key: "clientName",
       header: "Client Name",
-      width: "20%",
+      width: "22%",
       cellClassName: "font-medium",
-      render: (value, row) => (
-        <div className="flex items-center gap-2">
-          <span>{value}</span>
-          {row.attachments?.poaCopy && (
-            <button
-              type="button"
-              onClick={(e) => openDocument(e, row.attachments.poaCopy)}
-              title="Open copy of the power of attorney"
-              className="shrink-0 rounded p-0.5 text-blue-600 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <ScrollText className="h-4 w-4" />
-              <span className="sr-only">Open power of attorney for {value}</span>
-            </button>
-          )}
-        </div>
-      )
     },
     {
+      // Number, expiry and the attached copy read as one block per record.
       key: "referenceNo",
       header: "Reference No.",
-      width: "15%",
+      width: "20%",
       render: (value, row) => (
-        <div className="flex items-center gap-2">
-          <span>{value}</span>
-          {row.attachments?.referenceCopy && (
-            <button
-              type="button"
-              onClick={(e) => openDocument(e, row.attachments.referenceCopy)}
-              title="Open copy of the reference number"
-              className="shrink-0 rounded p-0.5 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              <FileText className="h-4 w-4" />
-              <span className="sr-only">Open reference document {value}</span>
-            </button>
-          )}
+        <div className="space-y-1">
+          <p>{value}</p>
+          <ExpiryDate date={row.referenceExpiryDate} />
+          <DocumentLink url={row.attachments?.referenceCopy} />
         </div>
-      )
+      ),
     },
     {
-      key: "referenceExpiryDate",
-      header: "Reference Expiry Date",
-      width: "14%"
-    },
-    {
-      key: "poaExpiryDate",
-      header: "POA Expiry Date",
-      width: "14%",
-      filterComponent: (
-        <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="h-8 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">No Sort</SelectItem>
-            <SelectItem value="poaExpiryDate">POA Earliest First</SelectItem>
-            <SelectItem value="referenceExpiryDate">Ref Date Earliest</SelectItem>
-          </SelectContent>
-        </Select>
-      )
+      key: "poaNo",
+      header: "POA No.",
+      width: "20%",
+      render: (value, row) => (
+        <div className="space-y-1">
+          <p>{value}</p>
+          <ExpiryDate date={row.poaExpiryDate} />
+          <DocumentLink url={row.attachments?.poaCopy} />
+        </div>
+      ),
     },
     {
       key: "status",
       header: "Status",
-      width: "8%",
-      render: (value) => (
-        <Badge variant={CLIENT_STATUS_VARIANT[value]}>{value}</Badge>
-      ),
-      filterComponent: (
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="h-8 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            {CLIENT_STATUSES.map((status) => (
-              <SelectItem key={status} value={status}>
-                {status}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )
-    },
-    {
-      key: "actions",
-      header: "Actions",
-      width: "8%",
-      disableFilter: true,
-      render: (_, row) => (
-        <div className="flex items-center justify-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/clients/${row.id}`);
-            }}
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-red-500 hover:text-red-600"
-            onClick={(e) => {
-              e.stopPropagation();
-              console.log("Delete client:", row.id);
-            }}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      )
+      width: "10%",
+      render: (value) => <StatusText status={value} />,
     },
   ];
 
@@ -621,6 +591,7 @@ export default function ClientsList() {
             columns={columns}
             data={processedClients}
             searchPlaceholder="Search clients..."
+            enableColumnSearch={false}
             onAdd={() => navigate('/clients/create')}
             addLabel="Add Client"
             currentPage={currentPage}

@@ -126,6 +126,19 @@ export default function BasicSection({
         />
       </div>
 
+      {/* POA No */}
+      <div className="space-y-2">
+        <Label htmlFor="poaNo">POA No. *</Label>
+        <Input
+          id="poaNo"
+          name="poaNo"
+          value={formData.poaNo}
+          onChange={onChange}
+          placeholder="Enter POA number"
+          required
+        />
+      </div>
+
       {/* POA Expiry Date */}
       <div className="space-y-2">
         <Label htmlFor="poaExpiryDate">POA Expiry Date *</Label>
