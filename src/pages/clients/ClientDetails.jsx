@@ -29,7 +29,7 @@ import MergeSection from "./sections/MergeSection";
 const SECTIONS = [
   {
     key: "basic",
-    label: "Basic",
+    label: "Basic Info",
     form: true,
     required: () => [
       "dateOfRegistration",
@@ -244,7 +244,7 @@ export default function ClientDetails() {
         {/* Section navigation */}
         <Card className="w-full lg:w-60 lg:shrink-0">
           <CardContent className="p-3">
-            <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="mb-2 border-b px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Client Details
             </p>
             <nav className="flex flex-row lg:flex-col gap-1 overflow-x-auto">
