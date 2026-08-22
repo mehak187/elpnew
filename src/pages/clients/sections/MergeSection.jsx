@@ -164,7 +164,7 @@ export default function MergeSection() {
                 Everything below is transferred to the resulting client
               </p>
             </div>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1 text-sm text-muted-foreground">
+            <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1 text-sm text-muted-foreground">
               {MERGE_TRANSFER_ITEMS.map((item) => (
                 <li key={item} className="flex items-center gap-2">
                   <ArrowRight className="h-3 w-3 shrink-0" />

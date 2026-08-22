@@ -69,7 +69,7 @@ export default function ProfileInfo() {
           <Separator className="mb-6" />
 
           {/* Form Fields */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             <div className="space-y-2">
               <Label htmlFor="name_en" className="text-xs sm:text-sm font-medium">
                 Full Name (English)

@@ -97,7 +97,7 @@ const toFormData = (record) =>
         languageOfCommunication: record.languageOfCommunication || "",
         whatsappNotification: record.whatsappNotification || "No",
         emailNotification: record.emailNotification || "No",
-        closeDate: record.closeDate || "",
+        deactivationDate: record.deactivationDate || "",
       };
 
 const emptyFormData = {
@@ -120,7 +120,7 @@ const emptyFormData = {
   languageOfCommunication: "",
   whatsappNotification: "No",
   emailNotification: "No",
-  closeDate: "",
+  deactivationDate: "",
 };
 
 export default function ClientDetails() {
@@ -283,11 +283,9 @@ export default function ClientDetails() {
                   <BasicSection
                     formData={formData}
                     clientType={clientType}
-                    statusOverride={statusOverride}
                     agreementFile={agreementFile}
                     onChange={handleChange}
                     onClientTypeChange={setClientType}
-                    onStatusOverrideChange={setStatusOverride}
                     onAgreementFileChange={handleFileChange}
                     onRemoveAgreementFile={() => setAgreementFile(null)}
                   />

@@ -279,7 +279,7 @@ export default function DocumentsSection({ initialStatusFilter, canEdit }) {
       {adding && canEdit && (
         <Card>
           <CardContent className="space-y-4 p-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-2">
                 <Label htmlFor="docName">Document Name *</Label>
                 <Input
@@ -429,7 +429,7 @@ export default function DocumentsSection({ initialStatusFilter, canEdit }) {
                 </div>
               )}
 
-              <div className="space-y-2 sm:col-span-2 lg:col-span-3">
+              <div className="space-y-2 sm:col-span-2 lg:col-span-4">
                 <Label htmlFor="docNotes">Notes</Label>
                 <Textarea
                   id="docNotes"

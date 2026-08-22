@@ -205,7 +205,7 @@ export default function EmployeeForm() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {/* Nationality */}
               <div className="space-y-2">
                 <Label htmlFor="nationality">Nationality *</Label>

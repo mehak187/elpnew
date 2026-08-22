@@ -10,21 +10,31 @@ import {
 } from "@/components/ui/select";
 import { Upload, FileText, X } from "lucide-react";
 import { CLIENT_TYPES } from "@/lib/constants";
-import { MANUAL_CLIENT_STATUSES } from "@/lib/clientStatus";
 
 export default function BasicSection({
   formData,
   clientType,
-  statusOverride,
   agreementFile,
   onChange,
   onClientTypeChange,
-  onStatusOverrideChange,
   onAgreementFileChange,
   onRemoveAgreementFile,
 }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      {/* Date of Registration */}
+      <div className="space-y-2">
+        <Label htmlFor="dateOfRegistration">Date of Registration *</Label>
+        <Input
+          id="dateOfRegistration"
+          name="dateOfRegistration"
+          type="date"
+          value={formData.dateOfRegistration}
+          onChange={onChange}
+          required
+        />
+      </div>
+
       {/* Client Type */}
       <div className="space-y-2">
         <Label htmlFor="clientType">Client Type *</Label>
@@ -40,37 +50,6 @@ export default function BasicSection({
             ))}
           </SelectContent>
         </Select>
-      </div>
-
-      {/* Client Status - derived from case activity unless an admin pins it */}
-      <div className="space-y-2">
-        <Label htmlFor="clientStatus">Client Status</Label>
-        <Select value={statusOverride} onValueChange={onStatusOverrideChange}>
-          <SelectTrigger id="clientStatus">
-            <SelectValue placeholder="Select status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="auto">Automatic (based on cases)</SelectItem>
-            {MANUAL_CLIENT_STATUSES.map((status) => (
-              <SelectItem key={status} value={status}>
-                {status}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Date of Registration */}
-      <div className="space-y-2">
-        <Label htmlFor="dateOfRegistration">Date of Registration *</Label>
-        <Input
-          id="dateOfRegistration"
-          name="dateOfRegistration"
-          type="date"
-          value={formData.dateOfRegistration}
-          onChange={onChange}
-          required
-        />
       </div>
 
       {/* Client's Arabic Name */}
@@ -152,20 +131,20 @@ export default function BasicSection({
         />
       </div>
 
-      {/* Close Date */}
+      {/* Deactivation Date - the client turns Inactive on this day */}
       <div className="space-y-2">
-        <Label htmlFor="closeDate">Close Date</Label>
+        <Label htmlFor="deactivationDate">Deactivation Date</Label>
         <Input
-          id="closeDate"
-          name="closeDate"
+          id="deactivationDate"
+          name="deactivationDate"
           type="date"
-          value={formData.closeDate}
+          value={formData.deactivationDate}
           onChange={onChange}
         />
       </div>
 
       {/* Agreement PDF Upload */}
-      <div className="space-y-2 sm:col-span-2 lg:col-span-3">
+      <div className="space-y-2 sm:col-span-2 lg:col-span-4">
         <Label>Agreement PDF</Label>
         <div className="border-2 border-dashed border-gray-200 rounded-lg p-6">
           {!agreementFile ? (

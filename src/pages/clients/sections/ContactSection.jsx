@@ -11,7 +11,7 @@ import {
 
 export default function ContactSection({ formData, onChange, onSelectChange }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
       {/* Mobile */}
       <div className="space-y-2">
         <Label htmlFor="mobile">Mobile *</Label>
@@ -40,7 +40,7 @@ export default function ContactSection({ formData, onChange, onSelectChange }) {
       </div>
 
       {/* Communication Methods */}
-      <div className="space-y-2 sm:col-span-2 lg:col-span-3">
+      <div className="space-y-2 sm:col-span-2 lg:col-span-4">
         <p className="text-sm font-semibold text-primary">
           Communication Methods
         </p>
@@ -114,7 +114,7 @@ export default function ContactSection({ formData, onChange, onSelectChange }) {
       {/* Both channels fire on every saved update, so say so plainly. */}
       {(formData.whatsappNotification === "Yes" ||
         formData.emailNotification === "Yes") && (
-        <div className="sm:col-span-2 lg:col-span-3">
+        <div className="sm:col-span-2 lg:col-span-4">
           <p className="rounded-md border-l-4 border-l-blue-500 bg-blue-50 px-3 py-2 text-xs text-blue-900">
             Every update saved against this client is sent immediately by
             {formData.whatsappNotification === "Yes" &&

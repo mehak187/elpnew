@@ -89,7 +89,7 @@ export default function PostJudgement() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <h3 className="font-semibold text-primary">Judgement Details</h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               <div className="space-y-2">
                 <Label htmlFor="judgement_date">Judgement Date *</Label>
                 <Input
@@ -175,7 +175,7 @@ export default function PostJudgement() {
                 />
               </div>
 
-              <div className="space-y-2 sm:col-span-2 lg:col-span-3">
+              <div className="space-y-2 sm:col-span-2 lg:col-span-4">
                 <Label htmlFor="judgement_summary">Judgement Summary</Label>
                 <Input
                   id="judgement_summary"

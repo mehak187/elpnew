@@ -114,7 +114,7 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
     <div className="space-y-4 sm:space-y-6">
       {/* ------------------------------------------------------ Invoice Data */}
       <FormSection icon={ReceiptText} title="Invoice Data">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
           <div className="space-y-2">
             <Label htmlFor="invoiceDate">Invoice Date *</Label>
             <Input
@@ -265,7 +265,7 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
                   <ExpenseClassificationPicker
                     types={GENERAL_TYPES}
                     idPrefix={"line-" + line.id}
@@ -318,7 +318,7 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
                         />
                       </div>
 
-                      <div className="space-y-2 sm:col-span-2 lg:col-span-3">
+                      <div className="space-y-2 sm:col-span-2 lg:col-span-4">
                         <Label htmlFor={"desc-" + line.id}>
                           Expense Description / Notes
                           {type?.requiresDescription && " *"}
@@ -341,7 +341,7 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
                   )}
 
                   {!classified && (
-                    <p className="self-end pb-2 text-sm text-muted-foreground sm:col-span-2 lg:col-span-3">
+                    <p className="self-end pb-2 text-sm text-muted-foreground sm:col-span-2 lg:col-span-4">
                       Choose the expense type, category and subcategory to
                       continue.
                     </p>
