@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { UserPlus, Save, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DEFAULT_DIAL_CODE } from "@/lib/constants";
 import { deriveClientStatus } from "@/lib/clientStatus";
 import { findClient } from "./clientRecords";
 import { StatusDot } from "@/components/shared/panels";
@@ -89,6 +90,7 @@ const toFormData = (record) =>
         poaNo: record.poaNo || "",
         poaExpiryDate: record.poaExpiryDate || "",
         email: record.email || "",
+        mobileDialCode: record.mobileDialCode || DEFAULT_DIAL_CODE,
         mobile: record.mobile || "",
         receivingBank: record.receivingBank || "",
         receivingAccount: record.receivingAccount || "",
@@ -112,6 +114,7 @@ const emptyFormData = {
   poaNo: "",
   poaExpiryDate: "",
   email: "",
+  mobileDialCode: DEFAULT_DIAL_CODE,
   mobile: "",
   receivingBank: "",
   receivingAccount: "",

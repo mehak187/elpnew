@@ -1,5 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { MessageCircle, Mail } from "lucide-react";
+import { COUNTRY_DIAL_CODES } from "@/lib/constants";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -12,17 +13,42 @@ import {
 export default function ContactSection({ formData, onChange, onSelectChange }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-      {/* Mobile */}
+      {/* Mobile - the country code is picked, not typed into the number */}
       <div className="space-y-2">
         <Label htmlFor="mobile">Mobile *</Label>
-        <Input
-          id="mobile"
-          name="mobile"
-          value={formData.mobile}
-          onChange={onChange}
-          placeholder="+968 XXXX XXXX"
-          required
-        />
+        <div className="flex gap-2">
+          <Select
+            value={formData.mobileDialCode}
+            onValueChange={(value) => onSelectChange("mobileDialCode", value)}
+          >
+            <SelectTrigger className="w-24 shrink-0" aria-label="Country code">
+              <SelectValue>{formData.mobileDialCode}</SelectValue>
+            </SelectTrigger>
+            <SelectContent className="max-h-72">
+              {COUNTRY_DIAL_CODES.map((country) => (
+                <SelectItem key={country.code} value={country.dial}>
+                  <span className="inline-flex w-full items-center gap-2">
+                    <span className="w-12 shrink-0 font-medium">
+                      {country.dial}
+                    </span>
+                    {/* Opacity rather than a colour, so it stays readable
+                        against the highlighted row. */}
+                    <span className="opacity-70">{country.name}</span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            id="mobile"
+            name="mobile"
+            value={formData.mobile}
+            onChange={onChange}
+            placeholder="XXXX XXXX"
+            className="flex-1"
+            required
+          />
+        </div>
       </div>
 
       {/* Email */}
