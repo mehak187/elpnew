@@ -68,10 +68,10 @@ const SECTIONS = [
         : []),
     ],
   },
-  { key: "commission", label: "Commission", existingOnly: true },
   { key: "documents", label: "Documents", existingOnly: true },
   { key: "cases", label: "Cases", existingOnly: true },
   { key: "invoices", label: "Invoices", existingOnly: true },
+  { key: "commission", label: "Commission", existingOnly: true },
   { key: "analytics", label: "Client Analytics", existingOnly: true },
   { key: "merge", label: "Merge Clients", existingOnly: true },
 ];
