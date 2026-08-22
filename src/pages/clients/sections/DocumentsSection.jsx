@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,20 +12,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import DataTable from "@/components/shared/DataTable";
-import { Upload, FileText, X } from "lucide-react";
+import { Upload, FileText, X, Trash2 } from "lucide-react";
 import {
   DOCUMENT_TYPES,
   DOCUMENT_EXPIRY_LABELS,
   DOCUMENT_STATUSES,
 } from "@/lib/constants";
 import { clientDocuments, officeFiles } from "../clientMockData";
-
-const STATUS_VARIANT = {
-  Valid: "success",
-  "Expiring Soon": "warning",
-  Expired: "destructive",
-  "Not Required": "secondary",
-};
 
 const emptyUpload = {
   documentType: "",
@@ -57,6 +49,9 @@ export default function DocumentsSection({ formData, onChange }) {
     if (chosen) setFile(chosen);
   };
 
+  const removeDocument = (id) =>
+    setDocuments((prev) => prev.filter((d) => d.id !== id));
+
   const handleSave = () => {
     setDocuments((prev) => [
       ...prev,
@@ -86,49 +81,56 @@ export default function DocumentsSection({ formData, onChange }) {
     {
       key: "documentType",
       header: "Document Type",
-      width: "18%",
+      width: "20%",
       cellClassName: "font-medium",
     },
+    { key: "uploadDate", header: "Upload Date", width: "14%" },
     {
       key: "fileName",
       header: "Uploaded Document",
-      width: "20%",
+      width: "24%",
       render: (value, row) => (
         <button
           type="button"
           onClick={() =>
             window.open(row.fileUrl, "_blank", "noopener,noreferrer")
           }
-          className="flex items-start gap-2 text-left text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring rounded"
+          className="flex items-start gap-2 rounded text-left text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <FileText className="h-4 w-4 shrink-0" />
           {value}
         </button>
       ),
     },
-    { key: "uploadDate", header: "Upload Date", width: "12%" },
-    {
-      key: "expiryDate",
-      header: "Expiry Date",
-      width: "12%",
-      render: (value) =>
-        value || <span className="text-muted-foreground">-</span>,
-    },
-    {
-      key: "status",
-      header: "Document Status",
-      width: "14%",
-      render: (value) => <Badge variant={STATUS_VARIANT[value]}>{value}</Badge>,
-    },
     {
       key: "notes",
       header: "Notes",
-      width: "24%",
+      width: "34%",
       render: (value, row) => (
         <span className="text-muted-foreground">
           {row.linkedFileNo ? "File " + row.linkedFileNo + ". " : ""}
           {value || "-"}
         </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Delete",
+      width: "8%",
+      disableFilter: true,
+      render: (_, row) => (
+        <div className="flex items-center justify-center">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-red-500 hover:text-red-600"
+            title="Delete document"
+            onClick={() => removeDocument(row.id)}
+          >
+            <Trash2 className="h-4 w-4" />
+            <span className="sr-only">Delete {row.fileName}</span>
+          </Button>
+        </div>
       ),
     },
   ];
