@@ -247,7 +247,7 @@ export default function ClientDetails() {
 
       <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 items-start">
         {/* Section navigation */}
-        <Card className="w-full lg:w-60 lg:shrink-0">
+        <Card className="w-full lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:w-60 lg:shrink-0 lg:overflow-y-auto">
           <CardContent className="p-3">
             <p className="mb-2 border-b px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Client Details
