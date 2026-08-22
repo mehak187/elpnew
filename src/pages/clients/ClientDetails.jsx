@@ -2,10 +2,11 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { UserPlus, Save, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CLIENT_STATUS_VARIANT, deriveClientStatus } from "@/lib/clientStatus";
+import { deriveClientStatus } from "@/lib/clientStatus";
+import { findClient } from "./clientRecords";
+import { StatusDot } from "@/components/shared/panels";
 
 import BasicSection from "./sections/BasicSection";
 import ContactSection from "./sections/ContactSection";
@@ -72,20 +73,6 @@ const SECTIONS = [
   { key: "merge", label: "Merge Clients", existingOnly: true },
 ];
 
-// Demo expiry dates are generated around today so the expired and still-valid
-// states are both visible whenever the app is run.
-const DAY = 24 * 60 * 60 * 1000;
-const dayOffset = (days) =>
-  new Date(Date.now() + days * DAY).toISOString().slice(0, 10);
-
-// Mock client data - in real app, this would come from API
-const clientsData = [
-  { id: 1, clientNo: "1", type: "Commercial Company", clientName: "ABC Holdings LLC", arabicName: "شركة ABC القابضة", referenceNo: "REF-2024-001", dateOfRegistration: "2024-01-15", referenceExpiryDate: dayOffset(-140), poaNo: "6565777", poaExpiryDate: dayOffset(90), vatinNo: "OM123456789", email: "john@abc.com", mobile: "+968 2411 1111", receivingBank: "Bank Muscat", receivingAccount: "1234567890", commissionRate: "10", payFeesOnBehalf: "Yes", paymentDelayPeriod: "30", paymentDelayCustomDays: "", languageOfCommunication: "English", whatsappNotification: "Yes", emailNotification: "No", closeDate: "", activeCases: 3, mergedIntoClientNo: null, statusOverride: null },
-  { id: 2, clientNo: "2", type: "Individual", clientName: "Fatima Rashid", arabicName: "فاطمة راشد", referenceNo: "REF-2024-002", dateOfRegistration: "2024-02-20", referenceExpiryDate: dayOffset(60), poaNo: "6565914", poaExpiryDate: dayOffset(-25), vatinNo: "", email: "fatima@email.com", mobile: "+968 9234 5678", receivingBank: "National Bank of Oman", receivingAccount: "0987654321", commissionRate: "7.5", payFeesOnBehalf: "No", paymentDelayPeriod: "15", paymentDelayCustomDays: "", languageOfCommunication: "Arabic", whatsappNotification: "Yes", emailNotification: "No", closeDate: "", activeCases: 1, mergedIntoClientNo: null, statusOverride: null },
-  { id: 3, clientNo: "3", type: "Commercial Company", clientName: "Al Madina Trading", arabicName: "شركة المدينة للتجارة", referenceNo: "REF-2024-003", dateOfRegistration: "2024-03-10", referenceExpiryDate: dayOffset(-35), poaNo: "6566051", poaExpiryDate: dayOffset(240), vatinNo: "OM987654321", email: "ahmed@almadina.com", mobile: "+968 2422 2222", receivingBank: "Bank Dhofar", receivingAccount: "5678901234", commissionRate: "12", payFeesOnBehalf: "Yes", paymentDelayPeriod: "60", paymentDelayCustomDays: "", languageOfCommunication: "Both", whatsappNotification: "Yes", emailNotification: "No", closeDate: "", activeCases: 2, mergedIntoClientNo: null, statusOverride: null },
-  { id: 4, clientNo: "4", type: "Commercial Company", clientName: "Gulf Construction Co", arabicName: "شركة الخليج للإنشاءات", referenceNo: "REF-2024-004", dateOfRegistration: "2024-04-05", referenceExpiryDate: dayOffset(210), poaNo: "6566188", poaExpiryDate: dayOffset(-110), vatinNo: "OM456789123", email: "khalid@gulfconst.com", mobile: "+968 2433 3333", receivingBank: "Oman Arab Bank", receivingAccount: "3456789012", commissionRate: "10", payFeesOnBehalf: "No", paymentDelayPeriod: "custom", paymentDelayCustomDays: "75", languageOfCommunication: "English", whatsappNotification: "Yes", emailNotification: "No", closeDate: "", activeCases: 1, mergedIntoClientNo: null, statusOverride: null },
-  { id: 5, clientNo: "5", type: "Individual", clientName: "Ahmed Al Lawati", arabicName: "أحمد اللواتي", referenceNo: "REF-2024-005", dateOfRegistration: "2024-05-01", referenceExpiryDate: dayOffset(95), poaNo: "6566325", poaExpiryDate: dayOffset(45), vatinNo: "", email: "ahmed.lawati@email.com", mobile: "+968 9345 6789", receivingBank: "Bank Muscat", receivingAccount: "7890123456", commissionRate: "8", payFeesOnBehalf: "No", paymentDelayPeriod: "45", paymentDelayCustomDays: "", languageOfCommunication: "Both", whatsappNotification: "Yes", emailNotification: "No", closeDate: "", activeCases: 0, mergedIntoClientNo: "1", statusOverride: null },
-];
 
 const toFormData = (record) =>
   !record
@@ -141,9 +128,7 @@ export default function ClientDetails() {
   const { id } = useParams();
   const isExisting = Boolean(id);
 
-  const record = isExisting
-    ? clientsData.find((c) => c.id === parseInt(id))
-    : null;
+  const record = isExisting ? findClient(id) : null;
 
   const [clientType, setClientType] = useState(() => record?.type || "Individual");
   const [statusOverride, setStatusOverride] = useState(
@@ -235,14 +220,9 @@ export default function ClientDetails() {
             </div>
           )}
           <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-xl sm:text-2xl font-bold text-primary">
-                {title}
-              </h1>
-              {status && (
-                <Badge variant={CLIENT_STATUS_VARIANT[status]}>{status}</Badge>
-              )}
-            </div>
+            <h1 className="text-xl sm:text-2xl font-bold text-primary">
+              {title}
+            </h1>
             <p className="text-xs sm:text-sm text-muted-foreground">
               {isExisting
                 ? "Client profile and related records"
@@ -290,10 +270,11 @@ export default function ClientDetails() {
         <div className="w-full flex-1 space-y-4">
           <Card>
             <CardContent className="p-4 sm:p-6">
-              <div className="border-b pb-3 mb-6">
+              <div className="mb-6 flex items-center gap-4 border-b pb-3">
                 <h2 className="text-base font-semibold text-primary">
                   {current.label}
                 </h2>
+                <StatusDot status={status} isGood={status === "Active"} />
               </div>
 
               {/* Editable sections share one form and one save button */}
