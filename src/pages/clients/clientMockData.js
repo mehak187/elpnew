@@ -96,11 +96,11 @@ export const clientLinkedCases = [
 ];
 
 export const clientInvoices = [
-  { id: 1, date: "2024-02-15", invoiceNo: "INV-2024-011", details: "Retainer - Q1 2024", amount: 4500, paidAmount: 4500, status: "Paid", notes: "" },
-  { id: 2, date: "2024-05-02", invoiceNo: "INV-2024-042", details: "Court fees - file 21", amount: 1200, paidAmount: 600, status: "Partially Paid", notes: "Balance agreed for June." },
-  { id: 3, date: "2024-08-19", invoiceNo: "INV-2024-088", details: "Retainer - Q3 2024", amount: 4500, paidAmount: 0, status: "Unpaid", notes: "" },
-  { id: 4, date: "2024-10-01", invoiceNo: "INV-2024-102", details: "Appeal filing - file 34", amount: 2750, paidAmount: 0, status: "Overdue", notes: "Reminder sent twice." },
-  { id: 5, date: "2024-11-11", invoiceNo: "INV-2024-119", details: "Duplicate issue", amount: 800, paidAmount: 0, status: "Cancelled", notes: "Raised in error." },
+  { id: 1, date: "2024-02-15", invoiceNo: "INV-2024-011", dueDate: "2024-03-16", details: "Retainer - Q1 2024", amount: 4500, paidAmount: 4500, status: "Paid", notes: "" },
+  { id: 2, date: "2024-05-02", invoiceNo: "INV-2024-042", dueDate: "2024-06-01", details: "Court fees - file 21", amount: 1200, paidAmount: 600, status: "Partially Paid", notes: "Balance agreed for June." },
+  { id: 3, date: "2024-08-19", invoiceNo: "INV-2024-088", dueDate: "2024-09-18", details: "Retainer - Q3 2024", amount: 4500, paidAmount: 0, status: "Unpaid", notes: "" },
+  { id: 4, date: "2024-10-01", invoiceNo: "INV-2024-102", dueDate: "2024-10-31", details: "Appeal filing - file 34", amount: 2750, paidAmount: 0, status: "Overdue", notes: "Reminder sent twice." },
+  { id: 5, date: "2024-11-11", invoiceNo: "INV-2024-119", dueDate: "2024-12-11", details: "Duplicate issue", amount: 800, paidAmount: 0, status: "Cancelled", notes: "Raised in error." },
 ];
 
 // Case activity, month by month. Deliberately holds no financial data - the
