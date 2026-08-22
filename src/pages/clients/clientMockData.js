@@ -144,3 +144,17 @@ export const MERGE_TRANSFER_ITEMS = [
   "Contracts",
   "Notes",
 ];
+
+/** Who a commission can be paid to. */
+export const commissionPayees = [
+  "Ahmed Al Habsi (Referrer)",
+  "Muscat Legal Consultants",
+  "Yusuf Al Kindi (Partner)",
+  "External Agent",
+];
+
+/** Commissions already settled for this client. */
+export const commissionPayments = [
+  { id: 1, paidOn: "2024-07-05", fromDate: "2024-01-01", toDate: "2024-06-30", payableTo: "Ahmed Al Habsi (Referrer)", legalFees: 5000, percent: 10, amount: 500 },
+  { id: 2, paidOn: "2025-01-12", fromDate: "2024-07-01", toDate: "2024-12-31", payableTo: "Muscat Legal Consultants", legalFees: 3200, percent: 7.5, amount: 240 },
+];

@@ -11,6 +11,7 @@ import { StatusDot } from "@/components/shared/panels";
 import BasicSection from "./sections/BasicSection";
 import ContactSection from "./sections/ContactSection";
 import FinancialSection from "./sections/FinancialSection";
+import CommissionSection from "./sections/CommissionSection";
 import DocumentsSection from "./sections/DocumentsSection";
 import LinkedCasesSection from "./sections/LinkedCasesSection";
 import InvoicesSection from "./sections/InvoicesSection";
@@ -66,6 +67,7 @@ const SECTIONS = [
         : []),
     ],
   },
+  { key: "commission", label: "Commission", existingOnly: true },
   { key: "documents", label: "Documents", existingOnly: true },
   { key: "cases", label: "Linked Cases", existingOnly: true },
   { key: "invoices", label: "Invoices", existingOnly: true },
@@ -274,7 +276,9 @@ export default function ClientDetails() {
                 <h2 className="text-base font-semibold text-primary">
                   {current.label}
                 </h2>
-                <StatusDot status={status} isGood={status === "Active"} />
+                {activeSection === "basic" && (
+                  <StatusDot status={status} isGood={status === "Active"} />
+                )}
               </div>
 
               {/* Editable sections share one form and one save button */}
@@ -307,6 +311,7 @@ export default function ClientDetails() {
                 )}
               </form>
 
+              {activeSection === "commission" && <CommissionSection />}
               {activeSection === "documents" && <DocumentsSection />}
               {activeSection === "cases" && <LinkedCasesSection />}
               {activeSection === "invoices" && <InvoicesSection />}
