@@ -321,7 +321,9 @@ export default function ClientDetails() {
               {activeSection === "cases" && <LinkedCasesSection />}
               {activeSection === "invoices" && <InvoicesSection />}
               {activeSection === "analytics" && <AnalyticsSection />}
-              {activeSection === "merge" && <MergeSection />}
+              {activeSection === "merge" && record && (
+                <MergeSection client={record} />
+              )}
             </CardContent>
           </Card>
         </div>
