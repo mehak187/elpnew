@@ -25,10 +25,8 @@ import { clientDocuments, officeFiles } from "../clientMockData";
  * change in either place is the same change. Adding another such type means
  * adding a row here and nothing else.
  */
-/**
- * The client's reference number and its expiry, shown against a document by
- * default. Editing them here edits the client record itself.
- */
+/** The client's reference number and its expiry. Editing them here edits the
+ *  client record itself. */
 const REFERENCE_FIELDS = {
   expiryField: "referenceExpiryDate",
   fields: [
@@ -45,7 +43,12 @@ const REFERENCE_FIELDS = {
   ],
 };
 
-/** A power of attorney carries its own number and expiry instead. */
+/**
+ * Which client fields each document type carries.
+ *
+ * Only these three do. Instructions, contracts and anything else are just a
+ * file with a note, so nothing extra is asked for.
+ */
 const LINKED_FIELDS = {
   "Power of Attorney": {
     expiryField: "poaExpiryDate",
@@ -54,6 +57,8 @@ const LINKED_FIELDS = {
       { name: "poaExpiryDate", label: "POA Expiry Date", type: "date" },
     ],
   },
+  "Commercial Registration": REFERENCE_FIELDS,
+  "ID Card": REFERENCE_FIELDS,
 };
 
 const emptyUpload = {
@@ -71,10 +76,7 @@ export default function DocumentsSection({ formData, onChange }) {
   const [currentPage, setCurrentPage] = useState(1);
 
   const needsOfficeFile = draft.documentType === "Special Contract";
-  // Every type shows the client's reference number unless it has its own.
-  const linked = draft.documentType
-    ? LINKED_FIELDS[draft.documentType] || REFERENCE_FIELDS
-    : null;
+  const linked = LINKED_FIELDS[draft.documentType];
 
   const setField = (name, value) =>
     setDraft((prev) => ({ ...prev, [name]: value }));
