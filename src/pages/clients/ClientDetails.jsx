@@ -13,6 +13,7 @@ import BasicSection from "./sections/BasicSection";
 import ContactSection from "./sections/ContactSection";
 import FinancialSection from "./sections/FinancialSection";
 import CommissionSection from "./sections/CommissionSection";
+import ClientManagementSection from "./sections/ClientManagementSection";
 import DocumentsSection from "./sections/DocumentsSection";
 import LinkedCasesSection from "./sections/LinkedCasesSection";
 import InvoicesSection from "./sections/InvoicesSection";
@@ -72,6 +73,7 @@ const SECTIONS = [
   { key: "cases", label: "Cases", existingOnly: true },
   { key: "invoices", label: "Invoices", existingOnly: true },
   { key: "commission", label: "Commission", existingOnly: true },
+  { key: "management", label: "Client Management", existingOnly: true },
   { key: "analytics", label: "Client Analytics", existingOnly: true },
   { key: "merge", label: "Merge Clients", existingOnly: true },
 ];
@@ -320,6 +322,9 @@ export default function ClientDetails() {
               )}
               {activeSection === "cases" && <LinkedCasesSection />}
               {activeSection === "invoices" && <InvoicesSection />}
+              {activeSection === "management" && record && (
+                <ClientManagementSection client={record} />
+              )}
               {activeSection === "analytics" && <AnalyticsSection />}
               {activeSection === "merge" && record && (
                 <MergeSection client={record} />

@@ -368,3 +368,41 @@ export function overviewFigures({ branches, documents, bankAccounts, payments, e
     },
   };
 }
+
+/* ------------------------------------------------------- Branch staff roles */
+
+/** The roles a branch staffs, in the order they are assigned to a client. */
+export const BRANCH_ROLES = [
+  "General Supervisor",
+  "Legal Consultant",
+  "Enforcement Officer",
+];
+
+/**
+ * Staff, each belonging to one branch.
+ *
+ * A client is managed by people from a single branch, so the role pickers only
+ * ever offer that branch's staff. Case tasks will later be assigned from the
+ * same list.
+ */
+export const firmStaff = [
+  { id: 1, name: "Mohammed Al Yahyaei", branchId: 1, role: "General Supervisor" },
+  { id: 2, name: "Hamad Al Riyami", branchId: 1, role: "General Supervisor" },
+  { id: 3, name: "Layla Al Balushi", branchId: 1, role: "Legal Consultant" },
+  { id: 4, name: "Aisha Al Saadi", branchId: 1, role: "Legal Consultant" },
+  { id: 5, name: "Khalid Al Hinai", branchId: 1, role: "Enforcement Officer" },
+  { id: 6, name: "Nasser Al Amri", branchId: 1, role: "Enforcement Officer" },
+
+  { id: 7, name: "Salim Al Rawahi", branchId: 2, role: "General Supervisor" },
+  { id: 8, name: "Maryam Al Ghafri", branchId: 2, role: "Legal Consultant" },
+  { id: 9, name: "Yusuf Al Kindi", branchId: 2, role: "Legal Consultant" },
+  { id: 10, name: "Talal Al Mahrouqi", branchId: 2, role: "Enforcement Officer" },
+
+  { id: 11, name: "Noura Al Habsi", branchId: 3, role: "General Supervisor" },
+  { id: 12, name: "Badar Al Shukaili", branchId: 3, role: "Legal Consultant" },
+  { id: 13, name: "Zahra Al Jabri", branchId: 3, role: "Enforcement Officer" },
+];
+
+/** Staff of one branch who hold a given role. */
+export const staffFor = (branchId, role) =>
+  firmStaff.filter((s) => s.branchId === Number(branchId) && s.role === role);
