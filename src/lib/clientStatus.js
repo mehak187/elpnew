@@ -2,6 +2,16 @@
 
 export const CLIENT_STATUSES = ["Active", "Inactive", "Merged"];
 
+/**
+ * The statuses an admin may set by hand.
+ *
+ * Merged is deliberately absent: it is only ever the outcome of a merge, run
+ * from the Merge Clients screen, so it is never something to pick from a list.
+ */
+export const MANUAL_CLIENT_STATUSES = CLIENT_STATUSES.filter(
+  (status) => status !== "Merged"
+);
+
 export const CLIENT_STATUS_VARIANT = {
   Active: "success",
   Inactive: "secondary",

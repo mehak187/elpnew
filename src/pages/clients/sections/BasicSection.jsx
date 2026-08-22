@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Upload, FileText, X } from "lucide-react";
 import { CLIENT_TYPES } from "@/lib/constants";
-import { CLIENT_STATUSES } from "@/lib/clientStatus";
+import { MANUAL_CLIENT_STATUSES } from "@/lib/clientStatus";
 
 export default function BasicSection({
   formData,
@@ -51,7 +51,7 @@ export default function BasicSection({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="auto">Automatic (based on cases)</SelectItem>
-            {CLIENT_STATUSES.map((status) => (
+            {MANUAL_CLIENT_STATUSES.map((status) => (
               <SelectItem key={status} value={status}>
                 {status}
               </SelectItem>
