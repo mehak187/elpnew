@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -12,13 +11,44 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import DataTable from "@/components/shared/DataTable";
-import { Upload, FileText, X, Trash2 } from "lucide-react";
+import { Upload, FileText, FileCheck, Trash2 } from "lucide-react";
 import {
   DOCUMENT_TYPES,
-  DOCUMENT_EXPIRY_LABELS,
   DOCUMENT_STATUSES,
 } from "@/lib/constants";
 import { clientDocuments, officeFiles } from "../clientMockData";
+
+/**
+ * Document types that carry fields the client record already holds.
+ *
+ * These are edited here and in Basic Info as one value - not copied - so a
+ * change in either place is the same change. Adding another such type means
+ * adding a row here and nothing else.
+ */
+const LINKED_FIELDS = {
+  "Power of Attorney": {
+    expiryField: "poaExpiryDate",
+    fields: [
+      { name: "poaNo", label: "POA No.", placeholder: "Enter POA number" },
+      { name: "poaExpiryDate", label: "POA Expiry Date", type: "date" },
+    ],
+  },
+  "Commercial Registration": {
+    expiryField: "referenceExpiryDate",
+    fields: [
+      {
+        name: "referenceNo",
+        label: "Reference No.",
+        placeholder: "Enter reference number",
+      },
+      {
+        name: "referenceExpiryDate",
+        label: "Reference Expiry Date",
+        type: "date",
+      },
+    ],
+  },
+};
 
 const emptyUpload = {
   documentType: "",
@@ -34,12 +64,8 @@ export default function DocumentsSection({ formData, onChange }) {
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Expiry only applies to the two document types that carry one.
-  const expiryLabel = DOCUMENT_EXPIRY_LABELS[draft.documentType];
   const needsOfficeFile = draft.documentType === "Special Contract";
-  // A power of attorney carries the client's own POA number and expiry, so
-  // those two fields are edited here and in Basic Info as one value.
-  const isPowerOfAttorney = draft.documentType === "Power of Attorney";
+  const linked = LINKED_FIELDS[draft.documentType];
 
   const setField = (name, value) =>
     setDraft((prev) => ({ ...prev, [name]: value }));
@@ -61,7 +87,9 @@ export default function DocumentsSection({ formData, onChange }) {
         fileName: file.name,
         fileUrl: URL.createObjectURL(file),
         uploadDate: new Date().toISOString().slice(0, 10),
-        expiryDate: isPowerOfAttorney ? formData.poaExpiryDate : draft.expiryDate,
+        expiryDate: linked
+          ? formData[linked.expiryField]
+          : draft.expiryDate,
         status: DOCUMENT_STATUSES[0],
         notes: draft.notes,
         linkedFileNo: draft.linkedFileNo || null,
@@ -75,7 +103,7 @@ export default function DocumentsSection({ formData, onChange }) {
     file &&
     draft.documentType &&
     (!needsOfficeFile || draft.linkedFileNo) &&
-    (!isPowerOfAttorney || (formData.poaNo && formData.poaExpiryDate));
+    (!linked || linked.fields.every((field) => formData[field.name]));
 
   const columns = [
     {
@@ -143,90 +171,79 @@ export default function DocumentsSection({ formData, onChange }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label htmlFor="documentType">Document Type *</Label>
-              <Select
-                value={draft.documentType}
-                onValueChange={(value) => setField("documentType", value)}
-              >
-                <SelectTrigger id="documentType">
-                  <SelectValue placeholder="Please Select" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DOCUMENT_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="flex gap-2">
+                <Select
+                  value={draft.documentType}
+                  onValueChange={(value) => setField("documentType", value)}
+                >
+                  <SelectTrigger id="documentType" className="flex-1">
+                    <SelectValue placeholder="Please Select" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DOCUMENT_TYPES.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-            <div className="space-y-2">
-              <Label>Upload</Label>
-              {!file ? (
-                <label className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed px-3 text-sm text-muted-foreground hover:bg-muted/50">
-                  <Upload className="h-4 w-4" />
-                  Upload File
-                  <Input
-                    type="file"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                </label>
-              ) : (
-                <div className="flex h-9 items-center justify-between gap-2 rounded-md bg-muted px-3">
-                  <span className="truncate text-sm">{file.name}</span>
-                  <button
+                {/* The attached file's name lives in the tooltip, so the
+                    control stays the size of an icon either way. */}
+                {file ? (
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0 border-green-600 text-green-600 hover:text-destructive"
+                    title={file.name + " - click to remove"}
                     onClick={() => setFile(null)}
-                    className="shrink-0 text-muted-foreground hover:text-destructive"
                   >
-                    <X className="h-4 w-4" />
-                    <span className="sr-only">Remove file</span>
-                  </button>
-                </div>
-              )}
+                    <FileCheck className="h-4 w-4" />
+                    <span className="sr-only">
+                      {file.name} attached. Remove it.
+                    </span>
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0"
+                    title="Upload file"
+                    asChild
+                  >
+                    <label className="cursor-pointer">
+                      <Upload className="h-4 w-4" />
+                      <span className="sr-only">Upload file</span>
+                      <Input
+                        type="file"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                    </label>
+                  </Button>
+                )}
+              </div>
             </div>
 
-{/* A power of attorney reads and writes the client's own POA fields, so
-                editing either here or in Basic Info changes the same value. */}
-            {isPowerOfAttorney && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="documentPoaNo">POA No. *</Label>
-                  <Input
-                    id="documentPoaNo"
-                    name="poaNo"
-                    value={formData.poaNo}
-                    onChange={onChange}
-                    placeholder="Enter POA number"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="documentPoaExpiry">POA Expiry Date *</Label>
-                  <Input
-                    id="documentPoaExpiry"
-                    name="poaExpiryDate"
-                    type="date"
-                    value={formData.poaExpiryDate}
-                    onChange={onChange}
-                  />
-                </div>
-              </>
-            )}
-
-            {/* Expiry date, for the other type that carries one */}
-            {expiryLabel && !isPowerOfAttorney && (
-              <div className="space-y-2">
-                <Label htmlFor="documentExpiry">{expiryLabel} *</Label>
+{/* These read and write the client's own fields, so editing them
+                here or in Basic Info changes the same value. */}
+            {linked?.fields.map((field) => (
+              <div key={field.name} className="space-y-2">
+                <Label htmlFor={"document-" + field.name}>
+                  {field.label} *
+                </Label>
                 <Input
-                  id="documentExpiry"
-                  type="date"
-                  value={draft.expiryDate}
-                  onChange={(e) => setField("expiryDate", e.target.value)}
+                  id={"document-" + field.name}
+                  name={field.name}
+                  type={field.type || "text"}
+                  value={formData[field.name]}
+                  onChange={onChange}
+                  placeholder={field.placeholder}
                 />
               </div>
-            )}
+            ))}
 
             {/* A special contract is tied to an office file sequence number */}
             {needsOfficeFile && (
@@ -252,20 +269,17 @@ export default function DocumentsSection({ formData, onChange }) {
                 </Select>
               </div>
             )}
-          </div>
 
-          {/* Notes only make sense once there is a document to annotate */}
-          {file && (
             <div className="space-y-2">
-              <Label htmlFor="documentNotes">Notes</Label>
-              <Textarea
+              <Label htmlFor="documentNotes">Note</Label>
+              <Input
                 id="documentNotes"
                 value={draft.notes}
                 onChange={(e) => setField("notes", e.target.value)}
                 placeholder="Add a note about this document"
               />
             </div>
-          )}
+          </div>
 
           <div className="flex justify-end">
             <Button type="button" onClick={handleSave} disabled={!canSave}>
