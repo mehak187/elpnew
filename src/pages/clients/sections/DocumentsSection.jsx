@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import DataTable from "@/components/shared/DataTable";
+import SearchableSelect from "@/components/shared/SearchableSelect";
 import { Upload, FileText, FileCheck, Trash2 } from "lucide-react";
 import {
   DOCUMENT_TYPES,
@@ -260,24 +261,17 @@ export default function DocumentsSection({ formData, onChange }) {
             {needsOfficeFile && (
               <div className="space-y-2">
                 <Label htmlFor="linkedFileNo">Link to Office File *</Label>
-                <Select
+                <SearchableSelect
+                  id="linkedFileNo"
                   value={draft.linkedFileNo}
                   onValueChange={(value) => setField("linkedFileNo", value)}
-                >
-                  <SelectTrigger id="linkedFileNo">
-                    <SelectValue placeholder="Select file number" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {officeFiles.map((officeFile) => (
-                      <SelectItem
-                        key={officeFile.fileNo}
-                        value={officeFile.fileNo}
-                      >
-                        {officeFile.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={officeFiles.map((officeFile) => ({
+                    value: officeFile.fileNo,
+                    label: officeFile.label,
+                  }))}
+                  placeholder="Select file number"
+                  searchPlaceholder="Search file number or case..."
+                />
               </div>
             )}
 
