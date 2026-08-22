@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Badge } from "@/components/ui/badge";
+import { StatusDot } from "@/components/shared/panels";
 import DataTable from "@/components/shared/DataTable";
 import { clientLinkedCases } from "../clientMockData";
 
@@ -14,7 +14,7 @@ export default function LinkedCasesSection() {
     {
       key: "fileNo",
       header: "File No.",
-      width: "10%",
+      width: "8%",
       render: (value) => (
         <button
           type="button"
@@ -25,25 +25,36 @@ export default function LinkedCasesSection() {
         </button>
       ),
     },
-    { key: "opponent", header: "Opponent", width: "22%" },
-    { key: "caseDetails", header: "Case Details", width: "26%" },
+    { key: "opponent", header: "Opponent", width: "20%" },
     {
-      key: "stage",
-      header: "Stage | Status",
-      width: "22%",
-      render: (value, row) => (
+      // The widest column: this is what the page is actually for.
+      key: "court",
+      header: "Case Details",
+      width: "46%",
+      render: (_, row) => (
         <div className="space-y-1">
-          <Badge variant="secondary">{value}</Badge>
-          <p className="text-xs text-muted-foreground">{row.status}</p>
+          <p className="font-medium">{row.court}</p>
+          <p className="text-xs text-muted-foreground">
+            {row.litigationLevel} &middot; Stage {row.stageNumber} &middot;{" "}
+            {row.caseStage}
+          </p>
+          <StatusDot
+            status={row.caseStatus}
+            isGood={row.caseStatus === "Active"}
+          />
         </div>
       ),
     },
-    { key: "updateDate", header: "Update Date", width: "12%" },
     {
       key: "update",
       header: "Update",
-      width: "18%",
-      render: (value) => value || <span className="text-muted-foreground">-</span>,
+      width: "26%",
+      render: (value, row) => (
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground">{row.updateDate}</p>
+          <p>{value || "-"}</p>
+        </div>
+      ),
     },
   ];
 
@@ -51,7 +62,7 @@ export default function LinkedCasesSection() {
     <DataTable
       columns={columns}
       data={clientLinkedCases}
-      searchPlaceholder="Search linked cases..."
+      searchPlaceholder="Search cases..."
       enableColumnSearch={false}
       currentPage={currentPage}
       pageSize={pageSize}
