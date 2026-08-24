@@ -71,7 +71,6 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
   // Whether a copy of the supplier invoice is coming, decided here rather than
   // deferred: a request with no invoice behind it has to say so up front.
   const [invoiceCopy, setInvoiceCopy] = useState("upload");
-  const [supportingDocuments, setSupportingDocuments] = useState([]);
   const [addingSupplier, setAddingSupplier] = useState(false);
   const [lines, setLines] = useState([emptyLine()]);
   const [error, setError] = useState("");
@@ -93,6 +92,15 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
     );
   };
 
+  // Nothing below the invoice data is asked for until the invoice itself is
+  // identified - there is no point classifying an expense against a supplier
+  // and a document that have not been named yet.
+  const invoiceDataComplete =
+    Boolean(invoiceDate) &&
+    invoiceNumber.trim().length > 0 &&
+    Boolean(supplier) &&
+    (noInvoice || Boolean(invoiceFile));
+
   const net = lines.reduce((sum, l) => sum + (Number(l.amountBeforeTax) || 0), 0);
   const tax = lines.reduce((sum, l) => sum + (Number(l.taxAmount) || 0), 0);
   const total = net + tax;
@@ -113,7 +121,6 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
       supplier,
       invoiceFile: noInvoice ? "" : invoiceFile,
       noInvoice,
-      supportingDocuments,
       lines: lines.map((l) => ({
         ...l,
         amountBeforeTax: Number(l.amountBeforeTax),
@@ -263,177 +270,187 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
         onCreated={setSupplier}
       />
 
+      {!invoiceDataComplete && (
+        <p className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
+          Fill in the invoice data above to carry on with the expense details.
+        </p>
+      )}
+
       {/* --------------------------------------------------- Expense Details */}
-      <FormSection
-        icon={FileText}
-        title="Expense Details"
-        action={
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            title="Add a row"
-            onClick={() => setLines((prev) => [...prev, emptyLine()])}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        }
-      >
-        <div className="space-y-5">
-          {lines.map((line, index) => {
-            const type = findType(line.typeKey);
-            const classified = isPathComplete(type, line.path);
+      {invoiceDataComplete && (
+        <FormSection
+          icon={FileText}
+          title="Expense Details"
+          action={
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              title="Add a row"
+              onClick={() => setLines((prev) => [...prev, emptyLine()])}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          }
+        >
+          <div className="space-y-5">
+            {lines.map((line, index) => {
+              const type = findType(line.typeKey);
+              const classified = isPathComplete(type, line.path);
 
-            return (
-              <div
-                key={line.id}
-                className={cn(index > 0 && "border-t pt-5", "space-y-4")}
-              >
-                {lines.length > 1 && (
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Row {index + 1}
-                    </p>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      onClick={() =>
-                        setLines((prev) => prev.filter((l) => l.id !== line.id))
-                      }
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Remove row {index + 1}</span>
-                    </Button>
+              return (
+                <div
+                  key={line.id}
+                  className={cn(index > 0 && "border-t pt-5", "space-y-4")}
+                >
+                  {lines.length > 1 && (
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Row {index + 1}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() =>
+                          setLines((prev) => prev.filter((l) => l.id !== line.id))
+                        }
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Remove row {index + 1}</span>
+                      </Button>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+                    <ExpenseClassificationPicker
+                      types={GENERAL_TYPES}
+                      idPrefix={"line-" + line.id}
+                      value={line}
+                      onChange={(next) => updateLine(line.id, next)}
+                    />
+
+                    {classified && (
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor={"net-" + line.id}>
+                            Amount Before Tax (OMR) *
+                          </Label>
+                          <Input
+                            id={"net-" + line.id}
+                            type="number"
+                            min="0"
+                            value={line.amountBeforeTax}
+                            onChange={(e) =>
+                              updateLine(line.id, { amountBeforeTax: e.target.value })
+                            }
+                            placeholder="0.00"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor={"tax-" + line.id}>Tax Amount (OMR)</Label>
+                          <Input
+                            id={"tax-" + line.id}
+                            type="number"
+                            min="0"
+                            value={line.taxAmount}
+                            onChange={(e) =>
+                              updateLine(line.id, { taxAmount: e.target.value })
+                            }
+                            placeholder="0.00"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor={"linetotal-" + line.id}>
+                            Total Amount (OMR)
+                          </Label>
+                          <Input
+                            id={"linetotal-" + line.id}
+                            value={lineTotalOf(line).toFixed(2)}
+                            readOnly
+                            disabled
+                            className="bg-muted"
+                          />
+                        </div>
+
+                        <div className="space-y-2 sm:col-span-2 lg:col-span-4">
+                          <Label htmlFor={"desc-" + line.id}>
+                            Expense Description / Notes
+                            {type?.requiresDescription && " *"}
+                          </Label>
+                          <Input
+                            id={"desc-" + line.id}
+                            value={line.description}
+                            onChange={(e) =>
+                              updateLine(line.id, { description: e.target.value })
+                            }
+                            placeholder="What is being claimed"
+                            className={cn(
+                              type?.requiresDescription &&
+                                !line.description.trim() &&
+                                "border-amber-400"
+                            )}
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {!classified && (
+                      <p className="self-end pb-2 text-sm text-muted-foreground sm:col-span-2 lg:col-span-4">
+                        Choose the expense type, category and subcategory to
+                        continue.
+                      </p>
+                    )}
                   </div>
-                )}
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-                  <ExpenseClassificationPicker
-                    types={GENERAL_TYPES}
-                    idPrefix={"line-" + line.id}
-                    value={line}
-                    onChange={(next) => updateLine(line.id, next)}
-                  />
-
-                  {classified && (
-                    <>
-                      <div className="space-y-2">
-                        <Label htmlFor={"net-" + line.id}>
-                          Amount Before Tax (OMR) *
-                        </Label>
-                        <Input
-                          id={"net-" + line.id}
-                          type="number"
-                          min="0"
-                          value={line.amountBeforeTax}
-                          onChange={(e) =>
-                            updateLine(line.id, { amountBeforeTax: e.target.value })
-                          }
-                          placeholder="0.00"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor={"tax-" + line.id}>Tax Amount (OMR)</Label>
-                        <Input
-                          id={"tax-" + line.id}
-                          type="number"
-                          min="0"
-                          value={line.taxAmount}
-                          onChange={(e) =>
-                            updateLine(line.id, { taxAmount: e.target.value })
-                          }
-                          placeholder="0.00"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor={"linetotal-" + line.id}>
-                          Total Amount (OMR)
-                        </Label>
-                        <Input
-                          id={"linetotal-" + line.id}
-                          value={lineTotalOf(line).toFixed(2)}
-                          readOnly
-                          disabled
-                          className="bg-muted"
-                        />
-                      </div>
-
-                      <div className="space-y-2 sm:col-span-2 lg:col-span-4">
-                        <Label htmlFor={"desc-" + line.id}>
-                          Expense Description / Notes
-                          {type?.requiresDescription && " *"}
-                        </Label>
-                        <Input
-                          id={"desc-" + line.id}
-                          value={line.description}
-                          onChange={(e) =>
-                            updateLine(line.id, { description: e.target.value })
-                          }
-                          placeholder="What is being claimed"
-                          className={cn(
-                            type?.requiresDescription &&
-                              !line.description.trim() &&
-                              "border-amber-400"
-                          )}
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {!classified && (
-                    <p className="self-end pb-2 text-sm text-muted-foreground sm:col-span-2 lg:col-span-4">
-                      Choose the expense type, category and subcategory to
-                      continue.
-                    </p>
-                  )}
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      </FormSection>
+              );
+            })}
+          </div>
+        </FormSection>
+      )}
 
       {/* ------------------------------------------------------------ Totals */}
-      <FormSection icon={CreditCard} title="Total Amount">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
-          <div className="space-y-2">
-            <Label htmlFor="netTotal">Amount Before Tax (OMR)</Label>
-            <Input
-              id="netTotal"
-              value={net.toFixed(2)}
-              readOnly
-              disabled
-              className="bg-muted"
-            />
-          </div>
+      {invoiceDataComplete && (
+        <FormSection icon={CreditCard} title="Total Amount">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="netTotal">Amount Before Tax (OMR)</Label>
+              <Input
+                id="netTotal"
+                value={net.toFixed(2)}
+                readOnly
+                disabled
+                className="bg-muted"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="taxTotal">Tax Amount (OMR)</Label>
-            <Input
-              id="taxTotal"
-              value={tax.toFixed(2)}
-              readOnly
-              disabled
-              className="bg-muted"
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="taxTotal">Tax Amount (OMR)</Label>
+              <Input
+                id="taxTotal"
+                value={tax.toFixed(2)}
+                readOnly
+                disabled
+                className="bg-muted"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="invoiceTotal">Total Amount (OMR)</Label>
-            <Input
-              id="invoiceTotal"
-              value={total.toFixed(2)}
-              readOnly
-              disabled
-              className="bg-muted font-bold text-primary"
-            />
+            <div className="space-y-2">
+              <Label htmlFor="invoiceTotal">Total Amount (OMR)</Label>
+              <Input
+                id="invoiceTotal"
+                value={total.toFixed(2)}
+                readOnly
+                disabled
+                className="bg-muted font-bold text-primary"
+              />
+            </div>
           </div>
-        </div>
-      </FormSection>
+        </FormSection>
+      )}
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
@@ -441,7 +458,11 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
         <Button variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button onClick={submit}>Submit Invoice &mdash; {money(total)}</Button>
+        {invoiceDataComplete && (
+          <Button onClick={submit}>
+            Submit Request &mdash; {money(total)}
+          </Button>
+        )}
       </div>
     </div>
   );
