@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFirm } from "@/lib/firm/context";
+import { Rial } from "@/components/shared/money";
 import {
   accountTransactions,
   invoices,
@@ -275,7 +276,7 @@ export default function TransactionsSection({ initialAccountId, canRecord }) {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="txAmount">Amount (OMR) *</Label>
+                <Label htmlFor="txAmount">Amount (<Rial />) *</Label>
                 <Input
                   id="txAmount"
                   type="number"
@@ -354,9 +355,14 @@ export default function TransactionsSection({ initialAccountId, canRecord }) {
                         : "text-red-600"
                     )}
                   >
-                    {row.type === "Opening"
-                      ? money(row.amount)
-                      : (row.amount >= 0 ? "+" : "-") + money(Math.abs(row.amount))}
+                    {row.type === "Opening" ? (
+                      money(row.amount)
+                    ) : (
+                      <>
+                        {row.amount >= 0 ? "+" : "-"}
+                        {money(Math.abs(row.amount))}
+                      </>
+                    )}
                   </td>
                   <td className="p-3 text-right font-semibold">{money(row.balance)}</td>
                 </tr>

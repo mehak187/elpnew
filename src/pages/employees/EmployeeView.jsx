@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { User, ArrowLeft, Edit, Mail, Phone, Calendar, Building, Briefcase, GraduationCap, DollarSign, Globe, Languages } from "lucide-react";
+import { Rial } from "@/components/shared/money";
 
 // Mock employee data - in real app, this would come from API
 const employees = [
@@ -103,7 +104,7 @@ export default function EmployeeView() {
             <InfoItem icon={GraduationCap} label="Education Level" value={employee.educationalLevel} />
             <InfoItem icon={Briefcase} label="Department" value={employee.department} />
             <InfoItem icon={Briefcase} label="Designation" value={employee.designation} />
-            <InfoItem icon={DollarSign} label="Salary" value={`${parseFloat(employee.salary).toFixed(3)} OMR`} />
+            <InfoItem icon={DollarSign} label="Salary" value={<>{parseFloat(employee.salary).toFixed(3)} <Rial /></>} />
           </div>
 
           {/* Document Expiry Section */}

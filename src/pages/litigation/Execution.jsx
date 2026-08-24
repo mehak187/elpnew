@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import DataTable from "@/components/shared/DataTable";
 import { Hammer, ArrowLeft, Save, Plus } from "lucide-react";
+import { Rial } from "@/components/shared/money";
 
 const executionActions = [
   { id: 1, date: "2024-12-05", action: "Execution Order Filed", status: "Completed", amount: "15,000.000", notes: "Filed with execution court" },
@@ -42,7 +43,7 @@ const columns = [
       </Badge>
     )
   },
-  { key: "amount", header: "Amount (OMR)", width: "12%", cellClassName: "text-right" },
+  { key: "amount", header: <>Amount (<Rial />)</>, width: "12%", cellClassName: "text-right" },
   { key: "notes", header: "Notes", width: "34%", cellClassName: "text-left" },
 ];
 
@@ -110,7 +111,7 @@ export default function Execution() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Awarded Amount</p>
-              <p className="font-medium text-emerald-600">OMR 15,000.000</p>
+              <p className="font-medium text-emerald-600">15,000.000 <Rial /></p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Status</p>
@@ -125,19 +126,19 @@ export default function Execution() {
         <Card>
           <CardContent className="p-4 text-center">
             <p className="text-xs text-muted-foreground">Total Amount</p>
-            <p className="text-2xl font-bold text-primary">OMR 15,000.000</p>
+            <p className="text-2xl font-bold text-primary">15,000.000 <Rial /></p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
             <p className="text-xs text-muted-foreground">Recovered</p>
-            <p className="text-2xl font-bold text-emerald-600">OMR 0.000</p>
+            <p className="text-2xl font-bold text-emerald-600">0.000 <Rial /></p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
             <p className="text-xs text-muted-foreground">Pending</p>
-            <p className="text-2xl font-bold text-amber-600">OMR 15,000.000</p>
+            <p className="text-2xl font-bold text-amber-600">15,000.000 <Rial /></p>
           </CardContent>
         </Card>
       </div>
@@ -204,7 +205,7 @@ export default function Execution() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="amount">Amount (OMR)</Label>
+                  <Label htmlFor="amount">Amount (<Rial />)</Label>
                   <Input
                     id="amount"
                     name="amount"

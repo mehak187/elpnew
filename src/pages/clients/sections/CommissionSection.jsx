@@ -13,9 +13,12 @@ import {
 import { Plus } from "lucide-react";
 import { EmptyState } from "@/components/shared/panels";
 import { clientInvoices, commissionPayments, commissionPayees } from "../clientMockData";
+import { withRial } from "@/components/shared/money";
 
-const money = (amount) =>
-  "OMR " + Number(amount || 0).toLocaleString("en-GB", { maximumFractionDigits: 2 });
+const moneyValue = (amount) =>
+  Number(amount || 0).toLocaleString("en-GB", { maximumFractionDigits: 2 });
+
+const money = (amount) => withRial(moneyValue(amount));
 
 const formatDate = (date) =>
   date
@@ -158,7 +161,7 @@ export default function CommissionSection() {
               </Label>
               <Input
                 id="legalFees"
-                value={fromDate && toDate ? money(fees) : ""}
+                value={fromDate && toDate ? moneyValue(fees) : ""}
                 readOnly
                 disabled
                 className="bg-muted"
@@ -169,7 +172,7 @@ export default function CommissionSection() {
               <Label htmlFor="commissionAmount">Commission Applied</Label>
               <Input
                 id="commissionAmount"
-                value={fromDate && toDate ? money(amount) : ""}
+                value={fromDate && toDate ? moneyValue(amount) : ""}
                 readOnly
                 disabled
                 className="bg-muted font-bold text-primary"

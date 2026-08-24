@@ -1,3 +1,5 @@
+// The Rial sign is drawn, not typed - see components/shared/money.jsx.
+
 // Client types as specified by the client (Phase 1 requirements)
 export const CLIENT_TYPES = [
   "Bank",

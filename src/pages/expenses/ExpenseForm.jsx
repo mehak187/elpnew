@@ -12,6 +12,7 @@ import { useExpenses } from "@/lib/expenses/context";
 import ExpenseClassificationPicker from "./ExpenseClassificationPicker";
 import { findType } from "./links";
 import { dayOffset } from "./expenseData";
+import { Rial } from "@/components/shared/money";
 
 const emptyDraft = {
   typeKey: "",
@@ -119,7 +120,7 @@ export default function ExpenseForm() {
 
               {classified && (
                 <div className="space-y-2">
-                  <Label htmlFor="expenseAmount">Amount (OMR) *</Label>
+                  <Label htmlFor="expenseAmount">Amount (<Rial />) *</Label>
                   <Input
                     id="expenseAmount"
                     type="number"

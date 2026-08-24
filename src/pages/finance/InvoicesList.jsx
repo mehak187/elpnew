@@ -14,19 +14,20 @@ const FILTERS = {
   client: { label: "Client", match: (row, value) => row.client === value },
 };
 import { Wallet, Plus, Eye, Edit, FileText } from "lucide-react";
+import { Rial } from "@/components/shared/money";
 
 const invoices = [
-  { id: 1, invoice_no: "INV/2024/001", client: "ABC Holdings LLC", amount: "OMR 2,500.000", date: "2024-12-01", due_date: "2024-12-31", status: "Paid" },
-  { id: 2, invoice_no: "INV/2024/002", client: "XYZ Investments", amount: "OMR 5,000.000", date: "2024-12-05", due_date: "2025-01-05", status: "Pending" },
-  { id: 3, invoice_no: "INV/2024/003", client: "Global Trade Co", amount: "OMR 3,750.000", date: "2024-12-10", due_date: "2025-01-10", status: "Pending" },
-  { id: 4, invoice_no: "INV/2024/004", client: "Tech Ventures Ltd", amount: "OMR 1,200.000", date: "2024-11-15", due_date: "2024-12-15", status: "Overdue" },
-  { id: 5, invoice_no: "INV/2024/005", client: "Ali Mohammed", amount: "OMR 800.000", date: "2024-11-20", due_date: "2024-12-20", status: "Paid" },
+  { id: 1, invoice_no: "INV/2024/001", client: "ABC Holdings LLC", amount: "2,500.000", date: "2024-12-01", due_date: "2024-12-31", status: "Paid" },
+  { id: 2, invoice_no: "INV/2024/002", client: "XYZ Investments", amount: "5,000.000", date: "2024-12-05", due_date: "2025-01-05", status: "Pending" },
+  { id: 3, invoice_no: "INV/2024/003", client: "Global Trade Co", amount: "3,750.000", date: "2024-12-10", due_date: "2025-01-10", status: "Pending" },
+  { id: 4, invoice_no: "INV/2024/004", client: "Tech Ventures Ltd", amount: "1,200.000", date: "2024-11-15", due_date: "2024-12-15", status: "Overdue" },
+  { id: 5, invoice_no: "INV/2024/005", client: "Ali Mohammed", amount: "800.000", date: "2024-11-20", due_date: "2024-12-20", status: "Paid" },
 ];
 
 const buildColumns = (onView, onDownload) => [
   { key: "invoice_no", header: "Invoice No.", width: "12%", cellClassName: "text-left font-medium" },
   { key: "client", header: "Client", width: "20%" },
-  { key: "amount", header: "Amount", width: "12%", className: "text-right", cellClassName: "text-right font-medium" },
+  { key: "amount", header: <>Amount (<Rial />)</>, width: "12%", className: "text-right", cellClassName: "text-right font-medium" },
   { key: "date", header: "Invoice Date", width: "12%" },
   { key: "due_date", header: "Due Date", width: "12%" },
   {

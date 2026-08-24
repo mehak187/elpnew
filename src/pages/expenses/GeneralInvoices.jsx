@@ -38,9 +38,11 @@ import { useExpenses } from "@/lib/expenses/context";
 import { useSuppliers } from "@/lib/suppliers/context";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 import { findType } from "./links";
+import { Rial } from "@/components/shared/money";
 import {
   PAYMENT_METHODS,
   VIEWER_ROLES,
+  ACCOUNTANT_REVIEW_RESULTS,
   STATUS,
   STATUS_VARIANT,
   firstReviewFor,
@@ -103,6 +105,76 @@ function Route({ invoice }) {
           )}
         </span>
       ))}
+    </div>
+  );
+}
+
+/**
+ * The accountant's decision on a request, taken on the request itself.
+ *
+ * Only shown to the accountant, and only while the request is sitting at their
+ * step. A return or a rejection asks for the note before it will submit.
+ */
+function AccountantReview({ invoiceId, onDecide }) {
+  const [result, setResult] = useState("");
+  const [note, setNote] = useState("");
+
+  const chosen = ACCOUNTANT_REVIEW_RESULTS.find((r) => r.key === result);
+  const noteRequired = Boolean(chosen?.needsNote);
+  const ready = Boolean(chosen) && (!noteRequired || note.trim().length > 0);
+
+  return (
+    <div className="space-y-4 rounded-md border bg-muted/30 p-4">
+      <p className="text-sm font-semibold text-primary">
+        Accountant&apos;s Review
+      </p>
+
+      <div className="grid grid-cols-1 gap-4 sm:max-w-md">
+        <div className="space-y-2">
+          <Label htmlFor={"review-" + invoiceId}>Review Result *</Label>
+          <Select
+            value={result}
+            onValueChange={(value) => {
+              setResult(value);
+              setNote("");
+            }}
+          >
+            <SelectTrigger id={"review-" + invoiceId}>
+              <SelectValue placeholder="Please Select" />
+            </SelectTrigger>
+            <SelectContent>
+              {ACCOUNTANT_REVIEW_RESULTS.map((option) => (
+                <SelectItem key={option.key} value={option.key}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {noteRequired && (
+          <div className="space-y-2">
+            <Label htmlFor={"note-" + invoiceId}>Accountant&apos;s Note *</Label>
+            <Textarea
+              id={"note-" + invoiceId}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Explain what needs correcting, or why this is rejected"
+            />
+          </div>
+        )}
+      </div>
+
+      <div className="flex justify-end">
+        <Button
+          size="sm"
+          disabled={!ready}
+          onClick={() => onDecide(chosen, note.trim())}
+        >
+          <Check className="mr-1.5 h-4 w-4" />
+          Submit Review
+        </Button>
+      </div>
     </div>
   );
 }
@@ -238,10 +310,15 @@ export default function GeneralInvoices() {
           const total = invoiceTotal(invoice);
           const paid = amountPaid(invoice);
           const isAdmin = role === "admin";
+          // The accountant decides through their own review block, so the
+          // three loose buttons are not offered to them as well.
+          const accountantReview =
+            role === "accountant" && invoice.status === "accountant";
           const canApprove =
-            (invoice.status === "accountant" &&
+            !accountantReview &&
+            ((invoice.status === "accountant" &&
               (isAdmin || role === "accountant")) ||
-            (invoice.status === "finance" && (isAdmin || role === "finance"));
+              (invoice.status === "finance" && (isAdmin || role === "finance")));
           const canPay =
             ["approved", "partiallyPaid"].includes(invoice.status) &&
             (isAdmin || role === "finance");
@@ -285,7 +362,7 @@ export default function GeneralInvoices() {
                       {money(total)}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Net {money(invoiceNet(invoice))} · Tax{" "}
+                      Net {money(invoiceNet(invoice))} · VAT{" "}
                       {money(invoiceTax(invoice))}
                     </p>
                     {paid > 0 && (
@@ -323,8 +400,8 @@ export default function GeneralInvoices() {
                         <th className="pb-2 font-medium">Category</th>
                         <th className="pb-2 font-medium">Subcategory</th>
                         <th className="pb-2 font-medium">Description</th>
-                        <th className="pb-2 text-right font-medium">Before Tax</th>
-                        <th className="pb-2 text-right font-medium">Tax</th>
+                        <th className="pb-2 text-right font-medium">Before VAT</th>
+                        <th className="pb-2 text-right font-medium">VAT</th>
                         <th className="pb-2 text-right font-medium">Total</th>
                       </tr>
                     </thead>
@@ -394,6 +471,15 @@ export default function GeneralInvoices() {
                     ))}
                   </ul>
                 </details>
+
+                {accountantReview && (
+                  <AccountantReview
+                    invoiceId={invoice.id}
+                    onDecide={(decision, note) =>
+                      record(invoice, decision.status, decision.action, note)
+                    }
+                  />
+                )}
 
                 {/* Actions available at this step */}
                 <div className="flex flex-wrap justify-end gap-2">
@@ -529,11 +615,13 @@ export default function GeneralInvoices() {
           <DialogHeader>
             <DialogTitle>Record payment</DialogTitle>
             <DialogDescription>
-              {payingFor &&
-                "Outstanding " +
-                  money(invoiceTotal(payingFor) - amountPaid(payingFor)) +
-                  " of " +
-                  money(invoiceTotal(payingFor))}
+              {payingFor && (
+                <>
+                  Outstanding{" "}
+                  {money(invoiceTotal(payingFor) - amountPaid(payingFor))} of{" "}
+                  {money(invoiceTotal(payingFor))}
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
           {payingFor && accountFor(payingFor.supplier) && (
@@ -559,7 +647,7 @@ export default function GeneralInvoices() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="paymentAmount">Amount Paid (OMR) *</Label>
+              <Label htmlFor="paymentAmount">Amount Paid (<Rial />) *</Label>
               <Input
                 id="paymentAmount"
                 type="number"

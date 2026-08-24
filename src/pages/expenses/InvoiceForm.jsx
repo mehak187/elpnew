@@ -27,6 +27,7 @@ import { findType } from "./links";
 import { dayOffset, money } from "./expenseData";
 import { useSuppliers } from "@/lib/suppliers/context";
 import NewSupplierDialog from "@/pages/suppliers/NewSupplierDialog";
+import { Rial } from "@/components/shared/money";
 
 /** A titled block of fields, with an optional action in its header. */
 function FormSection({ icon: Icon, title, action, children }) {
@@ -112,7 +113,7 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
       return setError("Upload the invoice copy, or mark it as no invoice.");
     if (!lines.every(lineComplete))
       return setError(
-        "Every row needs a full classification and an amount before tax. Other Expenses also needs a description."
+        "Every row needs a full classification and an amount before VAT. Other Expenses also needs a description."
       );
 
     onSubmit({
@@ -309,7 +310,7 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
                       <>
                         <div className="space-y-2">
                           <Label htmlFor={"net-" + line.id}>
-                            Amount Before Tax (OMR) *
+                            Amount Before VAT (<Rial />) *
                           </Label>
                           <Input
                             id={"net-" + line.id}
@@ -324,7 +325,7 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor={"tax-" + line.id}>Tax Amount (OMR)</Label>
+                          <Label htmlFor={"tax-" + line.id}>VAT Amount (<Rial />)</Label>
                           <Input
                             id={"tax-" + line.id}
                             type="number"
@@ -339,7 +340,7 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
 
                         <div className="space-y-2">
                           <Label htmlFor={"linetotal-" + line.id}>
-                            Total Amount (OMR)
+                            Total Amount (<Rial />)
                           </Label>
                           <Input
                             id={"linetotal-" + line.id}
@@ -385,7 +386,7 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
         <FormSection icon={CreditCard} title="Total Amount">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
             <div className="space-y-2">
-              <Label htmlFor="netTotal">Amount Before Tax (OMR)</Label>
+              <Label htmlFor="netTotal">Amount Before VAT (<Rial />)</Label>
               <Input
                 id="netTotal"
                 value={net.toFixed(2)}
@@ -396,7 +397,7 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="taxTotal">Tax Amount (OMR)</Label>
+              <Label htmlFor="taxTotal">VAT Amount (<Rial />)</Label>
               <Input
                 id="taxTotal"
                 value={tax.toFixed(2)}
@@ -407,7 +408,7 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="invoiceTotal">Total Amount (OMR)</Label>
+              <Label htmlFor="invoiceTotal">Total Amount (<Rial />)</Label>
               <Input
                 id="invoiceTotal"
                 value={total.toFixed(2)}

@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { UserPlus, UserCog, Save, ArrowLeft, Upload, X, User } from "lucide-react";
+import { Rial } from "@/components/shared/money";
 
 // Mock employee data - in real app, this would come from API
 const employeesData = [
@@ -431,7 +432,7 @@ export default function EmployeeForm() {
 
               {/* Salary */}
               <div className="space-y-2">
-                <Label htmlFor="salary">Salary (OMR) *</Label>
+                <Label htmlFor="salary">Salary (<Rial />) *</Label>
                 <Input
                   id="salary"
                   name="salary"

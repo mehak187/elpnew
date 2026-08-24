@@ -13,6 +13,8 @@
  * the expiry date - so a figure on screen can never drift from its records.
  */
 
+import { withRial } from "@/components/shared/money";
+
 const DAY = 24 * 60 * 60 * 1000;
 
 const startOfToday = () => {
@@ -48,12 +50,14 @@ export const formatDate = (dateStr) =>
       })
     : "";
 
-export const money = (amount) =>
-  "OMR " +
+/** The bare figure, for inputs and anywhere a plain string is needed. */
+export const moneyValue = (amount) =>
   Number(amount).toLocaleString("en-GB", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   });
+
+export const money = (amount) => withRial(moneyValue(amount));
 
 /* ------------------------------------------------- 1. Law firm information */
 

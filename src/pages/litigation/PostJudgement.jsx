@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FileCheck, ArrowLeft, Save, Upload } from "lucide-react";
+import { Rial } from "@/components/shared/money";
 
 export default function PostJudgement() {
   const navigate = useNavigate();
@@ -154,7 +155,7 @@ export default function PostJudgement() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="awarded_amount">Awarded Amount (OMR)</Label>
+                <Label htmlFor="awarded_amount">Awarded Amount (<Rial />)</Label>
                 <Input
                   id="awarded_amount"
                   name="awarded_amount"
@@ -165,7 +166,7 @@ export default function PostJudgement() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="court_costs">Court Costs (OMR)</Label>
+                <Label htmlFor="court_costs">Court Costs (<Rial />)</Label>
                 <Input
                   id="court_costs"
                   name="court_costs"

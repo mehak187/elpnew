@@ -4,10 +4,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import DataTable from "@/components/shared/DataTable";
 import { cn } from "@/lib/utils";
 import { INVOICE_STATUS_VARIANT } from "@/lib/constants";
+import { withRial } from "@/components/shared/money";
 import { clientInvoices } from "../clientMockData";
 
 const money = (amount) =>
-  "OMR " + amount.toLocaleString("en-GB", { minimumFractionDigits: 0 });
+  withRial(amount.toLocaleString("en-GB", { minimumFractionDigits: 0 }));
 
 /**
  * The three views of this client's billing.

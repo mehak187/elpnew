@@ -91,6 +91,38 @@ export const CREATOR_ROLES = [
 export const firstReviewFor = (creatorRole) =>
   CREATOR_ROLES.find((r) => r.key === creatorRole)?.firstReview || "accountant";
 
+/* ------------------------------------------------------ accountant review */
+
+/**
+ * What the accountant can decide, and where each decision sends the request.
+ *
+ * A return or a rejection stops the request, so the accountant has to say why -
+ * the note is written into the history and shown to whoever raised it.
+ */
+export const ACCOUNTANT_REVIEW_RESULTS = [
+  {
+    key: "approve",
+    label: "Approve for Payment",
+    status: "finance",
+    action: "Approved by Accountant",
+    needsNote: false,
+  },
+  {
+    key: "return",
+    label: "Return for Correction",
+    status: "returned",
+    action: "Returned for Correction",
+    needsNote: true,
+  },
+  {
+    key: "reject",
+    label: "Reject the Request",
+    status: "rejected",
+    action: "Rejected",
+    needsNote: true,
+  },
+];
+
 /* --------------------------------------------------------- who sees what */
 
 /**
