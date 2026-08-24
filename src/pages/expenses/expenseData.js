@@ -123,6 +123,39 @@ export const ACCOUNTANT_REVIEW_RESULTS = [
   },
 ];
 
+/* ------------------------------------------------- finance manager approval */
+
+/**
+ * What the finance manager can decide.
+ *
+ * Approving and paying is one action rather than two: the manager releasing the
+ * money is the manager recording where it went, so the transfer details are
+ * asked for at the same moment. A return or a rejection asks for a note.
+ */
+export const FINANCE_ACTIONS = [
+  {
+    key: "pay",
+    label: "Approve & Process Payment",
+    action: "Approved for Payment",
+    needsNote: false,
+    needsTransfer: true,
+  },
+  {
+    key: "return",
+    label: "Return for Correction",
+    status: "returned",
+    action: "Returned for Correction",
+    needsNote: true,
+  },
+  {
+    key: "reject",
+    label: "Reject Request",
+    status: "rejected",
+    action: "Rejected",
+    needsNote: true,
+  },
+];
+
 /* --------------------------------------------------------- who sees what */
 
 /**

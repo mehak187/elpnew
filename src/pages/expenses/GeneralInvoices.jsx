@@ -31,18 +31,21 @@ import {
   Undo2,
   X,
   Banknote,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/shared/panels";
 import { useExpenses } from "@/lib/expenses/context";
 import { useSuppliers } from "@/lib/suppliers/context";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
+import { initialBankAccounts } from "@/pages/firm/firmData";
 import { findType } from "./links";
 import { Rial } from "@/components/shared/Rial";
 import {
   PAYMENT_METHODS,
   VIEWER_ROLES,
   ACCOUNTANT_REVIEW_RESULTS,
+  FINANCE_ACTIONS,
   STATUS,
   STATUS_VARIANT,
   firstReviewFor,
@@ -179,6 +182,252 @@ function AccountantReview({ invoiceId, onDecide }) {
   );
 }
 
+/**
+ * The finance manager's decision, and where the money went.
+ *
+ * Approving releases the payment, so the transfer is recorded in the same
+ * breath - which account it left, when, and the reference it carries. Where the
+ * supplier is paid comes from the supplier record and is shown, not asked for.
+ */
+function FinanceApproval({ invoice, supplierAccount, outstanding, onDecide }) {
+  const [action, setAction] = useState("");
+  const [note, setNote] = useState("");
+  const [transfer, setTransfer] = useState({
+    bankId: "",
+    date: dayOffset(0),
+    reference: "",
+    document: "",
+  });
+
+  const chosen = FINANCE_ACTIONS.find((a) => a.key === action);
+  const account = initialBankAccounts.find(
+    (a) => String(a.id) === transfer.bankId
+  );
+
+  const ready =
+    Boolean(chosen) &&
+    (!chosen.needsNote || note.trim().length > 0) &&
+    (!chosen.needsTransfer || (transfer.bankId && transfer.date));
+
+  const id = (name) => name + "-" + invoice.id;
+
+  return (
+    <div className="space-y-4 rounded-md border bg-muted/30 p-4">
+      <p className="text-sm font-semibold text-primary">
+        Finance Manager Approval
+      </p>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="space-y-2">
+          <Label htmlFor={id("financeAction")}>Finance Manager Action *</Label>
+          <Select
+            value={action}
+            onValueChange={(value) => {
+              setAction(value);
+              setNote("");
+            }}
+          >
+            <SelectTrigger id={id("financeAction")}>
+              <SelectValue placeholder="Please Select" />
+            </SelectTrigger>
+            <SelectContent>
+              {FINANCE_ACTIONS.map((option) => (
+                <SelectItem key={option.key} value={option.key}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Supplier&apos;s Bank</Label>
+          <Input value={supplierAccount?.bank || "-"} readOnly disabled className="bg-muted" />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Supplier&apos;s Account Number</Label>
+          <Input
+            value={supplierAccount?.accountNumber || "-"}
+            readOnly
+            disabled
+            className="bg-muted"
+          />
+        </div>
+      </div>
+
+      {chosen?.needsTransfer && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="space-y-2">
+            <Label htmlFor={id("fromBank")}>Withdrawal Bank *</Label>
+            <Select
+              value={transfer.bankId}
+              onValueChange={(value) => setTransfer({ ...transfer, bankId: value })}
+            >
+              <SelectTrigger id={id("fromBank")}>
+                <SelectValue placeholder="Please Select" />
+              </SelectTrigger>
+              <SelectContent>
+                {initialBankAccounts
+                  .filter((a) => a.active)
+                  .map((a) => (
+                    <SelectItem key={a.id} value={String(a.id)}>
+                      {a.bankName} - {a.accountName}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Transfer From Account Number</Label>
+            <Input
+              value={account?.accountNumber || "-"}
+              readOnly
+              disabled
+              className="bg-muted"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor={id("withdrawnAt")}>Date of Withdrawal *</Label>
+            <Input
+              id={id("withdrawnAt")}
+              type="date"
+              value={transfer.date}
+              onChange={(e) => setTransfer({ ...transfer, date: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor={id("txRef")}>Transaction Number</Label>
+            <Input
+              id={id("txRef")}
+              value={transfer.reference}
+              onChange={(e) =>
+                setTransfer({ ...transfer, reference: e.target.value })
+              }
+              placeholder="If available"
+            />
+          </div>
+
+          <div className="space-y-2 sm:col-span-2">
+            <Label>Bank Transfer Document</Label>
+            {transfer.document ? (
+              <div className="flex h-9 items-center justify-between gap-2 rounded-md bg-muted px-3">
+                <span className="truncate text-sm">{transfer.document}</span>
+                <button
+                  type="button"
+                  onClick={() => setTransfer({ ...transfer, document: "" })}
+                  className="shrink-0 text-muted-foreground hover:text-destructive"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  <span className="sr-only">Remove document</span>
+                </button>
+              </div>
+            ) : (
+              <label className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed px-3 text-sm text-muted-foreground hover:bg-muted/50">
+                <Paperclip className="h-3.5 w-3.5" />
+                Attach transfer document
+                <Input
+                  type="file"
+                  className="hidden"
+                  onChange={(e) =>
+                    e.target.files[0] &&
+                    setTransfer({ ...transfer, document: e.target.files[0].name })
+                  }
+                />
+              </label>
+            )}
+          </div>
+        </div>
+      )}
+
+      {chosen?.needsNote && (
+        <div className="space-y-2 sm:max-w-md">
+          <Label htmlFor={id("financeNote")}>Notes *</Label>
+          <Textarea
+            id={id("financeNote")}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Explain what needs correcting, or why this is rejected"
+          />
+        </div>
+      )}
+
+      <div className="flex items-center justify-end gap-3">
+        {chosen?.needsTransfer && (
+          <span className="text-xs text-muted-foreground">
+            Paying {money(outstanding)}
+          </span>
+        )}
+        <Button size="sm" disabled={!ready} onClick={() => onDecide(chosen, note.trim(), { ...transfer, account })}>
+          <Check className="mr-1.5 h-4 w-4" />
+          Submit Decision
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/** What this supplier has been paid before, for judging what is in front of you. */
+function SupplierHistoryDialog({ supplier, invoices, onOpenChange }) {
+  const history = invoices
+    .filter((i) => i.supplier === supplier)
+    .sort((a, b) => b.invoiceDate.localeCompare(a.invoiceDate))
+    .slice(0, 10);
+
+  return (
+    <Dialog open={Boolean(supplier)} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>Last 10 Payments to This Supplier</DialogTitle>
+          <DialogDescription>{supplier}</DialogDescription>
+        </DialogHeader>
+
+        {history.length === 0 ? (
+          <EmptyState>Nothing has been raised against this supplier yet.</EmptyState>
+        ) : (
+          <div className="max-h-[60vh] overflow-auto">
+            <table className="w-full min-w-[640px] text-sm">
+              <thead>
+                <tr className="border-b text-left text-xs text-muted-foreground">
+                  <th className="pb-2 font-medium">Id</th>
+                  <th className="pb-2 font-medium">Invoice Date / Number</th>
+                  <th className="pb-2 font-medium">Expense Details</th>
+                  <th className="pb-2 text-right font-medium">Invoice Amount</th>
+                  <th className="pb-2 font-medium">Invoice Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.map((past) => (
+                  <tr key={past.id} className="border-b last:border-0">
+                    <td className="py-2 font-medium">{past.reference}</td>
+                    <td className="py-2 text-muted-foreground">
+                      {formatDate(past.invoiceDate)} · {past.invoiceNumber}
+                    </td>
+                    <td className="py-2 text-muted-foreground">
+                      {past.lines.map((l) => l.path.join(" / ")).join(", ")}
+                    </td>
+                    <td className="py-2 text-right font-semibold">
+                      {money(invoiceTotal(past))}
+                    </td>
+                    <td className="py-2">
+                      <Badge variant={STATUS_VARIANT[past.status]}>
+                        {STATUS[past.status]}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function GeneralInvoices() {
   const navigate = useNavigate();
   const { invoices, updateInvoice } = useExpenses();
@@ -197,6 +446,7 @@ export default function GeneralInvoices() {
   const [reasonFor, setReasonFor] = useState(null);
   const [reason, setReason] = useState("");
   const [payingFor, setPayingFor] = useState(null);
+  const [historyFor, setHistoryFor] = useState(null);
   const [payment, setPayment] = useState({
     date: dayOffset(0),
     amount: "",
@@ -219,6 +469,47 @@ export default function GeneralInvoices() {
     } else if (invoice.status === "finance") {
       record(invoice, "approved", "Approved for Payment");
     }
+  };
+
+  /**
+   * The finance manager's decision. Approving settles the invoice and files the
+   * transfer against it in one write, so a paid request always carries the
+   * record of how it was paid.
+   */
+  const decideFinance = (invoice, decision, note, transfer) => {
+    if (!decision.needsTransfer) {
+      return record(invoice, decision.status, decision.action, note);
+    }
+
+    const outstanding = invoiceTotal(invoice) - amountPaid(invoice);
+    const payments = [
+      ...invoice.payments,
+      {
+        id: invoice.payments.length + 1,
+        date: transfer.date,
+        amount: outstanding,
+        method: "Bank Transfer",
+        reference: transfer.reference,
+        fromAccount: transfer.account
+          ? transfer.account.bankName + " - " + transfer.account.accountNumber
+          : "",
+        document: transfer.document,
+      },
+    ];
+
+    updateInvoice(invoice.id, {
+      payments,
+      status: settlementStatus({ ...invoice, payments }),
+      history: [
+        ...invoice.history,
+        {
+          at: transfer.date,
+          by: roleLabel,
+          action: decision.action + " - payment processed",
+          reason: transfer.reference ? "Transaction " + transfer.reference : "",
+        },
+      ],
+    });
   };
 
   const savePayment = () => {
@@ -310,12 +601,15 @@ export default function GeneralInvoices() {
           const total = invoiceTotal(invoice);
           const paid = amountPaid(invoice);
           const isAdmin = role === "admin";
-          // The accountant decides through their own review block, so the
-          // three loose buttons are not offered to them as well.
+          // The accountant and the finance manager each decide through their own
+          // block, so the loose buttons are not offered to them as well.
           const accountantReview =
             role === "accountant" && invoice.status === "accountant";
+          const financeApproval =
+            role === "finance" && invoice.status === "finance";
           const canApprove =
             !accountantReview &&
+            !financeApproval &&
             ((invoice.status === "accountant" &&
               (isAdmin || role === "accountant")) ||
               (invoice.status === "finance" && (isAdmin || role === "finance")));
@@ -445,6 +739,13 @@ export default function GeneralInvoices() {
                           <span>
                             {formatDate(p.date)} · {p.method}
                             {p.reference && " · " + p.reference}
+                            {p.fromAccount && " · from " + p.fromAccount}
+                            {p.document && (
+                              <span className="ml-1 inline-flex items-center gap-1 text-primary">
+                                <Paperclip className="h-3 w-3" />
+                                {p.document}
+                              </span>
+                            )}
                           </span>
                           <span className="font-medium text-foreground">
                             {money(p.amount)}
@@ -472,11 +773,35 @@ export default function GeneralInvoices() {
                   </ul>
                 </details>
 
+                {(accountantReview || financeApproval) && (
+                  <div className="flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setHistoryFor(invoice.supplier)}
+                    >
+                      <History className="mr-1.5 h-4 w-4" />
+                      View Supplier History
+                    </Button>
+                  </div>
+                )}
+
                 {accountantReview && (
                   <AccountantReview
                     invoiceId={invoice.id}
                     onDecide={(decision, note) =>
                       record(invoice, decision.status, decision.action, note)
+                    }
+                  />
+                )}
+
+                {financeApproval && (
+                  <FinanceApproval
+                    invoice={invoice}
+                    supplierAccount={accountFor(invoice.supplier)}
+                    outstanding={total - paid}
+                    onDecide={(decision, note, transfer) =>
+                      decideFinance(invoice, decision, note, transfer)
                     }
                   />
                 )}
@@ -555,6 +880,14 @@ export default function GeneralInvoices() {
           );
         })}
       </div>
+
+      {historyFor && (
+        <SupplierHistoryDialog
+          supplier={historyFor}
+          invoices={invoices}
+          onOpenChange={(open) => !open && setHistoryFor(null)}
+        />
+      )}
 
       {/* Reason is compulsory for a return or a rejection */}
       <Dialog
