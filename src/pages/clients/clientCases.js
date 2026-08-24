@@ -43,17 +43,15 @@ export const CASE_LEVELS = [
   "Supreme (Dispute)",
 ];
 
-/** The stages a live case moves through, in order. */
+/**
+ * Where a case has reached in the office's own handling of it, as opposed to
+ * which court it stands before. A closed file has reached the last of them.
+ */
 export const CASE_STAGES = [
-  "Consultation",
-  "Pre-Litigation",
-  "First Instance",
-  "Appeal",
-  "Supreme Court",
-  "Different Panel – First Instance",
-  "Different Panel – Appeal",
-  "Different Panel – Supreme Court",
-  "Enforcement",
+  "Case Registration",
+  "Running Cases",
+  "Post Judgement",
+  "Close file",
 ];
 
 const c = (id, type, level, stage, receivedDays, closedDays, claimAmount, deleted) => ({
@@ -70,28 +68,28 @@ const c = (id, type, level, stage, receivedDays, closedDays, claimAmount, delete
 });
 
 export const clientCases = [
-  c(1, "Commercial Cases", "Execution", "Enforcement", -410, -60, 18500, null),
-  c(2, "Civil Cases", "Primary", "First Instance", -395, null, 42000, null),
-  c(3, "Commercial Cases", "Appeal", "Appeal", -370, null, 7300, null),
-  c(4, "Labor Cases", "Primary", "Consultation", -350, -300, 3200, -290),
-  c(5, "Civil Cases", "Primary (Dispute)", "Pre-Litigation", -330, -240, 15750, null),
-  c(6, "Real Estate Cases", "Primary", "First Instance", -300, -150, 96000, null),
-  c(7, "Commercial Cases", "Supreme", "Supreme Court", -280, null, 54000, null),
-  c(8, "Criminal Cases", "Primary", "First Instance", -255, -120, 8800, null),
-  c(9, "Administrative Cases", "Primary", "Pre-Litigation", -240, -180, 12400, -170),
-  c(10, "Commercial Cases", "Primary (Different Panel)", "Different Panel – First Instance", -210, null, 31000, null),
-  c(11, "Family/Personal Status Cases", "Primary", "Consultation", -195, -140, 4600, -130),
-  c(12, "Civil Cases", "Appeal (Dispute)", "Appeal", -175, -40, 27500, null),
-  c(13, "Labor Cases", "Primary", "First Instance", -150, null, 9100, null),
-  c(14, "Commercial Cases", "Execution", "Enforcement", -130, -35, 63000, null),
-  c(15, "Real Estate Cases", "Appeal (Different Panel)", "Different Panel – Appeal", -110, null, 38000, null),
-  c(16, "Civil Cases", "Primary", "First Instance", -95, -20, 11200, -15),
-  c(17, "Criminal Cases", "Supreme (Dispute)", "Pre-Litigation", -80, -25, 5400, null),
-  c(18, "Commercial Cases", "Primary", "First Instance", -62, null, 72000, null),
-  c(19, "Administrative Cases", "Primary", "Consultation", -45, -10, 6800, null),
-  c(20, "Labor Cases", "Supreme (Different Panel)", "First Instance", -30, null, 19500, null),
-  c(21, "Commercial Cases", "Primary", "Consultation", -14, null, 45000, null),
-  c(22, "Civil Cases", "Primary", "Pre-Litigation", -5, null, 13600, null),
+  c(1, "Commercial Cases", "Execution", "Close file", -410, -60, 18500, null),
+  c(2, "Civil Cases", "Primary", "Post Judgement", -395, null, 42000, null),
+  c(3, "Commercial Cases", "Appeal", "Case Registration", -370, null, 7300, null),
+  c(4, "Labor Cases", "Primary", "Close file", -350, -300, 3200, -290),
+  c(5, "Civil Cases", "Primary (Dispute)", "Close file", -330, -240, 15750, null),
+  c(6, "Real Estate Cases", "Primary", "Close file", -300, -150, 96000, null),
+  c(7, "Commercial Cases", "Supreme", "Running Cases", -280, null, 54000, null),
+  c(8, "Criminal Cases", "Primary", "Close file", -255, -120, 8800, null),
+  c(9, "Administrative Cases", "Primary", "Close file", -240, -180, 12400, -170),
+  c(10, "Commercial Cases", "Primary (Different Panel)", "Running Cases", -210, null, 31000, null),
+  c(11, "Family/Personal Status Cases", "Primary", "Close file", -195, -140, 4600, -130),
+  c(12, "Civil Cases", "Appeal (Dispute)", "Close file", -175, -40, 27500, null),
+  c(13, "Labor Cases", "Primary", "Running Cases", -150, null, 9100, null),
+  c(14, "Commercial Cases", "Execution", "Close file", -130, -35, 63000, null),
+  c(15, "Real Estate Cases", "Appeal (Different Panel)", "Case Registration", -110, null, 38000, null),
+  c(16, "Civil Cases", "Primary", "Close file", -95, -20, 11200, -15),
+  c(17, "Criminal Cases", "Supreme (Dispute)", "Close file", -80, -25, 5400, null),
+  c(18, "Commercial Cases", "Primary", "Case Registration", -62, null, 72000, null),
+  c(19, "Administrative Cases", "Primary", "Close file", -45, -10, 6800, null),
+  c(20, "Labor Cases", "Supreme (Different Panel)", "Post Judgement", -30, null, 19500, null),
+  c(21, "Commercial Cases", "Primary", "Case Registration", -14, null, 45000, null),
+  c(22, "Civil Cases", "Primary", "Running Cases", -5, null, 13600, null),
 ];
 
 /**
@@ -118,12 +116,11 @@ export const activeCaseCount = liveCases.filter(isOpen).length;
 
 
 /**
- * A case counts as in progress once it has left the advisory stages - it is
- * open and actually before a court or an enforcement officer.
+ * A case counts as in progress once it is past registration - the file is open
+ * and something is actually happening on it.
  */
-const ADVISORY_STAGES = ["Consultation", "Pre-Litigation"];
 export const isInProgress = (legalCase) =>
-  isOpen(legalCase) && !ADVISORY_STAGES.includes(legalCase.stage);
+  isOpen(legalCase) && legalCase.stage !== "Case Registration";
 
 /** Cases received between two dates, inclusive. */
 export const receivedBetween = (cases, from, to) =>

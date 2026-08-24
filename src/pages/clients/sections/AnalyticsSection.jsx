@@ -94,7 +94,9 @@ export default function AnalyticsSection() {
   const lastReceived = LATEST;
 
   const typeCounts = countBy(liveCases, CASE_TYPES, (k) => k.type);
-  const stageCounts = countBy(open, CASE_STAGES, (k) => k.stage);
+  // Counted across every live case, not just the open ones - a closed file
+  // has a stage too, and it is the last of them.
+  const stageCounts = countBy(liveCases, CASE_STAGES, (k) => k.stage);
   const levelCounts = countBy(open, CASE_LEVELS, (k) => k.level);
 
   /* Selected period. Left unmemoised on purpose - the compiler does it, and
@@ -190,14 +192,24 @@ export default function AnalyticsSection() {
                 className="w-full sm:w-44"
               />
             </div>
+
+            {/* The answer to the two dates, beside the dates that ask it */}
+            <div className="rounded-lg border bg-muted/40 px-4 py-2 sm:ml-auto">
+              <p className="text-xs text-muted-foreground">
+                Cases Received in Period
+              </p>
+              <div className="flex items-baseline gap-3">
+                <p className="text-2xl font-bold text-primary">
+                  {inPeriod.length}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {money(claimTotal(inPeriod))}
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Metric
-              label="Cases Received in Period"
-              value={inPeriod.length}
-              amount={claimTotal(inPeriod)}
-            />
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
             <Metric label="Cases Closed in Period" value={closedInPeriod} />
             <Metric
               label="Open Cases"
