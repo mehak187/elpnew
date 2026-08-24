@@ -1,6 +1,5 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -8,17 +7,82 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Upload, FileText, X } from "lucide-react";
+import { Upload, Paperclip, X } from "lucide-react";
 import { CLIENT_TYPES } from "@/lib/constants";
+
+/**
+ * A number and the copy that proves it, kept in one field.
+ *
+ * The upload sits inside the field rather than beside it, so it cannot drift
+ * into the neighbouring column when the grid narrows.
+ */
+function NumberWithCopy({
+  id,
+  name,
+  label,
+  placeholder,
+  value,
+  file,
+  onChange,
+  onFileChange,
+}) {
+  const fileName = typeof file === "string" ? file.split("/").pop() : "";
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="flex gap-2">
+        <Input
+          id={id}
+          name={name}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          className="min-w-0 flex-1"
+          required
+        />
+        <label
+          title={file ? "Replace copy" : "Upload copy"}
+          className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md border text-muted-foreground hover:bg-muted/50"
+        >
+          <Upload className="h-4 w-4" />
+          <span className="sr-only">Upload copy</span>
+          <Input
+            type="file"
+            className="hidden"
+            onChange={(e) =>
+              e.target.files[0] && onFileChange(e.target.files[0].name)
+            }
+          />
+        </label>
+      </div>
+
+      {file && (
+        <div className="flex h-8 items-center justify-between gap-2 rounded-md bg-muted px-3">
+          <span className="inline-flex min-w-0 items-center gap-1 text-xs text-primary">
+            <Paperclip className="h-3 w-3 shrink-0" />
+            <span className="truncate">{fileName}</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => onFileChange("")}
+            className="shrink-0 text-muted-foreground hover:text-destructive"
+          >
+            <X className="h-3.5 w-3.5" />
+            <span className="sr-only">Remove copy</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function BasicSection({
   formData,
   clientType,
-  agreementFile,
   onChange,
   onClientTypeChange,
-  onAgreementFileChange,
-  onRemoveAgreementFile,
+  onFileChange,
 }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
@@ -79,18 +143,17 @@ export default function BasicSection({
         />
       </div>
 
-      {/* Reference No */}
-      <div className="space-y-2">
-        <Label htmlFor="referenceNo">Reference No. *</Label>
-        <Input
-          id="referenceNo"
-          name="referenceNo"
-          value={formData.referenceNo}
-          onChange={onChange}
-          placeholder="Enter reference number"
-          required
-        />
-      </div>
+      {/* Reference No, with the copy of it */}
+      <NumberWithCopy
+        id="referenceNo"
+        name="referenceNo"
+        label="Reference No. *"
+        placeholder="Enter reference number"
+        value={formData.referenceNo}
+        file={formData.referenceCopy}
+        onChange={onChange}
+        onFileChange={(file) => onFileChange("referenceCopy", file)}
+      />
 
       {/* Reference Expiry Date */}
       <div className="space-y-2">
@@ -105,18 +168,17 @@ export default function BasicSection({
         />
       </div>
 
-      {/* POA No */}
-      <div className="space-y-2">
-        <Label htmlFor="poaNo">POA No. *</Label>
-        <Input
-          id="poaNo"
-          name="poaNo"
-          value={formData.poaNo}
-          onChange={onChange}
-          placeholder="Enter POA number"
-          required
-        />
-      </div>
+      {/* POA No, with the copy of it */}
+      <NumberWithCopy
+        id="poaNo"
+        name="poaNo"
+        label="POA No. *"
+        placeholder="Enter POA number"
+        value={formData.poaNo}
+        file={formData.poaCopy}
+        onChange={onChange}
+        onFileChange={(file) => onFileChange("poaCopy", file)}
+      />
 
       {/* POA Expiry Date */}
       <div className="space-y-2">
@@ -143,52 +205,6 @@ export default function BasicSection({
         />
       </div>
 
-      {/* Agreement PDF Upload */}
-      <div className="space-y-2 sm:col-span-2 lg:col-span-4">
-        <Label>Agreement PDF</Label>
-        <div className="border-2 border-dashed border-gray-200 rounded-lg p-6">
-          {!agreementFile ? (
-            <div className="flex flex-col items-center justify-center gap-2">
-              <Upload className="h-8 w-8 text-gray-400" />
-              <p className="text-sm text-gray-500">
-                Upload agreement document (PDF only)
-              </p>
-              <label className="cursor-pointer">
-                <Input
-                  type="file"
-                  accept=".pdf"
-                  onChange={onAgreementFileChange}
-                  className="hidden"
-                />
-                <Button type="button" variant="outline" size="sm" asChild>
-                  <span>Choose File</span>
-                </Button>
-              </label>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-              <div className="flex items-center gap-3">
-                <FileText className="h-8 w-8 text-red-500" />
-                <div>
-                  <p className="font-medium text-sm">{agreementFile.name}</p>
-                  <p className="text-xs text-gray-500">
-                    {(agreementFile.size / 1024).toFixed(1)} KB
-                  </p>
-                </div>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={onRemoveAgreementFile}
-                className="h-8 w-8 text-gray-500 hover:text-red-500"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

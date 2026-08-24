@@ -106,6 +106,8 @@ const toFormData = (record) =>
         whatsappNotification: record.whatsappNotification || "No",
         emailNotification: record.emailNotification || "No",
         deactivationDate: record.deactivationDate || "",
+        referenceCopy: record.attachments?.referenceCopy || "",
+        poaCopy: record.attachments?.poaCopy || "",
       };
 
 const emptyFormData = {
@@ -130,6 +132,8 @@ const emptyFormData = {
   whatsappNotification: "No",
   emailNotification: "No",
   deactivationDate: "",
+  referenceCopy: "",
+  poaCopy: "",
 };
 
 export default function ClientDetails() {
@@ -144,7 +148,6 @@ export default function ClientDetails() {
     () => record?.statusOverride || "auto"
   );
   const [activeSection, setActiveSection] = useState("basic");
-  const [agreementFile, setAgreementFile] = useState(null);
   const [formData, setFormData] = useState(() => toFormData(record));
 
   // Reload when the route moves to a different client without unmounting.
@@ -154,7 +157,6 @@ export default function ClientDetails() {
     setClientType(record?.type || "Individual");
     setStatusOverride(record?.statusOverride || "auto");
     setFormData(toFormData(record));
-    setAgreementFile(null);
     setActiveSection("basic");
   }
 
@@ -169,11 +171,6 @@ export default function ClientDetails() {
 
   const handleSelectChange = (name, value) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file && file.type === "application/pdf") setAgreementFile(file);
   };
 
   const handleSubmit = (e) => {
@@ -196,7 +193,6 @@ export default function ClientDetails() {
       type: clientType,
       statusOverride: statusOverride === "auto" ? null : statusOverride,
       ...formData,
-      agreementFile: agreementFile?.name,
     };
     if (isExisting) {
       console.log("Updating client:", clientData);
@@ -294,11 +290,9 @@ export default function ClientDetails() {
                   <BasicSection
                     formData={formData}
                     clientType={clientType}
-                    agreementFile={agreementFile}
                     onChange={handleChange}
                     onClientTypeChange={setClientType}
-                    onAgreementFileChange={handleFileChange}
-                    onRemoveAgreementFile={() => setAgreementFile(null)}
+                    onFileChange={handleSelectChange}
                   />
                 )}
                 {activeSection === "contact" && (
