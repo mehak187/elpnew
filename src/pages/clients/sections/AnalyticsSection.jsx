@@ -10,7 +10,6 @@ import {
   CASE_TYPES,
   CASE_STAGES,
   CASE_LEVELS,
-  levelOf,
   isOpen,
   isInProgress,
   claimTotal,
@@ -19,6 +18,7 @@ import {
   receivedPeriods,
 } from "../clientCases";
 import { withRial } from "@/lib/money";
+import { cn } from "@/lib/utils";
 
 const formatDate = (date) =>
   date ? new Date(date).toLocaleDateString("en-GB") : "-";
@@ -57,11 +57,11 @@ function Metric({ label, value, amount }) {
 }
 
 /** A row of counts, one per key, laid out as small tiles. */
-function Breakdown({ title, counts }) {
+function Breakdown({ title, counts, wide }) {
   return (
     <div>
       <p className="mb-2 text-xs font-semibold text-foreground">{title}</p>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      <div className={cn("grid grid-cols-2 gap-3 sm:grid-cols-3", wide ? "lg:grid-cols-5" : "lg:grid-cols-4")}>
         {Object.entries(counts).map(([key, count]) => (
           <div key={key} className="rounded-lg border p-3">
             <p className="text-xs leading-snug text-muted-foreground">{key}</p>
@@ -95,7 +95,7 @@ export default function AnalyticsSection() {
 
   const typeCounts = countBy(liveCases, CASE_TYPES, (k) => k.type);
   const stageCounts = countBy(open, CASE_STAGES, (k) => k.stage);
-  const levelCounts = countBy(open, CASE_LEVELS, levelOf);
+  const levelCounts = countBy(open, CASE_LEVELS, (k) => k.level);
 
   /* Selected period. Left unmemoised on purpose - the compiler does it, and
      doing it by hand here stopped it from optimising the component at all. */
@@ -217,7 +217,7 @@ export default function AnalyticsSection() {
       {/* Which court the open cases stand before, and where within it */}
       <Card>
         <CardContent className="p-4 sm:p-6">
-          <Breakdown title="Case Level" counts={levelCounts} />
+          <Breakdown title="Case Level" counts={levelCounts} wide />
         </CardContent>
       </Card>
 

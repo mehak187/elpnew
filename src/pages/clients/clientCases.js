@@ -23,6 +23,26 @@ export const CASE_TYPES = [
   "Administrative Cases",
 ];
 
+/**
+ * The court a case stands before.
+ *
+ * A case sent back to a differently constituted panel, or raised as a dispute
+ * over the ruling, is at the same court but is a case of its own - so each is
+ * counted separately rather than folded back into the plain level.
+ */
+export const CASE_LEVELS = [
+  "Primary",
+  "Appeal",
+  "Supreme",
+  "Execution",
+  "Primary (Different Panel)",
+  "Appeal (Different Panel)",
+  "Supreme (Different Panel)",
+  "Primary (Dispute)",
+  "Appeal (Dispute)",
+  "Supreme (Dispute)",
+];
+
 /** The stages a live case moves through, in order. */
 export const CASE_STAGES = [
   "Consultation",
@@ -36,10 +56,11 @@ export const CASE_STAGES = [
   "Enforcement",
 ];
 
-const c = (id, type, stage, receivedDays, closedDays, claimAmount, deleted) => ({
+const c = (id, type, level, stage, receivedDays, closedDays, claimAmount, deleted) => ({
   id,
   caseNo: "26" + String(1000 + id),
   type,
+  level,
   stage,
   receivedAt: iso(receivedDays),
   closedAt: closedDays === null ? null : iso(closedDays),
@@ -49,28 +70,28 @@ const c = (id, type, stage, receivedDays, closedDays, claimAmount, deleted) => (
 });
 
 export const clientCases = [
-  c(1, "Commercial Cases", "Enforcement", -410, -60, 18500, null),
-  c(2, "Civil Cases", "First Instance", -395, null, 42000, null),
-  c(3, "Commercial Cases", "Appeal", -370, null, 7300, null),
-  c(4, "Labor Cases", "Consultation", -350, -300, 3200, -290),
-  c(5, "Civil Cases", "Pre-Litigation", -330, -240, 15750, null),
-  c(6, "Real Estate Cases", "First Instance", -300, -150, 96000, null),
-  c(7, "Commercial Cases", "Supreme Court", -280, null, 54000, null),
-  c(8, "Criminal Cases", "First Instance", -255, -120, 8800, null),
-  c(9, "Administrative Cases", "Pre-Litigation", -240, -180, 12400, -170),
-  c(10, "Commercial Cases", "Different Panel – First Instance", -210, null, 31000, null),
-  c(11, "Family/Personal Status Cases", "Consultation", -195, -140, 4600, -130),
-  c(12, "Civil Cases", "Appeal", -175, -40, 27500, null),
-  c(13, "Labor Cases", "First Instance", -150, null, 9100, null),
-  c(14, "Commercial Cases", "Enforcement", -130, -35, 63000, null),
-  c(15, "Real Estate Cases", "Different Panel – Appeal", -110, null, 38000, null),
-  c(16, "Civil Cases", "First Instance", -95, -20, 11200, -15),
-  c(17, "Criminal Cases", "Pre-Litigation", -80, -25, 5400, null),
-  c(18, "Commercial Cases", "First Instance", -62, null, 72000, null),
-  c(19, "Administrative Cases", "Consultation", -45, -10, 6800, null),
-  c(20, "Labor Cases", "First Instance", -30, null, 19500, null),
-  c(21, "Commercial Cases", "Consultation", -14, null, 45000, null),
-  c(22, "Civil Cases", "Pre-Litigation", -5, null, 13600, null),
+  c(1, "Commercial Cases", "Execution", "Enforcement", -410, -60, 18500, null),
+  c(2, "Civil Cases", "Primary", "First Instance", -395, null, 42000, null),
+  c(3, "Commercial Cases", "Appeal", "Appeal", -370, null, 7300, null),
+  c(4, "Labor Cases", "Primary", "Consultation", -350, -300, 3200, -290),
+  c(5, "Civil Cases", "Primary (Dispute)", "Pre-Litigation", -330, -240, 15750, null),
+  c(6, "Real Estate Cases", "Primary", "First Instance", -300, -150, 96000, null),
+  c(7, "Commercial Cases", "Supreme", "Supreme Court", -280, null, 54000, null),
+  c(8, "Criminal Cases", "Primary", "First Instance", -255, -120, 8800, null),
+  c(9, "Administrative Cases", "Primary", "Pre-Litigation", -240, -180, 12400, -170),
+  c(10, "Commercial Cases", "Primary (Different Panel)", "Different Panel – First Instance", -210, null, 31000, null),
+  c(11, "Family/Personal Status Cases", "Primary", "Consultation", -195, -140, 4600, -130),
+  c(12, "Civil Cases", "Appeal (Dispute)", "Appeal", -175, -40, 27500, null),
+  c(13, "Labor Cases", "Primary", "First Instance", -150, null, 9100, null),
+  c(14, "Commercial Cases", "Execution", "Enforcement", -130, -35, 63000, null),
+  c(15, "Real Estate Cases", "Appeal (Different Panel)", "Different Panel – Appeal", -110, null, 38000, null),
+  c(16, "Civil Cases", "Primary", "First Instance", -95, -20, 11200, -15),
+  c(17, "Criminal Cases", "Supreme (Dispute)", "Pre-Litigation", -80, -25, 5400, null),
+  c(18, "Commercial Cases", "Primary", "First Instance", -62, null, 72000, null),
+  c(19, "Administrative Cases", "Primary", "Consultation", -45, -10, 6800, null),
+  c(20, "Labor Cases", "Supreme (Different Panel)", "First Instance", -30, null, 19500, null),
+  c(21, "Commercial Cases", "Primary", "Consultation", -14, null, 45000, null),
+  c(22, "Civil Cases", "Primary", "Pre-Litigation", -5, null, 13600, null),
 ];
 
 /**
@@ -95,22 +116,6 @@ export const claimTotal = (cases) =>
 /** The count shown beside the page title: live cases still open. */
 export const activeCaseCount = liveCases.filter(isOpen).length;
 
-/**
- * The court a case is standing before, as opposed to where it has reached
- * within that court. A case sent back to a differently constituted panel is
- * still at the same level, so the two are counted together.
- */
-export const CASE_LEVELS = [
-  "Consultation",
-  "Pre-Litigation",
-  "First Instance",
-  "Appeal",
-  "Supreme Court",
-  "Enforcement",
-];
-
-export const levelOf = (legalCase) =>
-  legalCase.stage.replace("Different Panel – ", "");
 
 /**
  * A case counts as in progress once it has left the advisory stages - it is
