@@ -35,20 +35,54 @@ export const clientDocuments = [
     notes: "",
     linkedFileNo: null,
   },
+];
+
+
+/**
+ * Every agreement signed with this client - the original, its renewals, and any
+ * amendment made since. A contract with an end date that has passed is spent,
+ * and the table drops it to the bottom.
+ */
+export const clientContracts = [
   {
-    id: 4,
-    documentType: "Special Contract",
+    id: 1,
+    serial: 1,
+    contractType: "General",
+    caseFileNo: null,
+    title: "Original retainer agreement",
+    startDate: "2024-01-20",
+    endDate: "2025-01-19",
+    fileName: "retainer-2024.pdf",
+    fileUrl: "/documents/sample-reference.pdf",
+    notes: "Superseded by the 2025 renewal.",
+  },
+  {
+    id: 2,
+    serial: 2,
+    contractType: "General",
+    caseFileNo: null,
+    title: "Retainer renewal",
+    startDate: "2025-01-20",
+    endDate: "",
+    fileName: "retainer-2025.pdf",
+    fileUrl: "/documents/sample-reference.pdf",
+    notes: "Rolling, no end date agreed.",
+  },
+  {
+    id: 3,
+    serial: 3,
+    contractType: "Specific",
+    caseFileNo: "21",
+    title: "Investment dispute engagement",
+    startDate: "2024-03-11",
+    endDate: "",
     fileName: "special-contract-21.pdf",
     fileUrl: "/documents/sample-reference.pdf",
-    uploadDate: "2024-03-11",
-    expiryDate: "",
-    status: "Valid",
-    notes: "Linked to the investment dispute file.",
-    linkedFileNo: "21",
+    notes: "Fee agreed on the outcome of the file.",
   },
 ];
 
-// Office file sequence numbers a Special Contract can be tied to.
+// Office file sequence numbers a contract can be tied to.
 export const officeFiles = [
   { fileNo: "21", label: "21 - Investment and Trade Dispute" },
   { fileNo: "34", label: "34 - Commercial Registration Renewal" },

@@ -11,124 +11,179 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import DataTable from "@/components/shared/DataTable";
-import { EmptyState } from "@/components/shared/panels";
-import { FileSignature, Paperclip, Plus, Trash2 } from "lucide-react";
-import { formatDate } from "@/pages/firm/firmData";
-import { clientDocuments, officeFiles } from "../clientMockData";
+import SearchableSelect from "@/components/shared/SearchableSelect";
+import { Upload, FileText, FileCheck, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { CONTRACT_TYPES } from "@/lib/constants";
+import { formatDate, dayOffset } from "@/pages/firm/firmData";
+import { clientContracts, clientLinkedCases } from "../clientMockData";
 
 /**
- * The two agreements the firm signs with a client.
- *
- * A general contract covers the relationship; a special contract is written for
- * one matter, so it carries the office file number that matter is filed under.
+ * A contract is spent once the end date it carries has arrived. Until then it
+ * is live, even if an end date is already agreed.
  */
-const CONTRACT_TYPES = ["General Contract", "Special Contract"];
+const isCancelled = (contract) =>
+  Boolean(contract.endDate) && contract.endDate <= dayOffset(0);
+
+/**
+ * Live contracts first, spent ones beneath them.
+ *
+ * Whoever opens this page is nearly always after the agreement in force, so the
+ * ones that have run out are pushed under it rather than mixed in by date.
+ */
+const byStanding = (a, b) => {
+  const spent = Number(isCancelled(a)) - Number(isCancelled(b));
+  return spent || b.startDate.localeCompare(a.startDate);
+};
 
 const emptyContract = {
-  documentType: "General Contract",
-  fileName: "",
-  signedDate: "",
-  expiryDate: "",
-  linkedFileNo: "",
+  contractType: "General",
+  caseFileNo: "",
+  title: "",
+  startDate: "",
+  endDate: "",
   notes: "",
 };
 
-const STATUS_VARIANT = {
-  Valid: "success",
-  "Expiring Soon": "warning",
-  Expired: "destructive",
-  "Not Required": "outline",
-};
-
 export default function ClientContractsSection() {
-  // Contracts live in the client's documents; this is the same record read
-  // through the one lens, not a second copy of it.
-  const [contracts, setContracts] = useState(() =>
-    clientDocuments.filter((doc) => CONTRACT_TYPES.includes(doc.documentType))
-  );
+  const [contracts, setContracts] = useState(clientContracts);
+  const [file, setFile] = useState(null);
   const [draft, setDraft] = useState(emptyContract);
-  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [pageSize, setPageSize] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
-  const isSpecial = draft.documentType === "Special Contract";
-  const canSave = draft.fileName.trim() && draft.signedDate;
+  const isSpecific = draft.contractType === "Specific";
 
-  const save = () => {
-    if (!canSave) return;
+  const setField = (name, value) =>
+    setDraft((prev) => ({ ...prev, [name]: value }));
+
+  const canSave =
+    file && draft.startDate && (!isSpecific || draft.caseFileNo);
+
+  const handleSave = () => {
     setContracts((prev) => [
       ...prev,
       {
         ...draft,
         id: prev.reduce((max, c) => Math.max(max, c.id), 0) + 1,
-        uploadDate: draft.signedDate,
-        status: "Valid",
-        linkedFileNo: isSpecial ? draft.linkedFileNo : null,
+        serial: prev.reduce((max, c) => Math.max(max, c.serial), 0) + 1,
+        caseFileNo: isSpecific ? draft.caseFileNo : null,
+        fileName: file.name,
+        fileUrl: URL.createObjectURL(file),
       },
     ]);
+    setFile(null);
     setDraft(emptyContract);
-    setAdding(false);
   };
+
+  const saveEdit = () => {
+    setContracts((prev) =>
+      prev.map((c) => (c.id === editing.id ? editing : c))
+    );
+    setEditing(null);
+  };
+
+  const rows = [...contracts].sort(byStanding);
 
   const columns = [
     {
-      key: "documentType",
-      header: "Contract Type",
-      width: "18%",
-      cellClassName: "font-medium",
-    },
-    {
-      key: "fileName",
-      header: "Document",
-      width: "22%",
-      render: (value, row) =>
-        value ? (
-          <a
-            href={row.fileUrl || "#"}
-            className="inline-flex items-center gap-1 text-primary hover:underline"
+      key: "serial",
+      header: "Serial No.",
+      width: "12%",
+      render: (value, row) => (
+        <div>
+          <button
+            type="button"
+            onClick={() => setEditing({ ...row })}
+            className="rounded font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
           >
-            <Paperclip className="h-3.5 w-3.5" />
             {value}
-          </a>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        ),
+          </button>
+          {isCancelled(row) && (
+            <div className="mt-1">
+              <Badge variant="destructive">Cancelled</Badge>
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                {formatDate(row.endDate)}
+              </span>
+            </div>
+          )}
+        </div>
+      ),
     },
     {
-      key: "uploadDate",
-      header: "Signed On",
-      width: "13%",
+      key: "contractType",
+      header: "Contract Type",
+      width: "14%",
+      cellClassName: "font-medium",
+      render: (value, row) => (
+        <div>
+          <span className="block">{value}</span>
+          {row.caseFileNo && (
+            <span className="block text-xs text-muted-foreground">
+              Case file {row.caseFileNo}
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "startDate",
+      header: "Start Date",
+      width: "12%",
       render: (value) => formatDate(value) || "-",
     },
     {
-      key: "expiryDate",
-      header: "Expires",
+      key: "endDate",
+      header: "Contract End Date",
       width: "13%",
       render: (value) =>
-        value ? formatDate(value) : <span className="text-muted-foreground">Open ended</span>,
-    },
-    {
-      key: "linkedFileNo",
-      header: "Office File No.",
-      width: "14%",
-      render: (value) =>
         value ? (
-          <Badge variant="secondary">{value}</Badge>
+          formatDate(value)
         ) : (
-          <span className="text-muted-foreground">-</span>
+          <span className="text-muted-foreground">Open ended</span>
         ),
     },
     {
-      key: "status",
-      header: "Status",
-      width: "12%",
-      render: (value) => (
-        <Badge variant={STATUS_VARIANT[value] || "outline"}>{value}</Badge>
+      key: "fileName",
+      header: "Contract Document",
+      width: "21%",
+      render: (value, row) => (
+        <button
+          type="button"
+          onClick={() =>
+            window.open(row.fileUrl, "_blank", "noopener,noreferrer")
+          }
+          className="flex items-start gap-2 rounded text-left text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <FileText className="h-4 w-4 shrink-0" />
+          {value}
+        </button>
+      ),
+    },
+    {
+      key: "notes",
+      header: "Notes",
+      width: "20%",
+      render: (value, row) => (
+        <span className="text-muted-foreground">
+          {row.title ? row.title + ". " : ""}
+          {value || "-"}
+        </span>
       ),
     },
     {
       key: "actions",
-      header: "",
+      header: "Delete",
       width: "8%",
       disableFilter: true,
       render: (_, row) => (
@@ -137,13 +192,13 @@ export default function ClientContractsSection() {
             variant="ghost"
             size="icon"
             className="h-8 w-8 text-red-500 hover:text-red-600"
-            title="Remove contract"
+            title="Delete contract"
             onClick={() =>
               setContracts((prev) => prev.filter((c) => c.id !== row.id))
             }
           >
             <Trash2 className="h-4 w-4" />
-            <span className="sr-only">Remove contract</span>
+            <span className="sr-only">Delete {row.fileName}</span>
           </Button>
         </div>
       ),
@@ -152,30 +207,185 @@ export default function ClientContractsSection() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="rounded-lg bg-secondary p-2">
-            <FileSignature className="h-4 w-4 text-secondary-foreground" />
-          </div>
-          <h2 className="font-semibold text-primary">Client Contracts</h2>
-        </div>
-        <Button size="sm" onClick={() => setAdding((open) => !open)}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          Add Contract
-        </Button>
-      </div>
-
-      {adding && (
-        <Card>
-          <CardContent className="space-y-4 p-4 sm:p-6">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="space-y-2">
-                <Label htmlFor="contractType">Contract Type *</Label>
+      {/* Add a contract */}
+      <Card>
+        <CardContent className="space-y-4 p-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-2">
+              <Label htmlFor="contractType">Contract Type *</Label>
+              <div className="flex gap-2">
                 <Select
-                  value={draft.documentType}
-                  onValueChange={(value) => set("documentType", value)}
+                  value={draft.contractType}
+                  onValueChange={(value) => setField("contractType", value)}
                 >
-                  <SelectTrigger id="contractType">
+                  <SelectTrigger id="contractType" className="flex-1">
+                    <SelectValue placeholder="Please Select" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CONTRACT_TYPES.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* The attached file's name lives in the tooltip, so the
+                    control stays the size of an icon either way. */}
+                {file ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0 border-green-600 text-green-600 hover:text-destructive"
+                    title={file.name + " - click to remove"}
+                    onClick={() => setFile(null)}
+                  >
+                    <FileCheck className="h-4 w-4" />
+                    <span className="sr-only">
+                      {file.name} attached. Remove it.
+                    </span>
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0"
+                    title="Upload contract"
+                    asChild
+                  >
+                    <label className="cursor-pointer">
+                      <Upload className="h-4 w-4" />
+                      <span className="sr-only">Upload contract</span>
+                      <Input
+                        type="file"
+                        className="hidden"
+                        onChange={(e) =>
+                          e.target.files[0] && setFile(e.target.files[0])
+                        }
+                      />
+                    </label>
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* A specific contract is written for one case, so it names it */}
+            {isSpecific && (
+              <div className="space-y-2">
+                <Label htmlFor="caseFileNo">Case File Number *</Label>
+                <SearchableSelect
+                  id="caseFileNo"
+                  value={draft.caseFileNo}
+                  onValueChange={(value) => setField("caseFileNo", value)}
+                  options={clientLinkedCases.map((c) => ({
+                    value: c.fileNo,
+                    label: c.fileNo + " - " + c.opponent,
+                  }))}
+                  placeholder="Select case file"
+                  searchPlaceholder="Search file number or opponent..."
+                />
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="contractStart">Start Date *</Label>
+              <Input
+                id="contractStart"
+                type="date"
+                value={draft.startDate}
+                onChange={(e) => setField("startDate", e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="contractEnd">Contract End Date</Label>
+              <Input
+                id="contractEnd"
+                type="date"
+                value={draft.endDate}
+                onChange={(e) => setField("endDate", e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="contractTitle">Contract</Label>
+              <Input
+                id="contractTitle"
+                value={draft.title}
+                onChange={(e) => setField("title", e.target.value)}
+                placeholder="Original, renewal, amendment..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="contractNotes">Note</Label>
+              <Input
+                id="contractNotes"
+                value={draft.notes}
+                onChange={(e) => setField("notes", e.target.value)}
+                placeholder="Add a note about this contract"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <Button type="button" onClick={handleSave} disabled={!canSave}>
+              Save Contract
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <DataTable
+        columns={columns}
+        data={rows}
+        searchPlaceholder="Search contracts..."
+        enableColumnSearch={false}
+        currentPage={currentPage}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
+      />
+
+      {/* The serial number opens the contract for reading and editing */}
+      <Dialog
+        open={Boolean(editing)}
+        onOpenChange={(open) => !open && setEditing(null)}
+      >
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Contract {editing?.serial}</DialogTitle>
+            <DialogDescription>
+              {editing && isCancelled(editing)
+                ? "Cancelled on " + formatDate(editing.endDate)
+                : "In force"}
+            </DialogDescription>
+          </DialogHeader>
+
+          {editing && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* The case file only exists for a specific contract, so the type
+                  takes the whole row when there is nothing to sit beside it. */}
+              <div
+                className={cn(
+                  "space-y-2",
+                  editing.contractType !== "Specific" && "sm:col-span-2"
+                )}
+              >
+                <Label htmlFor="editType">Contract Type</Label>
+                <Select
+                  value={editing.contractType}
+                  onValueChange={(value) =>
+                    setEditing({
+                      ...editing,
+                      contractType: value,
+                      caseFileNo: value === "Specific" ? editing.caseFileNo : null,
+                    })
+                  }
+                >
+                  <SelectTrigger id="editType">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -188,121 +398,95 @@ export default function ClientContractsSection() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="contractSigned">Signed On *</Label>
-                <Input
-                  id="contractSigned"
-                  type="date"
-                  value={draft.signedDate}
-                  onChange={(e) => set("signedDate", e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="contractExpiry">Expiry Date</Label>
-                <Input
-                  id="contractExpiry"
-                  type="date"
-                  value={draft.expiryDate}
-                  onChange={(e) => set("expiryDate", e.target.value)}
-                />
-              </div>
-
-              {/* A special contract is written for one matter, so it says which */}
-              {isSpecial && (
+              {editing.contractType === "Specific" && (
                 <div className="space-y-2">
-                  <Label htmlFor="contractFile">Office File No.</Label>
-                  <Select
-                    value={draft.linkedFileNo}
-                    onValueChange={(value) => set("linkedFileNo", value)}
-                  >
-                    <SelectTrigger id="contractFile">
-                      <SelectValue placeholder="Please Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {officeFiles.map((file) => (
-                        <SelectItem key={file.fileNo} value={file.fileNo}>
-                          {file.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="editCaseFile">Case File Number</Label>
+                  <SearchableSelect
+                    id="editCaseFile"
+                    value={editing.caseFileNo || ""}
+                    onValueChange={(value) =>
+                      setEditing({ ...editing, caseFileNo: value })
+                    }
+                    options={clientLinkedCases.map((c) => ({
+                      value: c.fileNo,
+                      label: c.fileNo + " - " + c.opponent,
+                    }))}
+                    placeholder="Select case file"
+                    searchPlaceholder="Search file number or opponent..."
+                  />
                 </div>
               )}
 
               <div className="space-y-2">
-                <Label>Contract Copy *</Label>
-                {draft.fileName ? (
-                  <div className="flex h-9 items-center justify-between gap-2 rounded-md bg-muted px-3">
-                    <span className="truncate text-sm">{draft.fileName}</span>
-                    <button
-                      type="button"
-                      onClick={() => set("fileName", "")}
-                      className="shrink-0 text-muted-foreground hover:text-destructive"
-                    >
-                      &times;
-                      <span className="sr-only">Remove file</span>
-                    </button>
-                  </div>
-                ) : (
-                  <label className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed px-3 text-sm text-muted-foreground hover:bg-muted/50">
-                    <Paperclip className="h-3.5 w-3.5" />
-                    Attach contract
-                    <Input
-                      type="file"
-                      className="hidden"
-                      onChange={(e) =>
-                        e.target.files[0] && set("fileName", e.target.files[0].name)
-                      }
-                    />
-                  </label>
-                )}
+                <Label htmlFor="editStart">Start Date</Label>
+                <Input
+                  id="editStart"
+                  type="date"
+                  value={editing.startDate}
+                  onChange={(e) =>
+                    setEditing({ ...editing, startDate: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="editEnd">Contract End Date</Label>
+                <Input
+                  id="editEnd"
+                  type="date"
+                  value={editing.endDate}
+                  onChange={(e) =>
+                    setEditing({ ...editing, endDate: e.target.value })
+                  }
+                />
               </div>
 
               <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="contractNotes">Notes</Label>
+                <Label htmlFor="editTitle">Contract</Label>
                 <Input
-                  id="contractNotes"
-                  value={draft.notes}
-                  onChange={(e) => set("notes", e.target.value)}
-                  placeholder="Anything worth recording about this contract"
+                  id="editTitle"
+                  value={editing.title}
+                  onChange={(e) =>
+                    setEditing({ ...editing, title: e.target.value })
+                  }
                 />
               </div>
-            </div>
 
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setDraft(emptyContract);
-                  setAdding(false);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button disabled={!canSave} onClick={save}>
-                Save Contract
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="editNotes">Note</Label>
+                <Input
+                  id="editNotes"
+                  value={editing.notes}
+                  onChange={(e) =>
+                    setEditing({ ...editing, notes: e.target.value })
+                  }
+                />
+              </div>
 
-      <Card>
-        <CardContent className="p-4 sm:p-6">
-          {contracts.length === 0 ? (
-            <EmptyState>No contracts signed with this client yet.</EmptyState>
-          ) : (
-            <DataTable
-              columns={columns}
-              data={contracts}
-              searchPlaceholder="Search contracts..."
-              exportFileName="client-contracts.csv"
-              enableColumnSearch={false}
-            />
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Contract Document</Label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    window.open(editing.fileUrl, "_blank", "noopener,noreferrer")
+                  }
+                  className="flex h-9 w-full items-center gap-2 rounded-md border bg-muted/40 px-3 text-left text-sm text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <FileText className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{editing.fileName}</span>
+                </button>
+              </div>
+            </div>
           )}
-        </CardContent>
-      </Card>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditing(null)}>
+              Cancel
+            </Button>
+            <Button onClick={saveEdit}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

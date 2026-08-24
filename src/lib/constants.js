@@ -29,14 +29,20 @@ export const RECEIVING_BANKS = [
 // so an unusual term can be entered directly.
 export const PAYMENT_DELAY_OPTIONS = ["15", "30", "45", "60", "90"];
 
+// Contracts are not filed here - they have their own page, because a contract
+// is renewed and amended over time while these are simply held on record.
 export const DOCUMENT_TYPES = [
   "Power of Attorney",
   "Commercial Registration",
   "ID Card",
   "Instructions",
-  "General Contract",
-  "Special Contract",
 ];
+
+/**
+ * A general contract governs the whole relationship; a specific one is written
+ * for a single matter, so it names the case file it belongs to.
+ */
+export const CONTRACT_TYPES = ["General", "Specific"];
 
 // Document types that carry an expiry date of their own.
 export const DOCUMENT_EXPIRY_LABELS = {
