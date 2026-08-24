@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { UserPlus, UserCog, Save, ArrowLeft, Upload, X, User } from "lucide-react";
-import { Rial } from "@/components/shared/money";
+import { Rial } from "@/components/shared/Rial";
 
 // Mock employee data - in real app, this would come from API
 const employeesData = [

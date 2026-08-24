@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import DataTable from "@/components/shared/DataTable";
 import { Hammer, ArrowLeft, Save, Plus } from "lucide-react";
-import { Rial } from "@/components/shared/money";
+import { Rial } from "@/components/shared/Rial";
 
 const executionActions = [
   { id: 1, date: "2024-12-05", action: "Execution Order Filed", status: "Completed", amount: "15,000.000", notes: "Filed with execution court" },

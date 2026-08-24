@@ -27,7 +27,7 @@ import { findType } from "./links";
 import { dayOffset, money } from "./expenseData";
 import { useSuppliers } from "@/lib/suppliers/context";
 import NewSupplierDialog from "@/pages/suppliers/NewSupplierDialog";
-import { Rial } from "@/components/shared/money";
+import { Rial } from "@/components/shared/Rial";
 
 /** A titled block of fields, with an optional action in its header. */
 function FormSection({ icon: Icon, title, action, children }) {

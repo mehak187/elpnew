@@ -13,7 +13,7 @@ import {
 import { Plus } from "lucide-react";
 import { EmptyState } from "@/components/shared/panels";
 import { clientInvoices, commissionPayments, commissionPayees } from "../clientMockData";
-import { withRial } from "@/components/shared/money";
+import { withRial } from "@/lib/money";
 
 const moneyValue = (amount) =>
   Number(amount || 0).toLocaleString("en-GB", { maximumFractionDigits: 2 });

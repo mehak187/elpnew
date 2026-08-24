@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import DataTable from "@/components/shared/DataTable";
 import { cn } from "@/lib/utils";
 import { INVOICE_STATUS_VARIANT } from "@/lib/constants";
-import { withRial } from "@/components/shared/money";
+import { withRial } from "@/lib/money";
 import { clientInvoices } from "../clientMockData";
 
 const money = (amount) =>

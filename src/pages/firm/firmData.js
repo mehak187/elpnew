@@ -13,7 +13,7 @@
  * the expiry date - so a figure on screen can never drift from its records.
  */
 
-import { withRial } from "@/components/shared/money";
+import { withRial } from "@/lib/money";
 
 const DAY = 24 * 60 * 60 * 1000;
 

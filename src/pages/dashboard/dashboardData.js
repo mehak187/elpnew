@@ -1,7 +1,7 @@
 // Mock data for the dashboard. Dates are generated relative to today so the
 // "today" and "days remaining" sections stay correct whenever the demo is run.
 
-import { withRial } from "@/components/shared/money";
+import { withRial } from "@/lib/money";
 
 const DAY = 24 * 60 * 60 * 1000;
 

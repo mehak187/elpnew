@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFirm } from "@/lib/firm/context";
-import { Rial } from "@/components/shared/money";
+import { Rial } from "@/components/shared/Rial";
 import {
   accountTransactions,
   invoices,

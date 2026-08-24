@@ -38,7 +38,7 @@ import { useExpenses } from "@/lib/expenses/context";
 import { useSuppliers } from "@/lib/suppliers/context";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 import { findType } from "./links";
-import { Rial } from "@/components/shared/money";
+import { Rial } from "@/components/shared/Rial";
 import {
   PAYMENT_METHODS,
   VIEWER_ROLES,

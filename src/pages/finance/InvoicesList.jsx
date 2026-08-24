@@ -14,7 +14,7 @@ const FILTERS = {
   client: { label: "Client", match: (row, value) => row.client === value },
 };
 import { Wallet, Plus, Eye, Edit, FileText } from "lucide-react";
-import { Rial } from "@/components/shared/money";
+import { Rial } from "@/components/shared/Rial";
 
 const invoices = [
   { id: 1, invoice_no: "INV/2024/001", client: "ABC Holdings LLC", amount: "2,500.000", date: "2024-12-01", due_date: "2024-12-31", status: "Paid" },

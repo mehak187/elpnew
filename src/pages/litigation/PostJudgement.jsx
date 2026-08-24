@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FileCheck, ArrowLeft, Save, Upload } from "lucide-react";
-import { Rial } from "@/components/shared/money";
+import { Rial } from "@/components/shared/Rial";
 
 export default function PostJudgement() {
   const navigate = useNavigate();

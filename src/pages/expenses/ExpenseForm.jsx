@@ -12,7 +12,7 @@ import { useExpenses } from "@/lib/expenses/context";
 import ExpenseClassificationPicker from "./ExpenseClassificationPicker";
 import { findType } from "./links";
 import { dayOffset } from "./expenseData";
-import { Rial } from "@/components/shared/money";
+import { Rial } from "@/components/shared/Rial";
 
 const emptyDraft = {
   typeKey: "",

@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { User, ArrowLeft, Edit, Mail, Phone, Calendar, Building, Briefcase, GraduationCap, DollarSign, Globe, Languages } from "lucide-react";
-import { Rial } from "@/components/shared/money";
+import { Rial } from "@/components/shared/Rial";
 
 // Mock employee data - in real app, this would come from API
 const employees = [
