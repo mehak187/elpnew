@@ -79,6 +79,13 @@ const navSections = [
         icon: Truck,
         description: "Supplier directory and tax numbers",
       },
+      {
+        name: "Expenses",
+        path: "/expenses",
+        key: "expenses",
+        icon: Wallet,
+        description: "Every expense, and what has been paid against it",
+      },
     ],
   },
   {

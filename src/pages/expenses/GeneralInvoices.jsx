@@ -51,6 +51,7 @@ import {
   firstReviewFor,
   routeFor,
   visibleInvoices,
+  similarRequests,
   invoiceNet,
   invoiceTax,
   invoiceTotal,
@@ -370,55 +371,119 @@ function FinanceApproval({ invoice, supplierAccount, outstanding, onDecide }) {
   );
 }
 
-/** What this supplier has been paid before, for judging what is in front of you. */
-function SupplierHistoryDialog({ supplier, invoices, onOpenChange }) {
-  const history = invoices
-    .filter((i) => i.supplier === supplier)
-    .sort((a, b) => b.invoiceDate.localeCompare(a.invoiceDate))
-    .slice(0, 10);
+/**
+ * What has come in before that resembles the request being decided.
+ *
+ * Each row says why it is here, so a reviewer can tell a repeat supplier
+ * invoice apart from the same person claiming the same thing again.
+ */
+function SupplierHistoryDialog({ invoice, invoices, accountFor, onOpenChange }) {
+  const matches = similarRequests(invoices, invoice);
 
   return (
-    <Dialog open={Boolean(supplier)} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl">
+    <Dialog open={Boolean(invoice)} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-5xl">
         <DialogHeader>
-          <DialogTitle>Last 10 Payments to This Supplier</DialogTitle>
-          <DialogDescription>{supplier}</DialogDescription>
+          <DialogTitle>Previous Requests Like This One</DialogTitle>
+          <DialogDescription>
+            {invoice.supplier} · raised by {invoice.createdBy}
+          </DialogDescription>
         </DialogHeader>
 
-        {history.length === 0 ? (
-          <EmptyState>Nothing has been raised against this supplier yet.</EmptyState>
+        {matches.length === 0 ? (
+          <EmptyState>
+            Nothing earlier resembles this request.
+          </EmptyState>
         ) : (
           <div className="max-h-[60vh] overflow-auto">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-b text-left text-xs text-muted-foreground">
                   <th className="pb-2 font-medium">Id</th>
+                  <th className="pb-2 font-medium">Supplier</th>
                   <th className="pb-2 font-medium">Invoice Date / Number</th>
                   <th className="pb-2 font-medium">Expense Details</th>
                   <th className="pb-2 text-right font-medium">Invoice Amount</th>
                   <th className="pb-2 font-medium">Invoice Status</th>
+                  <th className="pb-2 font-medium">Match</th>
                 </tr>
               </thead>
               <tbody>
-                {history.map((past) => (
-                  <tr key={past.id} className="border-b last:border-0">
-                    <td className="py-2 font-medium">{past.reference}</td>
-                    <td className="py-2 text-muted-foreground">
-                      {formatDate(past.invoiceDate)} · {past.invoiceNumber}
-                    </td>
-                    <td className="py-2 text-muted-foreground">
-                      {past.lines.map((l) => l.path.join(" / ")).join(", ")}
-                    </td>
-                    <td className="py-2 text-right font-semibold">
-                      {money(invoiceTotal(past))}
-                    </td>
-                    <td className="py-2">
-                      <Badge variant={STATUS_VARIANT[past.status]}>
-                        {STATUS[past.status]}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
+                {matches.map(({ invoice: past, sameSupplier, sameApplicant, sameKind }) => {
+                  const account = accountFor(past.supplier);
+                  return (
+                    <tr key={past.id} className="border-b align-top last:border-0">
+                      <td className="py-2 font-medium">
+                        {past.reference}
+                        {past.requestNo && (
+                          <span className="block text-xs font-normal text-muted-foreground">
+                            {past.requestNo}
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="py-2">
+                        <span className="block">{past.supplier}</span>
+                        <span className="block text-xs text-muted-foreground">
+                          {account?.bank || "-"}
+                        </span>
+                        <span className="block text-xs text-muted-foreground">
+                          {account?.accountNumber || "-"}
+                        </span>
+                      </td>
+
+                      <td className="py-2 text-muted-foreground">
+                        <span className="block">{formatDate(past.invoiceDate)}</span>
+                        <span className="block text-xs">{past.invoiceNumber}</span>
+                        {past.invoiceFile ? (
+                          <span
+                            title={past.invoiceFile}
+                            className="mt-0.5 inline-flex items-center gap-1 text-xs text-primary"
+                          >
+                            <Paperclip className="h-3 w-3" />
+                            Invoice
+                          </span>
+                        ) : (
+                          <span className="text-xs">No invoice copy</span>
+                        )}
+                      </td>
+
+                      <td className="py-2 text-xs text-muted-foreground">
+                        {past.lines.map((line) => (
+                          <span key={line.id} className="block">
+                            {findType(line.typeKey)?.name} · {line.path.join(" / ")}
+                          </span>
+                        ))}
+                      </td>
+
+                      <td className="py-2 text-right">
+                        <span className="block font-semibold">
+                          {money(invoiceTotal(past))}
+                        </span>
+                        <span className="block text-xs text-muted-foreground">
+                          Net {money(invoiceNet(past))}
+                        </span>
+                        <span className="block text-xs text-muted-foreground">
+                          VAT {money(invoiceTax(past))}
+                        </span>
+                      </td>
+
+                      <td className="py-2">
+                        <Badge variant={STATUS_VARIANT[past.status]}>
+                          {STATUS[past.status]}
+                        </Badge>
+                      </td>
+
+                      <td className="py-2">
+                        <div className="flex flex-wrap gap-1">
+                          {sameSupplier && <Badge variant="outline">Same supplier</Badge>}
+                          {sameKind && <Badge variant="outline">Same expense</Badge>}
+                          {sameApplicant && <Badge variant="outline">Same applicant</Badge>}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -616,6 +681,9 @@ export default function GeneralInvoices() {
           const canPay =
             ["approved", "partiallyPaid"].includes(invoice.status) &&
             (isAdmin || role === "finance");
+          // Whoever is judging the request can read what came before it.
+          const canReview =
+            accountantReview || financeApproval || canApprove || isAdmin;
           const canResubmit =
             invoice.status === "returned" && (isAdmin || role === "employee");
 
@@ -635,6 +703,12 @@ export default function GeneralInvoices() {
                         <Badge variant="outline">Admin raised</Badge>
                       )}
                     </div>
+                    {/* The number this is chased by, until the money goes out */}
+                    {invoice.requestNo && (
+                      <p className="mt-1 text-sm font-semibold text-foreground">
+                        {invoice.requestNo}
+                      </p>
+                    )}
                     <p className="mt-1 text-xs text-muted-foreground">
                       {invoice.reference} · Invoice {invoice.invoiceNumber} ·{" "}
                       {formatDate(invoice.invoiceDate)} · {invoice.createdBy}
@@ -773,12 +847,12 @@ export default function GeneralInvoices() {
                   </ul>
                 </details>
 
-                {(accountantReview || financeApproval) && (
+                {canReview && (
                   <div className="flex justify-end">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setHistoryFor(invoice.supplier)}
+                      onClick={() => setHistoryFor(invoice)}
                     >
                       <History className="mr-1.5 h-4 w-4" />
                       View Supplier History
@@ -883,8 +957,9 @@ export default function GeneralInvoices() {
 
       {historyFor && (
         <SupplierHistoryDialog
-          supplier={historyFor}
+          invoice={historyFor}
           invoices={invoices}
+          accountFor={accountFor}
           onOpenChange={(open) => !open && setHistoryFor(null)}
         />
       )}
