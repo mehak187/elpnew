@@ -69,6 +69,21 @@ export const INVOICE_STATUS_VARIANT = {
 };
 
 /**
+ * The dot that carries an invoice's status where the words sit in plain black.
+ *
+ * `ring` is given separately because a pale fill on a white row disappears
+ * without an edge, and a cancelled invoice is drawn hollow - nothing is owed on
+ * it and nothing has been paid, so there is nothing to fill in.
+ */
+export const INVOICE_STATUS_DOT = {
+  Paid: { fill: "#0B6623", ring: "#0B6623" },
+  "Partially Paid": { fill: "#D9F7E3", ring: "#0B6623" },
+  Unpaid: { fill: "#F59E0B", ring: "#F59E0B" },
+  Overdue: { fill: "#DC2626", ring: "#DC2626" },
+  Cancelled: { fill: "transparent", ring: "#9CA3AF" },
+};
+
+/**
  * Dial codes for the phone fields.
  *
  * Oman leads the list because it is the default, and the Gulf states follow
