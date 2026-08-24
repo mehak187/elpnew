@@ -21,8 +21,18 @@ const startOfToday = () => {
   return d;
 };
 
+// Formatted from the local parts, not through toISOString(): east of UTC the
+// UTC form of local midnight still falls on the previous day, which made
+// "today" render as yesterday in the date fields.
+const isoDate = (date) =>
+  date.getFullYear() +
+  "-" +
+  String(date.getMonth() + 1).padStart(2, "0") +
+  "-" +
+  String(date.getDate()).padStart(2, "0");
+
 export const dayOffset = (days) =>
-  new Date(startOfToday().getTime() + days * DAY).toISOString().slice(0, 10);
+  isoDate(new Date(startOfToday().getTime() + days * DAY));
 
 export const daysUntil = (dateStr) =>
   Math.round(

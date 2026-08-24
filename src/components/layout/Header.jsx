@@ -82,7 +82,7 @@ const navSections = [
     ],
   },
   {
-    name: "Expense Requests",
+    name: "Payment Request",
     path: "/expense-requests",
     key: "expense-requests",
     icon: ReceiptText,

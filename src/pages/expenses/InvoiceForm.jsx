@@ -17,14 +17,16 @@ import {
   Plus,
   Trash2,
   Paperclip,
+  FileX,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GENERAL_TYPES, isPathComplete } from "@/lib/expenses/taxonomy";
 import ExpenseClassificationPicker from "./ExpenseClassificationPicker";
 import { findType } from "./links";
-import { CREATOR_ROLES, dayOffset, money } from "./expenseData";
+import { dayOffset, money } from "./expenseData";
 import { useSuppliers } from "@/lib/suppliers/context";
+import NewSupplierDialog from "@/pages/suppliers/NewSupplierDialog";
 
 /** A titled block of fields, with an optional action in its header. */
 function FormSection({ icon: Icon, title, action, children }) {
@@ -66,10 +68,15 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [supplier, setSupplier] = useState("");
   const [invoiceFile, setInvoiceFile] = useState("");
+  // Whether a copy of the supplier invoice is coming, decided here rather than
+  // deferred: a request with no invoice behind it has to say so up front.
+  const [invoiceCopy, setInvoiceCopy] = useState("upload");
   const [supportingDocuments, setSupportingDocuments] = useState([]);
-  const [creatorRole, setCreatorRole] = useState("employee");
+  const [addingSupplier, setAddingSupplier] = useState(false);
   const [lines, setLines] = useState([emptyLine()]);
   const [error, setError] = useState("");
+
+  const noInvoice = invoiceCopy === "none";
 
   const updateLine = (id, changes) =>
     setLines((prev) => prev.map((l) => (l.id === id ? { ...l, ...changes } : l)));
@@ -93,7 +100,8 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
   const submit = () => {
     if (!invoiceNumber.trim()) return setError("Enter the invoice number.");
     if (!supplier) return setError("Select the supplier.");
-    if (!invoiceFile) return setError("Attach the invoice.");
+    if (!noInvoice && !invoiceFile)
+      return setError("Upload the invoice copy, or mark it as no invoice.");
     if (!lines.every(lineComplete))
       return setError(
         "Every row needs a full classification and an amount before tax. Other Expenses also needs a description."
@@ -103,9 +111,9 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
       invoiceDate,
       invoiceNumber,
       supplier,
-      invoiceFile,
+      invoiceFile: noInvoice ? "" : invoiceFile,
+      noInvoice,
       supportingDocuments,
-      creatorRole,
       lines: lines.map((l) => ({
         ...l,
         amountBeforeTax: Number(l.amountBeforeTax),
@@ -118,7 +126,7 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
     <div className="space-y-4 sm:space-y-6">
       {/* ------------------------------------------------------ Invoice Data */}
       <FormSection icon={ReceiptText} title="Invoice Data">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
           <div className="space-y-2">
             <Label htmlFor="invoiceDate">Invoice Date *</Label>
             <Input
@@ -129,37 +137,62 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
             />
           </div>
 
+          {/* The invoice copy sits with the number it belongs to. Whether one
+              is coming is settled here rather than deferred. */}
           <div className="space-y-2">
             <Label htmlFor="invoiceNumber">Invoice Number *</Label>
-            <Input
-              id="invoiceNumber"
-              value={invoiceNumber}
-              onChange={(e) => setInvoiceNumber(e.target.value)}
-              placeholder="Supplier invoice number"
-            />
-          </div>
+            <div className="flex gap-1.5">
+              <Input
+                id="invoiceNumber"
+                value={invoiceNumber}
+                onChange={(e) => setInvoiceNumber(e.target.value)}
+                placeholder="Invoice no."
+                className="min-w-0 flex-1"
+              />
+              <label
+                title="Upload Invoice Copy"
+                className={cn(
+                  "inline-flex h-9 shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-md border px-2.5 text-xs font-medium",
+                  noInvoice
+                    ? "text-muted-foreground hover:bg-muted/50"
+                    : "border-primary bg-primary text-primary-foreground"
+                )}
+              >
+                <Paperclip className="h-3.5 w-3.5" />
+                Upload Copy
+                <Input
+                  type="file"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (!e.target.files[0]) return;
+                    setInvoiceCopy("upload");
+                    setInvoiceFile(e.target.files[0].name);
+                  }}
+                />
+              </label>
+              <Button
+                type="button"
+                title="No Invoice"
+                variant={noInvoice ? "default" : "outline"}
+                className="h-9 shrink-0 gap-1 px-2.5 text-xs"
+                onClick={() => {
+                  setInvoiceCopy("none");
+                  setInvoiceFile("");
+                }}
+              >
+                <FileX className="h-3.5 w-3.5" />
+                No Invoice
+              </Button>
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="supplier">Supplier *</Label>
-            <Select value={supplier} onValueChange={setSupplier}>
-              <SelectTrigger id="supplier">
-                <SelectValue placeholder="Please Select" />
-              </SelectTrigger>
-              <SelectContent>
-                {activeSuppliers.map((supplier) => (
-                  <SelectItem key={supplier.id} value={supplier.name}>
-                    {supplier.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Attach Invoice *</Label>
-            {invoiceFile ? (
-              <div className="flex h-9 items-center justify-between gap-2 rounded-md bg-muted px-3">
-                <span className="truncate text-sm">{invoiceFile}</span>
+            {noInvoice && (
+              <p className="text-xs text-muted-foreground">
+                Raised without a supplier invoice.
+              </p>
+            )}
+            {!noInvoice && invoiceFile && (
+              <div className="flex h-8 items-center justify-between gap-2 rounded-md bg-muted px-3">
+                <span className="truncate text-xs">{invoiceFile}</span>
                 <button
                   type="button"
                   onClick={() => setInvoiceFile("")}
@@ -169,19 +202,36 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
                   <span className="sr-only">Remove invoice</span>
                 </button>
               </div>
-            ) : (
-              <label className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed px-3 text-sm text-muted-foreground hover:bg-muted/50">
-                <Paperclip className="h-3.5 w-3.5" />
-                Attach invoice
-                <Input
-                  type="file"
-                  className="hidden"
-                  onChange={(e) =>
-                    e.target.files[0] && setInvoiceFile(e.target.files[0].name)
-                  }
-                />
-              </label>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="supplier">Supplier *</Label>
+            <div className="flex gap-2">
+              <Select value={supplier} onValueChange={setSupplier}>
+                <SelectTrigger id="supplier" className="flex-1">
+                  <SelectValue placeholder="Please Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeSuppliers.map((supplier) => (
+                    <SelectItem key={supplier.id} value={supplier.name}>
+                      {supplier.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="shrink-0"
+                title="Add a new supplier"
+                onClick={() => setAddingSupplier(true)}
+              >
+                <Plus className="h-4 w-4" />
+                <span className="sr-only">Add a new supplier</span>
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -204,24 +254,14 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
               />
             </label>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="creatorRole">Raised By *</Label>
-            <Select value={creatorRole} onValueChange={setCreatorRole}>
-              <SelectTrigger id="creatorRole">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CREATOR_ROLES.map((role) => (
-                  <SelectItem key={role.key} value={role.key}>
-                    {role.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
         </div>
       </FormSection>
+
+      <NewSupplierDialog
+        open={addingSupplier}
+        onOpenChange={setAddingSupplier}
+        onCreated={setSupplier}
+      />
 
       {/* --------------------------------------------------- Expense Details */}
       <FormSection

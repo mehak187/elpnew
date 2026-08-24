@@ -6,6 +6,8 @@
  * selectable on an invoice, and its tax numbers travel with it.
  */
 
+import { DEFAULT_DIAL_CODE } from "@/lib/constants";
+
 export const SUPPLIER_CATEGORIES = [
   "Office Supplies",
   "Utilities",
@@ -20,6 +22,33 @@ export const SUPPLIER_CATEGORIES = [
 ];
 
 export const SUPPLIER_STATUSES = ["Active", "Inactive"];
+
+/* ------------------------------------------------------------ new supplier */
+
+// The draft a supplier form starts from. The dial code is held apart from the
+// number while editing and folded back in on save.
+export const emptySupplier = {
+  name: "",
+  category: "",
+  commercialRegistration: "",
+  taxIdentificationNumber: "",
+  vatNumber: "",
+  bank: "",
+  accountNumber: "",
+  dialCode: DEFAULT_DIAL_CODE,
+  phone: "",
+  status: "Active",
+};
+
+/** A supplier needs at least a name and a category before it can be saved. */
+export const canSaveSupplier = (draft) =>
+  Boolean(draft.name.trim() && draft.category);
+
+/** Folds the dial code back onto the phone number the record stores. */
+export function toSupplierRecord(draft) {
+  const { dialCode, phone, ...rest } = draft;
+  return { ...rest, phone: phone ? dialCode + " " + phone : "" };
+}
 
 const s = (id, name, category, cr, tin, vat, bank, account, phone, status) => ({
   id,

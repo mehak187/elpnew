@@ -35,14 +35,12 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/shared/panels";
-import { DEDICATED_TYPES } from "@/lib/expenses/taxonomy";
 import { useExpenses } from "@/lib/expenses/context";
 import { useSuppliers } from "@/lib/suppliers/context";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 import { findType } from "./links";
 import {
   PAYMENT_METHODS,
-  CREATOR_ROLES,
   VIEWER_ROLES,
   STATUS,
   STATUS_VARIANT,
@@ -193,7 +191,7 @@ export default function GeneralInvoices() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-primary sm:text-2xl">
-              Expense Requests
+              Invoice Payment Request
             </h1>
             <p className="text-xs text-muted-foreground sm:text-sm">
               General invoices and general company expenses
@@ -218,7 +216,7 @@ export default function GeneralInvoices() {
           </Select>
           <Button onClick={() => navigate("/expense-requests/create")}>
             <Plus className="mr-1.5 h-4 w-4" />
-            New General Invoice
+            New Payment Request
           </Button>
         </div>
       </div>
@@ -235,40 +233,6 @@ export default function GeneralInvoices() {
             "As the finance manager you see a request only once the accountant has acted on it."}
           {role === "admin" && "Management sees every request at every stage."}
         </span>
-      </div>
-
-      {/* The two routes, stated once */}
-      <Card>
-        <CardContent className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
-          {CREATOR_ROLES.map((role) => (
-            <div key={role.key} className="rounded-md border p-3">
-              <p className="mb-2 text-xs font-semibold text-foreground">
-                Raised by {role.label}
-              </p>
-              <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                {routeFor(role.key).map((step, i, all) => (
-                  <span key={step.key} className="flex items-center gap-1.5">
-                    <span className="text-muted-foreground">{step.label}</span>
-                    {i < all.length - 1 && (
-                      <ArrowRight className="h-3 w-3 text-muted-foreground/60" />
-                    )}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      {/* What this page deliberately does not cover */}
-      <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-        <Info className="h-3.5 w-3.5 shrink-0" />
-        <span>Entered on their own pages, not here:</span>
-        {DEDICATED_TYPES.map((type) => (
-          <Badge key={type.key} variant="outline">
-            {type.name} → {type.recordedOn}
-          </Badge>
-        ))}
       </div>
 
       {/* ------------------------------------------------------- invoices */}
@@ -320,11 +284,13 @@ export default function GeneralInvoices() {
                       {formatDate(invoice.invoiceDate)} · {invoice.createdBy}
                     </p>
                     <div className="mt-1 flex flex-wrap items-center gap-3 text-xs">
-                      {invoice.invoiceFile && (
+                      {invoice.invoiceFile ? (
                         <span className="inline-flex items-center gap-1 text-primary">
                           <Paperclip className="h-3 w-3" />
                           {invoice.invoiceFile}
                         </span>
+                      ) : (
+                        <Badge variant="outline">No invoice copy</Badge>
                       )}
                       {invoice.supportingDocuments.map((doc) => (
                         <span
