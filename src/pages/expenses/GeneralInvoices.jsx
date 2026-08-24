@@ -27,7 +27,6 @@ import {
   Trash2,
   Paperclip,
   ArrowRight,
-  Info,
   Check,
   Undo2,
   X,
@@ -219,20 +218,6 @@ export default function GeneralInvoices() {
             New Payment Request
           </Button>
         </div>
-      </div>
-
-      {/* Why the list is shorter than the whole file */}
-      <div className="flex items-start gap-2 rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        <span>
-          {role === "employee" &&
-            "As an employee you see only your own requests that are still in progress."}
-          {role === "accountant" &&
-            "As the accountant you see only the requests waiting for your review."}
-          {role === "finance" &&
-            "As the finance manager you see a request only once the accountant has acted on it."}
-          {role === "admin" && "Management sees every request at every stage."}
-        </span>
       </div>
 
       {/* ------------------------------------------------------- invoices */}

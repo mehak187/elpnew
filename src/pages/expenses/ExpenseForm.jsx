@@ -159,12 +159,6 @@ export default function ExpenseForm() {
               </div>
             )}
 
-            {type && !classified && (
-              <p className="text-sm text-muted-foreground">
-                Choose the category and subcategory to continue.
-              </p>
-            )}
-
             {error && <p className="text-sm text-destructive">{error}</p>}
           </form>
         </CardContent>

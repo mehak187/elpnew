@@ -250,12 +250,6 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
         onCreated={setSupplier}
       />
 
-      {!invoiceDataComplete && (
-        <p className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
-          Fill in the invoice data above to carry on with the expense details.
-        </p>
-      )}
-
       {/* --------------------------------------------------- Expense Details */}
       {invoiceDataComplete && (
         <FormSection
@@ -378,12 +372,6 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
                       </>
                     )}
 
-                    {!classified && (
-                      <p className="self-end pb-2 text-sm text-muted-foreground sm:col-span-2 lg:col-span-4">
-                        Choose the expense type, category and subcategory to
-                        continue.
-                      </p>
-                    )}
                   </div>
                 </div>
               );
