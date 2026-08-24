@@ -9,6 +9,7 @@ import { deriveClientStatus } from "@/lib/clientStatus";
 import { clientDisplayName } from "./clientRecords";
 import { useClients } from "@/lib/clients/context";
 import { StatusDot } from "@/components/shared/panels";
+import { activeCaseCount } from "./clientCases";
 
 import BasicSection from "./sections/BasicSection";
 import ContactSection from "./sections/ContactSection";
@@ -77,7 +78,7 @@ const SECTIONS = [
   { key: "contracts", label: "Client Contracts", existingOnly: true },
   { key: "invoices", label: "Invoices", existingOnly: true },
   { key: "commission", label: "Commission", existingOnly: true },
-  { key: "analytics", label: "Client Analytics", existingOnly: true },
+  { key: "analytics", label: "File Status", existingOnly: true },
   { key: "merge", label: "Merge Clients", existingOnly: true },
 ];
 
@@ -310,6 +311,12 @@ export default function ClientDetails() {
                 </h2>
                 {activeSection === "basic" && (
                   <StatusDot status={status} isGood={status === "Active"} />
+                )}
+                {/* Live cases still open, which is what File Status is about */}
+                {activeSection === "analytics" && (
+                  <span className="text-base font-bold text-primary">
+                    {activeCaseCount}
+                  </span>
                 )}
               </div>
 

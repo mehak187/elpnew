@@ -387,11 +387,11 @@ export function overviewFigures({ branches, documents, bankAccounts, payments, e
 
 /** The roles a branch staffs, in the order they are assigned to a client. */
 // In the order a client's work passes through them: the supervisor over it, the
-// lawyer running it, the consultant advising on it, the officer enforcing it.
+// consultant advising on it, the lawyer running it, the officer enforcing it.
 export const BRANCH_ROLES = [
   "General Supervisor",
-  "Lawyer",
   "Legal Consultant",
+  "Lawyer",
   "Enforcement Officer",
 ];
 
