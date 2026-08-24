@@ -91,6 +91,48 @@ export const CREATOR_ROLES = [
 export const firstReviewFor = (creatorRole) =>
   CREATOR_ROLES.find((r) => r.key === creatorRole)?.firstReview || "accountant";
 
+/* --------------------------------------------------------- who sees what */
+
+/**
+ * The roles a request page is read as. Auth is not wired up yet, so the page
+ * offers these as a switcher the way the dashboard does.
+ */
+export const VIEWER_ROLES = [
+  { key: "employee", label: "Employee" },
+  { key: "accountant", label: "Accountant" },
+  { key: "finance", label: "Finance Manager" },
+  { key: "admin", label: "Admin / Management" },
+];
+
+/** Nothing is waiting on anyone once an invoice reaches one of these. */
+const CLOSED = ["paid", "rejected"];
+
+/**
+ * Each role is shown only the requests that need it to act at that moment.
+ *
+ *   Employee        own requests that are still in flight
+ *   Accountant      only what is sitting at the accountant step
+ *   Finance Manager nothing until the accountant has acted, so the accountant's
+ *                   review is not visible early either
+ *   Admin           everything
+ */
+export function visibleInvoices(invoices, role, userName) {
+  switch (role) {
+    case "employee":
+      return invoices.filter(
+        (i) => i.createdBy === userName && !CLOSED.includes(i.status)
+      );
+    case "accountant":
+      return invoices.filter((i) => i.status === "accountant");
+    case "finance":
+      return invoices.filter((i) =>
+        ["finance", "approved", "partiallyPaid"].includes(i.status)
+      );
+    default:
+      return invoices;
+  }
+}
+
 /** The route an invoice takes, used to draw its progress. */
 export function routeFor(creatorRole) {
   const steps = [

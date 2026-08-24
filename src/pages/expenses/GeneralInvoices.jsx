@@ -38,14 +38,17 @@ import { EmptyState } from "@/components/shared/panels";
 import { DEDICATED_TYPES } from "@/lib/expenses/taxonomy";
 import { useExpenses } from "@/lib/expenses/context";
 import { useSuppliers } from "@/lib/suppliers/context";
+import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 import { findType } from "./links";
 import {
   PAYMENT_METHODS,
   CREATOR_ROLES,
+  VIEWER_ROLES,
   STATUS,
   STATUS_VARIANT,
   firstReviewFor,
   routeFor,
+  visibleInvoices,
   invoiceNet,
   invoiceTax,
   invoiceTotal,
@@ -115,6 +118,12 @@ export default function GeneralInvoices() {
   // Where this supplier is paid, taken from the supplier record.
   const accountFor = (name) => suppliers.find((s) => s.name === name) || null;
 
+  // Auth is not wired up yet, so the role is switchable here to make the
+  // visibility rules visible. It becomes the signed-in user's role later.
+  const [role, setRole] = useState("admin");
+  const roleLabel = VIEWER_ROLES.find((r) => r.key === role)?.label || "";
+  const visible = visibleInvoices(invoices, role, CURRENT_USER.name);
+
   // Reason capture for a return or rejection, and the payment dialog.
   const [reasonFor, setReasonFor] = useState(null);
   const [reason, setReason] = useState("");
@@ -131,7 +140,7 @@ export default function GeneralInvoices() {
       status,
       history: [
         ...invoice.history,
-        { at: dayOffset(0), by: "Current user", action, reason: note },
+        { at: dayOffset(0), by: roleLabel, action, reason: note },
       ],
     });
 
@@ -191,10 +200,41 @@ export default function GeneralInvoices() {
             </p>
           </div>
         </div>
-        <Button onClick={() => navigate("/expense-requests/create")}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          New General Invoice
-        </Button>
+        <div className="flex items-center gap-2">
+          <span className="hidden text-xs text-muted-foreground sm:inline">
+            Viewing as
+          </span>
+          <Select value={role} onValueChange={setRole}>
+            <SelectTrigger className="h-9 w-44 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {VIEWER_ROLES.map((r) => (
+                <SelectItem key={r.key} value={r.key}>
+                  {r.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button onClick={() => navigate("/expense-requests/create")}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            New General Invoice
+          </Button>
+        </div>
+      </div>
+
+      {/* Why the list is shorter than the whole file */}
+      <div className="flex items-start gap-2 rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+        <span>
+          {role === "employee" &&
+            "As an employee you see only your own requests that are still in progress."}
+          {role === "accountant" &&
+            "As the accountant you see only the requests waiting for your review."}
+          {role === "finance" &&
+            "As the finance manager you see a request only once the accountant has acted on it."}
+          {role === "admin" && "Management sees every request at every stage."}
+        </span>
       </div>
 
       {/* The two routes, stated once */}
@@ -233,19 +273,31 @@ export default function GeneralInvoices() {
 
       {/* ------------------------------------------------------- invoices */}
       <div className="space-y-4">
-        {invoices.length === 0 && (
+        {visible.length === 0 && (
           <Card>
             <CardContent className="p-6">
-              <EmptyState>No general invoices yet.</EmptyState>
+              <EmptyState>
+                {role === "admin"
+                  ? "No general invoices yet."
+                  : "Nothing is waiting for you at the moment."}
+              </EmptyState>
             </CardContent>
           </Card>
         )}
 
-        {invoices.map((invoice) => {
+        {visible.map((invoice) => {
           const total = invoiceTotal(invoice);
           const paid = amountPaid(invoice);
-          const canApprove = ["accountant", "finance"].includes(invoice.status);
-          const canPay = ["approved", "partiallyPaid"].includes(invoice.status);
+          const isAdmin = role === "admin";
+          const canApprove =
+            (invoice.status === "accountant" &&
+              (isAdmin || role === "accountant")) ||
+            (invoice.status === "finance" && (isAdmin || role === "finance"));
+          const canPay =
+            ["approved", "partiallyPaid"].includes(invoice.status) &&
+            (isAdmin || role === "finance");
+          const canResubmit =
+            invoice.status === "returned" && (isAdmin || role === "employee");
 
           return (
             <Card key={invoice.id}>
@@ -455,7 +507,7 @@ export default function GeneralInvoices() {
                     </Button>
                   )}
 
-                  {invoice.status === "returned" && (
+                  {canResubmit && (
                     <Button
                       size="sm"
                       onClick={() =>
