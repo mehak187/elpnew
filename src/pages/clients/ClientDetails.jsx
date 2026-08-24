@@ -15,6 +15,7 @@ import FinancialSection from "./sections/FinancialSection";
 import CommissionSection from "./sections/CommissionSection";
 import ClientManagementSection from "./sections/ClientManagementSection";
 import DocumentsSection from "./sections/DocumentsSection";
+import ClientContractsSection from "./sections/ClientContractsSection";
 import LinkedCasesSection from "./sections/LinkedCasesSection";
 import InvoicesSection from "./sections/InvoicesSection";
 import AnalyticsSection from "./sections/AnalyticsSection";
@@ -56,6 +57,9 @@ const SECTIONS = [
       "emailNotification",
     ],
   },
+  { key: "cases", label: "Cases", existingOnly: true },
+  { key: "documents", label: "Documents", existingOnly: true },
+  { key: "management", label: "Client Management", existingOnly: true },
   {
     key: "financial",
     label: "Financial Details",
@@ -69,11 +73,9 @@ const SECTIONS = [
         : []),
     ],
   },
-  { key: "documents", label: "Documents", existingOnly: true },
-  { key: "cases", label: "Cases", existingOnly: true },
+  { key: "contracts", label: "Client Contracts", existingOnly: true },
   { key: "invoices", label: "Invoices", existingOnly: true },
   { key: "commission", label: "Commission", existingOnly: true },
-  { key: "management", label: "Client Management", existingOnly: true },
   { key: "analytics", label: "Client Analytics", existingOnly: true },
   { key: "merge", label: "Merge Clients", existingOnly: true },
 ];
@@ -320,6 +322,7 @@ export default function ClientDetails() {
               {activeSection === "documents" && (
                 <DocumentsSection formData={formData} onChange={handleChange} />
               )}
+              {activeSection === "contracts" && <ClientContractsSection />}
               {activeSection === "cases" && <LinkedCasesSection />}
               {activeSection === "invoices" && <InvoicesSection />}
               {activeSection === "management" && record && (
