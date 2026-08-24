@@ -312,7 +312,9 @@ export default function ClientDetails() {
                 )}
               </form>
 
-              {activeSection === "commission" && <CommissionSection />}
+              {activeSection === "commission" && (
+                <CommissionSection clientNo={record?.clientNo} />
+              )}
               {activeSection === "documents" && (
                 <DocumentsSection formData={formData} onChange={handleChange} />
               )}
