@@ -3,6 +3,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import FirmProvider from "@/lib/firm/FirmProvider";
 import ExpensesProvider from "@/lib/expenses/ExpensesProvider";
 import SuppliersProvider from "@/lib/suppliers/SuppliersProvider";
+import ClientsProvider from "@/lib/clients/ClientsProvider";
 
 // Root Pages
 import Dashboard from "@/pages/Dashboard";
@@ -55,6 +56,7 @@ function App() {
     <FirmProvider>
       <ExpensesProvider>
         <SuppliersProvider>
+          <ClientsProvider>
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<MainLayout />}>
@@ -118,6 +120,7 @@ function App() {
             </Route>
           </Routes>
         </BrowserRouter>
+          </ClientsProvider>
         </SuppliersProvider>
       </ExpensesProvider>
     </FirmProvider>

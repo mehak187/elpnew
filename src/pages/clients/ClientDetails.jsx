@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { UserPlus, Save, ArrowLeft } from "lucide-react";
+import { UserPlus, Save, ArrowLeft, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DEFAULT_DIAL_CODE } from "@/lib/constants";
 import { deriveClientStatus } from "@/lib/clientStatus";
-import { findClient } from "./clientRecords";
+import { clientDisplayName } from "./clientRecords";
+import { useClients } from "@/lib/clients/context";
 import { StatusDot } from "@/components/shared/panels";
 
 import BasicSection from "./sections/BasicSection";
@@ -141,7 +142,12 @@ export default function ClientDetails() {
   const { id } = useParams();
   const isExisting = Boolean(id);
 
+  const { clients, findClient, findByNo } = useClients();
   const record = isExisting ? findClient(id) : null;
+  // Where this client's records now live, if it has been folded into another.
+  const mergedInto = record?.mergedIntoClientNo
+    ? findByNo(record.mergedIntoClientNo)
+    : null;
 
   const [clientType, setClientType] = useState(() => record?.type || "Individual");
   const [statusOverride, setStatusOverride] = useState(
@@ -202,9 +208,15 @@ export default function ClientDetails() {
     navigate("/clients");
   };
 
+  // Whatever this client has absorbed travels in its name, so the old name
+  // still finds the records that came in under it.
   const title = isExisting
-    ? [record?.clientNo, formData.englishName].filter(Boolean).join(" : ") ||
-      "Client Details"
+    ? [
+        record?.clientNo,
+        clientDisplayName(clients, record) || formData.englishName,
+      ]
+        .filter(Boolean)
+        .join(" : ") || "Client Details"
     : "Add New Client";
 
   return (
@@ -228,11 +240,28 @@ export default function ClientDetails() {
             <h1 className="text-xl sm:text-2xl font-bold text-primary">
               {title}
             </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              {isExisting
-                ? "Client profile and related records"
-                : "Create a new client record"}
-            </p>
+            {/* A merged client is still readable, and says where it went */}
+            {mergedInto ? (
+              <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+                <span className="font-medium text-amber-600">
+                  Merged with {mergedInto.clientName}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => navigate("/clients/" + mergedInto.id)}
+                  className="inline-flex items-center gap-1 text-primary underline-offset-2 hover:underline"
+                >
+                  Open {mergedInto.clientName}
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </button>
+              </p>
+            ) : (
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                {isExisting
+                  ? "Client profile and related records"
+                  : "Create a new client record"}
+              </p>
+            )}
           </div>
         </div>
 

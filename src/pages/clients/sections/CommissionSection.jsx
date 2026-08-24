@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Calculator } from "lucide-react";
 import { withRial } from "@/lib/money";
-import { clientRecords } from "../clientRecords";
+import { useClients } from "@/lib/clients/context";
 import { clientInvoices } from "../clientMockData";
 
 const moneyValue = (amount) =>
@@ -52,6 +52,7 @@ function legalFeesPaid(clientNo, from, to) {
  * it. Nothing is written down here - the answer is worked out and read off.
  */
 export default function CommissionSection({ clientNo }) {
+  const { clients } = useClients();
   const [company, setCompany] = useState(clientNo || "");
   const [percent, setPercent] = useState("");
   const [fromDate, setFromDate] = useState("");
@@ -85,7 +86,7 @@ export default function CommissionSection({ clientNo }) {
               <SelectValue placeholder="Please Select" />
             </SelectTrigger>
             <SelectContent>
-              {clientRecords.map((client) => (
+              {clients.map((client) => (
                 <SelectItem key={client.clientNo} value={client.clientNo}>
                   {client.clientName}
                 </SelectItem>

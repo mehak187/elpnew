@@ -43,3 +43,27 @@ export const clientRecords = [
 
 export const findClient = (id) =>
   clientRecords.find((c) => c.id === Number(id)) || null;
+
+/** The clients that were folded into this one. */
+export const mergedInto = (clients, client) =>
+  client ? clients.filter((c) => c.mergedIntoClientNo === client.clientNo) : [];
+
+/**
+ * The name a client is known by once others have been merged into it.
+ *
+ * A case or an invoice raised under the old name has to stay findable under it,
+ * so the old name travels with the new one rather than being replaced:
+ *
+ *   Bank Muscat - Ahli Bank Previously
+ */
+export function clientDisplayName(clients, client) {
+  if (!client) return "";
+  const absorbed = mergedInto(clients, client);
+  if (absorbed.length === 0) return client.clientName;
+  return (
+    client.clientName +
+    " — " +
+    absorbed.map((c) => c.clientName).join(", ") +
+    " Previously"
+  );
+}

@@ -9,7 +9,8 @@ import { StatusDot } from "@/components/shared/panels";
 import ActiveFilters from "@/components/shared/ActiveFilters";
 import { useListFilter } from "@/lib/useListFilter";
 import { deriveClientStatus } from "@/lib/clientStatus";
-import { clientRecords as clients } from "./clientRecords";
+import { clientDisplayName } from "./clientRecords";
+import { useClients } from "@/lib/clients/context";
 
 
 /** Has this date already passed? */
@@ -76,10 +77,17 @@ export default function ClientsList() {
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const { active, apply, clear } = useListFilter(URL_FILTERS);
+  const { clients } = useClients();
 
   // Inactive and merged clients sit at the end of the list.
   const processedClients = apply(
-    clients.map(client => ({ ...client, status: deriveClientStatus(client) }))
+    clients.map(client => ({
+      ...client,
+      status: deriveClientStatus(client),
+      // Whatever this client absorbed travels in its name, so searching by the
+      // old name still finds the records that came in under it.
+      clientName: clientDisplayName(clients, client),
+    }))
   ).sort((a, b) => {
     const aIsInactive = a.status !== "Active";
     const bIsInactive = b.status !== "Active";
