@@ -292,15 +292,6 @@ export default function GeneralInvoices() {
                       ) : (
                         <Badge variant="outline">No invoice copy</Badge>
                       )}
-                      {invoice.supportingDocuments.map((doc) => (
-                        <span
-                          key={doc}
-                          className="inline-flex items-center gap-1 text-muted-foreground"
-                        >
-                          <Paperclip className="h-3 w-3" />
-                          {doc}
-                        </span>
-                      ))}
                     </div>
                   </div>
 

@@ -241,26 +241,6 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Supporting Documents</Label>
-            <label className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed px-3 text-sm text-muted-foreground hover:bg-muted/50">
-              <Paperclip className="h-3.5 w-3.5" />
-              {supportingDocuments.length
-                ? supportingDocuments.length + " attached"
-                : "Add documents"}
-              <Input
-                type="file"
-                className="hidden"
-                onChange={(e) =>
-                  e.target.files[0] &&
-                  setSupportingDocuments((prev) => [
-                    ...prev,
-                    e.target.files[0].name,
-                  ])
-                }
-              />
-            </label>
-          </div>
         </div>
       </FormSection>
 
