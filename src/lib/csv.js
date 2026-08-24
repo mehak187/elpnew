@@ -9,13 +9,18 @@ const cell = (value) => {
  *
  * Action columns and object values hold buttons and attachments rather than
  * data, so they are skipped instead of exporting as "[object Object]".
+ *
+ * A column that shows several fields at once can set exportValue(row) so the
+ * spreadsheet carries all of them, not just the one its key points at.
  */
 export function toCsv(columns, rows) {
   const exportable = columns.filter((c) => c.key !== "actions");
   const header = exportable.map((c) => cell(c.header));
   const body = rows.map((row) =>
     exportable.map((column) => {
-      const value = row[column.key];
+      const value = column.exportValue
+        ? column.exportValue(row)
+        : row[column.key];
       return cell(typeof value === "object" && value !== null ? "" : value);
     })
   );

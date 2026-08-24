@@ -37,6 +37,7 @@ import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/shared/panels";
 import { DEDICATED_TYPES } from "@/lib/expenses/taxonomy";
 import { useExpenses } from "@/lib/expenses/context";
+import { useSuppliers } from "@/lib/suppliers/context";
 import { findType } from "./links";
 import {
   PAYMENT_METHODS,
@@ -109,6 +110,10 @@ function Route({ invoice }) {
 export default function GeneralInvoices() {
   const navigate = useNavigate();
   const { invoices, updateInvoice } = useExpenses();
+  const { suppliers } = useSuppliers();
+
+  // Where this supplier is paid, taken from the supplier record.
+  const accountFor = (name) => suppliers.find((s) => s.name === name) || null;
 
   // Reason capture for a return or rejection, and the payment dialog.
   const [reasonFor, setReasonFor] = useState(null);
@@ -298,6 +303,23 @@ export default function GeneralInvoices() {
                 </div>
 
                 <Route invoice={invoice} />
+
+                {["finance", "approved", "partiallyPaid"].includes(
+                  invoice.status
+                ) &&
+                  accountFor(invoice.supplier) && (
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-1 rounded-md border bg-muted/40 px-3 py-2 text-xs">
+                      <span className="font-medium">Supplier Account</span>
+                      <span>
+                        <span className="text-muted-foreground">Bank </span>
+                        {accountFor(invoice.supplier).bank || "-"}
+                      </span>
+                      <span>
+                        <span className="text-muted-foreground">Account </span>
+                        {accountFor(invoice.supplier).accountNumber || "-"}
+                      </span>
+                    </div>
+                  )}
 
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[720px] text-sm">
@@ -520,6 +542,18 @@ export default function GeneralInvoices() {
                   money(invoiceTotal(payingFor))}
             </DialogDescription>
           </DialogHeader>
+          {payingFor && accountFor(payingFor.supplier) && (
+            <div className="rounded-md border bg-muted/40 p-3 text-xs">
+              <p className="mb-1 font-medium">
+                Pay {payingFor.supplier}
+              </p>
+              <p className="text-muted-foreground">
+                {accountFor(payingFor.supplier).bank || "-"} &middot;{" "}
+                {accountFor(payingFor.supplier).accountNumber || "-"}
+              </p>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="paymentDate">Payment Date *</Label>

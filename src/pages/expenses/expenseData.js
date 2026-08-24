@@ -37,24 +37,6 @@ export const linkedCases = [
   { id: 5, caseNo: "1156/2026", client: "Salalah Port Services" },
 ];
 
-/** Suppliers a general invoice can come from. */
-export const suppliers = [
-  "Al Maha Properties",
-  "Oman Electricity Distribution",
-  "Omantel",
-  "Ooredoo",
-  "Muscat Stationery Est.",
-  "Gulf Cleaning Services",
-  "Bank Muscat",
-  "Tax Authority",
-  "Al Wathba Insurance",
-  "Ministry of Commerce",
-  "KPMG Oman",
-  "Blue Ocean Media",
-  "Nizwa Print House",
-  "Other Supplier",
-];
-
 export const PAYMENT_METHODS = [
   "Bank Transfer",
   "Cheque",

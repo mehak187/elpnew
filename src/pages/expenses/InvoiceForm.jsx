@@ -23,7 +23,8 @@ import { cn } from "@/lib/utils";
 import { GENERAL_TYPES, isPathComplete } from "@/lib/expenses/taxonomy";
 import ExpenseClassificationPicker from "./ExpenseClassificationPicker";
 import { findType } from "./links";
-import { suppliers, CREATOR_ROLES, dayOffset, money } from "./expenseData";
+import { CREATOR_ROLES, dayOffset, money } from "./expenseData";
+import { useSuppliers } from "@/lib/suppliers/context";
 
 /** A titled block of fields, with an optional action in its header. */
 function FormSection({ icon: Icon, title, action, children }) {
@@ -58,6 +59,9 @@ const lineTotalOf = (line) =>
   (Number(line.amountBeforeTax) || 0) + (Number(line.taxAmount) || 0);
 
 export default function InvoiceForm({ onCancel, onSubmit }) {
+  // Only suppliers still in use can be billed against.
+  const { suppliers } = useSuppliers();
+  const activeSuppliers = suppliers.filter((s) => s.status === "Active");
   const [invoiceDate, setInvoiceDate] = useState(dayOffset(0));
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [supplier, setSupplier] = useState("");
@@ -142,9 +146,9 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
                 <SelectValue placeholder="Please Select" />
               </SelectTrigger>
               <SelectContent>
-                {suppliers.map((name) => (
-                  <SelectItem key={name} value={name}>
-                    {name}
+                {activeSuppliers.map((supplier) => (
+                  <SelectItem key={supplier.id} value={supplier.name}>
+                    {supplier.name}
                   </SelectItem>
                 ))}
               </SelectContent>
