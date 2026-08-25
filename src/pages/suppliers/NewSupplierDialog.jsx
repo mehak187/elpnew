@@ -32,8 +32,9 @@ export default function NewSupplierDialog({ open, onOpenChange, onCreated }) {
 
   const save = () => {
     if (!canSaveSupplier(draft)) return;
-    addSupplier(toSupplierRecord(draft));
-    onCreated?.(draft.name.trim());
+    const record = toSupplierRecord(draft);
+    addSupplier(record);
+    onCreated?.(record);
     close();
   };
 

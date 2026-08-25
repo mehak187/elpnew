@@ -219,6 +219,33 @@ function approvalOf(invoice) {
 }
 
 /**
+ * The four hands a request passes through, read back off its history.
+ *
+ * Nothing is inferred from the status: each step is the entry that recorded it,
+ * so a request that skipped the accountant simply has nothing under that head.
+ */
+function trackingOf(invoice) {
+  const find = (test) => invoice.history.find(test) || null;
+  const last = (test) => [...invoice.history].reverse().find(test) || null;
+
+  const requested = invoice.history[0] || null;
+  const accountant = find(
+    (h) => /accountant/i.test(h.by) && /approv/i.test(h.action)
+  );
+  const finance = last((h) => /Approved for Payment/i.test(h.action));
+  const paid = last((h) => /payment (processed|recorded)/i.test(h.action));
+
+  const step = (entry) => ({ by: entry?.by || "", at: entry?.at || "" });
+
+  return {
+    requested: step(requested),
+    accountant: step(accountant),
+    finance: step(finance),
+    paid: step(paid),
+  };
+}
+
+/**
  * Everything the expenses table shows: expenses recorded directly, and the
  * requests that have cleared approval, in one shape.
  *
@@ -249,6 +276,7 @@ export function expenseRecords(expenses, invoices) {
       createdAt: invoice.history[0]?.at || invoice.invoiceDate,
       approvedBy: approval.by,
       approvedAt: approval.at,
+      tracking: trackingOf(invoice),
     };
   });
 
@@ -282,6 +310,7 @@ export function expenseRecords(expenses, invoices) {
     createdAt: expense.date,
     approvedBy: "",
     approvedAt: "",
+    tracking: null,
   }));
 
   const serials = {};
@@ -333,6 +362,23 @@ export function similarRequests(invoices, invoice) {
     .slice(0, 10);
 }
 
+/* ------------------------------------------- what the partners keep to
+                                                themselves */
+
+/**
+ * Expense types that never pass the accountant.
+ *
+ * What a partner draws, what the staff are paid and what has been advanced
+ * against a salary are the partners' own business. These requests go straight
+ * to the finance manager and are read on the partners' page, not the one the
+ * whole firm can open.
+ */
+const PARTNER_ONLY_TYPES = ["partner", "employee", "advances-loans"];
+
+export const skipsAccountant = (invoice) =>
+  invoice.creatorRole === "admin" ||
+  invoice.lines.some((line) => PARTNER_ONLY_TYPES.includes(line.typeKey));
+
 /* --------------------------------------------------------- who sees what */
 
 /**
@@ -369,7 +415,11 @@ export function visibleInvoices(invoices, role, userName) {
         (i) => i.createdBy === userName && !CLOSED.includes(i.status)
       );
     case "accountant":
-      return inFlight.filter((i) => i.status === "accountant");
+      // Also what they have already passed on, so they can follow it through
+      // the finance manager's review. Read-only from here.
+      return inFlight.filter((i) =>
+        ["accountant", "finance"].includes(i.status)
+      );
     case "finance":
       return inFlight.filter((i) => i.status === "finance");
     default:
@@ -422,6 +472,7 @@ export const initialInvoices = [
     id: 1,
     reference: "GIN-2026-001",
     requestNo: "REQ 1/2026",
+    branch: "Muscat",
     invoiceNumber: "AMP-8842",
     invoiceDate: dayOffset(-5),
     supplier: "Al Maha Properties",
@@ -442,6 +493,7 @@ export const initialInvoices = [
     id: 2,
     reference: "GIN-2026-002",
     requestNo: "REQ 2/2026",
+    branch: "Muscat",
     invoiceNumber: "BOM-1190",
     invoiceDate: dayOffset(-3),
     supplier: "Blue Ocean Media",
@@ -462,6 +514,7 @@ export const initialInvoices = [
     id: 3,
     reference: "GIN-2026-003",
     requestNo: "REQ 3/2026",
+    branch: "Muscat",
     invoiceNumber: "BM-77213",
     invoiceDate: dayOffset(-1),
     supplier: "Bank Muscat",
@@ -486,6 +539,7 @@ export const initialInvoices = [
     id: 4,
     reference: "GIN-2026-004",
     requestNo: "REQ 4/2026",
+    branch: "Salalah",
     invoiceNumber: "GCS-4410",
     invoiceDate: dayOffset(-18),
     supplier: "Gulf Cleaning Services",
@@ -510,6 +564,7 @@ export const initialInvoices = [
     id: 5,
     reference: "GIN-2026-005",
     requestNo: "REQ 5/2026",
+    branch: "Sohar",
     invoiceNumber: "MSE-2231",
     invoiceDate: dayOffset(-9),
     supplier: "Muscat Stationery Est.",
@@ -531,6 +586,109 @@ export const initialInvoices = [
       { id: 1, typeKey: "office", path: ["Stationery & Printing", "Printer Ink & Toner"], description: "Toner cartridges", amountBeforeTax: 210, taxAmount: 10 },
     ],
   },
+  {
+    id: 6,
+    reference: "GIN-2026-006",
+    requestNo: "REQ 6/2026",
+    branch: "Muscat",
+    invoiceNumber: "232",
+    invoiceDate: dayOffset(0),
+    supplier: "Al Maha Properties",
+    invoiceFile: "",
+    createdBy: "Mohammed Al Yahyaei",
+    creatorRole: "admin",
+    status: "finance",
+    history: [
+      {
+        at: dayOffset(0),
+        by: "Mohammed Al Yahyaei",
+        action: "Submitted by Admin - accountant step skipped",
+        reason: "",
+      },
+    ],
+    payments: [],
+    lines: [
+      { id: 1, typeKey: "office", path: ["Utilities & Services", "Electricity"], description: "", amountBeforeTax: 12, taxAmount: 1 },
+      { id: 2, typeKey: "marketing", path: ["Advertising", "Online Advertising"], description: "", amountBeforeTax: 20, taxAmount: 0 },
+    ],
+  },
+  {
+    id: 7,
+    reference: "GIN-2026-007",
+    requestNo: "REQ 7/2026",
+    branch: "Salalah",
+    invoiceNumber: "OMT-5521",
+    invoiceDate: dayOffset(-6),
+    supplier: "Omantel",
+    invoiceFile: "omantel-july.pdf",
+    createdBy: "Khalid Al Hinai",
+    creatorRole: "employee",
+    status: "accountant",
+    history: [
+      { at: dayOffset(-6), by: "Khalid Al Hinai", action: "Submitted", reason: "" },
+    ],
+    payments: [],
+    lines: [
+      { id: 1, typeKey: "office", path: ["Internet & Telecommunications", "Internet"], description: "Salalah branch line", amountBeforeTax: 320, taxAmount: 16 },
+    ],
+  },
+  {
+    id: 9,
+    reference: "GIN-2026-009",
+    requestNo: "REQ 9/2026",
+    branch: "Muscat",
+    invoiceNumber: "PTR-0031",
+    invoiceDate: dayOffset(-11),
+    supplier: "Al Wathba Insurance",
+    invoiceFile: "",
+    createdBy: "Yusuf Al Kindi",
+    creatorRole: "admin",
+    status: "finance",
+    history: [
+      {
+        at: dayOffset(-11),
+        by: "Yusuf Al Kindi",
+        action: "Submitted by Admin - accountant step skipped",
+        reason: "",
+      },
+    ],
+    payments: [],
+    lines: [
+      { id: 1, typeKey: "partner", path: ["Partner Expenses", "Hospitality & Meetings"], description: "Client dinner, Muscat", amountBeforeTax: 260, taxAmount: 13 },
+    ],
+  },
+  {
+    id: 8,
+    reference: "GIN-2026-008",
+    requestNo: "REQ 8/2026",
+    branch: "Muscat",
+    invoiceNumber: "FIT-1042",
+    invoiceDate: dayOffset(-2),
+    supplier: "Falcon IT Solutions",
+    invoiceFile: "licences.pdf",
+    createdBy: "Layla Al Balushi",
+    creatorRole: "employee",
+    status: "accountant",
+    history: [
+      { at: dayOffset(-2), by: "Layla Al Balushi", action: "Submitted", reason: "" },
+    ],
+    payments: [],
+    lines: [
+      { id: 1, typeKey: "office", path: ["Software & Subscriptions", "Software Licenses"], description: "Annual practice licences", amountBeforeTax: 940, taxAmount: 47 },
+    ],
+  },
+];
+
+/**
+ * Court fee payment requests.
+ *
+ * These are raised against a case file rather than a supplier invoice, so
+ * they are counted on the requests page but not listed there - their table is
+ * designed with the case file it belongs to.
+ */
+export const courtFeeRequests = [
+  { id: 1, requestNo: "CFR 1/2026", raisedAt: dayOffset(-4), caseNo: "1234/2026", client: "ABC Holdings LLC", purpose: "Case Filing Fees", amount: 320 },
+  { id: 2, requestNo: "CFR 2/2026", raisedAt: dayOffset(-9), caseNo: "0988/2026", client: "Al Madina Trading", purpose: "Expert Deposit Fees", amount: 750 },
 ];
 
 /** Expenses recorded outside General Invoices, on their own record pages. */

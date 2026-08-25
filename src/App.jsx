@@ -27,6 +27,8 @@ import SignIn from "@/pages/settings/SignIn";
 import ExpensesPage from "@/pages/expenses/ExpensesPage";
 import ExpenseForm from "@/pages/expenses/ExpenseForm";
 import GeneralInvoices from "@/pages/expenses/GeneralInvoices";
+import CourtFeePayments from "@/pages/expenses/CourtFeePayments";
+import JudicialExpenseForm from "@/pages/expenses/JudicialExpenseForm";
 import NewInvoice from "@/pages/expenses/NewInvoice";
 
 // Suppliers
@@ -71,9 +73,22 @@ function App() {
               {/* Expenses */}
               <Route path="suppliers" element={<SuppliersPage />} />
               <Route path="suppliers/create" element={<SupplierForm />} />
+              <Route path="suppliers/:id" element={<SupplierForm />} />
               <Route path="expenses" element={<ExpensesPage />} />
               <Route path="expenses/create" element={<ExpenseForm />} />
               <Route path="expense-requests" element={<GeneralInvoices />} />
+              <Route
+                path="partner-disbursements"
+                element={<GeneralInvoices partnersOnly />}
+              />
+              <Route
+                path="court-fee-payments"
+                element={<CourtFeePayments />}
+              />
+              <Route
+                path="court-fee-payments/create"
+                element={<JudicialExpenseForm />}
+              />
               <Route
                 path="expense-requests/create"
                 element={<NewInvoice />}

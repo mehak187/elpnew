@@ -6,7 +6,7 @@
  * selectable on an invoice, and its tax numbers travel with it.
  */
 
-import { DEFAULT_DIAL_CODE } from "@/lib/constants";
+import { COUNTRY_DIAL_CODES, DEFAULT_DIAL_CODE } from "@/lib/constants";
 
 export const SUPPLIER_CATEGORIES = [
   "Office Supplies",

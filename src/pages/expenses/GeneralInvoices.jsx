@@ -32,6 +32,17 @@ import {
   X,
   Banknote,
   History,
+  Building2,
+  FileText,
+  CalendarDays,
+  Landmark,
+  Wallet,
+  Tag,
+  ListTree,
+  AlignLeft,
+  Percent,
+  Calculator,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/shared/panels";
@@ -45,6 +56,8 @@ import {
   PAYMENT_METHODS,
   VIEWER_ROLES,
   ACCOUNTANT_REVIEW_RESULTS,
+  courtFeeRequests,
+  skipsAccountant,
   FINANCE_ACTIONS,
   STATUS,
   STATUS_VARIANT,
@@ -52,6 +65,7 @@ import {
   routeFor,
   visibleInvoices,
   similarRequests,
+  isApprovedRequest,
   invoiceNet,
   invoiceTax,
   invoiceTotal,
@@ -63,7 +77,12 @@ import {
   money,
 } from "./expenseData";
 
-/** The route this invoice takes, with the step it has reached marked. */
+/**
+ * The route this invoice takes, with the step it has reached marked.
+ *
+ * A finished step carries the date it happened, so the card says how long the
+ * request has been sitting where it is without anyone opening the history.
+ */
 function Route({ invoice }) {
   const steps = routeFor(invoice.creatorRole);
   const settled = ["paid", "partiallyPaid"].includes(invoice.status);
@@ -88,31 +107,112 @@ function Route({ invoice }) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      {steps.map((step, i) => (
-        <span key={step.key} className="flex items-center gap-1.5">
-          <span
-            className={cn(
-              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs",
-              i < at
-                ? "bg-green-50 text-green-700"
-                : i === at
-                ? "bg-secondary font-medium text-secondary-foreground"
-                : "text-muted-foreground"
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+      {steps.map((step, i) => {
+        const done = i < at;
+        const current = i === at;
+        // Each action writes one history entry, so they line up with the steps.
+        const happened = done ? invoice.history[i]?.at : null;
+
+        return (
+          <span key={step.key} className="flex items-center gap-4">
+            <span className="flex items-center gap-2">
+              <span
+                className={cn(
+                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
+                  done
+                    ? "bg-green-600 text-white"
+                    : current
+                    ? "border-[5px] border-primary bg-background"
+                    : "bg-muted-foreground/25"
+                )}
+              >
+                {done && <Check className="h-3.5 w-3.5" />}
+              </span>
+              <span className="leading-tight">
+                <span
+                  className={cn(
+                    "block text-xs",
+                    current
+                      ? "font-semibold text-primary"
+                      : done
+                      ? "font-medium text-foreground"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  {step.label}
+                </span>
+                {(happened || current) && (
+                  <span className="block text-[11px] text-muted-foreground">
+                    {current ? "Current step" : formatDate(happened)}
+                  </span>
+                )}
+              </span>
+            </span>
+            {i < steps.length - 1 && (
+              <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/50" />
             )}
-          >
-            {i < at && <Check className="h-3 w-3" />}
-            {step.label}
           </span>
-          {i < steps.length - 1 && (
-            <ArrowRight className="h-3 w-3 text-muted-foreground/60" />
-          )}
-        </span>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
+/** One labelled fact on a request card. */
+function Field({ icon, label, children }) {
+  const Icon = icon;
+  return (
+    <div className="flex items-start gap-3 p-4">
+      <span className="mt-0.5 shrink-0 rounded-lg bg-secondary p-2 text-secondary-foreground">
+        <Icon className="h-4 w-4" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <div className="mt-0.5 text-sm">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+/** The strip the fields sit in, so both rows of a card line up. */
+function FieldRow({ children }) {
+  return (
+    <div className="grid grid-cols-1 divide-y rounded-lg border sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x">
+      {children}
+    </div>
+  );
+}
+
+/**
+ * What is waiting at one stage of the route.
+ *
+ * The count is the headline because it is the queue length; the amount says
+ * what the firm is committed to at that stage.
+ */
+function StageTile({ label, count, amount, note, active, onClick }) {
+  const Wrapper = onClick ? "button" : "div";
+  return (
+    <Wrapper
+      type={onClick ? "button" : undefined}
+      onClick={onClick}
+      className={cn(
+        "rounded-lg border bg-card p-4 text-left",
+        onClick && "hover:border-primary/50 hover:bg-muted/40",
+        active && "border-primary ring-1 ring-primary"
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-xs uppercase tracking-wide text-muted-foreground">
+          {label}
+        </p>
+        <p className="text-lg font-bold text-primary">{count}</p>
+      </div>
+      <p className="mt-1 text-lg font-semibold">{money(amount)}</p>
+      {note && <p className="mt-1 text-xs text-muted-foreground">{note}</p>}
+    </Wrapper>
+  );
+}
 /**
  * The accountant's decision on a request, taken on the request itself.
  *
@@ -493,7 +593,15 @@ function SupplierHistoryDialog({ invoice, invoices, accountFor, onOpenChange }) 
   );
 }
 
-export default function GeneralInvoices() {
+/**
+ * The requests still waiting on somebody.
+ *
+ * The same page serves the firm and the partners. What separates them is the
+ * data: everything the accountant has to see, or everything they must not -
+ * partner drawings, salaries and advances, which reach the finance manager
+ * without passing through anyone else.
+ */
+export default function GeneralInvoices({ partnersOnly = false }) {
   const navigate = useNavigate();
   const { invoices, updateInvoice } = useExpenses();
   const { suppliers } = useSuppliers();
@@ -505,7 +613,29 @@ export default function GeneralInvoices() {
   // visibility rules visible. It becomes the signed-in user's role later.
   const [role, setRole] = useState("admin");
   const roleLabel = VIEWER_ROLES.find((r) => r.key === role)?.label || "";
-  const visible = visibleInvoices(invoices, role, CURRENT_USER.name);
+
+  // Clicking a stage tile narrows the list to that stage.
+  const [stage, setStage] = useState(null);
+
+  // The date a request was raised - what it is ordered by.
+  const raisedAt = (invoice) => invoice.history[0]?.at || invoice.invoiceDate;
+
+  const forRole = partnersOnly
+    ? invoices.filter((i) => !isApprovedRequest(i) && skipsAccountant(i))
+    : visibleInvoices(invoices, role, CURRENT_USER.name).filter(
+        (i) => !skipsAccountant(i)
+      );
+  const visible = forRole
+    .filter((i) => !stage || i.status === stage)
+    // Oldest first, so whatever has waited longest is dealt with first.
+    .slice()
+    .sort((a, b) => raisedAt(a).localeCompare(raisedAt(b)) || a.id - b.id);
+
+  const atStage = (key) => forRole.filter((i) => i.status === key);
+  const sumOf = (list) => list.reduce((sum, i) => sum + invoiceTotal(i), 0);
+  const awaitingAccountant = atStage("accountant");
+  const awaitingFinance = atStage("finance");
+  const courtFees = courtFeeRequests.reduce((sum, r) => sum + r.amount, 0);
 
   // Reason capture for a return or rejection, and the payment dialog.
   const [reasonFor, setReasonFor] = useState(null);
@@ -618,34 +748,73 @@ export default function GeneralInvoices() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-primary sm:text-2xl">
-              Invoice Payment Request
+              {partnersOnly ? "Pending Disbursements" : "Payment Requests"}
             </h1>
             <p className="text-xs text-primary/75 sm:text-sm">
-              General invoices and general company expenses
+              {partnersOnly
+                ? "Partners only - what reaches the finance manager directly"
+                : "Requests waiting to be paid, oldest first"}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="hidden text-xs text-muted-foreground sm:inline">
-            Viewing as
-          </span>
-          <Select value={role} onValueChange={setRole}>
-            <SelectTrigger className="h-9 w-44 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {VIEWER_ROLES.map((r) => (
-                <SelectItem key={r.key} value={r.key}>
-                  {r.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* Only the partners open their own page, so there is nobody to
+              switch to on it. */}
+          {!partnersOnly && (
+            <>
+              <span className="hidden text-xs text-muted-foreground sm:inline">
+                Viewing as
+              </span>
+              <Select value={role} onValueChange={setRole}>
+                <SelectTrigger className="h-9 w-44 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {VIEWER_ROLES.map((r) => (
+                    <SelectItem key={r.key} value={r.key}>
+                      {r.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          )}
           <Button onClick={() => navigate("/expense-requests/create")}>
             <Plus className="mr-1.5 h-4 w-4" />
             New Payment Request
           </Button>
         </div>
+      </div>
+
+      {/* What is waiting at each stage of the route */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Nothing on the partners' page waits on the accountant. */}
+        {!partnersOnly && (
+          <StageTile
+            label="Awaiting Accountant Approval"
+            count={awaitingAccountant.length}
+            amount={sumOf(awaitingAccountant)}
+            active={stage === "accountant"}
+            onClick={() =>
+              setStage(stage === "accountant" ? null : "accountant")
+            }
+          />
+        )}
+        <StageTile
+          label="Awaiting Finance Manager Approval"
+          count={awaitingFinance.length}
+          amount={sumOf(awaitingFinance)}
+          active={stage === "finance"}
+          onClick={() => setStage(stage === "finance" ? null : "finance")}
+        />
+        {/* Court fees are raised against a case file, so they are counted here
+            and listed with the case once that table is designed. */}
+        <StageTile
+          label="Court Fee Payment Requests"
+          count={courtFeeRequests.length}
+          amount={courtFees}
+          note="Listed with the case file"
+        />
       </div>
 
       {/* ------------------------------------------------------- invoices */}
@@ -654,8 +823,12 @@ export default function GeneralInvoices() {
           <Card>
             <CardContent className="p-6">
               <EmptyState>
-                {role === "admin"
-                  ? "No general invoices yet."
+                {stage
+                  ? "Nothing is waiting at that stage."
+                  : partnersOnly
+                  ? "No partner disbursements are pending."
+                  : role === "admin"
+                  ? "No requests are pending."
                   : "Nothing is waiting for you at the moment."}
               </EmptyState>
             </CardContent>
@@ -690,117 +863,186 @@ export default function GeneralInvoices() {
           return (
             <Card key={invoice.id}>
               <CardContent className="space-y-4 p-4 sm:p-6">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-semibold text-primary">
-                        {invoice.supplier}
-                      </h3>
-                      <Badge variant={STATUS_VARIANT[invoice.status]}>
-                        {STATUS[invoice.status]}
-                      </Badge>
-                      {invoice.creatorRole === "admin" && (
-                        <Badge variant="outline">Admin raised</Badge>
-                      )}
-                    </div>
-                    {/* The number this is chased by, until the money goes out */}
-                    {invoice.requestNo && (
-                      <p className="mt-1 text-sm font-semibold text-foreground">
-                        {invoice.requestNo}
+                <Route invoice={invoice} />
+
+                <FieldRow>
+                  <Field icon={FileText} label="Request No.">
+                    <p className="font-semibold">{invoice.requestNo}</p>
+                    {invoice.branch && (
+                      <p className="text-xs text-muted-foreground">
+                        {invoice.branch} Branch
                       </p>
                     )}
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {invoice.reference} · Invoice {invoice.invoiceNumber} ·{" "}
-                      {formatDate(invoice.invoiceDate)} · {invoice.createdBy}
-                    </p>
-                    <div className="mt-1 flex flex-wrap items-center gap-3 text-xs">
-                      {invoice.invoiceFile ? (
-                        <span className="inline-flex items-center gap-1 text-primary">
-                          <Paperclip className="h-3 w-3" />
-                          {invoice.invoiceFile}
-                        </span>
-                      ) : (
-                        <Badge variant="outline">No invoice copy</Badge>
-                      )}
-                    </div>
-                  </div>
+                  </Field>
 
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-primary">
-                      {money(total)}
+                  <Field icon={CalendarDays} label="Request Details">
+                    <p>
+                      {invoice.reference}
+                      <span className="text-muted-foreground">
+                        {" · Invoice " + invoice.invoiceNumber}
+                      </span>
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Net {money(invoiceNet(invoice))} · VAT{" "}
-                      {money(invoiceTax(invoice))}
+                      {formatDate(invoice.invoiceDate)} · {invoice.createdBy}
                     </p>
+                  </Field>
+
+                  <Field icon={Paperclip} label="Invoice Copy">
+                    {invoice.invoiceFile ? (
+                      <span className="inline-flex items-center gap-1 text-primary">
+                        <Paperclip className="h-3 w-3" />
+                        {invoice.invoiceFile}
+                      </span>
+                    ) : (
+                      <Badge variant="outline">No invoice copy</Badge>
+                    )}
+                  </Field>
+
+                  <div className="p-4">
+                    <p className="text-xs text-muted-foreground">
+                      Request Summary
+                    </p>
+                    <div className="mt-1 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                      <span>
+                        <span className="block text-[11px] text-muted-foreground">
+                          Before VAT
+                        </span>
+                        {money(invoiceNet(invoice))}
+                      </span>
+                      <span>
+                        <span className="block text-[11px] text-muted-foreground">
+                          VAT
+                        </span>
+                        {money(invoiceTax(invoice))}
+                      </span>
+                      <span>
+                        <span className="block text-[11px] text-muted-foreground">
+                          Total
+                        </span>
+                        <span className="font-bold text-destructive">
+                          {money(total)}
+                        </span>
+                      </span>
+                    </div>
                     {paid > 0 && (
-                      <p className="text-xs font-medium text-green-600">
+                      <p className="mt-1 text-xs font-medium text-green-600">
                         Paid {money(paid)} of {money(total)}
                       </p>
                     )}
                   </div>
-                </div>
+                </FieldRow>
 
-                <Route invoice={invoice} />
+                <FieldRow>
+                  <Field icon={Landmark} label="Supplier name">
+                    {invoice.supplier}
+                  </Field>
+                  <Field icon={Landmark} label="Supplier Account">
+                    {accountFor(invoice.supplier)?.bank || "-"}
+                  </Field>
+                  <Field icon={Wallet} label="Account">
+                    {accountFor(invoice.supplier)?.accountNumber || "-"}
+                  </Field>
+                  <div className="flex items-center p-4">
+                    {canReview && (
+                      <button
+                        type="button"
+                        onClick={() => setHistoryFor(invoice)}
+                        className="inline-flex items-center gap-2 rounded text-sm text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        <span className="rounded-lg bg-secondary p-2 text-secondary-foreground">
+                          <History className="h-4 w-4" />
+                        </span>
+                        View Supplier History
+                      </button>
+                    )}
+                  </div>
+                </FieldRow>
 
-                {["finance", "approved", "partiallyPaid"].includes(
-                  invoice.status
-                ) &&
-                  accountFor(invoice.supplier) && (
-                    <div className="flex flex-wrap items-center gap-x-6 gap-y-1 rounded-md border bg-muted/40 px-3 py-2 text-xs">
-                      <span className="font-medium">Supplier Account</span>
-                      <span>
-                        <span className="text-muted-foreground">Bank </span>
-                        {accountFor(invoice.supplier).bank || "-"}
-                      </span>
-                      <span>
-                        <span className="text-muted-foreground">Account </span>
-                        {accountFor(invoice.supplier).accountNumber || "-"}
-                      </span>
-                    </div>
-                  )}
-
-                <div className="overflow-x-auto">
+                <div className="rounded-lg border">
+                  <p className="border-b px-4 py-2 text-sm font-semibold">
+                    Expenses ({invoice.lines.length})
+                  </p>
+                  <div className="overflow-x-auto">
                   <table className="w-full min-w-[720px] text-sm">
                     <thead>
-                      <tr className="border-b text-left text-xs text-muted-foreground">
-                        <th className="pb-2 font-medium">Expense Type</th>
-                        <th className="pb-2 font-medium">Category</th>
-                        <th className="pb-2 font-medium">Subcategory</th>
-                        <th className="pb-2 font-medium">Description</th>
-                        <th className="pb-2 text-right font-medium">Before VAT</th>
-                        <th className="pb-2 text-right font-medium">VAT</th>
-                        <th className="pb-2 text-right font-medium">Total</th>
+                      <tr className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
+                        <th className="px-4 py-2 font-medium">#</th>
+                        <th className="px-4 py-2 font-medium">
+                          <span className="inline-flex items-center gap-1.5">
+                            <Building2 className="h-3.5 w-3.5" />
+                            Expense Type
+                          </span>
+                        </th>
+                        <th className="px-4 py-2 font-medium">
+                          <span className="inline-flex items-center gap-1.5">
+                            <Tag className="h-3.5 w-3.5" />
+                            Category
+                          </span>
+                        </th>
+                        <th className="px-4 py-2 font-medium">
+                          <span className="inline-flex items-center gap-1.5">
+                            <ListTree className="h-3.5 w-3.5" />
+                            Subcategory
+                          </span>
+                        </th>
+                        <th className="px-4 py-2 font-medium">
+                          <span className="inline-flex items-center gap-1.5">
+                            <AlignLeft className="h-3.5 w-3.5" />
+                            Description
+                          </span>
+                        </th>
+                        <th className="px-4 py-2 text-right font-medium">
+                          <span className="inline-flex items-center gap-1.5">
+                            <Calculator className="h-3.5 w-3.5" />
+                            Before VAT
+                          </span>
+                        </th>
+                        <th className="px-4 py-2 text-right font-medium">
+                          <span className="inline-flex items-center gap-1.5">
+                            <Percent className="h-3.5 w-3.5" />
+                            VAT
+                          </span>
+                        </th>
+                        <th className="px-4 py-2 text-right font-medium">
+                          <span className="inline-flex items-center gap-1.5">
+                            <ClipboardList className="h-3.5 w-3.5" />
+                            Total
+                          </span>
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {invoice.lines.map((line) => (
+                      {invoice.lines.map((line, i) => (
                         <tr key={line.id} className="border-b last:border-0">
-                          <td className="py-2 font-medium">
+                          <td className="px-4 py-2 text-muted-foreground">
+                            {i + 1}
+                          </td>
+                          <td className="px-4 py-2 font-medium">
                             {findType(line.typeKey)?.name}
                           </td>
-                          <td className="py-2 text-muted-foreground">
+                          <td className="px-4 py-2 text-muted-foreground">
                             {line.path[0]}
                           </td>
-                          <td className="py-2 text-muted-foreground">
+                          <td className="px-4 py-2 text-muted-foreground">
                             {line.path[1] || "-"}
                           </td>
-                          <td className="py-2 text-muted-foreground">
+                          <td className="px-4 py-2 text-muted-foreground">
                             {line.description || "-"}
                           </td>
-                          <td className="py-2 text-right">
+                          <td className="px-4 py-2 text-right">
                             {money(line.amountBeforeTax)}
                           </td>
-                          <td className="py-2 text-right text-muted-foreground">
+                          <td className="px-4 py-2 text-right text-muted-foreground">
                             {money(line.taxAmount)}
                           </td>
-                          <td className="py-2 text-right font-semibold">
+                          <td className="px-4 py-2 text-right font-semibold">
                             {money(lineTotal(line))}
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </div>
 
                 {/* Payments recorded so far */}
@@ -846,19 +1088,6 @@ export default function GeneralInvoices() {
                     ))}
                   </ul>
                 </details>
-
-                {canReview && (
-                  <div className="flex justify-end">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setHistoryFor(invoice)}
-                    >
-                      <History className="mr-1.5 h-4 w-4" />
-                      View Supplier History
-                    </Button>
-                  </div>
-                )}
 
                 {accountantReview && (
                   <AccountantReview

@@ -41,6 +41,7 @@ export default function DataTable({
   pageSize = 100,
   isLoading = false,
   showExport = true,
+  itemLabel,
   exportFileName = "export.csv",
   onAdd,
   addLabel = "Add",
@@ -185,6 +186,11 @@ export default function DataTable({
                         style={{ width: column.width }}
                       >
                         {column.header}
+                        {column.subHeader && (
+                          <span className="block text-[11px] font-normal text-muted-foreground">
+                            {column.subHeader}
+                          </span>
+                        )}
                       </TableHead>
                     ))}
                   </TableRow>
@@ -259,7 +265,16 @@ export default function DataTable({
       {/* Pagination */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground order-2 sm:order-1">
-          Page {currentPage} of {calculatedTotalPages}
+          {itemLabel && filteredData.length > 0
+            ? "Showing " +
+              ((currentPage - 1) * pageSize + 1) +
+              " to " +
+              Math.min(currentPage * pageSize, filteredData.length) +
+              " of " +
+              filteredData.length +
+              " " +
+              itemLabel
+            : "Page " + currentPage + " of " + calculatedTotalPages}
         </p>
         <div className="flex items-center gap-2 order-1 sm:order-2">
           <Button

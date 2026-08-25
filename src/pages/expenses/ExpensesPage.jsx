@@ -4,34 +4,26 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import DataTable from "@/components/shared/DataTable";
-import { Wallet, Plus, Paperclip, Trash2 } from "lucide-react";
+import { Wallet, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useExpenses } from "@/lib/expenses/context";
 import { useSuppliers } from "@/lib/suppliers/context";
 import { findType, linkLabel } from "./links";
 import {
   expenseRecords,
-  isApprovedRequest,
   settlement,
-  invoiceTotal,
   formatDate,
   money,
 } from "./expenseData";
 
 /**
- * The boxes above the table, each one also the filter for it.
+ * The boxes above the table, and the filters for it.
  *
- * "Awaiting Approval" is the odd one out: it counts what has not arrived here
- * yet, so it reads from the requests rather than the expenses and sends you to
- * the request list instead of filtering.
+ * "All Expenses" receives everything; each of the others is the same table
+ * again, narrowed to one kind of expense.
  */
 const GROUPS = [
   { key: "all", label: "All Expenses", match: () => true },
-  {
-    key: "court",
-    label: "Court Expenses",
-    match: (row) => row.lines.some((l) => l.typeKey === "court-case"),
-  },
   {
     key: "general",
     label: "General Expenses",
@@ -49,37 +41,96 @@ const GROUPS = [
       row.lines.some((l) => ["employee", "advances-loans"].includes(l.typeKey)),
   },
   {
-    key: "asset",
-    label: "Asset Expenses",
-    match: (row) => row.lines.some((l) => l.typeKey === "fixed-assets"),
+    // Salaries are a subcategory rather than a type of their own, so they are
+    // read off the classification instead of the type.
+    key: "salaries",
+    label: "Salaries",
+    match: (row) =>
+      row.lines.some((l) => l.typeKey === "employee" && l.path[1] === "Salaries"),
+  },
+  {
+    key: "office",
+    label: "Office Expenses",
+    match: (row) => row.lines.some((l) => l.typeKey === "office"),
+  },
+  {
+    key: "admin-financial",
+    label: "Administrative & Financial Expenses",
+    match: (row) => row.lines.some((l) => l.typeKey === "admin-financial"),
+  },
+  {
+    key: "marketing",
+    label: "Marketing & Business Development",
+    match: (row) => row.lines.some((l) => l.typeKey === "marketing"),
+  },
+  {
+    key: "donations",
+    label: "Donations & Assistance",
+    match: (row) => row.lines.some((l) => l.typeKey === "donations"),
+  },
+  {
+    key: "partner",
+    label: "Partner Expenses",
+    match: (row) => row.lines.some((l) => l.typeKey === "partner"),
+  },
+  {
+    key: "other",
+    label: "Other Expenses",
+    match: (row) => row.lines.some((l) => l.typeKey === "other"),
   },
 ];
 
-/** A count and a total, sitting on the filter it applies. */
-function SummaryTile({ label, count, amount, selected, onClick, tone }) {
+/** Amounts here are read against invoices, so they carry the currency and fils. */
+const omr = (amount) =>
+  "OMR " +
+  Number(amount || 0).toLocaleString("en-GB", {
+    minimumFractionDigits: 3,
+    maximumFractionDigits: 3,
+  });
+
+/** A total, sitting on the filter it applies. */
+function SummaryTile({ label, amount, selected, onClick }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-lg border p-3 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-ring",
-        selected ? "border-primary bg-secondary" : "hover:bg-muted/50"
+        "rounded-lg border bg-card p-4 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-ring",
+        selected ? "border-primary ring-1 ring-primary" : "hover:bg-muted/50"
       )}
     >
-      <div className="flex items-baseline justify-between gap-3">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">
-          {label}
-        </p>
-        <p className={cn("text-lg font-bold", tone || "text-primary")}>{count}</p>
-      </div>
-      <p className="mt-1 text-sm font-semibold text-foreground">{money(amount)}</p>
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-1 text-lg font-semibold">{money(amount)}</p>
     </button>
+  );
+}
+
+/** One field inside a stacked column. */
+function Line({ label, children }) {
+  return (
+    <p className="leading-tight">
+      <span className="block text-[11px] text-muted-foreground">{label}</span>
+      <span className="block">{children}</span>
+    </p>
+  );
+}
+
+/** A step in the trail, blank when nobody took it. */
+function Step({ label, by, at }) {
+  if (!by) return null;
+  return (
+    <Line label={label}>
+      {by}
+      <span className="block text-muted-foreground">{formatDate(at)}</span>
+    </Line>
   );
 }
 
 export default function ExpensesPage() {
   const navigate = useNavigate();
-  const { expenses, invoices, removeExpense } = useExpenses();
+  const { expenses, invoices } = useExpenses();
   const { suppliers } = useSuppliers();
 
   const [pageSize, setPageSize] = useState(10);
@@ -97,31 +148,22 @@ export default function ExpensesPage() {
 
   const total = rows.reduce((sum, row) => sum + row.total, 0);
 
-  // What has not reached this table yet.
-  const awaiting = invoices.filter((i) => !isApprovedRequest(i));
-  const awaitingTotal = awaiting.reduce((sum, i) => sum + invoiceTotal(i), 0);
-
   const columns = [
     {
       key: "expenseNo",
       header: "Expense ID",
-      width: "8%",
-      cellClassName: "font-medium",
-      render: (value, row) => (
-        <div>
-          <span className="block">{value}</span>
-          {row.reference && (
-            <span className="block text-xs text-muted-foreground">
-              {row.reference}
-            </span>
-          )}
-        </div>
+      width: "6%",
+      render: (value) => (
+        <span className="font-medium text-primary">{value}</span>
       ),
     },
     {
       key: "supplier",
-      header: "Supplier",
-      width: "14%",
+      header: "Supplier Details",
+      subHeader: "(Supplier Information)",
+      width: "16%",
+      exportValue: (row) =>
+        row.supplier || linkLabel(row.linkKind, row.linkId) || "Recorded directly",
       render: (value, row) => {
         if (!value) {
           const link = linkLabel(row.linkKind, row.linkId);
@@ -133,114 +175,141 @@ export default function ExpensesPage() {
         }
         const account = accountFor(value);
         return (
-          <div>
-            <span className="block">{value}</span>
-            <span className="block text-xs text-muted-foreground">
-              {account?.bank || "-"}
-            </span>
-            <span className="block text-xs text-muted-foreground">
-              {account?.accountNumber || "-"}
-            </span>
+          <div className="space-y-1.5 text-xs">
+            <Line label="Supplier ID:">
+              <span className="text-primary">{account?.supplierId || "-"}</span>
+            </Line>
+            <p className="font-semibold text-primary">{value}</p>
+            <Line label="Bank:">{account?.bank || "-"}</Line>
+            <Line label="Account No.:">{account?.accountNumber || "-"}</Line>
+            <Line label="Income Tax No.:">
+              {account?.taxIdentificationNumber || "-"}
+            </Line>
+            <Line label="VAT No.:">{account?.vatNumber || "-"}</Line>
+            <Line label="Commercial Registration:">
+              {account?.commercialRegistration || "-"}
+            </Line>
           </div>
         );
       },
     },
     {
-      key: "date",
-      header: "Invoice Date / Number",
-      width: "13%",
-      render: (value, row) => (
-        <div className="text-muted-foreground">
-          <span className="block text-foreground">{formatDate(value)}</span>
-          {row.invoiceNumber && (
-            <span className="block text-xs">{row.invoiceNumber}</span>
-          )}
-          {row.source === "request" &&
-            (row.invoiceFile ? (
-              <span
-                title={row.invoiceFile}
-                className="mt-0.5 inline-flex items-center gap-1 text-xs text-primary"
-              >
-                <Paperclip className="h-3 w-3" />
-                Invoice
-              </span>
-            ) : (
-              <span className="text-xs">No invoice copy</span>
-            ))}
-        </div>
-      ),
-    },
-    {
       key: "lines",
-      header: "Invoice Details",
-      width: "20%",
+      header: "Expense Details",
+      subHeader: "(Expense Information)",
+      width: "16%",
+      exportValue: (row) =>
+        row.lines
+          .map(
+            (l) => findType(l.typeKey)?.name + " · " + l.path.join(" / ")
+          )
+          .join(" | "),
       render: (value) => (
-        <div className="space-y-1 text-xs text-muted-foreground">
+        <div className="space-y-2 text-xs">
           {value.map((line) => (
-            <div key={line.id}>
-              <span className="block font-medium text-foreground">
-                {findType(line.typeKey)?.name}
-              </span>
-              <span className="block">{line.path.join(" / ")}</span>
+            <div key={line.id} className="space-y-1.5">
+              <Line label="Expense Type:">
+                <span className="font-medium">
+                  {findType(line.typeKey)?.name}
+                </span>
+              </Line>
+              <Line label="Category:">{line.path[0] || "-"}</Line>
+              <Line label="Sub Category:">{line.path[1] || "-"}</Line>
+              {line.description && (
+                <Line label="Note:">{line.description}</Line>
+              )}
             </div>
           ))}
         </div>
       ),
     },
     {
-      key: "total",
-      header: "Invoice Amount",
-      width: "11%",
-      className: "text-right",
-      cellClassName: "text-right",
+      key: "date",
+      header: "Invoice Details",
+      subHeader: "(Invoice Date · Number · View Invoice)",
+      width: "13%",
+      exportValue: (row) =>
+        formatDate(row.date) + (row.invoiceNumber ? " · " + row.invoiceNumber : ""),
       render: (value, row) => (
-        <div>
-          <span className="block font-semibold">{money(value)}</span>
-          <span className="block text-xs text-muted-foreground">
-            Net {money(row.net)}
-          </span>
-          <span className="block text-xs text-muted-foreground">
-            VAT {money(row.tax)}
-          </span>
+        <div className="space-y-1.5 text-xs">
+          <Line label="Invoice Date:">{formatDate(value)}</Line>
+          <Line label="Invoice Number:">
+            <span className="text-primary">{row.invoiceNumber || "-"}</span>
+          </Line>
+          {row.source === "request" && (
+            <Line label="View Invoice:">
+              {row.invoiceFile ? (
+                <a
+                  href={row.invoiceFile}
+                  onClick={(event) => event.preventDefault()}
+                  title={row.invoiceFile}
+                  className="text-primary underline-offset-2 hover:underline"
+                >
+                  Click to view invoice
+                </a>
+              ) : (
+                <span className="text-muted-foreground">No invoice copy</span>
+              )}
+            </Line>
+          )}
         </div>
       ),
     },
     {
-      key: "paid",
-      header: "Status",
-      width: "9%",
+      key: "total",
+      header: "Invoice Amount",
+      subHeader: "(Invoice Information)",
+      width: "14%",
       render: (value, row) => {
-        const state = settlement(value, row.total);
-        return <Badge variant={state.variant}>{state.label}</Badge>;
+        const state = settlement(row.paid, row.total);
+        const rate = row.net ? Math.round((row.tax / row.net) * 100) : 0;
+        return (
+          <div className="space-y-1.5 text-xs">
+            <p className="text-base font-bold text-primary">{omr(value)}</p>
+            <Line label="Total Amount (Incl. VAT):">{omr(value)}</Line>
+            <Line label="Amount Before VAT:">{omr(row.net)}</Line>
+            <Line label={"VAT Amount (" + rate + "%):"}>{omr(row.tax)}</Line>
+            <Badge variant={state.variant}>{state.label}</Badge>
+          </div>
+        );
       },
     },
     {
       key: "payments",
       header: "Payment Details",
-      width: "15%",
-      disableFilter: true,
-      render: (value) =>
+      subHeader: "(Payment Information)",
+      width: "17%",
+      exportValue: (row) =>
+        row.payments.map((p) => formatDate(p.date) + " " + p.amount).join(" | "),
+      render: (value, row) =>
         value.length === 0 ? (
           <span className="text-muted-foreground">-</span>
         ) : (
-          <div className="space-y-1.5 text-xs text-muted-foreground">
+          <div className="space-y-2 text-xs">
             {value.map((payment) => (
-              <div key={payment.id}>
-                <span className="block text-foreground">
-                  {formatDate(payment.date)} · {money(payment.amount)}
-                </span>
-                {payment.fromAccount && (
-                  <span className="block">{payment.fromAccount}</span>
+              <div key={payment.id} className="space-y-1.5">
+                <Line label="Payment Date:">{formatDate(payment.date)}</Line>
+                <Line label="Amount Paid:">{omr(payment.amount)}</Line>
+                {payment.method && (
+                  <Line label="Payment Method:">{payment.method}</Line>
                 )}
-                {payment.reference && <span className="block">{payment.reference}</span>}
+                {payment.fromAccount && (
+                  <Line label="Transferred From:">{payment.fromAccount}</Line>
+                )}
+                {row.supplier && (
+                  <Line label="Transferred To:">{row.supplier}</Line>
+                )}
                 {payment.document && (
-                  <span
-                    title={payment.document}
-                    className="inline-flex items-center gap-1 text-primary"
-                  >
-                    <Paperclip className="h-3 w-3" />
-                    Receipt
-                  </span>
+                  <Line label="Payment Proof:">
+                    <a
+                      href={payment.document}
+                      onClick={(event) => event.preventDefault()}
+                      title={payment.document}
+                      className="text-primary underline-offset-2 hover:underline"
+                    >
+                      Click to view proof
+                    </a>
+                  </Line>
                 )}
               </div>
             ))}
@@ -249,50 +318,53 @@ export default function ExpensesPage() {
     },
     {
       key: "createdBy",
-      header: "Transaction Audit Trail",
-      width: "14%",
-      disableFilter: true,
-      render: (value, row) => (
-        <div className="space-y-0.5 text-xs text-muted-foreground">
-          {value ? (
-            <span className="block">
-              Raised by <span className="text-foreground">{value}</span>
+      header: "Request Tracking",
+      subHeader: "(Request · Approval · Authorization · Payment)",
+      width: "18%",
+      exportValue: (row) =>
+        row.tracking
+          ? [
+              row.tracking.requested.by,
+              row.tracking.accountant.by,
+              row.tracking.finance.by,
+              row.tracking.paid.by,
+            ]
+              .filter(Boolean)
+              .join(" · ")
+          : "Recorded directly",
+      render: (_, row) => {
+        if (!row.tracking) {
+          return (
+            <span className="text-xs text-muted-foreground">
+              Recorded directly on {formatDate(row.date)}
             </span>
-          ) : (
-            <span className="block">Recorded directly</span>
-          )}
-          <span className="block">{formatDate(row.createdAt)}</span>
-          {row.approvedBy && (
-            <>
-              <span className="block pt-1">
-                Approved by <span className="text-foreground">{row.approvedBy}</span>
-              </span>
-              <span className="block">{formatDate(row.approvedAt)}</span>
-            </>
-          )}
-        </div>
-      ),
-    },
-    {
-      key: "actions",
-      header: "",
-      width: "5%",
-      disableFilter: true,
-      render: (_, row) =>
-        row.source === "expense" ? (
-          <div className="flex items-center justify-center">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-red-500 hover:text-red-600"
-              title="Delete expense"
-              onClick={() => removeExpense(row.expenseId)}
-            >
-              <Trash2 className="h-4 w-4" />
-              <span className="sr-only">Delete expense</span>
-            </Button>
+          );
+        }
+        return (
+          <div className="space-y-1.5 text-xs">
+            <Step
+              label="Requested By:"
+              by={row.tracking.requested.by}
+              at={row.tracking.requested.at}
+            />
+            <Step
+              label="Approved By Accountant:"
+              by={row.tracking.accountant.by}
+              at={row.tracking.accountant.at}
+            />
+            <Step
+              label="Approved By Finance Manager:"
+              by={row.tracking.finance.by}
+              at={row.tracking.finance.at}
+            />
+            <Step
+              label="Paid By:"
+              by={row.tracking.paid.by}
+              at={row.tracking.paid.at}
+            />
           </div>
-        ) : null,
+        );
+      },
     },
   ];
 
@@ -321,21 +393,13 @@ export default function ExpensesPage() {
       </div>
 
       {/* Each box is also the filter for the table below it */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
-        <SummaryTile
-          label="Awaiting Approval"
-          count={awaiting.length}
-          amount={awaitingTotal}
-          tone="text-amber-600"
-          onClick={() => navigate("/expense-requests")}
-        />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {GROUPS.map((option) => {
           const matching = records.filter(option.match);
           return (
             <SummaryTile
               key={option.key}
               label={option.label}
-              count={matching.length}
               amount={matching.reduce((sum, row) => sum + row.total, 0)}
               selected={group === option.key}
               onClick={() => {
@@ -355,6 +419,7 @@ export default function ExpensesPage() {
             searchPlaceholder="Search expenses..."
             exportFileName="expenses.csv"
             enableColumnSearch={false}
+            itemLabel="expenses"
             onAdd={() => navigate("/expenses/create")}
             addLabel="Add Expense"
             currentPage={currentPage}

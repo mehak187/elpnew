@@ -4,13 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   ReceiptText,
   FileText,
   CreditCard,
@@ -26,6 +19,8 @@ import ExpenseClassificationPicker from "./ExpenseClassificationPicker";
 import { findType } from "./links";
 import { dayOffset, money } from "./expenseData";
 import { useSuppliers } from "@/lib/suppliers/context";
+import { SUPPLIER_CATEGORIES } from "@/pages/suppliers/supplierData";
+import SearchableSelect from "@/components/shared/SearchableSelect";
 import NewSupplierDialog from "@/pages/suppliers/NewSupplierDialog";
 import { Rial } from "@/components/shared/Rial";
 
@@ -67,6 +62,9 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
   const activeSuppliers = suppliers.filter((s) => s.status === "Active");
   const [invoiceDate, setInvoiceDate] = useState(dayOffset(0));
   const [invoiceNumber, setInvoiceNumber] = useState("");
+  // The category narrows the supplier list rather than being stored - the
+  // supplier record already carries its own category.
+  const [category, setCategory] = useState("");
   const [supplier, setSupplier] = useState("");
   const [invoiceFile, setInvoiceFile] = useState("");
   // Whether a copy of the supplier invoice is coming, decided here rather than
@@ -77,6 +75,19 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
   const [error, setError] = useState("");
 
   const noInvoice = invoiceCopy === "none";
+
+  const suppliersInCategory = category
+    ? activeSuppliers.filter((s) => s.category === category)
+    : activeSuppliers;
+
+  // Changing the category drops a supplier that no longer belongs to it.
+  const chooseCategory = (next) => {
+    setCategory(next);
+    const kept = activeSuppliers.find(
+      (s) => s.name === supplier && s.category === next
+    );
+    if (!kept) setSupplier("");
+  };
 
   const updateLine = (id, changes) =>
     setLines((prev) => prev.map((l) => (l.id === id ? { ...l, ...changes } : l)));
@@ -99,6 +110,7 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
   const invoiceDataComplete =
     Boolean(invoiceDate) &&
     invoiceNumber.trim().length > 0 &&
+    Boolean(category) &&
     Boolean(supplier) &&
     (noInvoice || Boolean(invoiceFile));
 
@@ -134,7 +146,7 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
     <div className="space-y-4 sm:space-y-6">
       {/* ------------------------------------------------------ Invoice Data */}
       <FormSection icon={ReceiptText} title="Invoice Data">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
           <div className="space-y-2">
             <Label htmlFor="invoiceDate">Invoice Date *</Label>
             <Input
@@ -149,12 +161,15 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
               is coming is settled here rather than deferred. */}
           <div className="space-y-2">
             <Label htmlFor="invoiceNumber">Invoice Number *</Label>
-            <div className="flex gap-1.5">
+            <div className="flex flex-wrap gap-1.5">
               <Input
                 id="invoiceNumber"
                 value={invoiceNumber}
                 onChange={(e) => setInvoiceNumber(e.target.value)}
                 placeholder="Invoice no."
+                // An invoice number is never typed twice, so the browser's
+                // remembered list is only ever in the way.
+                autoComplete="off"
                 className="min-w-0 flex-1"
               />
               <label
@@ -214,20 +229,34 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="supplierCategory">Category *</Label>
+            <SearchableSelect
+              id="supplierCategory"
+              value={category}
+              onValueChange={chooseCategory}
+              options={SUPPLIER_CATEGORIES.map((name) => ({
+                value: name,
+                label: name,
+              }))}
+              searchPlaceholder="Search category..."
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="supplier">Supplier *</Label>
             <div className="flex gap-2">
-              <Select value={supplier} onValueChange={setSupplier}>
-                <SelectTrigger id="supplier" className="flex-1">
-                  <SelectValue placeholder="Please Select" />
-                </SelectTrigger>
-                <SelectContent>
-                  {activeSuppliers.map((supplier) => (
-                    <SelectItem key={supplier.id} value={supplier.name}>
-                      {supplier.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                id="supplier"
+                className="flex-1"
+                value={supplier}
+                onValueChange={setSupplier}
+                disabled={!category}
+                options={suppliersInCategory.map((s) => ({
+                  value: s.name,
+                  label: s.name,
+                }))}
+                searchPlaceholder="Search supplier..."
+              />
               <Button
                 type="button"
                 variant="outline"
@@ -248,7 +277,10 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
       <NewSupplierDialog
         open={addingSupplier}
         onOpenChange={setAddingSupplier}
-        onCreated={setSupplier}
+        onCreated={(created) => {
+          setCategory(created.category);
+          setSupplier(created.name);
+        }}
       />
 
       {/* --------------------------------------------------- Expense Details */}
@@ -351,7 +383,9 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
                           />
                         </div>
 
-                        <div className="space-y-2 sm:col-span-2 lg:col-span-4">
+                        {/* It sits in the gap the totals leave, rather than
+                            taking a row of its own. */}
+                        <div className="space-y-2">
                           <Label htmlFor={"desc-" + line.id}>
                             Expense Description / Notes
                             {type?.requiresDescription && " *"}

@@ -3,32 +3,76 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import DataTable from "@/components/shared/DataTable";
-import { StatusDot } from "@/components/shared/panels";
-import { Truck, Plus, Trash2, FileSpreadsheet } from "lucide-react";
+import { Truck, Plus, FileSpreadsheet } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toCsv, downloadCsv } from "@/lib/csv";
 import { useSuppliers } from "@/lib/suppliers/context";
 
 export default function SuppliersPage() {
   const navigate = useNavigate();
-  const { suppliers, removeSupplier } = useSuppliers();
+  const { suppliers } = useSuppliers();
 
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
   const columns = [
     {
+      // The dot carries the status, so the table does not need a column for it.
       key: "supplierId",
       header: "Supplier ID",
-      width: "10%",
-      cellClassName: "font-medium",
+      width: "14%",
+      render: (value, row) => (
+        <span className="inline-flex items-center gap-2">
+          <span
+            aria-hidden="true"
+            title={row.status}
+            className={cn(
+              "h-2 w-2 shrink-0 rounded-full",
+              row.status === "Active" ? "bg-green-500" : "bg-gray-400"
+            )}
+          />
+          <button
+            type="button"
+            onClick={() => navigate("/suppliers/" + row.id)}
+            className="rounded font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            {value}
+          </button>
+          <span className="sr-only">{row.status}</span>
+        </span>
+      ),
     },
-    { key: "name", header: "Supplier Name", width: "20%" },
-    { key: "category", header: "Category", width: "14%" },
+    {
+      key: "name",
+      header: "Supplier Name",
+      width: "24%",
+      exportValue: (row) => row.name + " | " + row.category,
+      render: (value, row) => (
+        <div className="space-y-0.5">
+          <p className="font-medium">{value}</p>
+          <p className="text-xs text-muted-foreground">{row.category}</p>
+        </div>
+      ),
+    },
+    { key: "phone", header: "Phone", width: "16%" },
+    {
+      key: "bank",
+      header: "Supplier Account",
+      width: "22%",
+      exportValue: (row) =>
+        (row.bank || "-") + " | " + (row.accountNumber || "-"),
+      render: (_, row) => (
+        <div className="space-y-0.5 text-xs">
+          <p className="font-medium">{row.bank || "-"}</p>
+          <p className="text-muted-foreground">{row.accountNumber || "-"}</p>
+        </div>
+      ),
+    },
     {
       // CR, TIN and VAT belong together - they are all the supplier's numbers.
       key: "taxIdentificationNumber",
-      header: "Tax Numbers",
-      width: "20%",
+      header: "Tax Details",
+      width: "24%",
       exportValue: (row) =>
         "CR " +
         (row.commercialRegistration || "-") +
@@ -50,48 +94,6 @@ export default function SuppliersPage() {
             <span className="text-muted-foreground">VAT </span>
             {row.vatNumber || "-"}
           </p>
-        </div>
-      ),
-    },
-    {
-      key: "bank",
-      header: "Supplier Account",
-      width: "17%",
-      exportValue: (row) =>
-        (row.bank || "-") + " | " + (row.accountNumber || "-"),
-      render: (_, row) => (
-        <div className="space-y-0.5 text-xs">
-          <p className="font-medium">{row.bank || "-"}</p>
-          <p className="text-muted-foreground">{row.accountNumber || "-"}</p>
-        </div>
-      ),
-    },
-    { key: "phone", header: "Phone", width: "12%" },
-    {
-      key: "status",
-      header: "Status",
-      width: "9%",
-      render: (value) => (
-        <StatusDot status={value} isGood={value === "Active"} />
-      ),
-    },
-    {
-      key: "actions",
-      header: "Delete",
-      width: "6%",
-      disableFilter: true,
-      render: (_, row) => (
-        <div className="flex items-center justify-center">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-red-500 hover:text-red-600"
-            title="Delete supplier"
-            onClick={() => removeSupplier(row.id)}
-          >
-            <Trash2 className="h-4 w-4" />
-            <span className="sr-only">Delete {row.name}</span>
-          </Button>
         </div>
       ),
     },
@@ -137,10 +139,8 @@ export default function SuppliersPage() {
             columns={columns}
             data={suppliers}
             searchPlaceholder="Ask anything..."
-            exportFileName="suppliers.csv"
+            showExport={false}
             enableColumnSearch={false}
-            onAdd={() => navigate("/suppliers/create")}
-            addLabel="Add Supplier"
             currentPage={currentPage}
             totalPages={Math.ceil(suppliers.length / pageSize)}
             pageSize={pageSize}
