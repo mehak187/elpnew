@@ -94,7 +94,7 @@ export default function SearchableSelect({
             <div className="max-h-60 overflow-y-auto">
               {matches.length === 0 ? (
                 <p className="px-3 py-4 text-center text-sm text-muted-foreground">
-                  Nothing matched.
+                  No results found.
                 </p>
               ) : (
                 matches.map((option) => (

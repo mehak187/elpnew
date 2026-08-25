@@ -84,20 +84,6 @@ const navSections = [
         icon: Users,
         description: "Client directory and profiles",
       },
-      {
-        name: "Suppliers",
-        path: "/suppliers",
-        key: "suppliers",
-        icon: Truck,
-        description: "Supplier directory and tax numbers",
-      },
-      {
-        name: "Expenses",
-        path: "/expenses",
-        key: "expenses",
-        icon: Wallet,
-        description: "Every expense, and what has been paid against it",
-      },
     ],
   },
   {
@@ -105,6 +91,29 @@ const navSections = [
     path: "/expense-requests",
     key: "expense-requests",
     icon: ReceiptText,
+  },
+  {
+    // Suppliers sit here rather than under the Partner Menu: a supplier only
+    // exists to be paid, so it is read alongside the spending it belongs to.
+    name: "Expenses",
+    key: "spending",
+    icon: Wallet,
+    items: [
+      {
+        name: "Expenses",
+        path: "/expenses",
+        key: "expenses",
+        icon: Wallet,
+        description: "Every expense, and what has been paid against it",
+      },
+      {
+        name: "Suppliers",
+        path: "/suppliers",
+        key: "suppliers",
+        icon: Truck,
+        description: "Supplier directory and tax numbers",
+      },
+    ],
   },
   // { name: "Corporate Matters", path: "/corporate", icon: Briefcase, key: "corporate" },
   // { name: "Invoices", path: "/finance", icon: Wallet, key: "finance" },
@@ -271,7 +280,14 @@ export default function Header({ onNavClick, activeNav }) {
                                 <span className="block text-sm font-medium">
                                   {item.name}
                                 </span>
-                                <span className="block text-xs text-muted-foreground">
+                                <span
+                                  className={cn(
+                                    "block text-xs",
+                                    isActive(item.key)
+                                      ? "text-primary-foreground/80"
+                                      : "text-muted-foreground"
+                                  )}
+                                >
                                   {item.description}
                                 </span>
                               </span>
