@@ -146,7 +146,7 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
     <div className="space-y-4 sm:space-y-6">
       {/* ------------------------------------------------------ Invoice Data */}
       <FormSection icon={ReceiptText} title="Invoice Data">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
           <div className="space-y-2">
             <Label htmlFor="invoiceDate">Invoice Date *</Label>
             <Input
@@ -161,7 +161,7 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
               is coming is settled here rather than deferred. */}
           <div className="space-y-2">
             <Label htmlFor="invoiceNumber">Invoice Number *</Label>
-            <div className="flex gap-1.5">
+            <div className="flex flex-wrap gap-1.5">
               <Input
                 id="invoiceNumber"
                 value={invoiceNumber}
@@ -383,7 +383,9 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
                           />
                         </div>
 
-                        <div className="space-y-2 sm:col-span-2 lg:col-span-4">
+                        {/* It sits in the gap the totals leave, rather than
+                            taking a row of its own. */}
+                        <div className="space-y-2">
                           <Label htmlFor={"desc-" + line.id}>
                             Expense Description / Notes
                             {type?.requiresDescription && " *"}
