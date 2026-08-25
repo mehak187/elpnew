@@ -13,6 +13,8 @@
  * the expiry date - so a figure on screen can never drift from its records.
  */
 
+import { withRial } from "@/lib/money";
+
 const DAY = 24 * 60 * 60 * 1000;
 
 const startOfToday = () => {
@@ -21,8 +23,18 @@ const startOfToday = () => {
   return d;
 };
 
+// Formatted from the local parts, not through toISOString(): east of UTC the
+// UTC form of local midnight still falls on the previous day, which made
+// "today" render as yesterday in the date fields.
+const isoDate = (date) =>
+  date.getFullYear() +
+  "-" +
+  String(date.getMonth() + 1).padStart(2, "0") +
+  "-" +
+  String(date.getDate()).padStart(2, "0");
+
 export const dayOffset = (days) =>
-  new Date(startOfToday().getTime() + days * DAY).toISOString().slice(0, 10);
+  isoDate(new Date(startOfToday().getTime() + days * DAY));
 
 export const daysUntil = (dateStr) =>
   Math.round(
@@ -38,12 +50,14 @@ export const formatDate = (dateStr) =>
       })
     : "";
 
-export const money = (amount) =>
-  "OMR " +
+/** The bare figure, for inputs and anywhere a plain string is needed. */
+export const moneyValue = (amount) =>
   Number(amount).toLocaleString("en-GB", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   });
+
+export const money = (amount) => withRial(moneyValue(amount));
 
 /* ------------------------------------------------- 1. Law firm information */
 
@@ -372,9 +386,12 @@ export function overviewFigures({ branches, documents, bankAccounts, payments, e
 /* ------------------------------------------------------- Branch staff roles */
 
 /** The roles a branch staffs, in the order they are assigned to a client. */
+// In the order a client's work passes through them: the supervisor over it, the
+// consultant advising on it, the lawyer running it, the officer enforcing it.
 export const BRANCH_ROLES = [
   "General Supervisor",
   "Legal Consultant",
+  "Lawyer",
   "Enforcement Officer",
 ];
 
@@ -392,15 +409,19 @@ export const firmStaff = [
   { id: 4, name: "Aisha Al Saadi", branchId: 1, role: "Legal Consultant" },
   { id: 5, name: "Khalid Al Hinai", branchId: 1, role: "Enforcement Officer" },
   { id: 6, name: "Nasser Al Amri", branchId: 1, role: "Enforcement Officer" },
+  { id: 14, name: "Fatma Al Zadjali", branchId: 1, role: "Lawyer" },
+  { id: 15, name: "Omar Al Harthy", branchId: 1, role: "Lawyer" },
 
   { id: 7, name: "Salim Al Rawahi", branchId: 2, role: "General Supervisor" },
   { id: 8, name: "Maryam Al Ghafri", branchId: 2, role: "Legal Consultant" },
   { id: 9, name: "Yusuf Al Kindi", branchId: 2, role: "Legal Consultant" },
   { id: 10, name: "Talal Al Mahrouqi", branchId: 2, role: "Enforcement Officer" },
+  { id: 16, name: "Huda Al Balushi", branchId: 2, role: "Lawyer" },
 
   { id: 11, name: "Noura Al Habsi", branchId: 3, role: "General Supervisor" },
   { id: 12, name: "Badar Al Shukaili", branchId: 3, role: "Legal Consultant" },
   { id: 13, name: "Zahra Al Jabri", branchId: 3, role: "Enforcement Officer" },
+  { id: 17, name: "Saif Al Rashdi", branchId: 3, role: "Lawyer" },
 ];
 
 /** Staff of one branch who hold a given role. */

@@ -12,6 +12,7 @@ import { useExpenses } from "@/lib/expenses/context";
 import ExpenseClassificationPicker from "./ExpenseClassificationPicker";
 import { findType } from "./links";
 import { dayOffset } from "./expenseData";
+import { Rial } from "@/components/shared/Rial";
 
 const emptyDraft = {
   typeKey: "",
@@ -67,18 +68,19 @@ export default function ExpenseForm() {
           <Button
             variant="ghost"
             size="icon"
+            className="rounded-full bg-secondary text-primary hover:bg-accent"
             onClick={() => navigate("/expenses")}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="rounded-xl bg-secondary p-2 sm:p-3">
-            <WalletCards className="h-5 w-5 text-secondary-foreground sm:h-6 sm:w-6" />
+          <div className="rounded-xl bg-primary p-2 sm:p-3">
+            <WalletCards className="h-5 w-5 text-primary-foreground sm:h-6 sm:w-6" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-primary sm:text-2xl">
               Add Expense
             </h1>
-            <p className="text-xs text-muted-foreground sm:text-sm">
+            <p className="text-xs text-primary/75 sm:text-sm">
               Record a new expense
             </p>
           </div>
@@ -119,7 +121,7 @@ export default function ExpenseForm() {
 
               {classified && (
                 <div className="space-y-2">
-                  <Label htmlFor="expenseAmount">Amount (OMR) *</Label>
+                  <Label htmlFor="expenseAmount">Amount (<Rial />) *</Label>
                   <Input
                     id="expenseAmount"
                     type="number"
@@ -157,12 +159,6 @@ export default function ExpenseForm() {
                   )}
                 />
               </div>
-            )}
-
-            {type && !classified && (
-              <p className="text-sm text-muted-foreground">
-                Choose the category and subcategory to continue.
-              </p>
             )}
 
             {error && <p className="text-sm text-destructive">{error}</p>}

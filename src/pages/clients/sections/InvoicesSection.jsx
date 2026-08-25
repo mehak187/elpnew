@@ -1,21 +1,42 @@
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import DataTable from "@/components/shared/DataTable";
 import { cn } from "@/lib/utils";
-import { INVOICE_STATUS_VARIANT } from "@/lib/constants";
+import { INVOICE_STATUS_DOT } from "@/lib/constants";
+import { withRial } from "@/lib/money";
+import { formatDate } from "@/pages/firm/firmData";
 import { clientInvoices } from "../clientMockData";
 
 const money = (amount) =>
-  "OMR " + amount.toLocaleString("en-GB", { minimumFractionDigits: 0 });
+  withRial(amount.toLocaleString("en-GB", { minimumFractionDigits: 0 }));
+
+/** Anything with money still owed against it. */
+const isOwed = (invoice) =>
+  ["Unpaid", "Overdue", "Partially Paid"].includes(invoice.status);
+
+/** The status as a coloured dot, so the word beside it can stay plain black. */
+function StatusDot({ status }) {
+  const dot = INVOICE_STATUS_DOT[status] || INVOICE_STATUS_DOT.Cancelled;
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+      <span
+        aria-hidden="true"
+        className="inline-block h-2.5 w-2.5 shrink-0 rounded-full border"
+        style={{ backgroundColor: dot.fill, borderColor: dot.ring }}
+      />
+      {status}
+    </span>
+  );
+}
 
 /**
- * The three views of this client's billing.
+ * The views of this client's billing.
  *
  * `match` decides both what a box counts and what the table shows when it is
  * selected, so the figure on the box and the rows below can never disagree.
  * Anything not settled counts as unpaid, including the outstanding half of a
- * partly paid invoice.
+ * partly paid invoice - so a part payment is counted in both its own box and
+ * that one, on purpose.
  */
 const VIEWS = [
   {
@@ -31,11 +52,22 @@ const VIEWS = [
     tone: "text-green-600",
   },
   {
+    key: "partial",
+    label: "Partially Paid Invoices",
+    match: (invoice) => invoice.status === "Partially Paid",
+    tone: "text-amber-600",
+  },
+  {
     key: "unpaid",
     label: "Unpaid Invoices",
-    match: (invoice) =>
-      ["Unpaid", "Overdue", "Partially Paid"].includes(invoice.status),
+    match: isOwed,
     tone: "text-red-600",
+  },
+  {
+    key: "cancelled",
+    label: "Cancelled Invoices",
+    match: (invoice) => invoice.status === "Cancelled",
+    tone: "text-muted-foreground",
   },
 ];
 
@@ -52,22 +84,39 @@ export default function InvoicesSection() {
     rows = [...rows].sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   }
 
+  // How long the oldest debt has been standing, which is what decides whether
+  // this client needs chasing at all.
+  const oldestDue = clientInvoices
+    .filter(isOwed)
+    .map((invoice) => invoice.dueDate)
+    .sort()[0];
+
   const columns = [
-    { key: "date", header: "Date", width: "11%" },
+    {
+      key: "date",
+      header: "Date",
+      width: "14%",
+      render: (value, row) => (
+        <div>
+          <span className="block">{value}</span>
+          <span className="mt-0.5 block text-xs font-medium">
+            <StatusDot status={row.status} />
+          </span>
+        </div>
+      ),
+    },
     {
       key: "invoiceNo",
       header: "Invoice No.",
-      width: "15%",
+      width: "16%",
       cellClassName: "font-medium",
     },
-    { key: "dueDate", header: "Due Date", width: "11%" },
-    { key: "details", header: "Details", width: "22%" },
+    { key: "dueDate", header: "Due Date", width: "13%" },
+    { key: "details", header: "Details", width: "25%" },
     {
       key: "amount",
       header: "Invoice Amount",
       width: "15%",
-      className: "text-right",
-      cellClassName: "text-right",
       render: (value, row) => (
         <div>
           <p className="font-medium">{money(value)}</p>
@@ -80,17 +129,9 @@ export default function InvoicesSection() {
       ),
     },
     {
-      key: "status",
-      header: "Status",
-      width: "12%",
-      render: (value) => (
-        <Badge variant={INVOICE_STATUS_VARIANT[value]}>{value}</Badge>
-      ),
-    },
-    {
       key: "notes",
       header: "Notes",
-      width: "14%",
+      width: "17%",
       render: (value) =>
         value || <span className="text-muted-foreground">-</span>,
     },
@@ -99,7 +140,7 @@ export default function InvoicesSection() {
   return (
     <div className="space-y-6">
       {/* Each box is also the filter for the table below it */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
         {VIEWS.map((option) => {
           const matching = clientInvoices.filter(option.match);
           const total = matching.reduce((sum, i) => sum + i.amount, 0);
@@ -126,6 +167,25 @@ export default function InvoicesSection() {
             </button>
           );
         })}
+
+        {/* A date rather than a count, so it opens what is owed instead of
+            filtering to itself. */}
+        <button
+          type="button"
+          onClick={() => {
+            setView("unpaid");
+            setCurrentPage(1);
+          }}
+          className="rounded-lg border p-4 text-left transition-colors hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <p className="text-xs text-muted-foreground">
+            Oldest Unpaid Invoice Date
+          </p>
+          <p className="mt-1 text-lg font-bold text-amber-600">
+            {oldestDue ? formatDate(oldestDue) : "-"}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">Earliest due date</p>
+        </button>
       </div>
 
       <Card>

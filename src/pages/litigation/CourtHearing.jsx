@@ -67,17 +67,17 @@ export default function CourtHearing() {
     <div className="space-y-4 sm:space-y-6">
       {/* Page Header */}
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/litigation")}>
+        <Button variant="ghost" size="icon" className="rounded-full bg-secondary text-primary hover:bg-accent" onClick={() => navigate("/litigation")}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="p-2 sm:p-3 rounded-xl bg-secondary">
-          <Gavel className="h-5 w-5 sm:h-6 sm:w-6 text-secondary-foreground" />
+        <div className="p-2 sm:p-3 rounded-xl bg-primary">
+          <Gavel className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
         </div>
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-primary">
             Court Hearings
           </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground">
+          <p className="text-xs sm:text-sm text-primary/75">
             Case No: {id || "2024/001"} - Manage court hearing sessions
           </p>
         </div>

@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ReceiptText, ArrowLeft } from "lucide-react";
 import { useExpenses } from "@/lib/expenses/context";
+import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 import InvoiceForm from "./InvoiceForm";
 import { firstReviewFor, dayOffset } from "./expenseData";
 
@@ -10,18 +11,23 @@ export default function NewInvoice() {
   const { addInvoice } = useExpenses();
 
   const handleSubmit = (invoice) => {
-    // An admin-raised invoice skips the accountant entirely.
+    // The route is decided by the raiser's own role, taken from their profile
+    // rather than asked for on the form. An admin-raised invoice skips the
+    // accountant entirely.
+    const creatorRole = CURRENT_USER.role === "admin" ? "admin" : "employee";
+
     addInvoice({
       ...invoice,
-      createdBy: "Mohammed Al Yahyaei",
-      status: firstReviewFor(invoice.creatorRole),
+      creatorRole,
+      createdBy: CURRENT_USER.name,
+      status: firstReviewFor(creatorRole),
       payments: [],
       history: [
         {
           at: dayOffset(0),
-          by: "Mohammed Al Yahyaei",
+          by: CURRENT_USER.name,
           action:
-            invoice.creatorRole === "admin"
+            creatorRole === "admin"
               ? "Submitted by Admin - accountant step skipped"
               : "Submitted",
           reason: "",
@@ -38,18 +44,19 @@ export default function NewInvoice() {
         <Button
           variant="ghost"
           size="icon"
+          className="rounded-full bg-secondary text-primary hover:bg-accent"
           onClick={() => navigate("/expense-requests")}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="rounded-xl bg-secondary p-2 sm:p-3">
-          <ReceiptText className="h-5 w-5 text-secondary-foreground sm:h-6 sm:w-6" />
+        <div className="rounded-xl bg-primary p-2 sm:p-3">
+          <ReceiptText className="h-5 w-5 text-primary-foreground sm:h-6 sm:w-6" />
         </div>
         <div>
           <h1 className="text-xl font-bold text-primary sm:text-2xl">
-            New General Invoice
+            New Payment Request
           </h1>
-          <p className="text-xs text-muted-foreground sm:text-sm">
+          <p className="text-xs text-primary/75 sm:text-sm">
             Raise a general company expense for approval
           </p>
         </div>

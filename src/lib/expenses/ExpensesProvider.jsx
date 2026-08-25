@@ -1,6 +1,11 @@
 import { useMemo, useState } from "react";
 import { ExpensesContext } from "./context";
-import { initialExpenses, initialInvoices } from "@/pages/expenses/expenseData";
+import {
+  initialExpenses,
+  initialInvoices,
+  nextRequestNo,
+  requestClosed,
+} from "@/pages/expenses/expenseData";
 
 const nextId = (rows) => rows.reduce((max, r) => Math.max(max, r.id), 0) + 1;
 
@@ -28,12 +33,21 @@ export default function ExpensesProvider({ children }) {
             ...invoice,
             id: nextId(prev),
             reference: "GIN-2026-" + String(prev.length + 1).padStart(3, "0"),
+            requestNo: nextRequestNo(prev),
           },
           ...prev,
         ]),
+      // A request that has been paid has nothing left to chase, so it gives up
+      // its request number here rather than at each of the call sites.
       updateInvoice: (id, changes) =>
         setInvoices((prev) =>
-          prev.map((i) => (i.id === id ? { ...i, ...changes } : i))
+          prev.map((i) => {
+            if (i.id !== id) return i;
+            const next = { ...i, ...changes };
+            return requestClosed(next.status)
+              ? { ...next, requestNo: null }
+              : next;
+          })
         ),
     }),
     [expenses, invoices]

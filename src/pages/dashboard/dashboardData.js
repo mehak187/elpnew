@@ -1,6 +1,8 @@
 // Mock data for the dashboard. Dates are generated relative to today so the
 // "today" and "days remaining" sections stay correct whenever the demo is run.
 
+import { withRial } from "@/lib/money";
+
 const DAY = 24 * 60 * 60 * 1000;
 
 const iso = (date) => date.toISOString().slice(0, 10);
@@ -21,7 +23,7 @@ export const formatDate = (dateStr) =>
   });
 
 export const money = (amount) =>
-  "OMR " + Math.round(amount).toLocaleString("en-GB");
+  withRial(Math.round(amount).toLocaleString("en-GB"));
 
 export { changePercent } from "@/lib/metrics";
 

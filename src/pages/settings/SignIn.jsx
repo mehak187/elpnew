@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, LogIn } from "lucide-react";
 import { useFirm } from "@/lib/firm/context";
+import logo from "@/assets/logo2.png";
 
 /**
  * Where Sign Out lands. There is no auth layer yet, so any details are accepted
@@ -25,10 +26,12 @@ export default function SignIn() {
       <Card className="w-full max-w-sm">
         <CardContent className="space-y-6 p-6">
           <div className="text-center">
-            <p className="font-serif text-3xl font-bold tracking-[0.12em] text-primary">
-              {firmInfo.nameEn}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground" dir="rtl">
+            <img
+              src={logo}
+              alt={firmInfo.nameEn}
+              className="mx-auto h-12 w-auto"
+            />
+            <p className="mt-2 text-xs text-muted-foreground" dir="rtl">
               {firmInfo.nameAr}
             </p>
           </div>

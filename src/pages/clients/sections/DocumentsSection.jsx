@@ -11,13 +11,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import DataTable from "@/components/shared/DataTable";
-import SearchableSelect from "@/components/shared/SearchableSelect";
 import { Upload, FileText, FileCheck, Trash2 } from "lucide-react";
 import {
   DOCUMENT_TYPES,
   DOCUMENT_STATUSES,
 } from "@/lib/constants";
-import { clientDocuments, officeFiles } from "../clientMockData";
+import { clientDocuments } from "../clientMockData";
 
 /**
  * Document types that carry fields the client record already holds.
@@ -47,7 +46,7 @@ const REFERENCE_FIELDS = {
 /**
  * Which client fields each document type carries.
  *
- * Only these three do. Instructions, contracts and anything else are just a
+ * Only these three do. Instructions and anything else are just a
  * file with a note, so nothing extra is asked for.
  */
 const LINKED_FIELDS = {
@@ -66,7 +65,6 @@ const emptyUpload = {
   documentType: "",
   expiryDate: "",
   notes: "",
-  linkedFileNo: "",
 };
 
 export default function DocumentsSection({ formData, onChange }) {
@@ -76,7 +74,6 @@ export default function DocumentsSection({ formData, onChange }) {
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const needsOfficeFile = draft.documentType === "Special Contract";
   const linked = LINKED_FIELDS[draft.documentType];
 
   const setField = (name, value) =>
@@ -104,7 +101,6 @@ export default function DocumentsSection({ formData, onChange }) {
           : draft.expiryDate,
         status: DOCUMENT_STATUSES[0],
         notes: draft.notes,
-        linkedFileNo: draft.linkedFileNo || null,
       },
     ]);
     setFile(null);
@@ -114,7 +110,6 @@ export default function DocumentsSection({ formData, onChange }) {
   const canSave =
     file &&
     draft.documentType &&
-    (!needsOfficeFile || draft.linkedFileNo) &&
     (!linked || linked.fields.every((field) => formData[field.name]));
 
   const columns = [
@@ -146,11 +141,8 @@ export default function DocumentsSection({ formData, onChange }) {
       key: "notes",
       header: "Notes",
       width: "34%",
-      render: (value, row) => (
-        <span className="text-muted-foreground">
-          {row.linkedFileNo ? "File " + row.linkedFileNo + ". " : ""}
-          {value || "-"}
-        </span>
+      render: (value) => (
+        <span className="text-muted-foreground">{value || "-"}</span>
       ),
     },
     {
@@ -256,24 +248,6 @@ export default function DocumentsSection({ formData, onChange }) {
                 />
               </div>
             ))}
-
-            {/* A special contract is tied to an office file sequence number */}
-            {needsOfficeFile && (
-              <div className="space-y-2">
-                <Label htmlFor="linkedFileNo">Link to Office File *</Label>
-                <SearchableSelect
-                  id="linkedFileNo"
-                  value={draft.linkedFileNo}
-                  onValueChange={(value) => setField("linkedFileNo", value)}
-                  options={officeFiles.map((officeFile) => ({
-                    value: officeFile.fileNo,
-                    label: officeFile.label,
-                  }))}
-                  placeholder="Select file number"
-                  searchPlaceholder="Search file number or case..."
-                />
-              </div>
-            )}
 
             <div className="space-y-2">
               <Label htmlFor="documentNotes">Note</Label>

@@ -128,14 +128,14 @@ export default function References() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 sm:p-3 rounded-xl bg-secondary">
-            <BookOpen className="h-5 w-5 sm:h-6 sm:w-6 text-secondary-foreground" />
+          <div className="p-2 sm:p-3 rounded-xl bg-primary">
+            <BookOpen className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-primary">
               References
             </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground">
+            <p className="text-xs sm:text-sm text-primary/75">
               Manage system reference data
             </p>
           </div>

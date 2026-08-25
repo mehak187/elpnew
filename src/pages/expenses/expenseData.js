@@ -37,24 +37,6 @@ export const linkedCases = [
   { id: 5, caseNo: "1156/2026", client: "Salalah Port Services" },
 ];
 
-/** Suppliers a general invoice can come from. */
-export const suppliers = [
-  "Al Maha Properties",
-  "Oman Electricity Distribution",
-  "Omantel",
-  "Ooredoo",
-  "Muscat Stationery Est.",
-  "Gulf Cleaning Services",
-  "Bank Muscat",
-  "Tax Authority",
-  "Al Wathba Insurance",
-  "Ministry of Commerce",
-  "KPMG Oman",
-  "Blue Ocean Media",
-  "Nizwa Print House",
-  "Other Supplier",
-];
-
 export const PAYMENT_METHODS = [
   "Bank Transfer",
   "Cheque",
@@ -109,6 +91,292 @@ export const CREATOR_ROLES = [
 export const firstReviewFor = (creatorRole) =>
   CREATOR_ROLES.find((r) => r.key === creatorRole)?.firstReview || "accountant";
 
+/* ------------------------------------------------------ accountant review */
+
+/**
+ * What the accountant can decide, and where each decision sends the request.
+ *
+ * A return or a rejection stops the request, so the accountant has to say why -
+ * the note is written into the history and shown to whoever raised it.
+ */
+export const ACCOUNTANT_REVIEW_RESULTS = [
+  {
+    key: "approve",
+    label: "Approve for Payment",
+    status: "finance",
+    action: "Approved by Accountant",
+    needsNote: false,
+  },
+  {
+    key: "return",
+    label: "Return for Correction",
+    status: "returned",
+    action: "Returned for Correction",
+    needsNote: true,
+  },
+  {
+    key: "reject",
+    label: "Reject the Request",
+    status: "rejected",
+    action: "Rejected",
+    needsNote: true,
+  },
+];
+
+/* ------------------------------------------------- finance manager approval */
+
+/**
+ * What the finance manager can decide.
+ *
+ * Approving and paying is one action rather than two: the manager releasing the
+ * money is the manager recording where it went, so the transfer details are
+ * asked for at the same moment. A return or a rejection asks for a note.
+ */
+export const FINANCE_ACTIONS = [
+  {
+    key: "pay",
+    label: "Approve & Process Payment",
+    action: "Approved for Payment",
+    needsNote: false,
+    needsTransfer: true,
+  },
+  {
+    key: "return",
+    label: "Return for Correction",
+    status: "returned",
+    action: "Returned for Correction",
+    needsNote: true,
+  },
+  {
+    key: "reject",
+    label: "Reject Request",
+    status: "rejected",
+    action: "Rejected",
+    needsNote: true,
+  },
+];
+
+/* ------------------------------------------------------- request numbers */
+
+/**
+ * The number a request is chased by while it is in flight - REQ 4/2026 and so
+ * on, restarting each year.
+ *
+ * It is not the expense number. The expense keeps `reference` for good; this
+ * only exists while somebody still has to act, and is dropped the moment the
+ * payment goes through, so a settled expense cannot be quoted by a number that
+ * no longer means anything.
+ */
+export const formatRequestNo = (serial, year) =>
+  "REQ " + serial + "/" + year;
+
+export function nextRequestNo(invoices, date = dayOffset(0)) {
+  const year = Number(String(date).slice(0, 4));
+  const used = invoices
+    .map((i) => i.requestNo)
+    .filter(Boolean)
+    .map((no) => {
+      const [serial, of] = no.replace("REQ ", "").split("/");
+      return Number(of) === year ? Number(serial) : 0;
+    });
+  return formatRequestNo(Math.max(0, ...used) + 1, year);
+}
+
+/** Nothing is left to chase once the money has gone out in full. */
+export const requestClosed = (status) => status === "paid";
+
+/* --------------------------------------------------------- expense records */
+
+/**
+ * A request stops being a request once it has cleared approval. From that point
+ * it is an expense the firm has committed to, so it leaves the request list and
+ * is read from the expenses table instead - one record, in one place, whichever
+ * way it was raised.
+ */
+export const APPROVED_STATUSES = ["approved", "partiallyPaid", "paid"];
+
+export const isApprovedRequest = (invoice) =>
+  APPROVED_STATUSES.includes(invoice.status);
+
+/** Expense number: 1/26, 2/26 and so on, restarting each year. */
+export const formatExpenseNo = (serial, date) =>
+  serial + "/" + String(date).slice(2, 4);
+
+/** Where an expense sits against its own settlement. */
+export function settlement(paid, total) {
+  if (paid <= 0) return { key: "unpaid", label: "Unpaid", variant: "secondary" };
+  if (paid >= total)
+    return { key: "fullyPaid", label: "Fully Paid", variant: "success" };
+  return { key: "partiallyPaid", label: "Partially Paid", variant: "warning" };
+}
+
+/** The moment the request cleared approval, and who cleared it. */
+function approvalOf(invoice) {
+  const entry = [...invoice.history]
+    .reverse()
+    .find((h) => h.action.startsWith("Approved for Payment"));
+  return { by: entry?.by || "", at: entry?.at || "" };
+}
+
+/**
+ * Everything the expenses table shows: expenses recorded directly, and the
+ * requests that have cleared approval, in one shape.
+ *
+ * Numbered oldest first so the number and the order agree, and so a number once
+ * given never shifts when something newer arrives.
+ */
+export function expenseRecords(expenses, invoices) {
+  const fromRequests = invoices.filter(isApprovedRequest).map((invoice) => {
+    const total = invoiceTotal(invoice);
+    const paid = amountPaid(invoice);
+    const approval = approvalOf(invoice);
+
+    return {
+      id: "request-" + invoice.id,
+      source: "request",
+      reference: invoice.reference,
+      date: invoice.invoiceDate,
+      supplier: invoice.supplier,
+      invoiceNumber: invoice.invoiceNumber,
+      invoiceFile: invoice.invoiceFile,
+      lines: invoice.lines,
+      net: invoiceNet(invoice),
+      tax: invoiceTax(invoice),
+      total,
+      paid,
+      payments: invoice.payments,
+      createdBy: invoice.createdBy,
+      createdAt: invoice.history[0]?.at || invoice.invoiceDate,
+      approvedBy: approval.by,
+      approvedAt: approval.at,
+    };
+  });
+
+  // An expense recorded directly is money already spent, so it arrives settled
+  // and carries no invoice or approval behind it.
+  const direct = expenses.map((expense) => ({
+    id: "expense-" + expense.id,
+    source: "expense",
+    expenseId: expense.id,
+    reference: "",
+    date: expense.date,
+    supplier: "",
+    invoiceNumber: "",
+    invoiceFile: "",
+    lines: [
+      {
+        id: expense.id,
+        typeKey: expense.typeKey,
+        path: expense.path,
+        description: expense.description,
+      },
+    ],
+    linkKind: expense.linkKind,
+    linkId: expense.linkId,
+    net: expense.amount,
+    tax: 0,
+    total: expense.amount,
+    paid: expense.amount,
+    payments: [{ id: 1, date: expense.date, amount: expense.amount, method: "" }],
+    createdBy: "",
+    createdAt: expense.date,
+    approvedBy: "",
+    approvedAt: "",
+  }));
+
+  const serials = {};
+  return [...fromRequests, ...direct]
+    .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))
+    .map((row) => {
+      const year = String(row.date).slice(0, 4);
+      serials[year] = (serials[year] || 0) + 1;
+      return { ...row, expenseNo: formatExpenseNo(serials[year], row.date) };
+    });
+}
+
+/* ---------------------------------------------------- looking backwards */
+
+const kindOf = (line) => line.typeKey + "|" + line.path.join("/");
+
+/**
+ * Earlier requests worth reading before deciding this one.
+ *
+ * The same supplier is the strongest signal - it is what makes a duplicate
+ * invoice or a creeping price obvious. After that comes the same person
+ * claiming the same kind of expense, which is what makes a habit obvious. A
+ * request has to match on at least one of those to be worth showing, and the
+ * strongest matches come first.
+ */
+export function similarRequests(invoices, invoice) {
+  const kinds = new Set(invoice.lines.map(kindOf));
+
+  return invoices
+    .filter((other) => other.id !== invoice.id)
+    .map((other) => {
+      const sameSupplier = other.supplier === invoice.supplier;
+      const sameApplicant = other.createdBy === invoice.createdBy;
+      const sameKind = other.lines.some((line) => kinds.has(kindOf(line)));
+      return {
+        invoice: other,
+        sameSupplier,
+        sameApplicant,
+        sameKind,
+        score: (sameSupplier ? 4 : 0) + (sameKind ? 2 : 0) + (sameApplicant ? 1 : 0),
+      };
+    })
+    .filter((match) => match.score > 0)
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        b.invoice.invoiceDate.localeCompare(a.invoice.invoiceDate)
+    )
+    .slice(0, 10);
+}
+
+/* --------------------------------------------------------- who sees what */
+
+/**
+ * The roles a request page is read as. Auth is not wired up yet, so the page
+ * offers these as a switcher the way the dashboard does.
+ */
+export const VIEWER_ROLES = [
+  { key: "employee", label: "Employee" },
+  { key: "accountant", label: "Accountant" },
+  { key: "finance", label: "Finance Manager" },
+  { key: "admin", label: "Admin / Management" },
+];
+
+/** Nothing is waiting on anyone once an invoice reaches one of these. */
+const CLOSED = ["paid", "rejected"];
+
+/**
+ * Each role is shown only the requests that need it to act at that moment.
+ *
+ *   Employee        own requests that are still in flight
+ *   Accountant      only what is sitting at the accountant step
+ *   Finance Manager nothing until the accountant has acted, so the accountant's
+ *                   review is not visible early either
+ *   Admin           everything
+ */
+export function visibleInvoices(invoices, role, userName) {
+  // A request that has cleared approval has become an expense and is read on
+  // the expenses page, so it is off this list whoever is looking.
+  const inFlight = invoices.filter((i) => !isApprovedRequest(i));
+
+  switch (role) {
+    case "employee":
+      return inFlight.filter(
+        (i) => i.createdBy === userName && !CLOSED.includes(i.status)
+      );
+    case "accountant":
+      return inFlight.filter((i) => i.status === "accountant");
+    case "finance":
+      return inFlight.filter((i) => i.status === "finance");
+    default:
+      return inFlight;
+  }
+}
+
 /** The route an invoice takes, used to draw its progress. */
 export function routeFor(creatorRole) {
   const steps = [
@@ -153,11 +421,11 @@ export const initialInvoices = [
   {
     id: 1,
     reference: "GIN-2026-001",
+    requestNo: "REQ 1/2026",
     invoiceNumber: "AMP-8842",
     invoiceDate: dayOffset(-5),
     supplier: "Al Maha Properties",
     invoiceFile: "rent-august.pdf",
-    supportingDocuments: ["lease-agreement.pdf"],
     createdBy: "Aisha Al Saadi",
     creatorRole: "employee",
     status: "finance",
@@ -173,11 +441,11 @@ export const initialInvoices = [
   {
     id: 2,
     reference: "GIN-2026-002",
+    requestNo: "REQ 2/2026",
     invoiceNumber: "BOM-1190",
     invoiceDate: dayOffset(-3),
     supplier: "Blue Ocean Media",
     invoiceFile: "agency-invoice.pdf",
-    supportingDocuments: [],
     createdBy: "Layla Al Balushi",
     creatorRole: "employee",
     status: "accountant",
@@ -193,11 +461,11 @@ export const initialInvoices = [
   {
     id: 3,
     reference: "GIN-2026-003",
+    requestNo: "REQ 3/2026",
     invoiceNumber: "BM-77213",
     invoiceDate: dayOffset(-1),
     supplier: "Bank Muscat",
     invoiceFile: "bank-statement.pdf",
-    supportingDocuments: [],
     createdBy: "Mohammed Al Yahyaei",
     creatorRole: "admin",
     status: "finance",
@@ -217,11 +485,11 @@ export const initialInvoices = [
   {
     id: 4,
     reference: "GIN-2026-004",
+    requestNo: "REQ 4/2026",
     invoiceNumber: "GCS-4410",
     invoiceDate: dayOffset(-18),
     supplier: "Gulf Cleaning Services",
     invoiceFile: "cleaning-invoice.pdf",
-    supportingDocuments: ["service-contract.pdf"],
     createdBy: "Aisha Al Saadi",
     creatorRole: "employee",
     status: "partiallyPaid",
@@ -241,11 +509,11 @@ export const initialInvoices = [
   {
     id: 5,
     reference: "GIN-2026-005",
+    requestNo: "REQ 5/2026",
     invoiceNumber: "MSE-2231",
     invoiceDate: dayOffset(-9),
     supplier: "Muscat Stationery Est.",
     invoiceFile: "stationery.pdf",
-    supportingDocuments: [],
     createdBy: "Salim Al Rawahi",
     creatorRole: "employee",
     status: "returned",

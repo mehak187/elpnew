@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -10,236 +9,152 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus } from "lucide-react";
-import { EmptyState } from "@/components/shared/panels";
-import { clientInvoices, commissionPayments, commissionPayees } from "../clientMockData";
+import { Calculator } from "lucide-react";
+import { withRial } from "@/lib/money";
+import { useClients } from "@/lib/clients/context";
+import { clientInvoices } from "../clientMockData";
 
-const money = (amount) =>
-  "OMR " + Number(amount || 0).toLocaleString("en-GB", { maximumFractionDigits: 2 });
+const moneyValue = (amount) =>
+  Number(amount || 0).toLocaleString("en-GB", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 
-const formatDate = (date) =>
-  date
-    ? new Date(date).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
-    : "-";
+const money = (amount) => withRial(moneyValue(amount));
 
 /**
- * What the client actually paid us between two dates.
+ * The legal fees this client settled between two dates.
  *
- * Commission is owed on money received, not money invoiced, so this counts the
- * paid portion of each invoice rather than its face value.
+ * Commission is owed on fees, not on tax, so the VAT on each invoice is left
+ * out - an invoice of 1,050 made of 1,000 fees and 50 VAT earns commission on
+ * the 1,000. Only invoices actually paid count, and they count on the day the
+ * money arrived rather than the day the invoice was raised, because that is the
+ * period the person is asking about.
  */
-function legalFeesBetween(from, to) {
-  if (!from || !to) return 0;
+function legalFeesPaid(clientNo, from, to) {
+  if (!clientNo || !from || !to) return 0;
   return clientInvoices
-    .filter((invoice) => invoice.date >= from && invoice.date <= to)
-    .reduce((sum, invoice) => sum + Number(invoice.paidAmount || 0), 0);
+    .filter(
+      (invoice) =>
+        invoice.clientNo === clientNo &&
+        invoice.status === "Paid" &&
+        invoice.paidDate >= from &&
+        invoice.paidDate <= to
+    )
+    .reduce((sum, invoice) => sum + Number(invoice.legalFees || 0), 0);
 }
 
-export default function CommissionSection() {
-  const [hasCommission, setHasCommission] = useState("");
+/**
+ * A calculator, and only a calculator.
+ *
+ * Someone inside a client's legal department refers work to the firm for a cut
+ * of the fees it brings in. When they ask what last month came to, this answers
+ * it. Nothing is written down here - the answer is worked out and read off.
+ */
+export default function CommissionSection({ clientNo }) {
+  const { clients } = useClients();
+  const [company, setCompany] = useState(clientNo || "");
   const [percent, setPercent] = useState("");
-  const [payableTo, setPayableTo] = useState(commissionPayees[0]);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [payments, setPayments] = useState(commissionPayments);
 
-  const fees = legalFeesBetween(fromDate, toDate);
-  const amount = (fees * (Number(percent) || 0)) / 100;
+  const rate = Number(percent) || 0;
+  const fees = legalFeesPaid(company, fromDate, toDate);
+  const commission = (fees * rate) / 100;
 
-  const canRecord =
-    hasCommission === "Yes" && fromDate && toDate && payableTo && amount > 0;
-
-  const recordPayment = () => {
-    setPayments((prev) => [
-      {
-        id: prev.reduce((max, p) => Math.max(max, p.id), 0) + 1,
-        paidOn: new Date().toISOString().slice(0, 10),
-        fromDate,
-        toDate,
-        payableTo,
-        legalFees: fees,
-        percent: Number(percent),
-        amount,
-      },
-      ...prev,
-    ]);
-    setFromDate("");
-    setToDate("");
-  };
+  const ready = company && rate > 0 && fromDate && toDate;
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <div className="rounded-lg bg-secondary p-2">
+          <Calculator className="h-4 w-4 text-secondary-foreground" />
+        </div>
+        <div>
+          <h2 className="font-semibold text-primary">Commission Calculator</h2>
+          <p className="text-xs text-muted-foreground">
+            Worked out on paid legal fees, before VAT
+          </p>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
         <div className="space-y-2">
-          <Label htmlFor="hasCommission">Is there a commission? *</Label>
-          <Select value={hasCommission} onValueChange={setHasCommission}>
-            <SelectTrigger id="hasCommission">
+          <Label htmlFor="commissionCompany">Company (Client) *</Label>
+          <Select value={company} onValueChange={setCompany}>
+            <SelectTrigger id="commissionCompany">
               <SelectValue placeholder="Please Select" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Yes">Yes</SelectItem>
-              <SelectItem value="No">No</SelectItem>
+              {clients.map((client) => (
+                <SelectItem key={client.clientNo} value={client.clientNo}>
+                  {client.clientName}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
 
-        {/* Nothing below matters unless a commission is owed. */}
-        {hasCommission === "Yes" && (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="commissionPercent">Commission Percentage *</Label>
-              <div className="relative">
-                <Input
-                  id="commissionPercent"
-                  type="text"
-                  inputMode="decimal"
-                  value={percent}
-                  onChange={(e) =>
-                    setPercent(e.target.value.replace(/[^\d.]/g, ""))
-                  }
-                  placeholder="0"
-                  className="pr-8"
-                />
-                <span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 select-none text-sm text-muted-foreground"
-                >
-                  %
-                </span>
-              </div>
-            </div>
+        <div className="space-y-2">
+          <Label htmlFor="commissionPercent">Commission Percentage *</Label>
+          <div className="relative">
+            <Input
+              id="commissionPercent"
+              inputMode="decimal"
+              value={percent}
+              onChange={(e) => setPercent(e.target.value.replace(/[^\d.]/g, ""))}
+              placeholder="0"
+              className="pr-8"
+            />
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 select-none text-sm text-muted-foreground"
+            >
+              %
+            </span>
+          </div>
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="payableTo">Payable To *</Label>
-              <Select value={payableTo} onValueChange={setPayableTo}>
-                <SelectTrigger id="payableTo">
-                  <SelectValue placeholder="Please Select" />
-                </SelectTrigger>
-                <SelectContent>
-                  {commissionPayees.map((payee) => (
-                    <SelectItem key={payee} value={payee}>
-                      {payee}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        <div className="space-y-2">
+          <Label htmlFor="commissionFrom">From Date *</Label>
+          <Input
+            id="commissionFrom"
+            type="date"
+            value={fromDate}
+            max={toDate || undefined}
+            onChange={(e) => setFromDate(e.target.value)}
+          />
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="commissionFrom">From Date *</Label>
-              <Input
-                id="commissionFrom"
-                type="date"
-                value={fromDate}
-                max={toDate || undefined}
-                onChange={(e) => setFromDate(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="commissionTo">To Date *</Label>
-              <Input
-                id="commissionTo"
-                type="date"
-                value={toDate}
-                min={fromDate || undefined}
-                onChange={(e) => setToDate(e.target.value)}
-              />
-            </div>
-
-            {/* Read from the client's paid invoices, never typed. */}
-            <div className="space-y-2">
-              <Label htmlFor="legalFees">
-                Total Legal Fees Received in Period
-              </Label>
-              <Input
-                id="legalFees"
-                value={fromDate && toDate ? money(fees) : ""}
-                readOnly
-                disabled
-                className="bg-muted"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="commissionAmount">Commission Applied</Label>
-              <Input
-                id="commissionAmount"
-                value={fromDate && toDate ? money(amount) : ""}
-                readOnly
-                disabled
-                className="bg-muted font-bold text-primary"
-              />
-            </div>
-
-            <div className="flex items-end">
-              <Button
-                type="button"
-                onClick={recordPayment}
-                disabled={!canRecord}
-                className="w-full"
-              >
-                <Plus className="mr-1.5 h-4 w-4" />
-                Record Payment
-              </Button>
-            </div>
-          </>
-        )}
+        <div className="space-y-2">
+          <Label htmlFor="commissionTo">To Date *</Label>
+          <Input
+            id="commissionTo"
+            type="date"
+            value={toDate}
+            min={fromDate || undefined}
+            onChange={(e) => setToDate(e.target.value)}
+          />
+        </div>
       </div>
 
-      {/* Commissions already paid */}
-      {hasCommission === "Yes" && (
-        <Card>
-          <CardContent className="overflow-x-auto p-0">
-            <table className="w-full min-w-[760px] text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
-                  <th className="p-3 font-semibold">Paid On</th>
-                  <th className="p-3 font-semibold">Period</th>
-                  <th className="p-3 font-semibold">Payable To</th>
-                  <th className="p-3 text-right font-semibold">Legal Fees</th>
-                  <th className="p-3 text-right font-semibold">Rate</th>
-                  <th className="p-3 text-right font-semibold">Commission Paid</th>
-                </tr>
-              </thead>
-              <tbody>
-                {payments.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="p-6">
-                      <EmptyState>No commission has been paid yet.</EmptyState>
-                    </td>
-                  </tr>
-                )}
-                {payments.map((payment) => (
-                  <tr key={payment.id} className="border-b last:border-0">
-                    <td className="p-3 text-muted-foreground">
-                      {formatDate(payment.paidOn)}
-                    </td>
-                    <td className="p-3 text-muted-foreground">
-                      {formatDate(payment.fromDate)} &ndash;{" "}
-                      {formatDate(payment.toDate)}
-                    </td>
-                    <td className="p-3 font-medium">{payment.payableTo}</td>
-                    <td className="p-3 text-right text-muted-foreground">
-                      {money(payment.legalFees)}
-                    </td>
-                    <td className="p-3 text-right text-muted-foreground">
-                      {payment.percent}%
-                    </td>
-                    <td className="p-3 text-right font-semibold">
-                      {money(payment.amount)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
-      )}
+      {/* One figure, which is the whole point of the page */}
+      <Card>
+        <CardContent className="p-6 text-center">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+            Commission Due
+          </p>
+          <p className="mt-2 text-4xl font-bold text-primary">
+            {ready ? money(commission) : "-"}
+          </p>
+          {ready && (
+            <p className="mt-3 text-sm text-muted-foreground">
+              {rate}% of {money(fees)} in legal fees paid between{" "}
+              {fromDate} and {toDate}
+            </p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -1,3 +1,5 @@
+// The Rial sign is drawn, not typed - see components/shared/money.jsx.
+
 // Client types as specified by the client (Phase 1 requirements)
 export const CLIENT_TYPES = [
   "Bank",
@@ -27,14 +29,20 @@ export const RECEIVING_BANKS = [
 // so an unusual term can be entered directly.
 export const PAYMENT_DELAY_OPTIONS = ["15", "30", "45", "60", "90"];
 
+// Contracts are not filed here - they have their own page, because a contract
+// is renewed and amended over time while these are simply held on record.
 export const DOCUMENT_TYPES = [
   "Power of Attorney",
   "Commercial Registration",
   "ID Card",
   "Instructions",
-  "General Contract",
-  "Special Contract",
 ];
+
+/**
+ * A general contract governs the whole relationship; a specific one is written
+ * for a single matter, so it names the case file it belongs to.
+ */
+export const CONTRACT_TYPES = ["General", "Specific"];
 
 // Document types that carry an expiry date of their own.
 export const DOCUMENT_EXPIRY_LABELS = {
@@ -58,6 +66,21 @@ export const INVOICE_STATUS_VARIANT = {
   Unpaid: "secondary",
   Overdue: "destructive",
   Cancelled: "outline",
+};
+
+/**
+ * The dot that carries an invoice's status where the words sit in plain black.
+ *
+ * `ring` is given separately because a pale fill on a white row disappears
+ * without an edge, and a cancelled invoice is drawn hollow - nothing is owed on
+ * it and nothing has been paid, so there is nothing to fill in.
+ */
+export const INVOICE_STATUS_DOT = {
+  Paid: { fill: "#0B6623", ring: "#0B6623" },
+  "Partially Paid": { fill: "#D9F7E3", ring: "#0B6623" },
+  Unpaid: { fill: "#F59E0B", ring: "#F59E0B" },
+  Overdue: { fill: "#DC2626", ring: "#DC2626" },
+  Cancelled: { fill: "transparent", ring: "#9CA3AF" },
 };
 
 /**

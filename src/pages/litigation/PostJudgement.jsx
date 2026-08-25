@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FileCheck, ArrowLeft, Save, Upload } from "lucide-react";
+import { Rial } from "@/components/shared/Rial";
 
 export default function PostJudgement() {
   const navigate = useNavigate();
@@ -43,17 +44,17 @@ export default function PostJudgement() {
     <div className="space-y-4 sm:space-y-6">
       {/* Page Header */}
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/litigation")}>
+        <Button variant="ghost" size="icon" className="rounded-full bg-secondary text-primary hover:bg-accent" onClick={() => navigate("/litigation")}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="p-2 sm:p-3 rounded-xl bg-secondary">
-          <FileCheck className="h-5 w-5 sm:h-6 sm:w-6 text-secondary-foreground" />
+        <div className="p-2 sm:p-3 rounded-xl bg-primary">
+          <FileCheck className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
         </div>
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-primary">
             Post Judgement
           </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground">
+          <p className="text-xs sm:text-sm text-primary/75">
             Case No: {id || "2024/003"} - Manage judgement details
           </p>
         </div>
@@ -154,7 +155,7 @@ export default function PostJudgement() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="awarded_amount">Awarded Amount (OMR)</Label>
+                <Label htmlFor="awarded_amount">Awarded Amount (<Rial />)</Label>
                 <Input
                   id="awarded_amount"
                   name="awarded_amount"
@@ -165,7 +166,7 @@ export default function PostJudgement() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="court_costs">Court Costs (OMR)</Label>
+                <Label htmlFor="court_costs">Court Costs (<Rial />)</Label>
                 <Input
                   id="court_costs"
                   name="court_costs"

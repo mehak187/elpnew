@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
 import FirmProvider from "@/lib/firm/FirmProvider";
 import ExpensesProvider from "@/lib/expenses/ExpensesProvider";
+import SuppliersProvider from "@/lib/suppliers/SuppliersProvider";
+import ClientsProvider from "@/lib/clients/ClientsProvider";
 
 // Root Pages
 import Dashboard from "@/pages/Dashboard";
@@ -27,6 +29,10 @@ import ExpenseForm from "@/pages/expenses/ExpenseForm";
 import GeneralInvoices from "@/pages/expenses/GeneralInvoices";
 import NewInvoice from "@/pages/expenses/NewInvoice";
 
+// Suppliers
+import SuppliersPage from "@/pages/suppliers/SuppliersPage";
+import SupplierForm from "@/pages/suppliers/SupplierForm";
+
 // Corporate Module
 import CorporateList from "@/pages/corporate/CorporateList";
 
@@ -49,6 +55,8 @@ function App() {
   return (
     <FirmProvider>
       <ExpensesProvider>
+        <SuppliersProvider>
+          <ClientsProvider>
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<MainLayout />}>
@@ -61,6 +69,8 @@ function App() {
               <Route path="sign-in" element={<SignIn />} />
 
               {/* Expenses */}
+              <Route path="suppliers" element={<SuppliersPage />} />
+              <Route path="suppliers/create" element={<SupplierForm />} />
               <Route path="expenses" element={<ExpensesPage />} />
               <Route path="expenses/create" element={<ExpenseForm />} />
               <Route path="expense-requests" element={<GeneralInvoices />} />
@@ -110,6 +120,8 @@ function App() {
             </Route>
           </Routes>
         </BrowserRouter>
+          </ClientsProvider>
+        </SuppliersProvider>
       </ExpensesProvider>
     </FirmProvider>
   );

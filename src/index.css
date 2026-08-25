@@ -4,6 +4,17 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /*
+   * One family does the whole interface, told apart by weight rather than by
+   * changing typeface - which is what stops a page of forms and tables looking
+   * like a ransom note. Georgia is kept for anywhere a serif is wanted; swap
+   * --font-heading to it if page titles should be set in serif instead.
+   */
+  --font-sans: "Open Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: Georgia, "Times New Roman", Times, serif;
+  --font-heading: var(--font-sans);
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -17,6 +28,7 @@
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+  --color-brand: var(--brand);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
@@ -47,80 +59,84 @@
 
 :root {
   --radius: 0.625rem;
-  /* #A61C1F - the red from the YANDS wordmark */
+  /* #A61C1F - the red from the YANDS wordmark. The mark keeps its red; the
+     interface around it is navy, so the two never compete for attention. */
+  --brand: oklch(0.47 0.173 26);
   --background: oklch(0.99 0 0);
   --foreground: oklch(0.20 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.20 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.20 0 0);
-  /* Primary: the logo red itself */
-  --primary: oklch(0.47 0.173 26);
+  /* Primary: the navy the buttons, headings and active nav are drawn in */
+  --primary: oklch(0.36 0.115 262);
   --primary-foreground: oklch(0.99 0 0);
-  /* Secondary: pale tint of the same red */
-  --secondary: oklch(0.955 0.018 30);
-  --secondary-foreground: oklch(0.42 0.15 26);
+  /* Secondary: pale tint of the same navy */
+  --secondary: oklch(0.955 0.018 258);
+  --secondary-foreground: oklch(0.36 0.115 262);
   /* Muted: plain grey - this paints table stripes and page surfaces */
   --muted: oklch(0.96 0 0);
   --muted-foreground: oklch(0.48 0 0);
-  --accent: oklch(0.93 0.028 28);
-  --accent-foreground: oklch(0.42 0.15 26);
-  /* Destructive sits at a warmer hue so danger never reads as brand */
-  --destructive: oklch(0.55 0.19 45);
+  --accent: oklch(0.93 0.03 258);
+  --accent-foreground: oklch(0.36 0.115 262);
+  /* Destructive is plain red, now well clear of the brand hue */
+  --destructive: oklch(0.55 0.20 27);
   --destructive-foreground: oklch(0.99 0 0);
   --border: oklch(0.90 0 0);
   --input: oklch(0.90 0 0);
-  --ring: oklch(0.55 0.16 26);
+  --ring: oklch(0.46 0.13 262);
   /* Charts: one hue, dark to light */
-  --chart-1: oklch(0.42 0.16 26);
-  --chart-2: oklch(0.52 0.17 26);
-  --chart-3: oklch(0.62 0.15 26);
-  --chart-4: oklch(0.72 0.11 28);
-  --chart-5: oklch(0.83 0.07 30);
-  --sidebar: oklch(0.38 0.14 26);
-  --sidebar-foreground: oklch(0.97 0.01 30);
+  --chart-1: oklch(0.33 0.11 262);
+  --chart-2: oklch(0.43 0.13 262);
+  --chart-3: oklch(0.54 0.14 260);
+  --chart-4: oklch(0.66 0.12 258);
+  --chart-5: oklch(0.80 0.07 256);
+  --sidebar: oklch(0.30 0.10 262);
+  --sidebar-foreground: oklch(0.97 0.01 258);
   --sidebar-primary: oklch(0.99 0 0);
-  --sidebar-primary-foreground: oklch(0.42 0.15 26);
-  --sidebar-accent: oklch(0.46 0.15 26);
-  --sidebar-accent-foreground: oklch(0.97 0.01 30);
-  --sidebar-border: oklch(0.48 0.12 26);
-  --sidebar-ring: oklch(0.60 0.14 26);
+  --sidebar-primary-foreground: oklch(0.36 0.115 262);
+  --sidebar-accent: oklch(0.38 0.12 262);
+  --sidebar-accent-foreground: oklch(0.97 0.01 258);
+  --sidebar-border: oklch(0.40 0.10 262);
+  --sidebar-ring: oklch(0.55 0.12 262);
 }
 
 .dark {
   /* Dark mode - steps chosen against the dark surface, not flipped */
+  /* The wordmark lifts off the dark ground rather than sinking into it */
+  --brand: oklch(0.62 0.18 26);
   --background: oklch(0.16 0 0);
   --foreground: oklch(0.95 0 0);
   --card: oklch(0.20 0 0);
   --card-foreground: oklch(0.95 0 0);
   --popover: oklch(0.20 0 0);
   --popover-foreground: oklch(0.95 0 0);
-  --primary: oklch(0.62 0.17 26);
-  --primary-foreground: oklch(0.16 0.02 30);
-  --secondary: oklch(0.26 0.04 28);
-  --secondary-foreground: oklch(0.93 0.015 30);
+  --primary: oklch(0.62 0.14 260);
+  --primary-foreground: oklch(0.16 0.02 262);
+  --secondary: oklch(0.26 0.04 260);
+  --secondary-foreground: oklch(0.93 0.015 258);
   --muted: oklch(0.26 0 0);
   --muted-foreground: oklch(0.68 0 0);
-  --accent: oklch(0.30 0.05 28);
-  --accent-foreground: oklch(0.93 0.015 30);
-  --destructive: oklch(0.68 0.18 45);
+  --accent: oklch(0.30 0.05 260);
+  --accent-foreground: oklch(0.93 0.015 258);
+  --destructive: oklch(0.68 0.19 27);
   --destructive-foreground: oklch(0.16 0 0);
   --border: oklch(0.30 0 0);
   --input: oklch(0.30 0 0);
-  --ring: oklch(0.55 0.14 26);
-  --chart-1: oklch(0.55 0.18 26);
-  --chart-2: oklch(0.63 0.16 26);
-  --chart-3: oklch(0.71 0.13 28);
-  --chart-4: oklch(0.79 0.09 30);
-  --chart-5: oklch(0.87 0.06 30);
-  --sidebar: oklch(0.20 0.05 28);
-  --sidebar-foreground: oklch(0.95 0.008 30);
-  --sidebar-primary: oklch(0.62 0.17 26);
-  --sidebar-primary-foreground: oklch(0.16 0.02 30);
-  --sidebar-accent: oklch(0.28 0.05 28);
-  --sidebar-accent-foreground: oklch(0.92 0.015 30);
-  --sidebar-border: oklch(0.30 0.04 30);
-  --sidebar-ring: oklch(0.55 0.14 26);
+  --ring: oklch(0.55 0.12 260);
+  --chart-1: oklch(0.52 0.14 262);
+  --chart-2: oklch(0.61 0.13 260);
+  --chart-3: oklch(0.70 0.11 258);
+  --chart-4: oklch(0.79 0.08 256);
+  --chart-5: oklch(0.87 0.05 256);
+  --sidebar: oklch(0.20 0.05 262);
+  --sidebar-foreground: oklch(0.95 0.008 258);
+  --sidebar-primary: oklch(0.62 0.14 260);
+  --sidebar-primary-foreground: oklch(0.16 0.02 262);
+  --sidebar-accent: oklch(0.28 0.05 260);
+  --sidebar-accent-foreground: oklch(0.92 0.015 258);
+  --sidebar-border: oklch(0.30 0.04 258);
+  --sidebar-ring: oklch(0.55 0.12 260);
 }
 
 @layer base {
@@ -128,7 +144,35 @@
     @apply border-border outline-ring/50;
   }
   body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     @apply bg-background text-foreground;
+  }
+
+  /*
+   * Weight carries the hierarchy. These set the family and a sensible default
+   * weight; a utility class on the element still wins, so the sizes already
+   * chosen page by page are untouched.
+   */
+  h1,
+  h2 {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
+    font-weight: 600;
+  }
+
+  /* Labels and table headers are subheadings in all but name */
+  label,
+  th {
+    font-weight: 600;
   }
   /* Tailwind v4 no longer gives buttons a pointer cursor. */
   button:not(:disabled),
