@@ -43,6 +43,18 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useFirm } from "@/lib/firm/context";
+import logo from "@/assets/logo2.png";
+
+/** The firm's mark. Height is set; the width follows the artwork. */
+function Logo({ name, className }) {
+  return (
+    <img
+      src={logo}
+      alt={name}
+      className={cn("h-10 w-auto shrink-0", className)}
+    />
+  );
+}
 
 /**
  * Header navigation.
@@ -128,8 +140,8 @@ export default function Header({ onNavClick, activeNav }) {
           </SheetTrigger>
           <SheetContent side="left" className="w-72 p-0">
             <SheetHeader className="p-4 border-b">
-              <SheetTitle className="font-serif text-3xl font-bold tracking-[0.12em] text-primary">
-                {firmInfo.nameEn}
+              <SheetTitle>
+                <Logo name={firmInfo.nameEn} />
               </SheetTitle>
             </SheetHeader>
             <nav className="flex flex-col p-2">
@@ -147,8 +159,8 @@ export default function Header({ onNavClick, activeNav }) {
                         className={cn(
                           "flex items-center mt-1 gap-3 px-4 py-3 rounded-md text-nowrap text-sm font-medium transition-colors",
                           isActive(item.key)
-                            ? "bg-secondary text-secondary-foreground"
-                            : "text-muted-foreground hover:bg-secondary hover:text-secondary-foreground"
+                            ? "bg-primary text-primary-foreground"
+                            : "text-primary hover:bg-secondary"
                         )}
                       >
                         {item.name}
@@ -163,8 +175,8 @@ export default function Header({ onNavClick, activeNav }) {
                     className={cn(
                       "flex items-center mt-1 gap-3 px-4 py-3 rounded-md text-nowrap text-sm font-medium transition-colors",
                       isActive(section.key)
-                        ? "bg-secondary text-secondary-foreground"
-                        : "text-muted-foreground hover:bg-secondary hover:text-secondary-foreground"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-primary hover:bg-secondary"
                     )}
                   >
                     {section.name}
@@ -192,9 +204,7 @@ export default function Header({ onNavClick, activeNav }) {
 
         {/* Logo */}
         <Link to="/" className="flex items-center">
-          <span className="font-serif text-3xl font-bold tracking-[0.12em] text-primary">
-            {firmInfo.nameEn}
-          </span>
+          <Logo name={firmInfo.nameEn} />
         </Link>
 
         {/* Desktop Navigation - left aligned, next to logo */}
@@ -214,10 +224,10 @@ export default function Header({ onNavClick, activeNav }) {
                       <NavigationMenuLink
                         className={cn(
                           "inline-flex items-center gap-2 h-9 rounded-md px-3 py-2 text-sm text-nowrap font-medium transition-colors",
-                          "hover:bg-secondary hover:text-secondary-foreground",
+                          "text-primary hover:bg-secondary",
                           "focus:bg-secondary focus:text-secondary-foreground focus:outline-none",
                           active
-                            ? "bg-secondary text-secondary-foreground font-semibold"
+                            ? "bg-primary text-primary-foreground font-semibold"
                             : "text-muted-foreground"
                         )}
                       >
@@ -235,7 +245,7 @@ export default function Header({ onNavClick, activeNav }) {
                     className={cn(
                       "h-9 px-3 py-2 text-sm font-medium",
                       active
-                        ? "bg-secondary text-secondary-foreground font-semibold"
+                        ? "bg-primary text-primary-foreground font-semibold"
                         : "text-muted-foreground"
                     )}
                   >
@@ -252,8 +262,8 @@ export default function Header({ onNavClick, activeNav }) {
                               className={cn(
                                 "flex items-start gap-3 rounded-md p-3 transition-colors",
                                 isActive(item.key)
-                                  ? "bg-secondary text-secondary-foreground"
-                                  : "hover:bg-secondary hover:text-secondary-foreground"
+                                  ? "bg-primary text-primary-foreground"
+                                  : "text-primary hover:bg-secondary"
                               )}
                             >
                               <item.icon className="mt-0.5 h-4 w-4 shrink-0" />

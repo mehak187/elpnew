@@ -140,6 +140,7 @@ export default function ChangePassword() {
         <Button
           variant="ghost"
           size="icon"
+          className="rounded-full bg-secondary text-primary hover:bg-accent"
           onClick={() => navigate(-1)}
           className="shrink-0"
         >
@@ -152,7 +153,7 @@ export default function ChangePassword() {
           <h1 className="text-xl font-bold text-primary sm:text-2xl">
             Change Password
           </h1>
-          <p className="text-xs text-muted-foreground sm:text-sm">
+          <p className="text-xs text-primary/75 sm:text-sm">
             Update the password used to sign in
           </p>
         </div>

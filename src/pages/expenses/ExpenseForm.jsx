@@ -68,18 +68,19 @@ export default function ExpenseForm() {
           <Button
             variant="ghost"
             size="icon"
+            className="rounded-full bg-secondary text-primary hover:bg-accent"
             onClick={() => navigate("/expenses")}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="rounded-xl bg-secondary p-2 sm:p-3">
-            <WalletCards className="h-5 w-5 text-secondary-foreground sm:h-6 sm:w-6" />
+          <div className="rounded-xl bg-primary p-2 sm:p-3">
+            <WalletCards className="h-5 w-5 text-primary-foreground sm:h-6 sm:w-6" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-primary sm:text-2xl">
               Add Expense
             </h1>
-            <p className="text-xs text-muted-foreground sm:text-sm">
+            <p className="text-xs text-primary/75 sm:text-sm">
               Record a new expense
             </p>
           </div>

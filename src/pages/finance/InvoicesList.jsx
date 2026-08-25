@@ -110,14 +110,14 @@ export default function InvoicesList() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 sm:p-3 rounded-xl bg-secondary">
-            <Wallet className="h-5 w-5 sm:h-6 sm:w-6 text-secondary-foreground" />
+          <div className="p-2 sm:p-3 rounded-xl bg-primary">
+            <Wallet className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-primary">
               Invoices
             </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground">
+            <p className="text-xs sm:text-sm text-primary/75">
               Manage billing and invoices
             </p>
           </div>

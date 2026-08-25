@@ -613,14 +613,14 @@ export default function GeneralInvoices() {
       {/* Page Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-secondary p-2 sm:p-3">
-            <ReceiptText className="h-5 w-5 text-secondary-foreground sm:h-6 sm:w-6" />
+          <div className="rounded-xl bg-primary p-2 sm:p-3">
+            <ReceiptText className="h-5 w-5 text-primary-foreground sm:h-6 sm:w-6" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-primary sm:text-2xl">
               Invoice Payment Request
             </h1>
-            <p className="text-xs text-muted-foreground sm:text-sm">
+            <p className="text-xs text-primary/75 sm:text-sm">
               General invoices and general company expenses
             </p>
           </div>

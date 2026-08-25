@@ -228,13 +228,14 @@ export default function ClientDetails() {
           <Button
             variant="ghost"
             size="icon"
+            className="rounded-full bg-secondary text-primary hover:bg-accent"
             onClick={() => navigate("/clients")}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           {!isExisting && (
-            <div className="p-2 sm:p-3 rounded-xl bg-secondary">
-              <UserPlus className="h-5 w-5 sm:h-6 sm:w-6 text-secondary-foreground" />
+            <div className="p-2 sm:p-3 rounded-xl bg-primary">
+              <UserPlus className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
             </div>
           )}
           <div>
@@ -257,7 +258,7 @@ export default function ClientDetails() {
                 </button>
               </p>
             ) : (
-              <p className="text-xs sm:text-sm text-muted-foreground">
+              <p className="text-xs sm:text-sm text-primary/75">
                 {isExisting
                   ? "Client profile and related records"
                   : "Create a new client record"}

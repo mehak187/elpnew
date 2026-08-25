@@ -48,17 +48,17 @@ export default function EmployeeView() {
       {/* Page Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/employees")}>
+          <Button variant="ghost" size="icon" className="rounded-full bg-secondary text-primary hover:bg-accent" onClick={() => navigate("/employees")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="p-2 sm:p-3 rounded-xl bg-secondary">
-            <User className="h-5 w-5 sm:h-6 sm:w-6 text-secondary-foreground" />
+          <div className="p-2 sm:p-3 rounded-xl bg-primary">
+            <User className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-primary">
               Employee Details
             </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground">
+            <p className="text-xs sm:text-sm text-primary/75">
               View employee information
             </p>
           </div>

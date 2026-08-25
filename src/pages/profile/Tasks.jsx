@@ -135,14 +135,14 @@ export default function Tasks() {
     <div className="space-y-4 sm:space-y-6">
       {/* Page Header */}
       <div className="flex items-center gap-3">
-        <div className="p-2 sm:p-3 rounded-xl bg-secondary">
-          <ListTodo className="h-5 w-5 sm:h-6 sm:w-6 text-secondary-foreground" />
+        <div className="p-2 sm:p-3 rounded-xl bg-primary">
+          <ListTodo className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
         </div>
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-primary">
             My Tasks
           </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground">
+          <p className="text-xs sm:text-sm text-primary/75">
             Track and manage your assigned tasks
           </p>
         </div>

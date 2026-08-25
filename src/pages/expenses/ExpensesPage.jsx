@@ -301,14 +301,14 @@ export default function ExpensesPage() {
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-secondary p-2 sm:p-3">
-            <Wallet className="h-5 w-5 text-secondary-foreground sm:h-6 sm:w-6" />
+          <div className="rounded-xl bg-primary p-2 sm:p-3">
+            <Wallet className="h-5 w-5 text-primary-foreground sm:h-6 sm:w-6" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-primary sm:text-2xl">
               Expenses
             </h1>
-            <p className="text-xs text-muted-foreground sm:text-sm">
+            <p className="text-xs text-primary/75 sm:text-sm">
               {rows.length} {rows.length === 1 ? "expense" : "expenses"} &middot;{" "}
               {money(total)}
             </p>
