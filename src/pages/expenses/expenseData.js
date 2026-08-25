@@ -333,6 +333,23 @@ export function similarRequests(invoices, invoice) {
     .slice(0, 10);
 }
 
+/* ------------------------------------------- what the partners keep to
+                                                themselves */
+
+/**
+ * Expense types that never pass the accountant.
+ *
+ * What a partner draws, what the staff are paid and what has been advanced
+ * against a salary are the partners' own business. These requests go straight
+ * to the finance manager and are read on the partners' page, not the one the
+ * whole firm can open.
+ */
+const PARTNER_ONLY_TYPES = ["partner", "employee", "advances-loans"];
+
+export const skipsAccountant = (invoice) =>
+  invoice.creatorRole === "admin" ||
+  invoice.lines.some((line) => PARTNER_ONLY_TYPES.includes(line.typeKey));
+
 /* --------------------------------------------------------- who sees what */
 
 /**
@@ -584,6 +601,31 @@ export const initialInvoices = [
     payments: [],
     lines: [
       { id: 1, typeKey: "office", path: ["Internet & Telecommunications", "Internet"], description: "Salalah branch line", amountBeforeTax: 320, taxAmount: 16 },
+    ],
+  },
+  {
+    id: 9,
+    reference: "GIN-2026-009",
+    requestNo: "REQ 9/2026",
+    branch: "Muscat",
+    invoiceNumber: "PTR-0031",
+    invoiceDate: dayOffset(-11),
+    supplier: "Al Wathba Insurance",
+    invoiceFile: "",
+    createdBy: "Yusuf Al Kindi",
+    creatorRole: "admin",
+    status: "finance",
+    history: [
+      {
+        at: dayOffset(-11),
+        by: "Yusuf Al Kindi",
+        action: "Submitted by Admin - accountant step skipped",
+        reason: "",
+      },
+    ],
+    payments: [],
+    lines: [
+      { id: 1, typeKey: "partner", path: ["Partner Expenses", "Hospitality & Meetings"], description: "Client dinner, Muscat", amountBeforeTax: 260, taxAmount: 13 },
     ],
   },
   {

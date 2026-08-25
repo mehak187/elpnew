@@ -97,8 +97,8 @@ const navSections = [
   },
   {
     name: "Payment Request",
-    path: "/expense-requests/create",
-    key: "expense-requests/create",
+    path: "/expense-requests",
+    key: "expense-requests",
     icon: ReceiptText,
   },
   {
@@ -108,10 +108,10 @@ const navSections = [
     items: [
       {
         name: "Pending Disbursements",
-        path: "/expense-requests",
-        key: "expense-requests",
+        path: "/partner-disbursements",
+        key: "partner-disbursements",
         icon: Wallet,
-        description: "Requests waiting to be paid",
+        description: "Partners only - no accountant approval",
       },
       {
         name: "Court Fee Payment",

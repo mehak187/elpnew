@@ -6,6 +6,7 @@ import {
   nextRequestNo,
   requestClosed,
 } from "@/pages/expenses/expenseData";
+import { initialJudicialExpenses } from "@/pages/expenses/judicialData";
 
 const nextId = (rows) => rows.reduce((max, r) => Math.max(max, r.id), 0) + 1;
 
@@ -17,6 +18,9 @@ const nextId = (rows) => rows.reduce((max, r) => Math.max(max, r.id), 0) + 1;
 export default function ExpensesProvider({ children }) {
   const [expenses, setExpenses] = useState(initialExpenses);
   const [invoices, setInvoices] = useState(initialInvoices);
+  const [judicialExpenses, setJudicialExpenses] = useState(
+    initialJudicialExpenses
+  );
 
   const value = useMemo(
     () => ({
@@ -25,6 +29,14 @@ export default function ExpensesProvider({ children }) {
         setExpenses((prev) => [{ ...expense, id: nextId(prev) }, ...prev]),
       removeExpense: (id) =>
         setExpenses((prev) => prev.filter((e) => e.id !== id)),
+
+      // Court fees, paid on a case's behalf.
+      judicialExpenses,
+      addJudicialExpense: (expense) =>
+        setJudicialExpenses((prev) => [
+          { ...expense, id: nextId(prev) },
+          ...prev,
+        ]),
 
       invoices,
       addInvoice: (invoice) =>
@@ -50,7 +62,7 @@ export default function ExpensesProvider({ children }) {
           })
         ),
     }),
-    [expenses, invoices]
+    [expenses, invoices, judicialExpenses]
   );
 
   return (

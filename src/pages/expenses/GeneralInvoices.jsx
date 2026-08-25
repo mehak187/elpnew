@@ -57,6 +57,7 @@ import {
   VIEWER_ROLES,
   ACCOUNTANT_REVIEW_RESULTS,
   courtFeeRequests,
+  skipsAccountant,
   FINANCE_ACTIONS,
   STATUS,
   STATUS_VARIANT,
@@ -64,6 +65,7 @@ import {
   routeFor,
   visibleInvoices,
   similarRequests,
+  isApprovedRequest,
   invoiceNet,
   invoiceTax,
   invoiceTotal,
@@ -591,7 +593,15 @@ function SupplierHistoryDialog({ invoice, invoices, accountFor, onOpenChange }) 
   );
 }
 
-export default function GeneralInvoices() {
+/**
+ * The requests still waiting on somebody.
+ *
+ * The same page serves the firm and the partners. What separates them is the
+ * data: everything the accountant has to see, or everything they must not -
+ * partner drawings, salaries and advances, which reach the finance manager
+ * without passing through anyone else.
+ */
+export default function GeneralInvoices({ partnersOnly = false }) {
   const navigate = useNavigate();
   const { invoices, updateInvoice } = useExpenses();
   const { suppliers } = useSuppliers();
@@ -610,7 +620,11 @@ export default function GeneralInvoices() {
   // The date a request was raised - what it is ordered by.
   const raisedAt = (invoice) => invoice.history[0]?.at || invoice.invoiceDate;
 
-  const forRole = visibleInvoices(invoices, role, CURRENT_USER.name);
+  const forRole = partnersOnly
+    ? invoices.filter((i) => !isApprovedRequest(i) && skipsAccountant(i))
+    : visibleInvoices(invoices, role, CURRENT_USER.name).filter(
+        (i) => !skipsAccountant(i)
+      );
   const visible = forRole
     .filter((i) => !stage || i.status === stage)
     // Oldest first, so whatever has waited longest is dealt with first.
@@ -734,29 +748,37 @@ export default function GeneralInvoices() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-primary sm:text-2xl">
-              Pending Disbursements
+              {partnersOnly ? "Pending Disbursements" : "Payment Requests"}
             </h1>
             <p className="text-xs text-primary/75 sm:text-sm">
-              Requests waiting to be paid, oldest first
+              {partnersOnly
+                ? "Partners only - what reaches the finance manager directly"
+                : "Requests waiting to be paid, oldest first"}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="hidden text-xs text-muted-foreground sm:inline">
-            Viewing as
-          </span>
-          <Select value={role} onValueChange={setRole}>
-            <SelectTrigger className="h-9 w-44 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {VIEWER_ROLES.map((r) => (
-                <SelectItem key={r.key} value={r.key}>
-                  {r.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* Only the partners open their own page, so there is nobody to
+              switch to on it. */}
+          {!partnersOnly && (
+            <>
+              <span className="hidden text-xs text-muted-foreground sm:inline">
+                Viewing as
+              </span>
+              <Select value={role} onValueChange={setRole}>
+                <SelectTrigger className="h-9 w-44 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {VIEWER_ROLES.map((r) => (
+                    <SelectItem key={r.key} value={r.key}>
+                      {r.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          )}
           <Button onClick={() => navigate("/expense-requests/create")}>
             <Plus className="mr-1.5 h-4 w-4" />
             New Payment Request
@@ -766,15 +788,18 @@ export default function GeneralInvoices() {
 
       {/* What is waiting at each stage of the route */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StageTile
-          label="Awaiting Accountant Approval"
-          count={awaitingAccountant.length}
-          amount={sumOf(awaitingAccountant)}
-          active={stage === "accountant"}
-          onClick={() =>
-            setStage(stage === "accountant" ? null : "accountant")
-          }
-        />
+        {/* Nothing on the partners' page waits on the accountant. */}
+        {!partnersOnly && (
+          <StageTile
+            label="Awaiting Accountant Approval"
+            count={awaitingAccountant.length}
+            amount={sumOf(awaitingAccountant)}
+            active={stage === "accountant"}
+            onClick={() =>
+              setStage(stage === "accountant" ? null : "accountant")
+            }
+          />
+        )}
         <StageTile
           label="Awaiting Finance Manager Approval"
           count={awaitingFinance.length}
@@ -800,6 +825,8 @@ export default function GeneralInvoices() {
               <EmptyState>
                 {stage
                   ? "Nothing is waiting at that stage."
+                  : partnersOnly
+                  ? "No partner disbursements are pending."
                   : role === "admin"
                   ? "No requests are pending."
                   : "Nothing is waiting for you at the moment."}
