@@ -219,6 +219,33 @@ function approvalOf(invoice) {
 }
 
 /**
+ * The four hands a request passes through, read back off its history.
+ *
+ * Nothing is inferred from the status: each step is the entry that recorded it,
+ * so a request that skipped the accountant simply has nothing under that head.
+ */
+function trackingOf(invoice) {
+  const find = (test) => invoice.history.find(test) || null;
+  const last = (test) => [...invoice.history].reverse().find(test) || null;
+
+  const requested = invoice.history[0] || null;
+  const accountant = find(
+    (h) => /accountant/i.test(h.by) && /approv/i.test(h.action)
+  );
+  const finance = last((h) => /Approved for Payment/i.test(h.action));
+  const paid = last((h) => /payment (processed|recorded)/i.test(h.action));
+
+  const step = (entry) => ({ by: entry?.by || "", at: entry?.at || "" });
+
+  return {
+    requested: step(requested),
+    accountant: step(accountant),
+    finance: step(finance),
+    paid: step(paid),
+  };
+}
+
+/**
  * Everything the expenses table shows: expenses recorded directly, and the
  * requests that have cleared approval, in one shape.
  *
@@ -249,6 +276,7 @@ export function expenseRecords(expenses, invoices) {
       createdAt: invoice.history[0]?.at || invoice.invoiceDate,
       approvedBy: approval.by,
       approvedAt: approval.at,
+      tracking: trackingOf(invoice),
     };
   });
 
@@ -282,6 +310,7 @@ export function expenseRecords(expenses, invoices) {
     createdAt: expense.date,
     approvedBy: "",
     approvedAt: "",
+    tracking: null,
   }));
 
   const serials = {};
