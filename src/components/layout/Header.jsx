@@ -9,6 +9,8 @@ import {
   LayoutDashboard,
   ReceiptText,
   Truck,
+  Landmark,
+  FileBarChart,
   Briefcase,
   Scale,
   Wallet,
@@ -84,34 +86,46 @@ const navSections = [
         icon: Users,
         description: "Client directory and profiles",
       },
-    ],
-  },
-  {
-    name: "Payment Request",
-    path: "/expense-requests",
-    key: "expense-requests",
-    icon: ReceiptText,
-  },
-  {
-    // Suppliers sit here rather than under the Partner Menu: a supplier only
-    // exists to be paid, so it is read alongside the spending it belongs to.
-    name: "Expenses",
-    key: "spending",
-    icon: Wallet,
-    items: [
-      {
-        name: "Expenses",
-        path: "/expenses",
-        key: "expenses",
-        icon: Wallet,
-        description: "Every expense, and what has been paid against it",
-      },
       {
         name: "Suppliers",
         path: "/suppliers",
         key: "suppliers",
         icon: Truck,
         description: "Supplier directory and tax numbers",
+      },
+    ],
+  },
+  {
+    name: "Payment Request",
+    path: "/expense-requests/create",
+    key: "expense-requests/create",
+    icon: ReceiptText,
+  },
+  {
+    name: "Expenses",
+    key: "spending",
+    icon: Wallet,
+    items: [
+      {
+        name: "Pending Disbursements",
+        path: "/expense-requests",
+        key: "expense-requests",
+        icon: Wallet,
+        description: "Requests waiting to be paid",
+      },
+      {
+        name: "Court Fee Payment",
+        path: "/court-fee-payments",
+        key: "court-fee-payments",
+        icon: Landmark,
+        description: "Fees raised against a case file",
+      },
+      {
+        name: "Expense Reports",
+        path: "/expenses",
+        key: "expenses",
+        icon: FileBarChart,
+        description: "Every expense, and what has been paid against it",
       },
     ],
   },
@@ -264,18 +278,29 @@ export default function Header({ onNavClick, activeNav }) {
                     <ul className="w-72 p-2">
                       {section.items.map((item) => (
                         <li key={item.key}>
-                          <NavigationMenuLink asChild>
+                          <NavigationMenuLink
+                            asChild
+                            className={cn(
+                              "flex items-start gap-3 rounded-md p-3 transition-colors",
+                              isActive(item.key)
+                                ? "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground"
+                                : "text-primary hover:bg-secondary hover:text-primary focus:bg-secondary focus:text-primary"
+                            )}
+                          >
                             <Link
                               to={item.path}
                               onClick={() => onNavClick && onNavClick(item.key)}
-                              className={cn(
-                                "flex items-start gap-3 rounded-md p-3 transition-colors",
-                                isActive(item.key)
-                                  ? "bg-primary text-primary-foreground"
-                                  : "text-primary hover:bg-secondary"
-                              )}
                             >
-                              <item.icon className="mt-0.5 h-4 w-4 shrink-0" />
+                              {/* Named colour on purpose: without a text-
+                                  class the menu greys every icon it holds. */}
+                              <item.icon
+                                className={cn(
+                                  "mt-0.5 h-4 w-4 shrink-0",
+                                  isActive(item.key)
+                                    ? "text-primary-foreground"
+                                    : "text-muted-foreground"
+                                )}
+                              />
                               <span>
                                 <span className="block text-sm font-medium">
                                   {item.name}
