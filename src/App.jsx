@@ -71,6 +71,7 @@ function App() {
               {/* Expenses */}
               <Route path="suppliers" element={<SuppliersPage />} />
               <Route path="suppliers/create" element={<SupplierForm />} />
+              <Route path="suppliers/:id" element={<SupplierForm />} />
               <Route path="expenses" element={<ExpensesPage />} />
               <Route path="expenses/create" element={<ExpenseForm />} />
               <Route path="expense-requests" element={<GeneralInvoices />} />
