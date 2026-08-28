@@ -10,6 +10,7 @@ import {
   initialTransfers,
   nextBranchNumber,
   nextDocumentId,
+  nextTransferNo,
   dayOffset,
 } from "@/pages/firm/firmData";
 
@@ -94,7 +95,10 @@ export default function FirmProvider({ children }) {
         setPayments((prev) => [...prev, { ...payment, id: nextId(prev) }]),
 
       addTransfer: (transfer) =>
-        setTransfers((prev) => [...prev, { ...transfer, id: nextId(prev) }]),
+        setTransfers((prev) => [
+          ...prev,
+          { ...transfer, id: nextId(prev), transferNo: nextTransferNo(prev) },
+        ]),
     }),
     [firmInfo, branches, documents, bankAccounts, payments, expenses, transfers]
   );

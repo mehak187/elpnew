@@ -207,8 +207,30 @@ export const initialExpenses = [
 ];
 
 export const initialTransfers = [
-  { id: 1, fromAccountId: 2, toAccountId: 1, amount: 1500, date: dayOffset(-50), reference: "TRF-001", description: "Transfer to main account", receipt: "" },
+  { id: 1, transferNo: "TRF-2026-0001", fromAccountId: 3, toAccountId: 1, amount: 3000, date: dayOffset(-95), time: "02:15 PM", reference: "REF-2026-039", receipt: "receipt_2026_039.pdf", byName: "Fatima Al Riyami", byRole: "Accountant", description: "Internal transfer" },
+  { id: 2, transferNo: "TRF-2026-0002", fromAccountId: 1, toAccountId: 2, amount: 5000, date: dayOffset(-50), time: "10:30 AM", reference: "REF-2026-045", receipt: "receipt_2026_045.pdf", byName: "Ahmed Al Balushi", byRole: "Finance Manager", description: "Internal transfer" },
 ];
+
+/**
+ * An account number is shown masked wherever the account is only being
+ * identified - the last four digits are enough to tell one from another, and
+ * the rest has no business being on a screen anyone can look over.
+ */
+export function maskAccountNumber(accountNumber) {
+  const digits = String(accountNumber || "").replace(/\s/g, "");
+  if (digits.length <= 4) return digits;
+  return "**** **** **** " + digits.slice(-4);
+}
+
+/** The reference a transfer is quoted by: TRF-2026-0001 and so on. */
+export function nextTransferNo(transfers, date = dayOffset(0)) {
+  const year = String(date).slice(0, 4);
+  const highest = transfers.reduce((max, t) => {
+    const [, of, serial] = String(t.transferNo || "").split("-");
+    return of === year ? Math.max(max, Number(serial) || 0) : max;
+  }, 0);
+  return "TRF-" + year + "-" + String(highest + 1).padStart(4, "0");
+}
 
 /* -------------------------------------------------------- 2. Documents */
 

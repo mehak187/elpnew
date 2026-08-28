@@ -12,10 +12,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Info, Paperclip, FileCheck } from "lucide-react";
+import { EmptyState } from "@/components/shared/panels";
 import { cn } from "@/lib/utils";
 import { RECEIVING_BANKS } from "@/lib/constants";
 import { useFirm } from "@/lib/firm/context";
-import { accountBalance, branchLabel, invoices, money } from "../firmData";
+import {
+  accountBalance,
+  branchLabel,
+  maskAccountNumber,
+  formatDate,
+  invoices,
+  money,
+} from "../firmData";
 
 const ALL_BRANCHES = "all";
 
@@ -56,8 +64,14 @@ const TABS = [
  */
 export default function BankAccountsSection({ onNavigateSection, canEdit }) {
   const firm = useFirm();
-  const { bankAccounts, branches, addBankAccount, addTransfer, setAccountActive } =
-    firm;
+  const {
+    bankAccounts,
+    branches,
+    transfers,
+    addBankAccount,
+    addTransfer,
+    setAccountActive,
+  } = firm;
 
   const ledgers = {
     payments: firm.payments,
@@ -76,13 +90,20 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
     setTransfer((prev) => ({ ...prev, [name]: value }));
 
   const balanceOf = (account) => accountBalance(account, ledgers);
+  const accountById = (id) => bankAccounts.find((a) => a.id === Number(id));
+
+  /** How an account reads inside a transfer row. */
+  const accountLine = (account) =>
+    account
+      ? account.bankName + " (" + branchLabel(branches, account.branchId) + ")"
+      : "-";
+
   const totalBalance = bankAccounts.reduce(
     (sum, account) => sum + balanceOf(account),
     0
   );
 
-  const canSaveAccount =
-    canEdit && draft.bankName && draft.accountNumber.trim();
+  const canSaveAccount = canEdit && draft.bankName && draft.accountNumber.trim();
 
   const saveAccount = () => {
     if (!canSaveAccount) return;
@@ -91,8 +112,7 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
       bankBranch: draft.bankBranch,
       accountNumber: draft.accountNumber,
       iban: draft.iban,
-      branchId:
-        draft.branch === ALL_BRANCHES ? null : Number(draft.branch),
+      branchId: draft.branch === ALL_BRANCHES ? null : Number(draft.branch),
       openingBalance: Number(draft.openingBalance) || 0,
       active: draft.active,
     });
@@ -244,9 +264,7 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
                     <Label htmlFor="accountStatus">Account Status</Label>
                     <Select
                       value={draft.active ? "Active" : "Inactive"}
-                      onValueChange={(value) =>
-                        set("active", value === "Active")
-                      }
+                      onValueChange={(value) => set("active", value === "Active")}
                     >
                       <SelectTrigger id="accountStatus">
                         <SelectValue />
@@ -304,10 +322,7 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
                       </SelectTrigger>
                       <SelectContent>
                         {bankAccounts.map((account) => (
-                          <SelectItem
-                            key={account.id}
-                            value={String(account.id)}
-                          >
+                          <SelectItem key={account.id} value={String(account.id)}>
                             {accountLabel(account, branches)}
                           </SelectItem>
                         ))}
@@ -432,85 +447,205 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
         </Card>
       )}
 
-      <Card>
-        <CardContent className="overflow-x-auto p-0">
-          <table className="w-full min-w-[900px] text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                <th className="p-3 font-semibold">Bank</th>
-                <th className="p-3 font-semibold">Account Number</th>
-                <th className="p-3 font-semibold">IBAN</th>
-                <th className="p-3 font-semibold">Branch</th>
-                <th className="p-3 text-right font-semibold">Opening Balance</th>
-                <th className="p-3 text-right font-semibold">Current Balance</th>
-                <th className="p-3 font-semibold">Status</th>
-                <th className="p-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {bankAccounts.map((account) => (
-                <tr
-                  key={account.id}
-                  className="border-b transition-colors last:border-0 hover:bg-primary/10"
-                >
-                  <td className="p-3">
-                    <span className="block font-medium">{account.bankName}</span>
-                    <span className="block text-xs text-muted-foreground">
-                      {account.bankBranch || "-"}
-                    </span>
-                  </td>
-                  <td className="p-3 text-muted-foreground">
-                    {account.accountNumber}
-                  </td>
-                  <td className="p-3 text-muted-foreground">
-                    {account.iban || "-"}
-                  </td>
-                  <td className="p-3 text-muted-foreground">
-                    {account.branchId
-                      ? branchLabel(branches, account.branchId)
-                      : "All Branches"}
-                  </td>
-                  <td className="p-3 text-right text-muted-foreground">
-                    {money(account.openingBalance)}
-                  </td>
-                  {/* The balance opens the transactions that make it up */}
-                  <td className="p-3 text-right font-semibold">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onNavigateSection("transactions", {
-                          accountId: account.id,
-                        })
-                      }
-                      className="text-primary underline-offset-2 hover:underline"
+      {/* Each tab shows the list its own work belongs to */}
+      {tab === "add" && (
+        <div>
+          <p className="mb-2 font-semibold text-primary">Bank Accounts</p>
+          <Card>
+            <CardContent className="overflow-x-auto p-0">
+              <table className="w-full min-w-[860px] text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
+                    <th className="p-3 font-semibold">Account</th>
+                    <th className="p-3 font-semibold">Office Branch</th>
+                    <th className="p-3 font-semibold">Balances</th>
+                    <th className="p-3 font-semibold">Status</th>
+                    <th className="p-3 font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bankAccounts.map((account) => (
+                    <tr
+                      key={account.id}
+                      className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"
                     >
-                      {money(balanceOf(account))}
-                    </button>
-                  </td>
-                  <td className="p-3">
-                    <Badge variant={account.active ? "success" : "secondary"}>
-                      {account.active ? "Active" : "Inactive"}
-                    </Badge>
-                  </td>
-                  <td className="p-3 text-right">
-                    {canEdit && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setAccountActive(account.id, !account.active)
-                        }
-                      >
-                        {account.active ? "Disable" : "Enable"}
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+                      <td className="p-3">
+                        <span className="block font-semibold">
+                          {account.bankName}
+                        </span>
+                        <span className="block text-xs text-muted-foreground">
+                          {account.bankBranch || "-"}
+                        </span>
+                        {/* Enough of the number to tell accounts apart, no more */}
+                        <span className="mt-1 block text-xs text-muted-foreground">
+                          {maskAccountNumber(account.accountNumber)}
+                        </span>
+                        <span className="block text-xs text-muted-foreground">
+                          {account.iban || "-"}
+                        </span>
+                      </td>
+                      <td className="p-3 text-muted-foreground">
+                        {account.branchId
+                          ? branchLabel(branches, account.branchId) + " Branch"
+                          : "All Branches"}
+                      </td>
+                      <td className="p-3">
+                        <span className="block text-xs text-muted-foreground">
+                          Opening Balance
+                        </span>
+                        <span className="block">
+                          {money(account.openingBalance)}
+                        </span>
+                        <span className="mt-1 block text-xs text-primary">
+                          Current Balance
+                        </span>
+                        <span className="block font-bold text-primary">
+                          {money(balanceOf(account))}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <Badge variant={account.active ? "success" : "secondary"}>
+                          {account.active ? "Active" : "Inactive"}
+                        </Badge>
+                      </td>
+                      <td className="p-3">
+                        <div className="flex flex-wrap gap-3 text-sm">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onNavigateSection("transactions", {
+                                accountId: account.id,
+                              })
+                            }
+                            className="rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                          >
+                            View
+                          </button>
+                          {canEdit && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setAccountActive(account.id, !account.active)
+                                }
+                                className="rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                              >
+                                {account.active ? "Disable" : "Enable"}
+                              </button>
+                              {/* Opens the transfer form with this account ready */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setTab("transfer");
+                                  setMove("fromAccountId", String(account.id));
+                                }}
+                                className="rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                              >
+                                Transfer
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        </div>
+
+      )}
+
+      {tab === "transfer" && (
+        <div>
+          <p className="mb-2 font-semibold text-primary">Account Transfers</p>
+          <Card>
+            <CardContent className="overflow-x-auto p-0">
+              {transfers.length === 0 ? (
+                <div className="p-6">
+                  <EmptyState>
+                    Nothing has been moved between accounts yet.
+                  </EmptyState>
+                </div>
+              ) : (
+                <table className="w-full min-w-[860px] text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
+                      <th className="p-3 font-semibold">Transfer</th>
+                      <th className="p-3 font-semibold">From &rarr; To</th>
+                      <th className="p-3 font-semibold">Amount</th>
+                      <th className="p-3 font-semibold">Reference &amp; Receipt</th>
+                      <th className="p-3 font-semibold">Transferred By</th>
+                      <th className="p-3 font-semibold">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...transfers]
+                      .sort((a, b) => b.date.localeCompare(a.date))
+                      .map((move) => (
+                        <tr
+                          key={move.id}
+                          className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"
+                        >
+                          <td className="p-3">
+                            <span className="block font-semibold">
+                              {move.transferNo}
+                            </span>
+                            <span className="block text-xs text-muted-foreground">
+                              {formatDate(move.date)}
+                            </span>
+                            {move.time && (
+                              <span className="block text-xs text-muted-foreground">
+                                {move.time}
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            <span className="block">
+                              {accountLine(accountById(move.fromAccountId))}
+                            </span>
+                            <span className="block">&darr;</span>
+                            <span className="block">
+                              {accountLine(accountById(move.toAccountId))}
+                            </span>
+                          </td>
+                          <td className="p-3 font-semibold">
+                            {money(move.amount)}
+                          </td>
+                          <td className="p-3">
+                            <span className="block">{move.reference || "-"}</span>
+                            {move.receipt && (
+                              <button
+                                type="button"
+                                title={move.receipt}
+                                className="mt-0.5 inline-flex items-center gap-1 rounded text-xs text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                              >
+                                <Paperclip className="h-3 w-3 shrink-0" />
+                                {move.receipt}
+                              </button>
+                            )}
+                          </td>
+                          <td className="p-3">
+                            <span className="block">{move.byName || "-"}</span>
+                            <span className="block text-xs text-muted-foreground">
+                              {move.byRole}
+                            </span>
+                          </td>
+                          <td className="p-3">
+                            {/* A transfer is only recorded once it has happened,
+                                so there is no pending state to show */}
+                            <Badge variant="success">Completed</Badge>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
