@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import {
   Save,
+  Plus,
   ArrowLeft,
   Info,
   User,
@@ -44,6 +45,7 @@ import {
   COUNTRY_DIAL_CODES,
   EMPLOYEE_DOCUMENT_TYPES,
 } from "@/lib/constants";
+import SalariesSection from "./sections/SalariesSection";
 import {
   employeeRecords,
   nextEmployeeNo,
@@ -83,12 +85,19 @@ const SECTIONS = [
     note: "Manage employee documents and attachments",
     save: "Save Changes",
   },
-  { key: "salary", label: "Salary", icon: Wallet, note: "Basic pay" },
   {
-    key: "allowances",
-    label: "Allowances & Loans",
+    key: "salaries",
+    label: "Salaries / Allowances",
+    icon: Wallet,
+    note: "Manage employee salaries, allowances, and other payments",
+    // The payment form saves itself, so the header offers to jump to it.
+    action: "Add Salary / Allowance",
+  },
+  {
+    key: "loans",
+    label: "Loans & Advances",
     icon: HandCoins,
-    note: "What is paid on top, and what is owed back",
+    note: "What has been lent, and what is owed back",
   },
   {
     key: "performance",
@@ -159,7 +168,6 @@ const emptyFormData = {
   occupation: "",
 
 
-  salary: "",
 
   phone: "",
   email: "",
@@ -235,6 +243,15 @@ export default function EmployeeForm() {
   const employeeNo = record?.empNo || nextEmployeeNo(employeeRecords);
   const hasLeft = HAS_LEFT.includes(formData.status);
 
+  // The section saves itself lower down, so the header brings the form to the
+  // top of the screen rather than pretending to save from up here.
+  const jumpToForm = () => {
+    const field = window.document.getElementById("salary-expense-type");
+    if (!field) return;
+    field.scrollIntoView({ behavior: "smooth", block: "center" });
+    field.focus();
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log(isEditMode ? "Updating employee:" : "Creating employee:", {
@@ -268,13 +285,20 @@ export default function EmployeeForm() {
             <p className="text-xs text-primary/75 sm:text-sm">{current.note}</p>
           </div>
         </div>
-        <Button type="submit" form="employee-form">
-          <Save className="mr-2 h-4 w-4" />
-          {current.save ||
-            (activeSection === "information"
-              ? "Save Employee"
-              : "Save " + current.label)}
-        </Button>
+        {current.action ? (
+          <Button type="button" onClick={jumpToForm}>
+            <Plus className="mr-2 h-4 w-4" />
+            {current.action}
+          </Button>
+        ) : (
+          <Button type="submit" form="employee-form">
+            <Save className="mr-2 h-4 w-4" />
+            {current.save ||
+              (activeSection === "information"
+                ? "Save Employee"
+                : "Save " + current.label)}
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-col items-start gap-4 sm:gap-6 lg:flex-row">
@@ -786,22 +810,7 @@ export default function EmployeeForm() {
                   </div>
                 )}
 
-                {activeSection === "salary" && (
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="salary">Basic Salary</Label>
-                      <Input
-                        id="salary"
-                        name="salary"
-                        type="number"
-                        min="0"
-                        value={formData.salary}
-                        onChange={onChange}
-                        placeholder="0.000"
-                      />
-                    </div>
-                  </div>
-                )}
+                {activeSection === "salaries" && <SalariesSection />}
 
                 {activeSection === "addresses" && (
                   <div className="space-y-6">
@@ -866,7 +875,7 @@ export default function EmployeeForm() {
                 )}
 
                 {/* Not yet specified, so nothing is invented for them */}
-                {["allowances", "performance", "permissions"].includes(
+                {["loans", "performance", "permissions"].includes(
                   activeSection
                 ) && <EmptyState>{current.label} is not set up yet.</EmptyState>}
               </form>
