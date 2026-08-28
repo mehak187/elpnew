@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,520 +11,918 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { UserPlus, UserCog, Save, ArrowLeft, Upload, X, User } from "lucide-react";
-import { Rial } from "@/components/shared/Rial";
+import {
+  Save,
+  Plus,
+  ArrowLeft,
+  Info,
+  User,
+  Briefcase,
+  FileText,
+  Wallet,
+  HandCoins,
+  HeartHandshake,
+  CalendarClock,
+  Gauge,
+  MapPin,
+  ShieldCheck,
+  Phone,
+  Mail,
+  UploadCloud,
+  FileCheck,
+  FileImage,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/shared/panels";
+import {
+  NATIONALITIES,
+  GENDERS,
+  EMPLOYEE_CATEGORIES,
+  JOB_LEVELS,
+  DEPARTMENTS,
+  OCCUPATIONS,
+  EMPLOYEE_STATUSES,
+  LEAVING_REASONS,
+  DEFAULT_DIAL_CODE,
+  COUNTRY_DIAL_CODES,
+  EMPLOYEE_DOCUMENT_TYPES,
+} from "@/lib/constants";
+import SalariesSection from "./sections/SalariesSection";
+import LoansSection from "./sections/LoansSection";
+import AssistanceSection from "./sections/AssistanceSection";
+import DailyActivitiesSection from "./sections/DailyActivitiesSection";
+import PerformanceSection from "./sections/PerformanceSection";
+import {
+  employeeRecords,
+  nextEmployeeNo,
+  employeeDocuments,
+  formatUploadedAt,
+} from "./employeeData";
 
-// Mock employee data - in real app, this would come from API
-const employeesData = [
-  { id: 1, emp_id: "1", name: "Mohammed Al Yahyaei", arabicName: "محمد اليحيائي", branch: "Muscat", dateOfJoining: "2020-01-15", dateOfBirth: "1985-03-20", gender: "Male", nationality: "Oman", department: "Partner", designation: "Partner", salary: "2500.000", status: "Active", phone: "+968 9123 4567", email: "mohammed@elp.com", languageOfCommunication: "Both", educationalLevel: "Master's Degree", nationalIdentityExpire: "2028-03-20" },
-  { id: 2, emp_id: "2", name: "Fatima Al Rashdi", arabicName: "فاطمة الراشدي", branch: "Muscat", dateOfJoining: "2021-03-20", dateOfBirth: "1990-07-15", gender: "Female", nationality: "Oman", department: "Lawyer", designation: "Litigation", salary: "2000.000", status: "Active", phone: "+968 9234 5678", email: "fatima@elp.com", languageOfCommunication: "Arabic", educationalLevel: "Bachelor's Degree", nationalIdentityExpire: "2027-07-15" },
-  { id: 3, emp_id: "3", name: "Ahmed Al Balushi", arabicName: "أحمد البلوشي", branch: "Salalah", dateOfJoining: "2022-06-10", dateOfBirth: "1988-11-25", gender: "Male", nationality: "Oman", department: "Lawyer", designation: "Supervisor", salary: "800.000", status: "On Leave", phone: "+968 9345 6789", email: "ahmed@elp.com", languageOfCommunication: "Both", educationalLevel: "Bachelor's Degree", nationalIdentityExpire: "2026-11-25" },
-  { id: 4, emp_id: "4", name: "Sarah Al Lawati", arabicName: "سارة اللواتي", branch: "Muscat", dateOfJoining: "2019-09-05", dateOfBirth: "1992-04-10", gender: "Female", nationality: "Oman", department: "Administrative", designation: "Administrative", salary: "650.000", status: "Active", phone: "+968 9456 7890", email: "sarah@elp.com", languageOfCommunication: "English", educationalLevel: "Secondary Education", nationalIdentityExpire: "2029-04-10" },
-  { id: 5, emp_id: "5", name: "Rajesh Kumar", arabicName: "", branch: "Salalah", dateOfJoining: "2023-02-28", dateOfBirth: "1987-09-08", gender: "Male", nationality: "India", department: "Accountant", designation: "Accountant", salary: "1200.000", status: "Inactive", phone: "+968 9567 8901", email: "rajesh@elp.com", languageOfCommunication: "English", educationalLevel: "Bachelor's Degree", nationalIdentityExpire: "2025-09-08", passportExpire: "2028-05-15", visaExpire: "2025-02-28", lawyerCardExpire: "2025-12-31" },
+/**
+ * The employee record, section by section.
+ *
+ * The sections are the sides of one person's file rather than steps in a wizard,
+ * so any of them can be opened at any time and they all save together.
+ */
+const SECTIONS = [
+  {
+    key: "information",
+    label: "Employee Information",
+    icon: User,
+    note: "Employee profile and basic information",
+  },
+  {
+    key: "job",
+    label: "Job Description",
+    icon: Briefcase,
+    note: "Define and manage employee job description details",
+  },
+  {
+    key: "addresses",
+    label: "Addresses",
+    icon: MapPin,
+    note: "Manage employee contact and address details",
+  },
+  {
+    key: "documents",
+    label: "Documents",
+    icon: FileText,
+    note: "Manage employee documents and attachments",
+    save: "Save Changes",
+  },
+  {
+    key: "salaries",
+    label: "Salaries / Allowances",
+    icon: Wallet,
+    note: "Manage employee salaries, allowances, and other payments",
+    // The payment form saves itself, so the header offers to jump to it.
+    action: "Add Salary / Allowance",
+  },
+  {
+    key: "loans",
+    label: "Loans",
+    icon: HandCoins,
+    note: "Manage loans taken by the firm",
+    // The loan form saves itself, so the header offers to jump to it.
+    action: "Add Loan",
+  },
+  {
+    key: "assistance",
+    label: "Assistance",
+    icon: HeartHandshake,
+    note: "Manage financial assistance and charitable aid",
+    // The assistance form saves itself, so the header offers to jump to it.
+    action: "Add Assistance",
+  },
+  {
+    key: "daily",
+    label: "Daily Activities",
+    icon: CalendarClock,
+    note: "Record today's working time and activities",
+    save: "Save Daily Activity",
+  },
+  {
+    key: "performance",
+    label: "Performance Evaluation",
+    icon: Gauge,
+    note: "Statistics collected by the system from recorded activity",
+  },
+  {
+    key: "permissions",
+    label: "System Permissions",
+    icon: ShieldCheck,
+    note: "What this employee may see and change",
+  },
 ];
 
+/** A labelled field with its own icon sitting inside the box. */
+function IconField({ icon, id, label, ...props }) {
+  const Icon = icon;
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="relative">
+        <Icon
+          aria-hidden="true"
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+        />
+        <Input id={id} className="pl-9" {...props} />
+      </div>
+    </div>
+  );
+}
+
+const STATUS_DOT = {
+  Active: "bg-green-500",
+  "On Leave": "bg-amber-500",
+  Inactive: "bg-muted-foreground",
+  Terminated: "bg-red-500",
+};
+
+/** How much of a note the field will take, shown as a count while typing. */
+const NOTES_LIMIT = 300;
+
+/** The first field of the form a section's header button jumps to. */
+const JUMP_TARGET = {
+  salaries: "salary-expense-type",
+  loans: "loan-expense-type",
+  assistance: "assistance-expense-type",
+};
+
+const IMAGE_TYPES = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
+
+const isImage = (name) =>
+  IMAGE_TYPES.some((ext) => String(name).toLowerCase().endsWith(ext));
+
+/** A picture is marked as one so a scan is not mistaken for a signed PDF. */
+const fileIcon = (name) => (isImage(name) ? FileImage : FileText);
+
+/** Somebody who has left, and so owes the record a reason and a last day. */
+const HAS_LEFT = ["Inactive", "Terminated"];
+
 const emptyFormData = {
-  nationality: "",
   arabicName: "",
   employeeName: "",
+  nationality: "",
   gender: "",
   dateOfBirth: "",
+  dateOfJoining: "",
+  status: "Active",
+  reasonForLeaving: "",
+  lastWorkingDate: "",
+
+  category: "",
+  jobLevel: "",
+  department: "",
+  occupation: "",
+
+
+
   phone: "",
   email: "",
-  languageOfCommunication: "",
-  dateOfJoining: "",
-  branch: "",
-  educationalLevel: "",
-  department: "",
-  jobDesignation: "",
-  salary: "",
-  status: "",
-  nationalIdentityExpire: "",
-  passportExpire: "",
-  visaExpire: "",
-  lawyerCardExpire: "",
+  address: "",
+  emergencyName: "",
+  emergencyPhone: "",
 };
+
+const toFormData = (record) =>
+  record ? { ...emptyFormData, ...record } : emptyFormData;
 
 export default function EmployeeForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditMode = Boolean(id);
 
-  const [photoFile, setPhotoFile] = useState(null);
-  const [photoPreview, setPhotoPreview] = useState(null);
-  const [formData, setFormData] = useState(emptyFormData);
+  const record = isEditMode
+    ? employeeRecords.find((e) => e.id === Number(id)) || null
+    : null;
 
-  // Load employee data if in edit mode
-  useEffect(() => {
-    if (isEditMode) {
-      const employee = employeesData.find(emp => emp.id === parseInt(id));
-      if (employee) {
-        setFormData({
-          nationality: employee.nationality || "",
-          arabicName: employee.arabicName || "",
-          employeeName: employee.name || "",
-          gender: employee.gender || "",
-          dateOfBirth: employee.dateOfBirth || "",
-          phone: employee.phone || "",
-          email: employee.email || "",
-          languageOfCommunication: employee.languageOfCommunication || "",
-          dateOfJoining: employee.dateOfJoining || "",
-          branch: employee.branch || "",
-          educationalLevel: employee.educationalLevel || "",
-          department: employee.department || "",
-          jobDesignation: employee.designation || "",
-          salary: employee.salary || "",
-          status: employee.status || "",
-          nationalIdentityExpire: employee.nationalIdentityExpire || "",
-          passportExpire: employee.passportExpire || "",
-          visaExpire: employee.visaExpire || "",
-          lawyerCardExpire: employee.lawyerCardExpire || "",
-        });
-      }
-    }
-  }, [id, isEditMode]);
+  const [activeSection, setActiveSection] = useState("information");
+  const [formData, setFormData] = useState(() => toFormData(record));
 
-  const isOmani = formData.nationality === "Oman";
+  // Reload when the route moves to a different employee without unmounting.
+  const [loadedId, setLoadedId] = useState(id);
+  if (id !== loadedId) {
+    setLoadedId(id);
+    setFormData(toFormData(record));
+    setActiveSection("information");
+  }
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  // Papers are a list of their own, kept beside the fields rather than in them.
+  const [documents, setDocuments] = useState(employeeDocuments);
+  const [docDraft, setDocDraft] = useState({ type: "", notes: "" });
+  const [docFile, setDocFile] = useState(null);
+
+  const addDocument = () => {
+    if (!docDraft.type || !docFile) return;
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    setDocuments((prev) => [
+      {
+        id: prev.reduce((max, d) => Math.max(max, d.id), 0) + 1,
+        uploadedAt:
+          now.getFullYear() +
+          "-" +
+          pad(now.getMonth() + 1) +
+          "-" +
+          pad(now.getDate()) +
+          "T" +
+          pad(now.getHours()) +
+          ":" +
+          pad(now.getMinutes()),
+        type: docDraft.type,
+        fileName: docFile.name,
+        fileUrl: URL.createObjectURL(docFile),
+        notes: docDraft.notes,
+      },
+      ...prev,
+    ]);
+    setDocDraft({ type: "", notes: "" });
+    setDocFile(null);
   };
 
-  const handleSelectChange = (name, value) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  const openDocument = (doc) => {
+    if (doc.fileUrl) window.open(doc.fileUrl, "_blank", "noopener,noreferrer");
   };
 
-  const handlePhotoChange = (e) => {
-    const file = e.target.files[0];
-    if (file && file.type.startsWith("image/")) {
-      setPhotoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoPreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  const set = (name, value) => setFormData((prev) => ({ ...prev, [name]: value }));
+  const onChange = (e) => set(e.target.name, e.target.value);
 
-  const removePhoto = () => {
-    setPhotoFile(null);
-    setPhotoPreview(null);
+  const current = SECTIONS.find((s) => s.key === activeSection) || SECTIONS[0];
+  const employeeNo = record?.empNo || nextEmployeeNo(employeeRecords);
+  const hasLeft = HAS_LEFT.includes(formData.status);
+
+  // The section saves itself lower down, so the header brings the form to the
+  // top of the screen rather than pretending to save from up here.
+  const jumpToForm = () => {
+    const field = window.document.getElementById(
+      JUMP_TARGET[activeSection] || "salary-expense-type"
+    );
+    if (!field) return;
+    field.scrollIntoView({ behavior: "smooth", block: "center" });
+    field.focus();
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const employeeData = {
+    console.log(isEditMode ? "Updating employee:" : "Creating employee:", {
       ...formData,
-      photo: photoFile?.name,
-    };
-    if (isEditMode) {
-      console.log("Updating employee:", employeeData);
-    } else {
-      console.log("Creating employee:", employeeData);
-    }
+      empNo: employeeNo,
+    });
     navigate("/employees");
   };
-
-  const HeaderIcon = isEditMode ? UserCog : UserPlus;
 
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Page Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="rounded-full bg-secondary text-primary hover:bg-accent" onClick={() => navigate("/employees")}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full bg-secondary text-primary hover:bg-accent"
+            onClick={() => navigate("/employees")}
+          >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="p-2 sm:p-3 rounded-xl bg-primary">
-            <HeaderIcon className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
-          </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-primary">
-              {isEditMode ? "Edit Employee" : "Add New Employee"}
+            <h1 className="text-xl font-bold text-primary sm:text-2xl">
+              {activeSection === "information"
+                ? isEditMode
+                  ? formData.employeeName || "Employee"
+                  : "New Employee"
+                : current.label}
             </h1>
-            <p className="text-xs sm:text-sm text-primary/75">
-              {isEditMode ? "Update employee information" : "Create a new employee record"}
-            </p>
+            <p className="text-xs text-primary/75 sm:text-sm">{current.note}</p>
           </div>
         </div>
-        <Button type="submit" form="employee-form">
-          <Save className="mr-2 h-4 w-4" />
-          {isEditMode ? "Update Employee" : "Save Employee"}
-        </Button>
+        {current.action ? (
+          <Button type="button" onClick={jumpToForm}>
+            <Plus className="mr-2 h-4 w-4" />
+            {current.action}
+          </Button>
+        ) : (
+          <Button type="submit" form="employee-form">
+            <Save className="mr-2 h-4 w-4" />
+            {current.save ||
+              (activeSection === "information"
+                ? "Save Employee"
+                : "Save " + current.label)}
+          </Button>
+        )}
       </div>
 
-      <Card>
-        <CardContent className="p-4 sm:p-6">
-          <form id="employee-form" onSubmit={handleSubmit} className="space-y-6">
-            {/* Photo Upload Section */}
-            <div className="space-y-2">
-              <Label>Employee Photo</Label>
-              <div className="flex items-start gap-6">
-                <div className="w-32 h-32 border-2 border-dashed border-gray-200 rounded-lg overflow-hidden flex items-center justify-center bg-muted">
-                  {photoPreview ? (
-                    <img
-                      src={photoPreview}
-                      alt="Employee preview"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <User className="h-12 w-12 text-gray-400" />
-                  )}
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="cursor-pointer">
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={handlePhotoChange}
-                      className="hidden"
-                    />
-                    <Button type="button" variant="outline" size="sm" asChild>
-                      <span>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Upload Photo
-                      </span>
-                    </Button>
-                  </label>
-                  {photoFile && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={removePhoto}
-                      className="text-red-500 hover:text-red-600"
-                    >
-                      <X className="mr-2 h-4 w-4" />
-                      Remove
-                    </Button>
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    JPG, PNG or GIF. Max 2MB.
-                  </p>
-                </div>
-              </div>
-            </div>
+      <div className="flex flex-col items-start gap-4 sm:gap-6 lg:flex-row">
+        {/* Section navigation */}
+        <Card className="w-full lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:w-60 lg:shrink-0 lg:overflow-y-auto">
+          <CardContent className="p-3">
+            <p className="mb-2 border-b px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Employee Details
+            </p>
+            <nav className="flex flex-row gap-1 overflow-x-auto lg:flex-col">
+              {SECTIONS.map((section) => {
+                const Icon = section.icon;
+                return (
+                  <button
+                    key={section.key}
+                    type="button"
+                    onClick={() => setActiveSection(section.key)}
+                    className={cn(
+                      "flex items-center gap-2.5 text-nowrap rounded-md px-3 py-2 text-left text-sm font-medium transition-colors",
+                      activeSection === section.key
+                        ? "bg-primary text-primary-foreground"
+                        : "text-primary hover:bg-secondary"
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {section.label}
+                  </button>
+                );
+              })}
+            </nav>
+          </CardContent>
+        </Card>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-              {/* Nationality */}
-              <div className="space-y-2">
-                <Label htmlFor="nationality">Nationality *</Label>
-                <Select
-                  value={formData.nationality}
-                  onValueChange={(value) => handleSelectChange("nationality", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select nationality" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Oman">Oman</SelectItem>
-                    <SelectItem value="UAE">UAE</SelectItem>
-                    <SelectItem value="Saudi Arabia">Saudi Arabia</SelectItem>
-                    <SelectItem value="Kuwait">Kuwait</SelectItem>
-                    <SelectItem value="Bahrain">Bahrain</SelectItem>
-                    <SelectItem value="Qatar">Qatar</SelectItem>
-                    <SelectItem value="India">India</SelectItem>
-                    <SelectItem value="Pakistan">Pakistan</SelectItem>
-                    <SelectItem value="Bangladesh">Bangladesh</SelectItem>
-                    <SelectItem value="Philippines">Philippines</SelectItem>
-                    <SelectItem value="Egypt">Egypt</SelectItem>
-                    <SelectItem value="Jordan">Jordan</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
+        <div className="w-full flex-1">
+          <Card>
+            <CardContent className="p-4 sm:p-6">
+              <div className="mb-6 flex items-center gap-3 border-b pb-3">
+                <h2 className="text-base font-semibold text-primary">
+                  {current.label}
+                </h2>
+                {/* Standing travels with the record, whichever side is open */}
+                <span className="inline-flex items-center gap-1.5 text-sm">
+                  {formData.status}
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "h-2 w-2 rounded-full",
+                      STATUS_DOT[formData.status] || "bg-muted-foreground"
+                    )}
+                  />
+                </span>
               </div>
 
-              {/* Arabic Name */}
-              <div className="space-y-2">
-                <Label htmlFor="arabicName">Employee Name in Arabic</Label>
-                <Input
-                  id="arabicName"
-                  name="arabicName"
-                  value={formData.arabicName}
-                  onChange={handleChange}
-                  placeholder="أدخل الاسم بالعربية"
-                  dir="rtl"
-                  className="text-right"
-                />
-              </div>
+              <form id="employee-form" onSubmit={handleSubmit}>
+                {activeSection === "information" && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+                      {/* Given by the system, so it is shown and not asked for */}
+                      <div className="space-y-2">
+                        <Label htmlFor="employeeNo">Employee No. *</Label>
+                        <Input
+                          id="employeeNo"
+                          value={employeeNo}
+                          readOnly
+                          disabled
+                          className="bg-muted"
+                        />
+                      </div>
 
-              {/* Employee Name (English) */}
-              <div className="space-y-2">
-                <Label htmlFor="employeeName">Employee Name *</Label>
-                <Input
-                  id="employeeName"
-                  name="employeeName"
-                  value={formData.employeeName}
-                  onChange={handleChange}
-                  placeholder="Enter employee name"
-                  required
-                />
-              </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="arabicName">Full Name (Arabic) *</Label>
+                        <Input
+                          id="arabicName"
+                          name="arabicName"
+                          value={formData.arabicName}
+                          onChange={onChange}
+                          placeholder="أدخل الاسم الكامل بالعربية"
+                          dir="rtl"
+                          required
+                        />
+                      </div>
 
-              {/* Gender */}
-              <div className="space-y-2">
-                <Label htmlFor="gender">Gender *</Label>
-                <Select
-                  value={formData.gender}
-                  onValueChange={(value) => handleSelectChange("gender", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Male">Male</SelectItem>
-                    <SelectItem value="Female">Female</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="employeeName">
+                          Full Name (English) *
+                        </Label>
+                        <Input
+                          id="employeeName"
+                          name="employeeName"
+                          value={formData.employeeName}
+                          onChange={onChange}
+                          placeholder="Enter full name in English"
+                          required
+                        />
+                      </div>
 
-              {/* Date of Birth */}
-              <div className="space-y-2">
-                <Label htmlFor="dateOfBirth">Date of Birth *</Label>
-                <Input
-                  id="dateOfBirth"
-                  name="dateOfBirth"
-                  type="date"
-                  value={formData.dateOfBirth}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="nationality">Nationality *</Label>
+                        <Select
+                          value={formData.nationality}
+                          onValueChange={(value) => set("nationality", value)}
+                        >
+                          <SelectTrigger id="nationality">
+                            <SelectValue placeholder="Select Nationality" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-72">
+                            {NATIONALITIES.map((nationality) => (
+                              <SelectItem key={nationality} value={nationality}>
+                                {nationality}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-              {/* Phone */}
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone *</Label>
-                <Input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  placeholder="+968 XXXX XXXX"
-                  required
-                />
-              </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="gender">Gender *</Label>
+                        <Select
+                          value={formData.gender}
+                          onValueChange={(value) => set("gender", value)}
+                        >
+                          <SelectTrigger id="gender">
+                            <SelectValue placeholder="Select Gender" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {GENDERS.map((gender) => (
+                              <SelectItem key={gender} value={gender}>
+                                {gender}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-              {/* Email */}
-              <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="email@example.com"
-                  required
-                />
-              </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="dateOfBirth">Date of Birth *</Label>
+                        <Input
+                          id="dateOfBirth"
+                          name="dateOfBirth"
+                          type="date"
+                          value={formData.dateOfBirth}
+                          onChange={onChange}
+                          required
+                        />
+                      </div>
 
-              {/* Language of Communication */}
-              <div className="space-y-2">
-                <Label htmlFor="languageOfCommunication">Language of Communication *</Label>
-                <Select
-                  value={formData.languageOfCommunication}
-                  onValueChange={(value) => handleSelectChange("languageOfCommunication", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select language" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Arabic">Arabic</SelectItem>
-                    <SelectItem value="English">English</SelectItem>
-                    <SelectItem value="Both">Both (Arabic & English)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="dateOfJoining">Date of Joining *</Label>
+                        <Input
+                          id="dateOfJoining"
+                          name="dateOfJoining"
+                          type="date"
+                          value={formData.dateOfJoining}
+                          onChange={onChange}
+                          required
+                        />
+                      </div>
 
-              {/* Date of Joining */}
-              <div className="space-y-2">
-                <Label htmlFor="dateOfJoining">Date of Joining *</Label>
-                <Input
-                  id="dateOfJoining"
-                  name="dateOfJoining"
-                  type="date"
-                  value={formData.dateOfJoining}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="status">Status *</Label>
+                        <Select
+                          value={formData.status}
+                          onValueChange={(value) => set("status", value)}
+                        >
+                          <SelectTrigger id="status">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {EMPLOYEE_STATUSES.map((status) => (
+                              <SelectItem key={status} value={status}>
+                                {status}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
 
-              {/* Branch */}
-              <div className="space-y-2">
-                <Label htmlFor="branch">Branch *</Label>
-                <Select
-                  value={formData.branch}
-                  onValueChange={(value) => handleSelectChange("branch", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select branch" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Muscat">Muscat</SelectItem>
-                    <SelectItem value="Salalah">Salalah</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                    {/* Asked for only once the status says somebody has left */}
+                    {hasLeft && (
+                      <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
+                        <p className="flex items-start gap-2 text-xs text-muted-foreground">
+                          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                          A status of {formData.status} needs the reason and the
+                          last day worked on record.
+                        </p>
 
-              {/* Educational Level */}
-              <div className="space-y-2">
-                <Label htmlFor="educationalLevel">Educational Level *</Label>
-                <Select
-                  value={formData.educationalLevel}
-                  onValueChange={(value) => handleSelectChange("educationalLevel", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select education level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Primary Education">Primary Education</SelectItem>
-                    <SelectItem value="Intermediate Education">Intermediate Education</SelectItem>
-                    <SelectItem value="Secondary Education">Secondary Education</SelectItem>
-                    <SelectItem value="Bachelor's Degree">Bachelor's Degree</SelectItem>
-                    <SelectItem value="Master's Degree">Master's Degree</SelectItem>
-                    <SelectItem value="Doctoral Degree (PHD)">Doctoral Degree (PHD)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
+                          <div className="space-y-2">
+                            <Label htmlFor="reasonForLeaving">
+                              Reason for Leaving
+                            </Label>
+                            <Select
+                              value={formData.reasonForLeaving}
+                              onValueChange={(value) =>
+                                set("reasonForLeaving", value)
+                              }
+                            >
+                              <SelectTrigger id="reasonForLeaving">
+                                <SelectValue placeholder="Select Reason" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {LEAVING_REASONS.map((reason) => (
+                                  <SelectItem key={reason} value={reason}>
+                                    {reason}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
 
-              {/* Department */}
-              <div className="space-y-2">
-                <Label htmlFor="department">Department *</Label>
-                <Select
-                  value={formData.department}
-                  onValueChange={(value) => handleSelectChange("department", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Partner">Partner</SelectItem>
-                    <SelectItem value="Advisor">Advisor</SelectItem>
-                    <SelectItem value="Lawyer">Lawyer</SelectItem>
-                    <SelectItem value="Administrative">Administrative</SelectItem>
-                    <SelectItem value="Accountant">Accountant</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Job Designation */}
-              <div className="space-y-2">
-                <Label htmlFor="jobDesignation">Job Designation *</Label>
-                <Select
-                  value={formData.jobDesignation}
-                  onValueChange={(value) => handleSelectChange("jobDesignation", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select designation" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Partner">Partner</SelectItem>
-                    <SelectItem value="Advisor">Advisor</SelectItem>
-                    <SelectItem value="Litigation">Litigation</SelectItem>
-                    <SelectItem value="Supervisor">Supervisor</SelectItem>
-                    <SelectItem value="Accountant">Accountant</SelectItem>
-                    <SelectItem value="Administrative">Administrative</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Salary */}
-              <div className="space-y-2">
-                <Label htmlFor="salary">Salary (<Rial />) *</Label>
-                <Input
-                  id="salary"
-                  name="salary"
-                  type="number"
-                  min="0"
-                  step="0.001"
-                  value={formData.salary}
-                  onChange={handleChange}
-                  placeholder="Enter salary amount"
-                  required
-                />
-              </div>
-
-              {/* Status */}
-              <div className="space-y-2">
-                <Label htmlFor="status">Status *</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) => handleSelectChange("status", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Inactive">Inactive</SelectItem>
-                    <SelectItem value="On Leave">On Leave</SelectItem>
-                    <SelectItem value="Terminated">Terminated</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* National Identity Expire */}
-              <div className="space-y-2">
-                <Label htmlFor="nationalIdentityExpire">National Identity Expire *</Label>
-                <Input
-                  id="nationalIdentityExpire"
-                  name="nationalIdentityExpire"
-                  type="date"
-                  value={formData.nationalIdentityExpire}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              {/* Additional fields for non-Omani employees */}
-              {formData.nationality && !isOmani && (
-                <>
-                  {/* Passport Expire */}
-                  <div className="space-y-2">
-                    <Label htmlFor="passportExpire">Passport Expire *</Label>
-                    <Input
-                      id="passportExpire"
-                      name="passportExpire"
-                      type="date"
-                      value={formData.passportExpire}
-                      onChange={handleChange}
-                      required
-                    />
+                          <div className="space-y-2">
+                            <Label htmlFor="lastWorkingDate">
+                              Last Working Date
+                            </Label>
+                            <Input
+                              id="lastWorkingDate"
+                              name="lastWorkingDate"
+                              type="date"
+                              value={formData.lastWorkingDate}
+                              onChange={onChange}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
+                )}
 
-                  {/* Visa Expire */}
-                  <div className="space-y-2">
-                    <Label htmlFor="visaExpire">Visa Expire *</Label>
-                    <Input
-                      id="visaExpire"
-                      name="visaExpire"
-                      type="date"
-                      value={formData.visaExpire}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
+                {activeSection === "job" && (
+                  <div className="space-y-6">
+                    <p className="font-semibold text-primary">
+                      Job Description Information
+                    </p>
 
-                  {/* Lawyer Card Expire */}
-                  <div className="space-y-2">
-                    <Label htmlFor="lawyerCardExpire">Lawyer Card Expire *</Label>
-                    <Input
-                      id="lawyerCardExpire"
-                      name="lawyerCardExpire"
-                      type="date"
-                      value={formData.lawyerCardExpire}
-                      onChange={handleChange}
-                      required
-                    />
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="category">Category / Role *</Label>
+                        <Select
+                          value={formData.category}
+                          onValueChange={(value) => set("category", value)}
+                        >
+                          <SelectTrigger id="category">
+                            <SelectValue placeholder="Select Category / Role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {EMPLOYEE_CATEGORIES.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="jobLevel">Job Level *</Label>
+                        <Select
+                          value={formData.jobLevel}
+                          onValueChange={(value) => set("jobLevel", value)}
+                        >
+                          <SelectTrigger id="jobLevel">
+                            <SelectValue placeholder="Select Job Level" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {JOB_LEVELS.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="department">
+                          Department / Division *
+                        </Label>
+                        <Select
+                          value={formData.department}
+                          onValueChange={(value) => set("department", value)}
+                        >
+                          <SelectTrigger id="department">
+                            <SelectValue placeholder="Select Department / Division" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {DEPARTMENTS.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="occupation">
+                          Profession / Occupation *
+                        </Label>
+                        <Select
+                          value={formData.occupation}
+                          onValueChange={(value) => set("occupation", value)}
+                        >
+                          <SelectTrigger id="occupation">
+                            <SelectValue placeholder="Select Profession / Occupation" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {OCCUPATIONS.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                    </div>
                   </div>
-                </>
-              )}
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+                )}
+
+                {activeSection === "documents" && (
+                  <div className="space-y-6">
+                    {/* Add a document */}
+                    <div className="rounded-lg border p-4">
+                      <p className="mb-4 font-semibold text-primary">
+                        Add Document
+                      </p>
+
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="docType">
+                            Document Type{" "}
+                            <span className="text-destructive">*</span>
+                          </Label>
+                          <div className="flex gap-2">
+                            <Select
+                              value={docDraft.type}
+                              onValueChange={(value) =>
+                                setDocDraft((prev) => ({ ...prev, type: value }))
+                              }
+                            >
+                              <SelectTrigger id="docType" className="flex-1">
+                                <SelectValue placeholder="Select document type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {EMPLOYEE_DOCUMENT_TYPES.map((type) => (
+                                  <SelectItem key={type} value={type}>
+                                    {type}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+
+                            {/* The file name lives in the tooltip, so the
+                                control stays icon-sized either way. */}
+                            {docFile ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="shrink-0 border-green-600 text-green-600 hover:text-destructive"
+                                title={docFile.name + " - click to remove"}
+                                onClick={() => setDocFile(null)}
+                              >
+                                <FileCheck className="h-4 w-4" />
+                                <span className="sr-only">
+                                  {docFile.name} attached. Remove it.
+                                </span>
+                              </Button>
+                            ) : (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="shrink-0"
+                                title="Upload document"
+                                asChild
+                              >
+                                <label className="cursor-pointer">
+                                  <UploadCloud className="h-4 w-4" />
+                                  <span className="sr-only">
+                                    Upload document
+                                  </span>
+                                  <Input
+                                    type="file"
+                                    className="hidden"
+                                    onChange={(e) =>
+                                      e.target.files[0] &&
+                                      setDocFile(e.target.files[0])
+                                    }
+                                  />
+                                </label>
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 sm:col-span-2">
+                          <Label htmlFor="docNotes">Notes</Label>
+                          <div className="relative">
+                            <Input
+                              id="docNotes"
+                              maxLength={NOTES_LIMIT}
+                              placeholder="Enter notes (optional)"
+                              className="pr-16"
+                              value={docDraft.notes}
+                              onChange={(e) =>
+                                setDocDraft((prev) => ({
+                                  ...prev,
+                                  notes: e.target.value,
+                                }))
+                              }
+                            />
+                            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                              {docDraft.notes.length}/{NOTES_LIMIT}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex justify-end">
+                        <Button
+                          type="button"
+                          onClick={addDocument}
+                          disabled={!docDraft.type || !docFile}
+                        >
+                          Add Document
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* What is already on file */}
+                    <div className="rounded-lg border">
+                      <p className="border-b p-4 font-semibold text-primary">
+                        Uploaded Documents
+                      </p>
+
+                      {documents.length === 0 ? (
+                        <div className="p-6">
+                          <EmptyState>No documents uploaded yet.</EmptyState>
+                        </div>
+                      ) : (
+                        <div className="overflow-x-auto p-4 pt-0">
+                          <table className="mt-4 w-full min-w-[720px] border text-sm">
+                            <thead>
+                              <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
+                                <th className="p-3 font-semibold">No.</th>
+                                <th className="p-3 font-semibold">
+                                  Upload Date
+                                </th>
+                                <th className="p-3 font-semibold">
+                                  Document Type &amp; Attachment
+                                </th>
+                                <th className="p-3 font-semibold">Notes</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {documents.map((document, index) => {
+                                const Icon = fileIcon(document.fileName);
+                                return (
+                                  <tr
+                                    key={document.id}
+                                    className="border-b transition-colors last:border-0 hover:bg-primary/10"
+                                  >
+                                    {/* The row number opens the paper it stands for */}
+                                    <td className="p-3 align-top">
+                                      <button
+                                        type="button"
+                                        onClick={() => openDocument(document)}
+                                        className="rounded font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                                      >
+                                        {index + 1}
+                                      </button>
+                                    </td>
+                                    <td className="whitespace-nowrap p-3 align-top">
+                                      {formatUploadedAt(document.uploadedAt)}
+                                    </td>
+                                    <td className="p-3 align-top">
+                                      <span className="block">
+                                        {document.type}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => openDocument(document)}
+                                        className="mt-1 inline-flex items-center gap-1.5 rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                                      >
+                                        <Icon
+                                          className={cn(
+                                            "h-4 w-4 shrink-0",
+                                            isImage(document.fileName)
+                                              ? "text-green-600"
+                                              : "text-red-600"
+                                          )}
+                                        />
+                                        {document.fileName}
+                                      </button>
+                                    </td>
+                                    <td className="p-3 align-top text-muted-foreground">
+                                      {document.notes || "-"}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {activeSection === "salaries" && <SalariesSection />}
+
+                {activeSection === "loans" && <LoansSection />}
+
+                {activeSection === "assistance" && <AssistanceSection />}
+
+                {activeSection === "daily" && <DailyActivitiesSection />}
+
+                {activeSection === "performance" && <PerformanceSection />}
+
+                {activeSection === "addresses" && (
+                  <div className="space-y-6">
+                    <p className="font-semibold text-primary">
+                      Contact &amp; Address Information
+                    </p>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
+                      <IconField
+                        icon={Phone}
+                        id="phone"
+                        name="phone"
+                        label="Phone Number *"
+                        placeholder="Enter phone number"
+                        value={formData.phone}
+                        onChange={onChange}
+                      />
+
+                      <IconField
+                        icon={Mail}
+                        id="email"
+                        name="email"
+                        type="email"
+                        label="Email Address *"
+                        placeholder="Enter email address"
+                        value={formData.email}
+                        onChange={onChange}
+                      />
+
+                      <IconField
+                        icon={MapPin}
+                        id="address"
+                        name="address"
+                        label="Address *"
+                        placeholder="Enter full address"
+                        value={formData.address}
+                        onChange={onChange}
+                      />
+
+                      {/* Who to call, and on what number, if something happens */}
+                      <IconField
+                        icon={User}
+                        id="emergencyName"
+                        name="emergencyName"
+                        label="Emergency Contact Name *"
+                        placeholder="Enter emergency contact name"
+                        value={formData.emergencyName}
+                        onChange={onChange}
+                      />
+
+                      <IconField
+                        icon={Phone}
+                        id="emergencyPhone"
+                        name="emergencyPhone"
+                        label="Emergency Contact Phone Number *"
+                        placeholder="Enter emergency contact phone number"
+                        value={formData.emergencyPhone}
+                        onChange={onChange}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Not yet specified, so nothing is invented for them */}
+                {["permissions"].includes(
+                  activeSection
+                ) && <EmptyState>{current.label} is not set up yet.</EmptyState>}
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

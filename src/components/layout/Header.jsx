@@ -100,6 +100,13 @@ const navSections = [
         icon: Building2,
         description: "Company information and administration",
       },
+      {
+        name: "Employees",
+        path: "/employees",
+        key: "employees",
+        icon: UserCircle,
+        description: "Staff records, branches and roles",
+      },
     ],
   },
   {
@@ -138,7 +145,6 @@ const navSections = [
   },
   // { name: "Corporate Matters", path: "/corporate", icon: Briefcase, key: "corporate" },
   // { name: "Invoices", path: "/finance", icon: Wallet, key: "finance" },
-  // { name: "Employees", path: "/employees", icon: Users, key: "employees" },
   // { name: "Archive", path: "/archive", icon: Archive, key: "archive" },
 ];
 
