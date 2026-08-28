@@ -207,3 +207,19 @@ export const COUNTRY_DIAL_CODES = [
   { code: "GB", name: "United Kingdom", dial: "+44", flag: "🇬🇧" },
   { code: "US", name: "United States", dial: "+1", flag: "🇺🇸" },
 ];
+
+/**
+ * Papers held against a person rather than against the firm - the two lists are
+ * kept apart because a bar card belongs to a lawyer and a commercial
+ * registration belongs to the company.
+ */
+export const EMPLOYEE_DOCUMENT_TYPES = [
+  "ID Card",
+  "Passport",
+  "Bar Card",
+  "Academic Qualification",
+  "Experience Certificate",
+  "Decisions",
+  "Other Certificates",
+  "Other Documents",
+];

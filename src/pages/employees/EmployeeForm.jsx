@@ -25,6 +25,9 @@ import {
   ShieldCheck,
   Phone,
   Mail,
+  UploadCloud,
+  FileCheck,
+  FileImage,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/shared/panels";
@@ -39,8 +42,14 @@ import {
   LEAVING_REASONS,
   DEFAULT_DIAL_CODE,
   COUNTRY_DIAL_CODES,
+  EMPLOYEE_DOCUMENT_TYPES,
 } from "@/lib/constants";
-import { employeeRecords, nextEmployeeNo } from "./employeeData";
+import {
+  employeeRecords,
+  nextEmployeeNo,
+  employeeDocuments,
+  formatUploadedAt,
+} from "./employeeData";
 
 /**
  * The employee record, section by section.
@@ -71,7 +80,8 @@ const SECTIONS = [
     key: "documents",
     label: "Documents",
     icon: FileText,
-    note: "Identity papers and what they expire on",
+    note: "Manage employee documents and attachments",
+    save: "Save Changes",
   },
   { key: "salary", label: "Salary", icon: Wallet, note: "Basic pay" },
   {
@@ -118,6 +128,17 @@ const STATUS_DOT = {
   Terminated: "bg-red-500",
 };
 
+/** How much of a note the field will take, shown as a count while typing. */
+const NOTES_LIMIT = 300;
+
+const IMAGE_TYPES = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
+
+const isImage = (name) =>
+  IMAGE_TYPES.some((ext) => String(name).toLowerCase().endsWith(ext));
+
+/** A picture is marked as one so a scan is not mistaken for a signed PDF. */
+const fileIcon = (name) => (isImage(name) ? FileImage : FileText);
+
 /** Somebody who has left, and so owes the record a reason and a last day. */
 const HAS_LEFT = ["Inactive", "Terminated"];
 
@@ -137,10 +158,6 @@ const emptyFormData = {
   department: "",
   occupation: "",
 
-  nationalIdentityExpire: "",
-  passportExpire: "",
-  visaExpire: "",
-  lawyerCardExpire: "",
 
   salary: "",
 
@@ -173,6 +190,43 @@ export default function EmployeeForm() {
     setFormData(toFormData(record));
     setActiveSection("information");
   }
+
+  // Papers are a list of their own, kept beside the fields rather than in them.
+  const [documents, setDocuments] = useState(employeeDocuments);
+  const [docDraft, setDocDraft] = useState({ type: "", notes: "" });
+  const [docFile, setDocFile] = useState(null);
+
+  const addDocument = () => {
+    if (!docDraft.type || !docFile) return;
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    setDocuments((prev) => [
+      {
+        id: prev.reduce((max, d) => Math.max(max, d.id), 0) + 1,
+        uploadedAt:
+          now.getFullYear() +
+          "-" +
+          pad(now.getMonth() + 1) +
+          "-" +
+          pad(now.getDate()) +
+          "T" +
+          pad(now.getHours()) +
+          ":" +
+          pad(now.getMinutes()),
+        type: docDraft.type,
+        fileName: docFile.name,
+        fileUrl: URL.createObjectURL(docFile),
+        notes: docDraft.notes,
+      },
+      ...prev,
+    ]);
+    setDocDraft({ type: "", notes: "" });
+    setDocFile(null);
+  };
+
+  const openDocument = (doc) => {
+    if (doc.fileUrl) window.open(doc.fileUrl, "_blank", "noopener,noreferrer");
+  };
 
   const set = (name, value) => setFormData((prev) => ({ ...prev, [name]: value }));
   const onChange = (e) => set(e.target.name, e.target.value);
@@ -216,7 +270,10 @@ export default function EmployeeForm() {
         </div>
         <Button type="submit" form="employee-form">
           <Save className="mr-2 h-4 w-4" />
-          {activeSection === "information" ? "Save Employee" : "Save " + current.label}
+          {current.save ||
+            (activeSection === "information"
+              ? "Save Employee"
+              : "Save " + current.label)}
         </Button>
       </div>
 
@@ -539,53 +596,192 @@ export default function EmployeeForm() {
                 )}
 
                 {activeSection === "documents" && (
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="nationalIdentityExpire">
-                        National ID Expiry
-                      </Label>
-                      <Input
-                        id="nationalIdentityExpire"
-                        name="nationalIdentityExpire"
-                        type="date"
-                        value={formData.nationalIdentityExpire}
-                        onChange={onChange}
-                      />
+                  <div className="space-y-6">
+                    {/* Add a document */}
+                    <div className="rounded-lg border p-4">
+                      <p className="mb-4 font-semibold text-primary">
+                        Add Document
+                      </p>
+
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="docType">
+                            Document Type{" "}
+                            <span className="text-destructive">*</span>
+                          </Label>
+                          <div className="flex gap-2">
+                            <Select
+                              value={docDraft.type}
+                              onValueChange={(value) =>
+                                setDocDraft((prev) => ({ ...prev, type: value }))
+                              }
+                            >
+                              <SelectTrigger id="docType" className="flex-1">
+                                <SelectValue placeholder="Select document type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {EMPLOYEE_DOCUMENT_TYPES.map((type) => (
+                                  <SelectItem key={type} value={type}>
+                                    {type}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+
+                            {/* The file name lives in the tooltip, so the
+                                control stays icon-sized either way. */}
+                            {docFile ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="shrink-0 border-green-600 text-green-600 hover:text-destructive"
+                                title={docFile.name + " - click to remove"}
+                                onClick={() => setDocFile(null)}
+                              >
+                                <FileCheck className="h-4 w-4" />
+                                <span className="sr-only">
+                                  {docFile.name} attached. Remove it.
+                                </span>
+                              </Button>
+                            ) : (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="shrink-0"
+                                title="Upload document"
+                                asChild
+                              >
+                                <label className="cursor-pointer">
+                                  <UploadCloud className="h-4 w-4" />
+                                  <span className="sr-only">
+                                    Upload document
+                                  </span>
+                                  <Input
+                                    type="file"
+                                    className="hidden"
+                                    onChange={(e) =>
+                                      e.target.files[0] &&
+                                      setDocFile(e.target.files[0])
+                                    }
+                                  />
+                                </label>
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 sm:col-span-2">
+                          <Label htmlFor="docNotes">Notes</Label>
+                          <div className="relative">
+                            <Input
+                              id="docNotes"
+                              maxLength={NOTES_LIMIT}
+                              placeholder="Enter notes (optional)"
+                              className="pr-16"
+                              value={docDraft.notes}
+                              onChange={(e) =>
+                                setDocDraft((prev) => ({
+                                  ...prev,
+                                  notes: e.target.value,
+                                }))
+                              }
+                            />
+                            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                              {docDraft.notes.length}/{NOTES_LIMIT}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex justify-end">
+                        <Button
+                          type="button"
+                          onClick={addDocument}
+                          disabled={!docDraft.type || !docFile}
+                        >
+                          Add Document
+                        </Button>
+                      </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="passportExpire">Passport Expiry</Label>
-                      <Input
-                        id="passportExpire"
-                        name="passportExpire"
-                        type="date"
-                        value={formData.passportExpire}
-                        onChange={onChange}
-                      />
-                    </div>
+                    {/* What is already on file */}
+                    <div className="rounded-lg border">
+                      <p className="border-b p-4 font-semibold text-primary">
+                        Uploaded Documents
+                      </p>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="visaExpire">Visa Expiry</Label>
-                      <Input
-                        id="visaExpire"
-                        name="visaExpire"
-                        type="date"
-                        value={formData.visaExpire}
-                        onChange={onChange}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="lawyerCardExpire">
-                        Lawyer Card Expiry
-                      </Label>
-                      <Input
-                        id="lawyerCardExpire"
-                        name="lawyerCardExpire"
-                        type="date"
-                        value={formData.lawyerCardExpire}
-                        onChange={onChange}
-                      />
+                      {documents.length === 0 ? (
+                        <div className="p-6">
+                          <EmptyState>No documents uploaded yet.</EmptyState>
+                        </div>
+                      ) : (
+                        <div className="overflow-x-auto p-4 pt-0">
+                          <table className="mt-4 w-full min-w-[720px] border text-sm">
+                            <thead>
+                              <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
+                                <th className="p-3 font-semibold">No.</th>
+                                <th className="p-3 font-semibold">
+                                  Upload Date
+                                </th>
+                                <th className="p-3 font-semibold">
+                                  Document Type &amp; Attachment
+                                </th>
+                                <th className="p-3 font-semibold">Notes</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {documents.map((document, index) => {
+                                const Icon = fileIcon(document.fileName);
+                                return (
+                                  <tr
+                                    key={document.id}
+                                    className="border-b transition-colors last:border-0 hover:bg-primary/10"
+                                  >
+                                    {/* The row number opens the paper it stands for */}
+                                    <td className="p-3 align-top">
+                                      <button
+                                        type="button"
+                                        onClick={() => openDocument(document)}
+                                        className="rounded font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                                      >
+                                        {index + 1}
+                                      </button>
+                                    </td>
+                                    <td className="whitespace-nowrap p-3 align-top">
+                                      {formatUploadedAt(document.uploadedAt)}
+                                    </td>
+                                    <td className="p-3 align-top">
+                                      <span className="block">
+                                        {document.type}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => openDocument(document)}
+                                        className="mt-1 inline-flex items-center gap-1.5 rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                                      >
+                                        <Icon
+                                          className={cn(
+                                            "h-4 w-4 shrink-0",
+                                            isImage(document.fileName)
+                                              ? "text-green-600"
+                                              : "text-red-600"
+                                          )}
+                                        />
+                                        {document.fileName}
+                                      </button>
+                                    </td>
+                                    <td className="p-3 align-top text-muted-foreground">
+                                      {document.notes || "-"}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

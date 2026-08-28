@@ -41,3 +41,31 @@ export function nextEmployeeNo(records) {
   }, 0);
   return 'EMP-' + String(highest + 1).padStart(4, '0');
 }
+
+/**
+ * Papers already on an employee's file.
+ *
+ * `uploadedAt` carries the time as well as the date because two documents are
+ * often filed on the same day and the list is read newest first.
+ */
+export const employeeDocuments = [
+  { id: 1, uploadedAt: "2026-08-26T10:30", type: "ID Card", fileName: "ID_Card_Mohammed.pdf", notes: "Clear copy of the ID card" },
+  { id: 2, uploadedAt: "2026-08-20T14:15", type: "Passport", fileName: "Passport_Mohammed.jpg", notes: "Valid until 12/09/2030" },
+  { id: 3, uploadedAt: "2026-08-15T09:45", type: "Bar Card", fileName: "Bar_Card_Mohammed.pdf", notes: "Issued by Oman Bar Association" },
+  { id: 4, uploadedAt: "2026-08-10T11:20", type: "Academic Qualification", fileName: "Bachelor_Law.pdf", notes: "Bachelor of Law" },
+  { id: 5, uploadedAt: "2026-08-05T13:05", type: "Experience Certificate", fileName: "Experience_Certificate.pdf", notes: "5 years of legal experience" },
+  { id: 6, uploadedAt: "2026-08-01T15:40", type: "Decisions", fileName: "Decision_2026_14.pdf", notes: "Decision No. 14/2026" },
+  { id: 7, uploadedAt: "2026-07-29T12:10", type: "Other Certificates", fileName: "Training_Certificate.jpg", notes: "Legal training certificate" },
+  { id: 8, uploadedAt: "2026-07-25T16:25", type: "Other Documents", fileName: "Reference_Letter.pdf", notes: "Reference letter" },
+];
+
+/** "2026-08-26T10:30" as "26/08/2026  10:30 AM". */
+export function formatUploadedAt(value) {
+  const [date, time] = String(value).split("T");
+  const [year, month, day] = date.split("-");
+  const [rawHour, minute] = (time || "00:00").split(":");
+  const hour = Number(rawHour);
+  const suffix = hour < 12 ? "AM" : "PM";
+  const shown = hour % 12 === 0 ? 12 : hour % 12;
+  return `${day}/${month}/${year}  ${String(shown).padStart(2, "0")}:${minute} ${suffix}`;
+}
