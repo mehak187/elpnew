@@ -20,7 +20,7 @@ export function TeamWorkload() {
           </thead>
           <tbody>
             {teamWorkload.map((member) => (
-              <tr key={member.name} className="border-b last:border-0">
+              <tr key={member.name} className="border-b transition-colors last:border-0 hover:bg-primary/10">
                 <td className="py-2">
                   <p className="font-medium">{member.name}</p>
                   <p className="text-xs text-muted-foreground">{member.role}</p>

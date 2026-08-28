@@ -9,6 +9,8 @@ import {
   initialExpenses,
   initialTransfers,
   nextBranchNumber,
+  nextDocumentId,
+  nextTransferNo,
   dayOffset,
 } from "@/pages/firm/firmData";
 
@@ -50,8 +52,27 @@ export default function FirmProvider({ children }) {
           { ...branch, id: nextId(prev), branchNumber: nextBranchNumber(prev) },
         ]),
 
+      // The number is the one thing a branch cannot change: case files are
+      // filed under it, so it stays with the branch for good.
+      updateBranch: (id, changes) =>
+        setBranches((prev) =>
+          prev.map((b) =>
+            b.id === id ? { ...b, ...changes, branchNumber: b.branchNumber } : b
+          )
+        ),
+
+      // A document is quoted by its reference, so it is given one here rather
+      // than by whichever screen happens to be adding it.
       addDocument: (document) =>
-        setDocuments((prev) => [...prev, { ...document, id: nextId(prev) }]),
+        setDocuments((prev) => [
+          ...prev,
+          { ...document, id: nextId(prev), docId: nextDocumentId(prev) },
+        ]),
+
+      updateDocument: (id, changes) =>
+        setDocuments((prev) =>
+          prev.map((d) => (d.id === id ? { ...d, ...changes } : d))
+        ),
 
       removeDocument: (id) =>
         setDocuments((prev) => prev.filter((d) => d.id !== id)),
@@ -74,7 +95,10 @@ export default function FirmProvider({ children }) {
         setPayments((prev) => [...prev, { ...payment, id: nextId(prev) }]),
 
       addTransfer: (transfer) =>
-        setTransfers((prev) => [...prev, { ...transfer, id: nextId(prev) }]),
+        setTransfers((prev) => [
+          ...prev,
+          { ...transfer, id: nextId(prev), transferNo: nextTransferNo(prev) },
+        ]),
     }),
     [firmInfo, branches, documents, bankAccounts, payments, expenses, transfers]
   );

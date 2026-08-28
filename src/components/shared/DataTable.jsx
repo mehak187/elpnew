@@ -233,8 +233,7 @@ export default function DataTable({
                         key={row.id || rowIndex}
                         className={cn(
                           rowIndex % 2 === 0 ? "bg-white" : "bg-muted/30",
-                          onRowClick &&
-                            "cursor-pointer hover:bg-primary/5 transition-colors"
+                          onRowClick && "cursor-pointer"
                         )}
                         onClick={() => onRowClick && onRowClick(row)}
                       >

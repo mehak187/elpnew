@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,292 +12,346 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, FileText, X, AlertTriangle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { EmptyState } from "@/components/shared/panels";
+import { Upload, FileCheck, FileText, Trash2 } from "lucide-react";
 import { useFirm } from "@/lib/firm/context";
 import {
   DOCUMENT_TYPES,
-  RELATED_TO_KINDS,
+  GENERAL_BRANCH,
   DOCUMENT_STATUS_VARIANT,
-  EXPIRY_WARNING_DAYS,
+  branchLabel,
   documentStatus,
-  daysUntil,
   formatDate,
-  clients,
-  cases,
 } from "../firmData";
 
 const emptyDraft = {
-  name: "",
+  branch: GENERAL_BRANCH,
   type: "",
-  documentDate: "",
-  issueDate: "",
   expiryDate: "",
-  relatedKind: "firm",
-  relatedId: "",
   notes: "",
 };
 
-const relatedLabel = (document) => {
-  if (document.relatedKind === "client") {
-    const client = clients.find((c) => c.id === Number(document.relatedId));
-    return client ? "Client: " + client.name : "Client";
-  }
-  if (document.relatedKind === "case") {
-    const legalCase = cases.find((c) => c.id === Number(document.relatedId));
-    return legalCase ? "Case: " + legalCase.caseNo : "Case";
-  }
-  return "The Law Firm";
-};
-
 /**
- * Section 2 of the specification.
+ * The company's own paperwork.
  *
- * Status is never typed in - it is derived from the expiry date every render,
- * so a document cannot sit in the list claiming to be Active after its date has
- * passed. Documents without an expiry date simply stay Active.
+ * A document either covers the whole company or one branch, so the branch
+ * picker leads with General. Status is never typed in - it is read off the
+ * expiry date every render, so a document cannot sit in the list claiming to be
+ * valid after its date has passed.
  */
-export default function DocumentsSection({ initialStatusFilter, canEdit }) {
-  const { documents, addDocument, removeDocument } = useFirm();
+export default function DocumentsSection({ canEdit }) {
+  const { documents, branches, addDocument, updateDocument, removeDocument } =
+    useFirm();
 
-  const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState(emptyDraft);
   const [file, setFile] = useState(null);
+  const [editing, setEditing] = useState(null);
 
-  const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState(initialStatusFilter || "all");
-  const [relatedFilter, setRelatedFilter] = useState("all");
-  const [relatedIdFilter, setRelatedIdFilter] = useState("all");
-  const [expiryFilter, setExpiryFilter] = useState("all");
+  const setField = (name, value) =>
+    setDraft((prev) => ({ ...prev, [name]: value }));
 
-  const setField = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
-
-  const rows = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return documents
-      .map((document) => ({ ...document, status: documentStatus(document) }))
-      .filter((document) => {
-        if (term) {
-          const haystack = [
-            document.name,
-            document.type,
-            document.notes,
-            relatedLabel(document),
-          ]
-            .join(" ")
-            .toLowerCase();
-          if (!haystack.includes(term)) return false;
-        }
-        if (typeFilter !== "all" && document.type !== typeFilter) return false;
-        if (statusFilter !== "all" && document.status !== statusFilter) return false;
-        if (relatedFilter !== "all" && document.relatedKind !== relatedFilter)
-          return false;
-        if (
-          relatedIdFilter !== "all" &&
-          String(document.relatedId) !== relatedIdFilter
-        )
-          return false;
-        if (expiryFilter === "has" && !document.expiryDate) return false;
-        if (expiryFilter === "none" && document.expiryDate) return false;
-        return true;
-      })
-      .sort((a, b) => (b.documentDate || "").localeCompare(a.documentDate || ""));
-  }, [
-    documents,
-    search,
-    typeFilter,
-    statusFilter,
-    relatedFilter,
-    relatedIdFilter,
-    expiryFilter,
-  ]);
-
-  // Section 2 asks for notification when a document nears its expiry date.
-  const expiringSoon = documents
-    .map((document) => ({ ...document, status: documentStatus(document) }))
-    .filter((document) => document.status !== "Active");
-
-  const canSave = draft.name && draft.type && draft.documentDate;
+  const canSave = canEdit && file && draft.type;
 
   const handleSave = () => {
+    if (!canSave) return;
     addDocument({
-      ...draft,
-      relatedId: draft.relatedKind === "firm" ? null : Number(draft.relatedId),
-      fileName: file ? file.name : "",
-      fileUrl: file ? URL.createObjectURL(file) : "",
+      branchId: draft.branch === GENERAL_BRANCH ? null : Number(draft.branch),
+      type: draft.type,
+      expiryDate: draft.expiryDate,
+      notes: draft.notes,
+      fileName: file.name,
+      fileUrl: URL.createObjectURL(file),
     });
     setDraft(emptyDraft);
     setFile(null);
-    setAdding(false);
   };
+
+  const saveEdit = () => {
+    updateDocument(editing.id, {
+      branchId: editing.branchId,
+      type: editing.type,
+      expiryDate: editing.expiryDate,
+      notes: editing.notes,
+    });
+    setEditing(null);
+  };
+
+  const open = (document) =>
+    window.open(document.fileUrl, "_blank", "noopener,noreferrer");
 
   return (
     <div className="space-y-6">
-      {/* Expiry notifications */}
-      {expiringSoon.length > 0 && (
-        <div className="space-y-2">
-          {expiringSoon.map((document) => {
-            const days = daysUntil(document.expiryDate);
-            const expired = days < 0;
-            return (
-              <div
-                key={document.id}
-                className={
-                  "flex items-start gap-2 rounded-md border-l-4 px-3 py-2 text-xs " +
-                  (expired
-                    ? "border-l-red-500 bg-red-50 text-red-800"
-                    : "border-l-amber-500 bg-amber-50 text-amber-900")
-                }
-              >
-                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                <span>
-                  <span className="font-semibold">{document.name}</span>{" "}
-                  {expired
-                    ? "expired " + Math.abs(days) + " days ago"
-                    : "expires in " + days + " days"}{" "}
-                  ({formatDate(document.expiryDate)})
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Search and filters */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search documents..."
-            className="pl-9"
-          />
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="h-9 w-48 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All types</SelectItem>
-              {DOCUMENT_TYPES.map((type) => (
-                <SelectItem key={type} value={type}>
-                  {type}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-9 w-36 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
-              <SelectItem value="Active">Active</SelectItem>
-              <SelectItem value="Expiring Soon">Expiring Soon</SelectItem>
-              <SelectItem value="Expired">Expired</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={relatedFilter}
-            onValueChange={(value) => {
-              setRelatedFilter(value);
-              setRelatedIdFilter("all");
-            }}
-          >
-            <SelectTrigger className="h-9 w-36 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All records</SelectItem>
-              {RELATED_TO_KINDS.map((kind) => (
-                <SelectItem key={kind.key} value={kind.key}>
-                  {kind.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {relatedFilter === "client" && (
-            <Select value={relatedIdFilter} onValueChange={setRelatedIdFilter}>
-              <SelectTrigger className="h-9 w-44 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All clients</SelectItem>
-                {clients.map((client) => (
-                  <SelectItem key={client.id} value={String(client.id)}>
-                    {client.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-
-          {relatedFilter === "case" && (
-            <Select value={relatedIdFilter} onValueChange={setRelatedIdFilter}>
-              <SelectTrigger className="h-9 w-44 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All cases</SelectItem>
-                {cases.map((legalCase) => (
-                  <SelectItem key={legalCase.id} value={String(legalCase.id)}>
-                    Case {legalCase.caseNo}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-
-          <Select value={expiryFilter} onValueChange={setExpiryFilter}>
-            <SelectTrigger className="h-9 w-40 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Any expiry</SelectItem>
-              <SelectItem value="has">Has expiry date</SelectItem>
-              <SelectItem value="none">No expiry date</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {canEdit && (
-            <Button size="sm" onClick={() => setAdding((v) => !v)}>
-              <Plus className="mr-1.5 h-4 w-4" />
-              Add Document
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Add document */}
-      {adding && canEdit && (
+      {/* Add a document */}
+      {canEdit && (
         <Card>
           <CardContent className="space-y-4 p-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-2">
-                <Label htmlFor="docName">Document Name *</Label>
+                <Label htmlFor="documentBranch">Branch</Label>
+                <Select
+                  value={draft.branch}
+                  onValueChange={(value) => setField("branch", value)}
+                >
+                  <SelectTrigger id="documentBranch">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {/* General first: most papers cover the whole company */}
+                    <SelectItem value={GENERAL_BRANCH}>General</SelectItem>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch.id} value={String(branch.id)}>
+                        {branch.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="documentType">Document Type *</Label>
+                <div className="flex gap-2">
+                  <Select
+                    value={draft.type}
+                    onValueChange={(value) => setField("type", value)}
+                  >
+                    <SelectTrigger id="documentType" className="flex-1">
+                      <SelectValue placeholder="Please Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DOCUMENT_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {/* The file name lives in the tooltip, so the control stays
+                      the size of an icon either way. */}
+                  {file ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="shrink-0 border-green-600 text-green-600 hover:text-destructive"
+                      title={file.name + " - click to remove"}
+                      onClick={() => setFile(null)}
+                    >
+                      <FileCheck className="h-4 w-4" />
+                      <span className="sr-only">
+                        {file.name} attached. Remove it.
+                      </span>
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="shrink-0"
+                      title="Upload document"
+                      asChild
+                    >
+                      <label className="cursor-pointer">
+                        <Upload className="h-4 w-4" />
+                        <span className="sr-only">Upload document</span>
+                        <Input
+                          type="file"
+                          className="hidden"
+                          onChange={(e) =>
+                            e.target.files[0] && setFile(e.target.files[0])
+                          }
+                        />
+                      </label>
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="documentExpiry">Document Expiry Date</Label>
                 <Input
-                  id="docName"
-                  value={draft.name}
-                  onChange={(e) => setField("name", e.target.value)}
-                  placeholder="Enter document name"
+                  id="documentExpiry"
+                  type="date"
+                  value={draft.expiryDate}
+                  onChange={(e) => setField("expiryDate", e.target.value)}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="docType">Document Type *</Label>
+                <Label htmlFor="documentNotes">Notes</Label>
+                <Input
+                  id="documentNotes"
+                  value={draft.notes}
+                  onChange={(e) => setField("notes", e.target.value)}
+                  placeholder="Anything worth recording"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <Button type="button" onClick={handleSave} disabled={!canSave}>
+                Save Document
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* What is on file */}
+      <Card>
+        <CardContent className="overflow-x-auto p-0">
+          {documents.length === 0 ? (
+            <div className="p-6">
+              <EmptyState>No documents on file yet.</EmptyState>
+            </div>
+          ) : (
+            <table className="w-full min-w-[820px] text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
+                  <th className="p-3 font-semibold">Document ID</th>
+                  <th className="p-3 font-semibold">Branch</th>
+                  <th className="p-3 font-semibold">Document Type</th>
+                  <th className="p-3 font-semibold">Document</th>
+                  <th className="p-3 font-semibold">Expiry Date</th>
+                  <th className="p-3 font-semibold">Notes</th>
+                  <th className="p-3 font-semibold">Delete</th>
+                </tr>
+              </thead>
+              <tbody>
+                {documents.map((document) => {
+                  const status = documentStatus(document);
+                  return (
+                    <tr
+                      key={document.id}
+                      className="border-b transition-colors last:border-0 hover:bg-primary/10"
+                    >
+                      {/* The reference opens the document for editing */}
+                      <td className="p-3">
+                        <button
+                          type="button"
+                          onClick={() => setEditing({ ...document })}
+                          className="rounded font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                          {document.docId}
+                        </button>
+                      </td>
+                      <td className="p-3">
+                        {branchLabel(branches, document.branchId)}
+                      </td>
+                      <td className="p-3 font-medium">{document.type}</td>
+                      <td className="p-3">
+                        <button
+                          type="button"
+                          onClick={() => open(document)}
+                          className="inline-flex items-center gap-1.5 rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                          <FileText className="h-3.5 w-3.5 shrink-0" />
+                          {document.fileName}
+                        </button>
+                      </td>
+                      <td className="p-3">
+                        {document.expiryDate ? (
+                          <span className="flex flex-col gap-1">
+                            {formatDate(document.expiryDate)}
+                            {status !== "Active" && (
+                              <Badge variant={DOCUMENT_STATUS_VARIANT[status]}>
+                                {status}
+                              </Badge>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">
+                            No expiry
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-3 text-muted-foreground">
+                        {document.notes || "-"}
+                      </td>
+                      <td className="p-3">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-red-500 hover:text-red-600"
+                          title="Delete document"
+                          disabled={!canEdit}
+                          onClick={() => removeDocument(document.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">
+                            Delete {document.docId}
+                          </span>
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* The document reference opens its details for reading and editing */}
+      <Dialog
+        open={Boolean(editing)}
+        onOpenChange={(next) => !next && setEditing(null)}
+      >
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{editing?.docId}</DialogTitle>
+            <DialogDescription>{editing?.fileName}</DialogDescription>
+          </DialogHeader>
+
+          {editing && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="editBranch">Branch</Label>
                 <Select
-                  value={draft.type}
-                  onValueChange={(value) => setField("type", value)}
+                  value={
+                    editing.branchId ? String(editing.branchId) : GENERAL_BRANCH
+                  }
+                  onValueChange={(value) =>
+                    setEditing({
+                      ...editing,
+                      branchId: value === GENERAL_BRANCH ? null : Number(value),
+                    })
+                  }
+                  disabled={!canEdit}
                 >
-                  <SelectTrigger id="docType">
-                    <SelectValue placeholder="Please Select" />
+                  <SelectTrigger id="editBranch">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={GENERAL_BRANCH}>General</SelectItem>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch.id} value={String(branch.id)}>
+                        {branch.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="editType">Document Type</Label>
+                <Select
+                  value={editing.type}
+                  onValueChange={(value) =>
+                    setEditing({ ...editing, type: value })
+                  }
+                  disabled={!canEdit}
+                >
+                  <SelectTrigger id="editType">
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {DOCUMENT_TYPES.map((type) => (
@@ -310,231 +364,52 @@ export default function DocumentsSection({ initialStatusFilter, canEdit }) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="docDate">Document Date *</Label>
+                <Label htmlFor="editExpiry">Document Expiry Date</Label>
                 <Input
-                  id="docDate"
+                  id="editExpiry"
                   type="date"
-                  value={draft.documentDate}
-                  onChange={(e) => setField("documentDate", e.target.value)}
+                  value={editing.expiryDate}
+                  onChange={(e) =>
+                    setEditing({ ...editing, expiryDate: e.target.value })
+                  }
+                  disabled={!canEdit}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="docIssue">Issue Date</Label>
-                <Input
-                  id="docIssue"
-                  type="date"
-                  value={draft.issueDate}
-                  onChange={(e) => setField("issueDate", e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="docExpiry">Expiry Date</Label>
-                <Input
-                  id="docExpiry"
-                  type="date"
-                  value={draft.expiryDate}
-                  onChange={(e) => setField("expiryDate", e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Uploaded Document</Label>
-                {!file ? (
-                  <label className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed px-3 text-sm text-muted-foreground hover:bg-muted/50">
-                    Choose file
-                    <Input
-                      type="file"
-                      className="hidden"
-                      onChange={(e) => e.target.files[0] && setFile(e.target.files[0])}
-                    />
-                  </label>
-                ) : (
-                  <div className="flex h-9 items-center justify-between gap-2 rounded-md bg-muted px-3">
-                    <span className="truncate text-sm">{file.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => setFile(null)}
-                      className="shrink-0 text-muted-foreground hover:text-destructive"
-                    >
-                      <X className="h-4 w-4" />
-                      <span className="sr-only">Remove file</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="docRelated">Related To</Label>
-                <Select
-                  value={draft.relatedKind}
-                  onValueChange={(value) => {
-                    setField("relatedKind", value);
-                    setField("relatedId", "");
-                  }}
+                <Label>Document</Label>
+                <button
+                  type="button"
+                  onClick={() => open(editing)}
+                  className="flex h-9 w-full items-center gap-2 rounded-md border bg-muted/40 px-3 text-left text-sm text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
                 >
-                  <SelectTrigger id="docRelated">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {RELATED_TO_KINDS.map((kind) => (
-                      <SelectItem key={kind.key} value={kind.key}>
-                        {kind.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <FileText className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{editing.fileName}</span>
+                </button>
               </div>
 
-              {draft.relatedKind === "client" && (
-                <div className="space-y-2">
-                  <Label htmlFor="docClient">Client *</Label>
-                  <Select
-                    value={draft.relatedId}
-                    onValueChange={(value) => setField("relatedId", value)}
-                  >
-                    <SelectTrigger id="docClient">
-                      <SelectValue placeholder="Select client" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clients.map((client) => (
-                        <SelectItem key={client.id} value={String(client.id)}>
-                          {client.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {draft.relatedKind === "case" && (
-                <div className="space-y-2">
-                  <Label htmlFor="docCase">Case *</Label>
-                  <Select
-                    value={draft.relatedId}
-                    onValueChange={(value) => setField("relatedId", value)}
-                  >
-                    <SelectTrigger id="docCase">
-                      <SelectValue placeholder="Select case" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {cases.map((legalCase) => (
-                        <SelectItem key={legalCase.id} value={String(legalCase.id)}>
-                          {legalCase.caseNo}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              <div className="space-y-2 sm:col-span-2 lg:col-span-4">
-                <Label htmlFor="docNotes">Notes</Label>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="editNotes">Notes</Label>
                 <Textarea
-                  id="docNotes"
-                  value={draft.notes}
-                  onChange={(e) => setField("notes", e.target.value)}
-                  placeholder="Add a note about this document"
+                  id="editNotes"
+                  value={editing.notes}
+                  onChange={(e) =>
+                    setEditing({ ...editing, notes: e.target.value })
+                  }
+                  disabled={!canEdit}
                 />
               </div>
             </div>
+          )}
 
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setAdding(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSave} disabled={!canSave}>
-                Save Document
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Document list */}
-      <Card>
-        <CardContent className="overflow-x-auto p-0">
-          <table className="w-full min-w-[900px] text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
-                <th className="p-3 font-semibold">Document Name</th>
-                <th className="p-3 font-semibold">Type</th>
-                <th className="p-3 font-semibold">Document Date</th>
-                <th className="p-3 font-semibold">Issue Date</th>
-                <th className="p-3 font-semibold">Expiry Date</th>
-                <th className="p-3 font-semibold">Related To</th>
-                <th className="p-3 font-semibold">Status</th>
-                <th className="p-3 font-semibold">Notes</th>
-                <th className="p-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={9} className="p-6 text-center text-muted-foreground">
-                    No documents match these filters.
-                  </td>
-                </tr>
-              )}
-              {rows.map((document) => (
-                <tr key={document.id} className="border-b last:border-0">
-                  <td className="p-3">
-                    {document.fileUrl ? (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          window.open(document.fileUrl, "_blank", "noopener,noreferrer")
-                        }
-                        className="flex items-start gap-2 text-left font-medium text-primary underline-offset-2 hover:underline"
-                      >
-                        <FileText className="h-4 w-4 shrink-0" />
-                        {document.name}
-                      </button>
-                    ) : (
-                      <span className="font-medium">{document.name}</span>
-                    )}
-                  </td>
-                  <td className="p-3 text-muted-foreground">{document.type}</td>
-                  <td className="p-3 text-muted-foreground">
-                    {formatDate(document.documentDate) || "-"}
-                  </td>
-                  <td className="p-3 text-muted-foreground">
-                    {formatDate(document.issueDate) || "-"}
-                  </td>
-                  <td className="p-3 text-muted-foreground">
-                    {formatDate(document.expiryDate) || "-"}
-                  </td>
-                  <td className="p-3 text-muted-foreground">
-                    {relatedLabel(document)}
-                  </td>
-                  <td className="p-3">
-                    <Badge variant={DOCUMENT_STATUS_VARIANT[document.status]}>
-                      {document.status}
-                    </Badge>
-                  </td>
-                  <td className="p-3 text-muted-foreground">
-                    {document.notes || "-"}
-                  </td>
-                  <td className="p-3 text-right">
-                    {canEdit && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => removeDocument(document.id)}
-                      >
-                        <X className="h-4 w-4" />
-                        <span className="sr-only">Remove {document.name}</span>
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditing(null)}>
+              Close
+            </Button>
+            {canEdit && <Button onClick={saveEdit}>Save Changes</Button>}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

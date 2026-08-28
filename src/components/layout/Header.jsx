@@ -93,6 +93,13 @@ const navSections = [
         icon: Truck,
         description: "Supplier directory and tax numbers",
       },
+      {
+        name: "Company Profile",
+        path: "/settings/firm",
+        key: "settings",
+        icon: Building2,
+        description: "Company information and administration",
+      },
     ],
   },
   {

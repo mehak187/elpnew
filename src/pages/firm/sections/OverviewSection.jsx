@@ -102,7 +102,7 @@ export default function OverviewSection({ onNavigateSection }) {
                     {clientCases.map((legalCase) => {
                       const perCase = caseTotals(legalCase.id, firm);
                       return (
-                        <tr key={legalCase.id} className="border-b last:border-0">
+                        <tr key={legalCase.id} className="border-b transition-colors last:border-0 hover:bg-primary/10">
                           <td className="py-2 pl-6 text-muted-foreground">
                             Case {legalCase.caseNo}
                           </td>

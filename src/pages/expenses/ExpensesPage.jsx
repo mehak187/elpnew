@@ -88,8 +88,14 @@ const omr = (amount) =>
     maximumFractionDigits: 3,
   });
 
-/** A total, sitting on the filter it applies. */
-function SummaryTile({ label, amount, selected, onClick }) {
+/**
+ * A total, sitting on the filter it applies.
+ *
+ * The count sits beside the label because the two answer different questions -
+ * how many expenses of this kind there are, and what they came to. A total on
+ * its own cannot tell one large expense from twenty small ones.
+ */
+function SummaryTile({ label, count, amount, selected, onClick }) {
   return (
     <button
       type="button"
@@ -99,9 +105,12 @@ function SummaryTile({ label, amount, selected, onClick }) {
         selected ? "border-primary ring-1 ring-primary" : "hover:bg-muted/50"
       )}
     >
-      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+          {label}
+        </p>
+        <p className="text-lg font-bold text-primary">{count}</p>
+      </div>
       <p className="mt-1 text-lg font-semibold">{money(amount)}</p>
     </button>
   );
@@ -400,6 +409,7 @@ export default function ExpensesPage() {
             <SummaryTile
               key={option.key}
               label={option.label}
+              count={matching.length}
               amount={matching.reduce((sum, row) => sum + row.total, 0)}
               selected={group === option.key}
               onClick={() => {

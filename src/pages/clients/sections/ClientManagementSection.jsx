@@ -108,7 +108,7 @@ export default function ClientManagementSection({ client }) {
                     (s) => String(s.id) === assignments[role]
                   );
                   return (
-                    <tr key={role} className="border-b last:border-0">
+                    <tr key={role} className="border-b transition-colors last:border-0 hover:bg-primary/10">
                       <td className="p-3 font-medium">{role}</td>
                       <td className="p-3">
                         {person ? (
