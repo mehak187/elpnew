@@ -64,31 +64,47 @@ export const money = (amount) => withRial(moneyValue(amount));
 export const initialFirmInfo = {
   nameAr: "مكتب ياندس للمحاماة",
   nameEn: "YANDS",
+  // The name the company trades under, which need not be its registered one.
+  tradeName: "Y&S Associates",
   address: "Building 214, Way 3009, Shatti Al Qurum, Muscat, Oman",
   mojLicenseNo: "MOJ-2010-0447",
   crNumber: "1234567",
   crExpiryDate: dayOffset(120),
+  // The branch the company answers from, chosen from the branches it has.
+  primaryBranchId: 1,
 };
 
 /* --------------------------------------------------------- 2. Document types */
 
 export const DOCUMENT_TYPES = [
-  "Professional Indemnity Insurance",
-  "Ministry of Justice License",
   "Commercial Registration",
-  "Official Certificate",
-  "License or Permit",
-  "Annual Accounting Report",
-  "Administrative or Management Report",
-  "Meeting Minutes",
+  "Ministry of Justice License",
+  "Membership Certificate",
+  "Office Lease Contract",
+  "Apartment Lease Contract",
   "Other",
 ];
 
-export const RELATED_TO_KINDS = [
-  { key: "firm", label: "The Law Firm" },
-  { key: "client", label: "A Client" },
-  { key: "case", label: "A Case" },
-];
+/**
+ * A document either applies to the whole company or to one branch, so the
+ * branch field carries null for the general case rather than a separate flag.
+ */
+export const GENERAL_BRANCH = "general";
+
+export const branchLabel = (branches, branchId) =>
+  branchId ? branches.find((b) => b.id === branchId)?.name || "-" : "General";
+
+/** The reference a document is quoted by: DOC-001, DOC-002 and so on. */
+export const formatDocumentId = (serial) =>
+  "DOC-" + String(serial).padStart(3, "0");
+
+export function nextDocumentId(documents) {
+  const highest = documents.reduce((max, d) => {
+    const serial = Number(String(d.docId || "").replace("DOC-", ""));
+    return Number.isFinite(serial) ? Math.max(max, serial) : max;
+  }, 0);
+  return formatDocumentId(highest + 1);
+}
 
 // A document is Expiring Soon inside this window.
 export const EXPIRY_WARNING_DAYS = 60;
@@ -114,9 +130,9 @@ export const DOCUMENT_STATUS_VARIANT = {
 /* ----------------------------------------------------------- 3. Branches */
 
 export const initialBranches = [
-  { id: 1, branchNumber: 1, name: "Muscat", address: "Shatti Al Qurum, Muscat", phone: "+968 2411 1111" },
-  { id: 2, branchNumber: 2, name: "Salalah", address: "Al Saada Street, Salalah", phone: "+968 2329 2222" },
-  { id: 3, branchNumber: 3, name: "Sohar", address: "Falaj Al Qabail, Sohar", phone: "+968 2684 3333" },
+  { id: 1, branchNumber: 1, name: "Muscat", nameAr: "فرع مسقط", address: "Shatti Al Qurum, Muscat", phone: "+968 2411 1111", email: "muscat@company.com", managerId: 1, active: true },
+  { id: 2, branchNumber: 2, name: "Salalah", nameAr: "فرع صلالة", address: "Al Saada Street, Salalah", phone: "+968 2329 2222", email: "salalah@company.com", managerId: 7, active: true },
+  { id: 3, branchNumber: 3, name: "Sohar", nameAr: "فرع صحار", address: "Falaj Al Qabail, Sohar", phone: "+968 2684 3333", email: "sohar@company.com", managerId: 11, active: true },
 ];
 
 /**
@@ -133,9 +149,9 @@ export function nextBranchNumber(branches) {
 /* ------------------------------------------------------- 4. Bank accounts */
 
 export const initialBankAccounts = [
-  { id: 1, bankName: "Bank Muscat", accountName: "YANDS Legal Firm - Main", accountNumber: "OM81 BMUS 0123 4567 8901", openingBalance: 5000, openedAt: dayOffset(-232), active: true },
-  { id: 2, bankName: "National Bank of Oman", accountName: "YANDS Legal Firm - Client Trust", accountNumber: "OM45 NBOM 9876 5432 1098", openingBalance: 12000, openedAt: dayOffset(-232), active: true },
-  { id: 3, bankName: "Bank Dhofar", accountName: "YANDS Legal Firm - Salalah Branch", accountNumber: "OM12 BDOF 4455 6677 8899", openingBalance: 3000, openedAt: dayOffset(-120), active: false },
+  { id: 1, bankName: "Bank Muscat", bankBranch: "Shatti Al Qurum", accountNumber: "0123456789", iban: "OM81 BMUS 0123 4567 8901", branchId: 1, openingBalance: 5000, openedAt: dayOffset(-232), active: true },
+  { id: 2, bankName: "National Bank of Oman", bankBranch: "Ruwi", accountNumber: "9876543210", iban: "OM45 NBOM 9876 5432 1098", branchId: null, openingBalance: 12000, openedAt: dayOffset(-232), active: true },
+  { id: 3, bankName: "Bank Dhofar", bankBranch: "Salalah Main", accountNumber: "4455667788", iban: "OM12 BDOF 4455 6677 8899", branchId: 2, openingBalance: 3000, openedAt: dayOffset(-120), active: false },
 ];
 
 /* ------------------------- 8. Clients, cases and invoices (the relation chain) */
@@ -191,21 +207,19 @@ export const initialExpenses = [
 ];
 
 export const initialTransfers = [
-  { id: 1, fromAccountId: 2, toAccountId: 1, amount: 1500, date: dayOffset(-50), reference: "TRF-001", description: "Transfer to main account" },
+  { id: 1, fromAccountId: 2, toAccountId: 1, amount: 1500, date: dayOffset(-50), reference: "TRF-001", description: "Transfer to main account", receipt: "" },
 ];
 
 /* -------------------------------------------------------- 2. Documents */
 
 export const initialDocuments = [
-  { id: 1, name: "Professional Indemnity Insurance 2026", type: "Professional Indemnity Insurance", documentDate: dayOffset(-200), issueDate: dayOffset(-200), expiryDate: dayOffset(45), fileName: "indemnity-2026.pdf", fileUrl: "/documents/sample-reference.pdf", relatedKind: "firm", relatedId: null, notes: "Renewal quote requested." },
-  { id: 2, name: "Ministry of Justice License", type: "Ministry of Justice License", documentDate: dayOffset(-500), issueDate: dayOffset(-500), expiryDate: dayOffset(210), fileName: "moj-license.pdf", fileUrl: "/documents/sample-reference.pdf", relatedKind: "firm", relatedId: null, notes: "" },
-  { id: 3, name: "Commercial Registration Certificate", type: "Commercial Registration", documentDate: dayOffset(-610), issueDate: dayOffset(-610), expiryDate: dayOffset(120), fileName: "cr-certificate.pdf", fileUrl: "/documents/sample-reference.pdf", relatedKind: "firm", relatedId: null, notes: "" },
-  { id: 4, name: "Annual Accounting Report 2025", type: "Annual Accounting Report", documentDate: dayOffset(-150), issueDate: dayOffset(-150), expiryDate: "", fileName: "accounts-2025.pdf", fileUrl: "/documents/sample-reference.pdf", relatedKind: "firm", relatedId: null, notes: "Audited." },
-  { id: 5, name: "Bar Association Permit", type: "License or Permit", documentDate: dayOffset(-400), issueDate: dayOffset(-400), expiryDate: dayOffset(-12), fileName: "bar-permit.pdf", fileUrl: "/documents/sample-reference.pdf", relatedKind: "firm", relatedId: null, notes: "Renewal overdue." },
-  { id: 6, name: "Power of Attorney - ABC Holdings", type: "Official Certificate", documentDate: dayOffset(-205), issueDate: dayOffset(-205), expiryDate: dayOffset(300), fileName: "poa-abc.pdf", fileUrl: "/documents/sample-poa.pdf", relatedKind: "client", relatedId: 1, notes: "" },
-  { id: 7, name: "Meeting Minutes - XYZ Investments", type: "Meeting Minutes", documentDate: dayOffset(-30), issueDate: "", expiryDate: "", fileName: "minutes-xyz.pdf", fileUrl: "/documents/sample-reference.pdf", relatedKind: "client", relatedId: 2, notes: "Scope of engagement agreed." },
-  { id: 8, name: "Statement of Claim - Case 226004", type: "Official Certificate", documentDate: dayOffset(-58), issueDate: dayOffset(-58), expiryDate: "", fileName: "claim-226004.pdf", fileUrl: "/documents/sample-reference.pdf", relatedKind: "case", relatedId: 5, notes: "" },
-  { id: 9, name: "Management Report Q2 2026", type: "Administrative or Management Report", documentDate: dayOffset(-45), issueDate: dayOffset(-45), expiryDate: "", fileName: "mgmt-q2.pdf", fileUrl: "/documents/sample-reference.pdf", relatedKind: "firm", relatedId: null, notes: "" },
+  { id: 1, docId: "DOC-001", branchId: null, type: "Commercial Registration", expiryDate: dayOffset(120), fileName: "cr-certificate.pdf", fileUrl: "/documents/sample-reference.pdf", notes: "" },
+  { id: 2, docId: "DOC-002", branchId: null, type: "Ministry of Justice License", expiryDate: dayOffset(210), fileName: "moj-license.pdf", fileUrl: "/documents/sample-reference.pdf", notes: "" },
+  { id: 3, docId: "DOC-003", branchId: null, type: "Membership Certificate", expiryDate: dayOffset(45), fileName: "bar-membership.pdf", fileUrl: "/documents/sample-reference.pdf", notes: "Renewal quote requested." },
+  { id: 4, docId: "DOC-004", branchId: 1, type: "Office Lease Contract", expiryDate: dayOffset(300), fileName: "lease-muscat.pdf", fileUrl: "/documents/sample-reference.pdf", notes: "Shatti Al Qurum office." },
+  { id: 5, docId: "DOC-005", branchId: 2, type: "Office Lease Contract", expiryDate: dayOffset(-12), fileName: "lease-salalah.pdf", fileUrl: "/documents/sample-reference.pdf", notes: "Renewal overdue." },
+  { id: 6, docId: "DOC-006", branchId: 3, type: "Apartment Lease Contract", expiryDate: dayOffset(160), fileName: "apartment-sohar.pdf", fileUrl: "/documents/sample-reference.pdf", notes: "Staff accommodation." },
+  { id: 7, docId: "DOC-007", branchId: null, type: "Other", expiryDate: "", fileName: "accounts-2025.pdf", fileUrl: "/documents/sample-reference.pdf", notes: "Audited annual accounts." },
 ];
 
 /* --------------------------------------------------- 5 & 7. Derived money */

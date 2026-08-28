@@ -373,7 +373,7 @@ function FinanceApproval({ invoice, supplierAccount, outstanding, onDecide }) {
                   .filter((a) => a.active)
                   .map((a) => (
                     <SelectItem key={a.id} value={String(a.id)}>
-                      {a.bankName} - {a.accountName}
+                      {a.bankName} - {a.accountNumber}
                     </SelectItem>
                   ))}
               </SelectContent>
@@ -512,7 +512,7 @@ function SupplierHistoryDialog({ invoice, invoices, accountFor, onOpenChange }) 
                 {matches.map(({ invoice: past, sameSupplier, sameApplicant, sameKind }) => {
                   const account = accountFor(past.supplier);
                   return (
-                    <tr key={past.id} className="border-b align-top last:border-0">
+                    <tr key={past.id} className="border-b align-top transition-colors last:border-0 hover:bg-primary/10">
                       <td className="py-2 font-medium">
                         {past.reference}
                         {past.requestNo && (
@@ -861,7 +861,7 @@ export default function GeneralInvoices({ partnersOnly = false }) {
             invoice.status === "returned" && (isAdmin || role === "employee");
 
           return (
-            <Card key={invoice.id}>
+            <Card key={invoice.id} className="border-2 border-primary/30">
               <CardContent className="space-y-4 p-4 sm:p-6">
                 <Route invoice={invoice} />
 
@@ -933,7 +933,7 @@ export default function GeneralInvoices({ partnersOnly = false }) {
                 </FieldRow>
 
                 <FieldRow>
-                  <Field icon={Landmark} label="Supplier name">
+                  <Field icon={Building2} label="Supplier name">
                     {invoice.supplier}
                   </Field>
                   <Field icon={Landmark} label="Supplier Account">
@@ -1013,7 +1013,7 @@ export default function GeneralInvoices({ partnersOnly = false }) {
                     </thead>
                     <tbody>
                       {invoice.lines.map((line, i) => (
-                        <tr key={line.id} className="border-b last:border-0">
+                        <tr key={line.id} className="border-b transition-colors last:border-0 hover:bg-primary/10">
                           <td className="px-4 py-2 text-muted-foreground">
                             {i + 1}
                           </td>

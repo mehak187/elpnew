@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import DataTable from "@/components/shared/DataTable";
-import { Briefcase, Plus } from "lucide-react";
+import { Briefcase, Plus, FileText, Eye } from "lucide-react";
 import { useExpenses } from "@/lib/expenses/context";
 import { judicialTotals } from "./judicialData";
 import { formatDate, money } from "./expenseData";
@@ -114,15 +114,23 @@ export default function CourtFeePayments() {
           <Line label="Payment Method:">{row.paymentMethod}</Line>
           <Line label="Bank:">{row.bank}</Line>
           <Line label="Account No.:">{row.accountNo}</Line>
+          {/* The receipt is a document you open, so it is offered as one:
+              what it is on the left, what clicking does on the right. */}
           <Line label="Payment Receipt:">
-            <a
-              href={row.receipt}
-              onClick={(event) => event.preventDefault()}
-              title={row.receipt}
-              className="text-primary underline-offset-2 hover:underline"
-            >
-              View Payment Receipt
-            </a>
+            {row.receipt ? (
+              <a
+                href={row.receipt}
+                onClick={(event) => event.preventDefault()}
+                title={row.receipt}
+                className="inline-flex items-center gap-1.5 rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <FileText className="h-3.5 w-3.5 shrink-0" />
+                View Payment Receipt
+                <Eye className="h-3.5 w-3.5 shrink-0" />
+              </a>
+            ) : (
+              <span className="text-muted-foreground">Not attached</span>
+            )}
           </Line>
         </div>
       ),

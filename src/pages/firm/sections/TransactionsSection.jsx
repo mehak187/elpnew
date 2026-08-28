@@ -154,7 +154,7 @@ export default function TransactionsSection({ initialAccountId, canRecord }) {
             <SelectContent>
               {bankAccounts.map((a) => (
                 <SelectItem key={a.id} value={String(a.id)}>
-                  {a.bankName} &ndash; {a.accountName}
+                  {a.bankName} &ndash; {a.accountNumber}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -257,7 +257,7 @@ export default function TransactionsSection({ initialAccountId, canRecord }) {
                           .filter((a) => String(a.id) !== accountId)
                           .map((a) => (
                             <SelectItem key={a.id} value={String(a.id)}>
-                              {a.bankName} &ndash; {a.accountName}
+                              {a.bankName} &ndash; {a.accountNumber}
                             </SelectItem>
                           ))}
                       </SelectContent>
@@ -338,7 +338,7 @@ export default function TransactionsSection({ initialAccountId, canRecord }) {
                 </tr>
               )}
               {rows.map((row) => (
-                <tr key={row.id} className="border-b last:border-0">
+                <tr key={row.id} className="border-b transition-colors last:border-0 hover:bg-primary/10">
                   <td className="p-3 text-muted-foreground">{formatDate(row.date)}</td>
                   <td className="p-3 font-medium">{row.description}</td>
                   <td className="p-3 text-muted-foreground">{row.reference || "—"}</td>
