@@ -21,6 +21,7 @@ import {
   FileText,
   Wallet,
   HandCoins,
+  HeartHandshake,
   Gauge,
   MapPin,
   ShieldCheck,
@@ -46,6 +47,8 @@ import {
   EMPLOYEE_DOCUMENT_TYPES,
 } from "@/lib/constants";
 import SalariesSection from "./sections/SalariesSection";
+import LoansSection from "./sections/LoansSection";
+import AssistanceSection from "./sections/AssistanceSection";
 import {
   employeeRecords,
   nextEmployeeNo,
@@ -95,9 +98,19 @@ const SECTIONS = [
   },
   {
     key: "loans",
-    label: "Loans & Advances",
+    label: "Loans",
     icon: HandCoins,
-    note: "What has been lent, and what is owed back",
+    note: "Manage loans taken by the firm",
+    // The loan form saves itself, so the header offers to jump to it.
+    action: "Add Loan",
+  },
+  {
+    key: "assistance",
+    label: "Assistance",
+    icon: HeartHandshake,
+    note: "Manage financial assistance and charitable aid",
+    // The assistance form saves itself, so the header offers to jump to it.
+    action: "Add Assistance",
   },
   {
     key: "performance",
@@ -139,6 +152,13 @@ const STATUS_DOT = {
 
 /** How much of a note the field will take, shown as a count while typing. */
 const NOTES_LIMIT = 300;
+
+/** The first field of the form a section's header button jumps to. */
+const JUMP_TARGET = {
+  salaries: "salary-expense-type",
+  loans: "loan-expense-type",
+  assistance: "assistance-expense-type",
+};
 
 const IMAGE_TYPES = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
 
@@ -246,7 +266,9 @@ export default function EmployeeForm() {
   // The section saves itself lower down, so the header brings the form to the
   // top of the screen rather than pretending to save from up here.
   const jumpToForm = () => {
-    const field = window.document.getElementById("salary-expense-type");
+    const field = window.document.getElementById(
+      JUMP_TARGET[activeSection] || "salary-expense-type"
+    );
     if (!field) return;
     field.scrollIntoView({ behavior: "smooth", block: "center" });
     field.focus();
@@ -812,6 +834,10 @@ export default function EmployeeForm() {
 
                 {activeSection === "salaries" && <SalariesSection />}
 
+                {activeSection === "loans" && <LoansSection />}
+
+                {activeSection === "assistance" && <AssistanceSection />}
+
                 {activeSection === "addresses" && (
                   <div className="space-y-6">
                     <p className="font-semibold text-primary">
@@ -875,7 +901,7 @@ export default function EmployeeForm() {
                 )}
 
                 {/* Not yet specified, so nothing is invented for them */}
-                {["loans", "performance", "permissions"].includes(
+                {["performance", "permissions"].includes(
                   activeSection
                 ) && <EmptyState>{current.label} is not set up yet.</EmptyState>}
               </form>
