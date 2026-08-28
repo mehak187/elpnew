@@ -1,5 +1,82 @@
 // The Rial sign is drawn, not typed - see components/shared/money.jsx.
 
+/* ------------------------------------------------------------- employees */
+
+// Nationalities are written as the adjective, which is how a personnel record
+// reads: "Omani", not "Oman".
+export const NATIONALITIES = [
+  "Omani",
+  "Emirati",
+  "Saudi",
+  "Qatari",
+  "Kuwaiti",
+  "Bahraini",
+  "Yemeni",
+  "Egyptian",
+  "Jordanian",
+  "Syrian",
+  "Lebanese",
+  "Sudanese",
+  "Indian",
+  "Pakistani",
+  "Bangladeshi",
+  "Sri Lankan",
+  "Filipino",
+  "British",
+  "Other",
+];
+
+export const GENDERS = ["Male", "Female"];
+
+export const EMPLOYEE_STATUSES = ["Active", "On Leave", "Inactive", "Terminated"];
+
+/**
+ * Why someone left. Only asked for once a status says they have - a reason for
+ * leaving on an employee who is still here is a contradiction, not a blank.
+ */
+export const LEAVING_REASONS = [
+  "Resignation",
+  "End of Contract",
+  "Termination",
+  "Retirement",
+  "Transfer",
+  "Other",
+];
+
+/* ---------------------------------------------------------- job description */
+
+/** A partner owns a share of the firm; everyone else is employed by it. */
+export const EMPLOYEE_CATEGORIES = ["Partner", "Employee"];
+
+/** How far up the firm somebody sits, regardless of what they do. */
+export const JOB_LEVELS = ["Top Management", "Executive Management", "Staff"];
+
+/** The side of the firm's work somebody belongs to. */
+export const DEPARTMENTS = [
+  "Litigation",
+  "Execution",
+  "Administrative Affairs",
+  "Accounting",
+];
+
+/** What somebody actually does, which is not the same as their level. */
+export const OCCUPATIONS = [
+  "Legal Consultant",
+  "Lawyer",
+  "Administrator",
+  "Accountant",
+  "Junior Accountant",
+  "Other Business",
+];
+
+export const EDUCATION_LEVELS = [
+  "Secondary Education",
+  "Diploma",
+  "Bachelor's Degree",
+  "Master's Degree",
+  "Doctorate",
+];
+
 // Client types as specified by the client (Phase 1 requirements)
 export const CLIENT_TYPES = [
   "Bank",
