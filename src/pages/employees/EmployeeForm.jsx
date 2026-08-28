@@ -22,6 +22,7 @@ import {
   Wallet,
   HandCoins,
   HeartHandshake,
+  CalendarClock,
   Gauge,
   MapPin,
   ShieldCheck,
@@ -49,6 +50,8 @@ import {
 import SalariesSection from "./sections/SalariesSection";
 import LoansSection from "./sections/LoansSection";
 import AssistanceSection from "./sections/AssistanceSection";
+import DailyActivitiesSection from "./sections/DailyActivitiesSection";
+import PerformanceSection from "./sections/PerformanceSection";
 import {
   employeeRecords,
   nextEmployeeNo,
@@ -113,10 +116,17 @@ const SECTIONS = [
     action: "Add Assistance",
   },
   {
+    key: "daily",
+    label: "Daily Activities",
+    icon: CalendarClock,
+    note: "Record today's working time and activities",
+    save: "Save Daily Activity",
+  },
+  {
     key: "performance",
     label: "Performance Evaluation",
     icon: Gauge,
-    note: "Reviews and how they went",
+    note: "Statistics collected by the system from recorded activity",
   },
   {
     key: "permissions",
@@ -838,6 +848,10 @@ export default function EmployeeForm() {
 
                 {activeSection === "assistance" && <AssistanceSection />}
 
+                {activeSection === "daily" && <DailyActivitiesSection />}
+
+                {activeSection === "performance" && <PerformanceSection />}
+
                 {activeSection === "addresses" && (
                   <div className="space-y-6">
                     <p className="font-semibold text-primary">
@@ -901,7 +915,7 @@ export default function EmployeeForm() {
                 )}
 
                 {/* Not yet specified, so nothing is invented for them */}
-                {["performance", "permissions"].includes(
+                {["permissions"].includes(
                   activeSection
                 ) && <EmptyState>{current.label} is not set up yet.</EmptyState>}
               </form>
