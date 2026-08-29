@@ -2,20 +2,66 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import DataTable from "@/components/shared/DataTable";
-import { Briefcase, Plus, FileText, Eye } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Briefcase, Plus, FileText } from "lucide-react";
 import { useExpenses } from "@/lib/expenses/context";
 import { judicialTotals } from "./judicialData";
 import { formatDate, money } from "./expenseData";
 
-/** One field inside a stacked column. */
+/** A fact with its heading above it, for a column read down rather than across. */
 function Line({ label, children }) {
   return (
     <p className="leading-tight">
-      <span className="block text-[11px] text-muted-foreground">{label}</span>
+      <span className="block font-semibold">{label}</span>
       <span className="block">{children || "-"}</span>
     </p>
+  );
+}
+
+/** A fact with its heading beside it, where the pair fits on one line. */
+function Pair({ label, children }) {
+  return (
+    <p className="leading-tight">
+      <span className="text-muted-foreground">{label} </span>
+      <span>{children || "-"}</span>
+    </p>
+  );
+}
+
+/** Who did a thing, and when they did it. */
+function Stamp({ label, name, date, time }) {
+  return (
+    <p className="leading-tight">
+      <span className="block text-muted-foreground">{label}</span>
+      <span className="block font-semibold">{name || "-"}</span>
+      <span className="block text-muted-foreground">
+        {formatDate(date)} - {time}
+      </span>
+    </p>
+  );
+}
+
+/**
+ * A document the row carries.
+ *
+ * Nothing is uploaded yet, so the link is held rather than followed - the
+ * name is in the tooltip so it is still possible to tell which file is meant.
+ */
+function DocumentLink({ file, children }) {
+  if (!file) {
+    return <span className="block text-muted-foreground">Not attached</span>;
+  }
+  return (
+    <a
+      href={file}
+      onClick={(event) => event.preventDefault()}
+      title={file}
+      className="inline-flex items-center gap-1.5 rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+    >
+      <FileText className="h-3.5 w-3.5 shrink-0" />
+      {children}
+    </a>
   );
 }
 
@@ -39,128 +85,148 @@ export default function CourtFeePayments() {
 
   const columns = [
     {
-      key: "branch",
-      header: "Branch",
-      subHeader: "(Office Branch)",
-      width: "8%",
-      cellClassName: "font-medium",
+      key: "expenseNo",
+      header: "Expense No.",
+      subHeader: "(Branch)",
+      width: "12%",
+      // The number opens the request it belongs to.
+      render: (value, row) => (
+        <div className="space-y-1">
+          <button
+            type="button"
+            onClick={() => navigate("/court-fee-payments/" + row.id)}
+            className="rounded text-sm font-bold text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            {value}
+          </button>
+          <p className="text-xs text-muted-foreground">{row.branch} Branch</p>
+        </div>
+      ),
     },
     {
       key: "client",
       header: "Case Parties",
       subHeader: "(Client / Opponent)",
-      width: "13%",
+      width: "14%",
       exportValue: (row) => row.client + " / " + row.opponent,
       render: (_, row) => (
-        <div className="space-y-1.5 text-xs">
-          <Line label="Client:">
+        <div className="space-y-2 text-xs">
+          <Line label="Client">
             <span className="font-medium">{row.client}</span>
           </Line>
-          <Line label="Opponent:">{row.opponent}</Line>
+          <Line label="Opponent">{row.opponent}</Line>
         </div>
       ),
     },
     {
-      key: "caseNo",
+      key: "court",
       header: "Case Details",
-      subHeader: "(Court · Level · Number · Location)",
-      width: "16%",
-      exportValue: (row) =>
-        [row.court, row.level, row.caseNo, row.location].join(" · "),
+      subHeader: "(Court - Level)",
+      width: "13%",
+      exportValue: (row) => row.court + " - " + row.level,
       render: (_, row) => (
-        <div className="space-y-1.5 text-xs">
-          <Line label="Court:">{row.court}</Line>
-          <Line label="Level:">{row.level}</Line>
-          <Line label="Case No.:">{row.caseNo}</Line>
-          <Line label="Location:">{row.location}</Line>
+        <div className="text-xs">
+          <p className="font-medium">{row.court}</p>
+          <p className="text-muted-foreground">{row.level}</p>
         </div>
       ),
     },
     {
       key: "expenseType",
       header: "Expense Details",
-      subHeader: "(Type · Category · Subcategory)",
-      width: "15%",
+      subHeader: "(Court Expense Type)",
+      width: "17%",
       exportValue: (row) =>
-        [row.expenseType, row.category, row.subcategory].join(" · "),
+        [row.expenseType, row.category, row.subcategory].join(" - "),
       render: (_, row) => (
-        <div className="space-y-1.5 text-xs">
-          <Line label="Expense Type:">
-            <span className="font-medium">{row.expenseType}</span>
-          </Line>
-          <Line label="Category:">{row.category}</Line>
-          <Line label="Subcategory:">{row.subcategory}</Line>
+        <div className="space-y-3 text-xs">
+          <div>
+            <p className="font-semibold">{row.expenseType}</p>
+            <p className="text-muted-foreground">{row.category}</p>
+            <p className="text-muted-foreground">{row.subcategory}</p>
+          </div>
+          {/* What the court gave back, kept with what it was given for */}
+          <div className="space-y-1 border-t pt-2">
+            <DocumentLink file={row.registrationReceipt}>
+              View Registration Receipt
+            </DocumentLink>
+            <DocumentLink file={row.caseRecord}>
+              View Case Registration Record
+            </DocumentLink>
+          </div>
         </div>
       ),
     },
     {
       key: "amount",
-      header: "Amount Paid to Court",
-      subHeader: "(Payment Amount)",
-      width: "12%",
-      render: (value) => (
-        <p className="text-lg font-bold text-primary">{money(value)}</p>
-      ),
-    },
-    {
-      key: "paymentMethod",
       header: "Payment Details",
-      subHeader: "(Method · Bank · Account · Receipt)",
-      width: "16%",
+      subHeader: "(Amount & Payment Method)",
+      width: "18%",
       exportValue: (row) =>
-        [row.paymentMethod, row.bank, row.accountNo].join(" · "),
+        [row.amount, row.paymentMethod, row.bank, row.accountNo].join(" - "),
+      // Sorted on the figure, which is the only part of this column anybody
+      // orders by.
+      sortValue: (row) => row.amount,
       render: (_, row) => (
-        <div className="space-y-1.5 text-xs">
-          <Line label="Payment Method:">{row.paymentMethod}</Line>
-          <Line label="Bank:">{row.bank}</Line>
-          <Line label="Account No.:">{row.accountNo}</Line>
-          {/* The receipt is a document you open, so it is offered as one:
-              what it is on the left, what clicking does on the right. */}
-          <Line label="Payment Receipt:">
-            {row.receipt ? (
-              <a
-                href={row.receipt}
-                onClick={(event) => event.preventDefault()}
-                title={row.receipt}
-                className="inline-flex items-center gap-1.5 rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <FileText className="h-3.5 w-3.5 shrink-0" />
-                View Payment Receipt
-                <Eye className="h-3.5 w-3.5 shrink-0" />
-              </a>
-            ) : (
-              <span className="text-muted-foreground">Not attached</span>
-            )}
-          </Line>
+        <div className="space-y-3">
+          <p className="text-center text-lg font-bold text-primary">
+            {money(row.amount)}
+          </p>
+          <div className="space-y-1 border-t pt-2 text-xs">
+            <Pair label="Payment Method:">{row.paymentMethod}</Pair>
+            <Pair label="Bank Name:">{row.bank}</Pair>
+            <Pair label="Account No.:">{row.accountNo}</Pair>
+          </div>
+          <div className="space-y-1 border-t pt-2 text-xs">
+            <p className="text-muted-foreground">Payment Receipt:</p>
+            <DocumentLink file={row.receipt}>View Payment Receipt</DocumentLink>
+          </div>
         </div>
       ),
     },
     {
       key: "status",
       header: "Transaction Tracking",
-      subHeader: "(Submitted · Approved · Status)",
-      width: "16%",
+      subHeader: "(Submitted - Approved - Status)",
+      width: "20%",
       exportValue: (row) =>
-        row.submittedBy + " · " + row.approvedBy + " · " + row.status,
+        [
+          row.submittedBy,
+          row.accountantApprovedBy,
+          row.financeApprovedBy,
+          row.status,
+        ].join(" - "),
       render: (_, row) => (
-        <div className="space-y-1.5 text-xs">
-          <Line label="Submitted By:">
-            {row.submittedBy}
-            <span className="block text-muted-foreground">
-              {formatDate(row.submittedAt)} - {row.submittedTime}
-            </span>
-          </Line>
-          <Line label="Approved By:">
-            {row.approvedBy}
-            <span className="block text-muted-foreground">
-              {formatDate(row.approvedAt)} - {row.approvedTime}
-            </span>
-          </Line>
-          <Line label="Status:">
-            <Badge variant={row.status === "Approved" ? "success" : "warning"}>
+        <div className="space-y-2 text-xs">
+          <Stamp
+            label="Submitted By:"
+            name={row.submittedBy}
+            date={row.submittedAt}
+            time={row.submittedTime}
+          />
+          <Stamp
+            label="Accountant Approved By:"
+            name={row.accountantApprovedBy}
+            date={row.accountantApprovedAt}
+            time={row.accountantApprovedTime}
+          />
+          <Stamp
+            label="Finance Manager Approved By:"
+            name={row.financeApprovedBy}
+            date={row.approvedAt}
+            time={row.approvedTime}
+          />
+          <p className="border-t pt-2">
+            <span className="text-muted-foreground">Status: </span>
+            <span
+              className={cn(
+                "font-semibold",
+                row.status === "Approved" ? "text-green-600" : "text-amber-600"
+              )}
+            >
               {row.status}
-            </Badge>
-          </Line>
+            </span>
+          </p>
         </div>
       ),
     },
@@ -212,6 +278,7 @@ export default function CourtFeePayments() {
             searchPlaceholder="Ask anything..."
             exportFileName="judicial-authority-expenses.csv"
             enableColumnSearch={false}
+            enableSorting
             itemLabel="expenses"
             onAdd={() => navigate("/court-fee-payments/create")}
             addLabel="Add Expense"
