@@ -29,6 +29,7 @@
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-brand: var(--brand);
+  --color-frame-alt: var(--frame-alt);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
@@ -62,6 +63,9 @@
   /* #A61C1F - the red from the YANDS wordmark. The mark keeps its red; the
      interface around it is navy, so the two never compete for attention. */
   --brand: oklch(0.47 0.173 26);
+  /* Every other request card is framed in brown, so where one ends and the
+     next begins is read at a glance rather than counted. */
+  --frame-alt: oklch(0.44 0.075 55);
   --background: oklch(0.99 0 0);
   --foreground: oklch(0.20 0 0);
   --card: oklch(1 0 0);
@@ -105,6 +109,7 @@
   /* Dark mode - steps chosen against the dark surface, not flipped */
   /* The wordmark lifts off the dark ground rather than sinking into it */
   --brand: oklch(0.62 0.18 26);
+  --frame-alt: oklch(0.62 0.09 60);
   --background: oklch(0.16 0 0);
   --foreground: oklch(0.95 0 0);
   --card: oklch(0.20 0 0);
