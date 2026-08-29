@@ -148,11 +148,44 @@ export function nextBranchNumber(branches) {
 
 /* ------------------------------------------------------- 4. Bank accounts */
 
+/**
+ * The company's bank accounts.
+ *
+ * A branch is written on three lines because that is how a bank writes it:
+ * the branch's name, the district it stands in, and the city it is in. The
+ * SWIFT code is held beside the IBAN since a transfer from abroad needs both.
+ *
+ * `logo` names an image file for the bank's own mark. None are on disk yet,
+ * so the cards fall back to the bank's initials - dropping the files in is
+ * all that is needed to replace them.
+ */
 export const initialBankAccounts = [
-  { id: 1, bankName: "Bank Muscat", bankBranch: "Shatti Al Qurum", accountNumber: "0123456789", iban: "OM81 BMUS 0123 4567 8901", branchId: 1, openingBalance: 5000, openedAt: dayOffset(-232), active: true },
-  { id: 2, bankName: "National Bank of Oman", bankBranch: "Ruwi", accountNumber: "9876543210", iban: "OM45 NBOM 9876 5432 1098", branchId: null, openingBalance: 12000, openedAt: dayOffset(-232), active: true },
-  { id: 3, bankName: "Bank Dhofar", bankBranch: "Salalah Main", accountNumber: "4455667788", iban: "OM12 BDOF 4455 6677 8899", branchId: 2, openingBalance: 3000, openedAt: dayOffset(-120), active: false },
+  { id: 1, bankName: "Bank Muscat", logo: "", bankBranch: "Muscat Branch", branchArea: "Shatti Al Qurum", location: "Muscat, Oman", accountName: "Operating Account", accountType: "Current Account", accountNumber: "0123456789", iban: "OM81 BMUS 0123 4567 8901", swift: "BMUSOMRX", branchId: 1, openingBalance: 5000, openedAt: dayOffset(-232), active: true },
+  { id: 2, bankName: "National Bank of Oman", logo: "", bankBranch: "Ruwi Branch", branchArea: "Ruwi", location: "Muscat, Oman", accountName: "Corporate Account", accountType: "Current Account", accountNumber: "9876543210", iban: "OM45 NBOM 9876 5432 1098", swift: "NBOMOMRX", branchId: null, openingBalance: 12000, openedAt: dayOffset(-232), active: true },
+  { id: 3, bankName: "Bank Dhofar", logo: "", bankBranch: "Salalah Branch", branchArea: "Salalah Main", location: "Dhofar, Oman", accountName: "Salalah Office Account", accountType: "Current Account", accountNumber: "4455667788", iban: "OM12 BDOF 4455 6677 8899", swift: "BDOFOMRU", branchId: 2, openingBalance: 3000, openedAt: dayOffset(-120), active: false },
+  { id: 4, bankName: "Sohar International", logo: "", bankBranch: "Sohar Branch", branchArea: "Sohar", location: "Al Batinah, Oman", accountName: "Sohar Office Account", accountType: "Current Account", accountNumber: "1122334455", iban: "OM68 SIIB 1122 3344 5566", swift: "SIIBOMRX", branchId: 3, openingBalance: 8000, openedAt: dayOffset(-180), active: true },
+  { id: 5, bankName: "Oman Arab Bank", logo: "", bankBranch: "Azaiba Branch", branchArea: "Azaiba", location: "Muscat, Oman", accountName: "Client Funds Account", accountType: "Call Account", accountNumber: "4455667899", iban: "OM96 OABB 4455 6677 8899", swift: "OABOOMRX", branchId: 1, openingBalance: 6500, openedAt: dayOffset(-150), active: true },
+  { id: 6, bankName: "Ahli Bank", logo: "", bankBranch: "Qurum Branch", branchArea: "Qurum", location: "Muscat, Oman", accountName: "Payroll Account", accountType: "Current Account", accountNumber: "9988776655", iban: "OM94 AHLI 9988 7766 5544", swift: "AHLIOMRX", branchId: 1, openingBalance: 7000, openedAt: dayOffset(-95), active: true },
+  { id: 7, bankName: "First Abu Dhabi Bank", logo: "", bankBranch: "Al Khuwair Branch", branchArea: "Al Khuwair", location: "Muscat, Oman", accountName: "Reserve Account", accountType: "Fixed Deposit", accountNumber: "2233445566", iban: "OM11 FAB 2233 4455 6677", swift: "FABOOMRX", branchId: 1, openingBalance: 4650, openedAt: dayOffset(-60), active: true },
 ];
+
+/**
+ * The initials a bank is drawn by until its own mark is available.
+ *
+ * Words like "of" and "the" are skipped so National Bank of Oman reads NBO
+ * rather than NBOO.
+ */
+const SKIPPED_WORDS = ["of", "the", "and", "for"];
+
+export function bankInitials(name) {
+  return String(name)
+    .split(" ")
+    .filter((word) => word && !SKIPPED_WORDS.includes(word.toLowerCase()))
+    .map((word) => word[0])
+    .join("")
+    .slice(0, 3)
+    .toUpperCase();
+}
 
 /* ------------------------- 8. Clients, cases and invoices (the relation chain) */
 
@@ -199,11 +232,18 @@ export const initialPayments = [
   { id: 6, invoiceId: 7, amount: 900, date: dayOffset(-6), bankAccountId: 1 },
 ];
 
+/**
+ * Money leaving an account.
+ *
+ * `kind` decides how the row reads in an account's activity - who is named,
+ * and what the document beside it is called. An office invoice names its
+ * supplier; a court fee names the case it was paid on.
+ */
 export const initialExpenses = [
-  { id: 1, description: "Office Expense", reference: "EXP-001", amount: 500, date: dayOffset(-190), bankAccountId: 1, kind: "Expense" },
-  { id: 2, description: "Court Fees", reference: "EXP-002", amount: 320, date: dayOffset(-100), bankAccountId: 1, kind: "Expense" },
-  { id: 3, description: "Staff Salaries", reference: "EXP-003", amount: 2400, date: dayOffset(-40), bankAccountId: 2, kind: "Expense" },
-  { id: 4, description: "Software Subscription", reference: "EXP-004", amount: 180, date: dayOffset(-20), bankAccountId: 1, kind: "Expense" },
+  { id: 1, kind: "Office", supplier: "Muscat Office Supplies", expenseType: "Office Supplies", description: "Office Expense", reference: "EXP-001", amount: 500, date: dayOffset(-190), bankAccountId: 1 },
+  { id: 2, kind: "Court", caseNo: "261001", description: "Court Fees", reference: "RCP-2026-002", amount: 320, date: dayOffset(-100), bankAccountId: 1 },
+  { id: 3, kind: "Salary", period: "Payroll", description: "Staff Salaries", reference: "PV-2026-003", amount: 2400, date: dayOffset(-40), bankAccountId: 2 },
+  { id: 4, kind: "Office", supplier: "Yands Software LLC", expenseType: "Software Subscription", description: "Software Subscription", reference: "EXP-004", amount: 180, date: dayOffset(-20), bankAccountId: 1 },
 ];
 
 export const initialTransfers = [
@@ -252,13 +292,66 @@ export const initialDocuments = [
  * The opening balance is the first row rather than a separate field, so the
  * final running balance IS the current balance - the two can never disagree.
  */
-export function accountTransactions(account, { payments, expenses, transfers, invoices: invoiceList }) {
+/** How an expense reads, by what kind of expense it is. */
+const EXPENSE_SHAPES = {
+  Office: {
+    title: "Office Expense Payment",
+    documentLabel: "Expense Invoice No.",
+    documentAction: "View Invoice",
+    details: (e) =>
+      [e.supplier && "Supplier: " + e.supplier, e.expenseType && "Type: " + e.expenseType].filter(Boolean),
+  },
+  Court: {
+    title: "Court Expense Payment",
+    documentLabel: "Receipt No.",
+    documentAction: "View Receipt",
+    details: (e) => [e.caseNo && "Case No.: " + e.caseNo].filter(Boolean),
+  },
+  Salary: {
+    title: "Salary Payment",
+    documentLabel: "Voucher No.",
+    documentAction: "View Voucher",
+    details: (e) => [e.description].filter(Boolean),
+  },
+};
+
+const DEFAULT_EXPENSE_SHAPE = {
+  title: "Expense Payment",
+  documentLabel: "Reference No.",
+  documentAction: "View Document",
+  details: (e) => [e.description].filter(Boolean),
+};
+
+/**
+ * Everything that has moved through one account, oldest first.
+ *
+ * Each row carries not just its figures but how it should be read: the kind
+ * of movement it was, who it involved, and what the document beside it is
+ * called. That belongs here rather than in the table, because the same row is
+ * read on more than one screen and must say the same thing on each.
+ *
+ * `accounts` is optional and only used to name the other side of a transfer;
+ * a caller that just wants the balance does not have to pass it.
+ */
+export function accountTransactions(
+  account,
+  { payments, expenses, transfers, invoices: invoiceList, accounts = [] }
+) {
+  const accountName = (id) => {
+    const other = accounts.find((a) => a.id === id);
+    return other ? other.bankName : "another account";
+  };
+
   const rows = [
     {
       id: "opening-" + account.id,
       date: account.openedAt,
+      title: "Opening Balance",
+      details: [],
       description: "Opening Balance",
       reference: "",
+      documentLabel: "",
+      documentAction: "",
       type: "Opening",
       amount: account.openingBalance,
     },
@@ -268,11 +361,21 @@ export function accountTransactions(account, { payments, expenses, transfers, in
     .filter((p) => p.bankAccountId === account.id)
     .forEach((p) => {
       const invoice = invoiceList.find((i) => i.id === p.invoiceId);
+      const client = invoice
+        ? clients.find((c) => c.id === invoice.clientId)
+        : null;
       rows.push({
         id: "pay-" + p.id,
         date: p.date,
+        title: "Client Invoice Payment",
+        details: [
+          client && "Client: " + client.name,
+          invoice && "Invoice: " + invoice.invoiceNo,
+        ].filter(Boolean),
         description: "Invoice Payment",
         reference: invoice ? invoice.invoiceNo : "",
+        documentLabel: "Invoice No.",
+        documentAction: "View Invoice",
         type: "Income",
         amount: p.amount,
       });
@@ -281,39 +384,49 @@ export function accountTransactions(account, { payments, expenses, transfers, in
   expenses
     .filter((e) => e.bankAccountId === account.id)
     .forEach((e) => {
+      const shape = EXPENSE_SHAPES[e.kind] || DEFAULT_EXPENSE_SHAPE;
       rows.push({
         id: "exp-" + e.id,
         date: e.date,
+        title: shape.title,
+        details: shape.details(e),
         description: e.description,
         reference: e.reference,
-        type: e.kind || "Expense",
+        documentLabel: shape.documentLabel,
+        documentAction: shape.documentAction,
+        type: "Expense",
         amount: -e.amount,
       });
     });
 
   transfers.forEach((t) => {
+    const shared = {
+      date: t.date,
+      title: "Transfer Between Accounts",
+      description: t.description,
+      reference: t.transferNo || t.reference || "",
+      documentLabel: "Transfer Ref.",
+      documentAction: "View Receipt",
+    };
     if (t.toAccountId === account.id) {
       rows.push({
+        ...shared,
         id: "trf-in-" + t.id,
-        date: t.date,
-        description: t.description,
-        reference: t.reference,
+        details: ["From: " + accountName(t.fromAccountId)],
         type: "Transfer In",
         amount: t.amount,
       });
     }
     if (t.fromAccountId === account.id) {
       rows.push({
+        ...shared,
         id: "trf-out-" + t.id,
-        date: t.date,
-        description: t.description,
-        reference: t.reference,
+        details: ["To: " + accountName(t.toAccountId)],
         type: "Transfer Out",
         amount: -t.amount,
       });
     }
   });
-
   rows.sort((a, b) => a.date.localeCompare(b.date));
 
   let balance = 0;

@@ -83,6 +83,11 @@ export default function FirmProvider({ children }) {
           { ...account, id: nextId(prev), openedAt: dayOffset(0), active: true },
         ]),
 
+      updateBankAccount: (id, changes) =>
+        setBankAccounts((prev) =>
+          prev.map((a) => (a.id === id ? { ...a, ...changes } : a))
+        ),
+
       setAccountActive: (id, active) =>
         setBankAccounts((prev) =>
           prev.map((a) => (a.id === id ? { ...a, active } : a))

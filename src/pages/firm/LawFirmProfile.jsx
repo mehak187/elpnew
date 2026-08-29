@@ -61,7 +61,7 @@ const SECTIONS = [
     key: "bank",
     label: "Bank Accounts",
     icon: Landmark,
-    note: "Where the company's money is held",
+    note: "Manage all bank accounts and view account balances",
   },
   {
     key: "documents",
@@ -77,7 +77,7 @@ const SECTIONS = [
   },
   {
     key: "transactions",
-    label: "Financial Transactions",
+    label: "Manage Transactions",
     icon: Wallet,
     note: "Every movement through the bank accounts",
   },
@@ -203,7 +203,7 @@ export default function LawFirmProfile() {
         <Card className="w-full lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:w-60 lg:shrink-0 lg:overflow-y-auto">
           <CardContent className="p-3">
             <p className="mb-2 border-b px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Profile Management
+              Office Management
             </p>
             <nav className="flex flex-row gap-1 overflow-x-auto lg:flex-col">
               {SECTIONS.map((section) => {

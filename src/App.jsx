@@ -20,6 +20,7 @@ import ClientDetails from "@/pages/clients/ClientDetails";
 
 // Company Settings
 import LawFirmProfile from "@/pages/firm/LawFirmProfile";
+import BankEdit from "@/pages/firm/BankEdit";
 import ChangePassword from "@/pages/settings/ChangePassword";
 import SignIn from "@/pages/settings/SignIn";
 
@@ -68,6 +69,7 @@ function App() {
 
               {/* Company Settings */}
               <Route path="settings/firm" element={<LawFirmProfile />} />
+              <Route path="settings/bank/:id" element={<BankEdit />} />
               <Route path="settings/password" element={<ChangePassword />} />
               <Route path="sign-in" element={<SignIn />} />
 
