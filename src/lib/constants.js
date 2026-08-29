@@ -223,3 +223,23 @@ export const EMPLOYEE_DOCUMENT_TYPES = [
   "Other Certificates",
   "Other Documents",
 ];
+
+/** The branches the firm's banks are held at. */
+export const BANK_BRANCHES = [
+  "Main Branch",
+  "Shatti Al Qurum",
+  "Ruwi",
+  "Al Khuwair",
+  "Seeb",
+  "Nizwa",
+  "Sohar",
+  "Salalah",
+];
+
+/** What kind of account it is, which decides how the money can be used. */
+export const ACCOUNT_TYPES = [
+  "Current Account",
+  "Savings Account",
+  "Call Account",
+  "Fixed Deposit",
+];

@@ -11,10 +11,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Paperclip, FileCheck } from "lucide-react";
+import { Paperclip, FileCheck, Plus } from "lucide-react";
 import { EmptyState } from "@/components/shared/panels";
 import { cn } from "@/lib/utils";
-import { RECEIVING_BANKS } from "@/lib/constants";
+import { RECEIVING_BANKS, BANK_BRANCHES, ACCOUNT_TYPES } from "@/lib/constants";
 import { useFirm } from "@/lib/firm/context";
 import {
   accountBalance,
@@ -25,16 +25,16 @@ import {
   money,
 } from "../firmData";
 
-const ALL_BRANCHES = "all";
 
 const emptyAccount = {
   bankName: "",
   bankBranch: "",
+  accountName: "",
   accountNumber: "",
   iban: "",
   openingBalance: "",
+  accountType: "",
   active: true,
-  branch: ALL_BRANCHES,
 };
 
 const emptyTransfer = {
@@ -45,14 +45,24 @@ const emptyTransfer = {
   reference: "",
 };
 
+/** Every field on the bank form is required, so the mark is part of the label. */
+function FieldLabel({ htmlFor, children }) {
+  return (
+    <Label htmlFor={htmlFor}>
+      {children}
+      <span className="text-destructive"> *</span>
+    </Label>
+  );
+}
+
 /** How an account is named wherever it has to be picked from a list. */
 const accountLabel = (account, branches) =>
   account.accountNumber + " - " + branchLabel(branches, account.branchId);
 
 /** The two things this section does, one at a time. */
 const TABS = [
-  { key: "add", label: "Add Bank Account" },
-  { key: "transfer", label: "Transfer Between Accounts" },
+  { key: "add", label: "Bank Accounts" },
+  { key: "transfer", label: "Account Transfers" },
 ];
 
 /**
@@ -81,11 +91,24 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
   };
 
   const [tab, setTab] = useState("add");
+  // The form is opened deliberately rather than sitting open under the list.
+  const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState(emptyAccount);
   const [transfer, setTransfer] = useState(emptyTransfer);
   const [receipt, setReceipt] = useState(null);
 
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
+
+  const openAddBank = () => {
+    setDraft(emptyAccount);
+    setTab("add");
+    setAdding(true);
+  };
+
+  const closeAddBank = () => {
+    setDraft(emptyAccount);
+    setAdding(false);
+  };
   const setMove = (name, value) =>
     setTransfer((prev) => ({ ...prev, [name]: value }));
 
@@ -103,20 +126,33 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
     0
   );
 
-  const canSaveAccount = canEdit && draft.bankName && draft.accountNumber.trim();
+  // Every field on the form is required, so every field is checked.
+  const canSaveAccount =
+    canEdit &&
+    draft.bankName &&
+    draft.bankBranch &&
+    draft.accountName.trim() &&
+    draft.accountNumber.trim() &&
+    draft.iban.trim() &&
+    draft.openingBalance !== "" &&
+    draft.accountType;
 
   const saveAccount = () => {
     if (!canSaveAccount) return;
     addBankAccount({
       bankName: draft.bankName,
       bankBranch: draft.bankBranch,
+      accountName: draft.accountName,
       accountNumber: draft.accountNumber,
       iban: draft.iban,
-      branchId: draft.branch === ALL_BRANCHES ? null : Number(draft.branch),
+      accountType: draft.accountType,
+      // An account opened here serves the whole company until it is said to
+      // belong to one office.
+      branchId: null,
       openingBalance: Number(draft.openingBalance) || 0,
       active: draft.active,
     });
-    setDraft(emptyAccount);
+    closeAddBank();
   };
 
   // Money cannot be moved to the account it came from, and there has to be
@@ -167,144 +203,181 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
       </div>
 
 
-      {canEdit && (
+      {/* One row of controls: what the section is showing, and how to add to it */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* One job at a time: reading the accounts, or moving money */}
+        <div className="grid flex-1 grid-cols-2 gap-2 rounded-lg border p-1 sm:max-w-md">
+          {TABS.map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              onClick={() => setTab(option.key)}
+              className={cn(
+                "rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                tab === option.key
+                  ? "bg-secondary text-secondary-foreground"
+                  : "text-muted-foreground hover:bg-muted/50"
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        {canEdit && (
+          <Button onClick={openAddBank}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Add New Bank
+          </Button>
+        )}
+      </div>
+
+      {adding && canEdit && (
         <Card>
           <CardContent className="space-y-5 p-4 sm:p-6">
-            <p className="font-semibold text-primary">Account Management</p>
+            {/* The rule beside the heading marks where the form starts */}
+            <p className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
+              Add New Bank
+            </p>
 
-            {/* One job at a time: opening an account, or moving money */}
-            <div className="grid grid-cols-2 gap-2 rounded-lg border p-1">
-              {TABS.map((option) => (
-                <button
-                  key={option.key}
-                  type="button"
-                  onClick={() => setTab(option.key)}
-                  className={cn(
-                    "rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                    tab === option.key
-                      ? "bg-secondary text-secondary-foreground"
-                      : "text-muted-foreground hover:bg-muted/50"
-                  )}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="space-y-2">
+                <FieldLabel htmlFor="bankName">Bank Name</FieldLabel>
+                <Select
+                  value={draft.bankName}
+                  onValueChange={(value) => set("bankName", value)}
                 >
-                  {option.label}
-                </button>
-              ))}
+                  <SelectTrigger id="bankName">
+                    <SelectValue placeholder="Select Bank" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RECEIVING_BANKS.map((bank) => (
+                      <SelectItem key={bank} value={bank}>
+                        {bank}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <FieldLabel htmlFor="bankBranch">Bank Branch</FieldLabel>
+                <Select
+                  value={draft.bankBranch}
+                  onValueChange={(value) => set("bankBranch", value)}
+                >
+                  <SelectTrigger id="bankBranch">
+                    <SelectValue placeholder="Enter Bank Branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BANK_BRANCHES.map((branch) => (
+                      <SelectItem key={branch} value={branch}>
+                        {branch}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <FieldLabel htmlFor="accountName">Account Name</FieldLabel>
+                <Input
+                  id="accountName"
+                  value={draft.accountName}
+                  onChange={(e) => set("accountName", e.target.value)}
+                  placeholder="Enter Account Name"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FieldLabel htmlFor="accountNumber">Account Number</FieldLabel>
+                <Input
+                  id="accountNumber"
+                  value={draft.accountNumber}
+                  onChange={(e) => set("accountNumber", e.target.value)}
+                  placeholder="Enter Account Number"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FieldLabel htmlFor="iban">IBAN</FieldLabel>
+                <Input
+                  id="iban"
+                  value={draft.iban}
+                  onChange={(e) => set("iban", e.target.value)}
+                  placeholder="Enter IBAN"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FieldLabel htmlFor="openingBalance">Opening Balance</FieldLabel>
+                <Input
+                  id="openingBalance"
+                  type="number"
+                  min="0"
+                  step="0.001"
+                  value={draft.openingBalance}
+                  onChange={(e) => set("openingBalance", e.target.value)}
+                  placeholder="Enter Opening Balance"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FieldLabel htmlFor="accountType">Account Type</FieldLabel>
+                <Select
+                  value={draft.accountType}
+                  onValueChange={(value) => set("accountType", value)}
+                >
+                  <SelectTrigger id="accountType">
+                    <SelectValue placeholder="Select Account Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ACCOUNT_TYPES.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <FieldLabel htmlFor="accountStatus">Account Status</FieldLabel>
+                <Select
+                  value={draft.active ? "Active" : "Inactive"}
+                  onValueChange={(value) => set("active", value === "Active")}
+                >
+                  <SelectTrigger id="accountStatus">
+                    <SelectValue placeholder="Select Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            {tab === "add" ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="bankName">Bank Name *</Label>
-                    <Select
-                      value={draft.bankName}
-                      onValueChange={(value) => set("bankName", value)}
-                    >
-                      <SelectTrigger id="bankName">
-                        <SelectValue placeholder="Select bank" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {RECEIVING_BANKS.map((bank) => (
-                          <SelectItem key={bank} value={bank}>
-                            {bank}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={closeAddBank}>
+                Cancel
+              </Button>
+              <Button onClick={saveAccount} disabled={!canSaveAccount}>
+                Save Bank Account
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-                  <div className="space-y-2">
-                    <Label htmlFor="bankBranch">Bank Branch</Label>
-                    <Input
-                      id="bankBranch"
-                      value={draft.bankBranch}
-                      onChange={(e) => set("bankBranch", e.target.value)}
-                      placeholder="Enter bank branch"
-                    />
-                  </div>
+      {canEdit && tab === "transfer" && (
+        <Card>
+          <CardContent className="space-y-5 p-4 sm:p-6">
+            <p className="font-semibold text-primary">
+              Transfer Between Accounts
+            </p>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="accountNumber">Account Number *</Label>
-                    <Input
-                      id="accountNumber"
-                      value={draft.accountNumber}
-                      onChange={(e) => set("accountNumber", e.target.value)}
-                      placeholder="Enter account number"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="iban">IBAN</Label>
-                    <Input
-                      id="iban"
-                      value={draft.iban}
-                      onChange={(e) => set("iban", e.target.value)}
-                      placeholder="Enter IBAN"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="openingBalance">Opening Balance</Label>
-                    <Input
-                      id="openingBalance"
-                      type="number"
-                      min="0"
-                      value={draft.openingBalance}
-                      onChange={(e) => set("openingBalance", e.target.value)}
-                      placeholder="Enter opening balance"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="accountStatus">Account Status</Label>
-                    <Select
-                      value={draft.active ? "Active" : "Inactive"}
-                      onValueChange={(value) => set("active", value === "Active")}
-                    >
-                      <SelectTrigger id="accountStatus">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Active">Active</SelectItem>
-                        <SelectItem value="Inactive">Inactive</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* An account either serves the whole company or one office */}
-                  <div className="space-y-2">
-                    <Label htmlFor="accountBranch">
-                      Account Belongs to Branch
-                    </Label>
-                    <Select
-                      value={draft.branch}
-                      onValueChange={(value) => set("branch", value)}
-                    >
-                      <SelectTrigger id="accountBranch">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={ALL_BRANCHES}>
-                          All Branches
-                        </SelectItem>
-                        {branches.map((branch) => (
-                          <SelectItem key={branch.id} value={String(branch.id)}>
-                            {branch.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="flex justify-end">
-                  <Button onClick={saveAccount} disabled={!canSaveAccount}>
-                    Save Bank Account
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
+            <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="transferFrom">Transfer From</Label>
@@ -430,8 +503,7 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
                     Save Transfer
                   </Button>
                 </div>
-              </div>
-            )}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -462,6 +534,12 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
                         <span className="block font-semibold">
                           {account.bankName}
                         </span>
+                        {account.accountName && (
+                          <span className="block text-xs">
+                            {account.accountName}
+                            {account.accountType && ' - ' + account.accountType}
+                          </span>
+                        )}
                         <span className="block text-xs text-muted-foreground">
                           {account.bankBranch || "-"}
                         </span>
