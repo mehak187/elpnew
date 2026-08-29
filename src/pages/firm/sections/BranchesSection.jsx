@@ -82,17 +82,22 @@ function BranchFields({ draft, set, idPrefix, assignedNumber }) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor={id("status")}>Status</Label>
+        <Label htmlFor={id("manager")}>Branch Manager</Label>
         <Select
-          value={draft.active ? "Active" : "Inactive"}
-          onValueChange={(value) => set("active", value === "Active")}
+          value={draft.managerId ? String(draft.managerId) : ""}
+          onValueChange={(value) => set("managerId", Number(value))}
         >
-          <SelectTrigger id={id("status")}>
-            <SelectValue />
+          <SelectTrigger id={id("manager")}>
+            <SelectValue placeholder="Select manager" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="Active">Active</SelectItem>
-            <SelectItem value="Inactive">Inactive</SelectItem>
+            {firmStaff
+              .filter((person) => person.role === "General Supervisor")
+              .map((person) => (
+                <SelectItem key={person.id} value={String(person.id)}>
+                  {person.name}
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
       </div>
@@ -128,23 +133,20 @@ function BranchFields({ draft, set, idPrefix, assignedNumber }) {
         />
       </div>
 
+      {/* Last: standing is the decision taken once everything else about the
+          branch has been settled. */}
       <div className="space-y-2">
-        <Label htmlFor={id("manager")}>Branch Manager</Label>
+        <Label htmlFor={id("status")}>Status</Label>
         <Select
-          value={draft.managerId ? String(draft.managerId) : ""}
-          onValueChange={(value) => set("managerId", Number(value))}
+          value={draft.active ? "Active" : "Inactive"}
+          onValueChange={(value) => set("active", value === "Active")}
         >
-          <SelectTrigger id={id("manager")}>
-            <SelectValue placeholder="Select manager" />
+          <SelectTrigger id={id("status")}>
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {firmStaff
-              .filter((person) => person.role === "General Supervisor")
-              .map((person) => (
-                <SelectItem key={person.id} value={String(person.id)}>
-                  {person.name}
-                </SelectItem>
-              ))}
+            <SelectItem value="Active">Active</SelectItem>
+            <SelectItem value="Inactive">Inactive</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -187,9 +189,13 @@ export default function BranchesSection({ canEdit }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          {branches.length} {branches.length === 1 ? "branch" : "branches"}
-        </p>
+        {/* The count belongs to the list, so it goes when the list does */}
+        {!adding && (
+          <p className="text-sm text-muted-foreground">
+            {branches.length} {branches.length === 1 ? "branch" : "branches"}
+          </p>
+        )}
+        {adding && <span />}
         {canEdit && (
           <Button size="sm" onClick={() => setAdding((open) => !open)}>
             <Plus className="mr-1.5 h-4 w-4" />
@@ -229,6 +235,10 @@ export default function BranchesSection({ canEdit }) {
         </Card>
       )}
 
+      {/* Adding replaces the list rather than sitting above it - the branches
+          were already read on the way in, and showing them twice says nothing
+          the first showing did not. */}
+      {!adding && (
       <Card>
         <CardContent className="overflow-x-auto p-0">
           <table className="w-full min-w-[720px] text-sm">
@@ -287,12 +297,7 @@ export default function BranchesSection({ canEdit }) {
           </table>
         </CardContent>
       </Card>
-
-      <div className="rounded-lg border bg-muted/30 p-4 text-xs text-muted-foreground">
-        A branch number is the first part of every case file number raised at
-        that branch, so it is never reused. A branch that has records against it
-        is set to Inactive rather than removed.
-      </div>
+      )}
 
       {/* The branch number opens its details for reading and editing */}
       <Dialog

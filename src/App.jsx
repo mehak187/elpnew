@@ -20,6 +20,7 @@ import ClientDetails from "@/pages/clients/ClientDetails";
 
 // Company Settings
 import LawFirmProfile from "@/pages/firm/LawFirmProfile";
+import BankEdit from "@/pages/firm/BankEdit";
 import ChangePassword from "@/pages/settings/ChangePassword";
 import SignIn from "@/pages/settings/SignIn";
 
@@ -29,6 +30,7 @@ import ExpenseForm from "@/pages/expenses/ExpenseForm";
 import GeneralInvoices from "@/pages/expenses/GeneralInvoices";
 import CourtFeePayments from "@/pages/expenses/CourtFeePayments";
 import JudicialExpenseForm from "@/pages/expenses/JudicialExpenseForm";
+import CourtFeeDetails from "@/pages/expenses/CourtFeeDetails";
 import NewInvoice from "@/pages/expenses/NewInvoice";
 
 // Suppliers
@@ -67,6 +69,7 @@ function App() {
 
               {/* Company Settings */}
               <Route path="settings/firm" element={<LawFirmProfile />} />
+              <Route path="settings/bank/:id" element={<BankEdit />} />
               <Route path="settings/password" element={<ChangePassword />} />
               <Route path="sign-in" element={<SignIn />} />
 
@@ -88,6 +91,11 @@ function App() {
               <Route
                 path="court-fee-payments/create"
                 element={<JudicialExpenseForm />}
+              />
+              {/* Kept below /create so the literal path wins over the id */}
+              <Route
+                path="court-fee-payments/:id"
+                element={<CourtFeeDetails />}
               />
               <Route
                 path="expense-requests/create"

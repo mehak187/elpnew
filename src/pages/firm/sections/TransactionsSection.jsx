@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +16,7 @@ import {
   ArrowUpRight,
   ArrowLeftRight,
   Banknote,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFirm } from "@/lib/firm/context";
@@ -31,14 +31,6 @@ import {
   dayOffset,
 } from "../firmData";
 
-const TYPE_VARIANT = {
-  Opening: "secondary",
-  Income: "success",
-  Expense: "destructive",
-  Payment: "destructive",
-  "Transfer In": "success",
-  "Transfer Out": "warning",
-};
 
 // An outgoing payment and an office expense both leave the account, so they
 // are recorded the same way and only differ by the kind stamped on the row.
@@ -76,7 +68,14 @@ export default function TransactionsSection({ initialAccountId, canRecord }) {
   const [toAccountId, setToAccountId] = useState("");
 
   const account = bankAccounts.find((a) => String(a.id) === accountId);
-  const ledgers = { payments, expenses, transfers, invoices };
+  // `accounts` lets a transfer row say which account it came from or went to.
+  const ledgers = {
+    payments,
+    expenses,
+    transfers,
+    invoices,
+    accounts: bankAccounts,
+  };
 
   const rows = useMemo(
     () => (account ? accountTransactions(account, ledgers).reverse() : []),
@@ -315,18 +314,18 @@ export default function TransactionsSection({ initialAccountId, canRecord }) {
         </div>
       )}
 
-      {/* Transaction history */}
+      {/* Everything that has moved through the account, and where it left it */}
       <Card>
         <CardContent className="overflow-x-auto p-0">
-          <table className="w-full min-w-[720px] text-sm">
+          <table className="w-full min-w-[900px] text-sm">
             <thead>
-              <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
-                <th className="p-3 font-semibold">Date</th>
-                <th className="p-3 font-semibold">Description</th>
-                <th className="p-3 font-semibold">Reference</th>
-                <th className="p-3 font-semibold">Type</th>
-                <th className="p-3 text-right font-semibold">Amount</th>
-                <th className="p-3 text-right font-semibold">Balance</th>
+              <tr className="border-b bg-secondary text-left text-sm font-bold text-primary">
+                <th className="p-3">Date</th>
+                <th className="p-3">Transaction Details</th>
+                <th className="p-3">Document / Reference No.</th>
+                <th className="p-3 text-right">Money In</th>
+                <th className="p-3 text-right">Money Out</th>
+                <th className="p-3 text-right">Balance</th>
               </tr>
             </thead>
             <tbody>
@@ -337,36 +336,74 @@ export default function TransactionsSection({ initialAccountId, canRecord }) {
                   </td>
                 </tr>
               )}
-              {rows.map((row) => (
-                <tr key={row.id} className="border-b transition-colors last:border-0 hover:bg-primary/10">
-                  <td className="p-3 text-muted-foreground">{formatDate(row.date)}</td>
-                  <td className="p-3 font-medium">{row.description}</td>
-                  <td className="p-3 text-muted-foreground">{row.reference || "—"}</td>
-                  <td className="p-3">
-                    <Badge variant={TYPE_VARIANT[row.type]}>{row.type}</Badge>
-                  </td>
-                  <td
-                    className={cn(
-                      "p-3 text-right font-medium",
-                      row.type === "Opening"
-                        ? "text-muted-foreground"
-                        : row.amount >= 0
-                        ? "text-green-600"
-                        : "text-red-600"
-                    )}
+              {rows.map((row) => {
+                const opening = row.type === "Opening";
+                const incoming = row.amount >= 0;
+                return (
+                  <tr
+                    key={row.id}
+                    className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"
                   >
-                    {row.type === "Opening" ? (
-                      money(row.amount)
-                    ) : (
-                      <>
-                        {row.amount >= 0 ? "+" : "-"}
-                        {money(Math.abs(row.amount))}
-                      </>
-                    )}
-                  </td>
-                  <td className="p-3 text-right font-semibold">{money(row.balance)}</td>
-                </tr>
-              ))}
+                    <td className="whitespace-nowrap p-3 text-muted-foreground">
+                      {formatDate(row.date)}
+                    </td>
+                    <td className="p-3">
+                      <span className="block font-semibold">{row.title}</span>
+                      {row.details.map((line) => (
+                        <span
+                          key={line}
+                          className="block text-xs text-muted-foreground"
+                        >
+                          {line}
+                        </span>
+                      ))}
+                    </td>
+                    <td className="p-3">
+                      {row.reference ? (
+                        <>
+                          <span className="block font-semibold">
+                            {row.documentLabel}
+                          </span>
+                          <span className="block text-xs text-muted-foreground">
+                            {row.reference}
+                          </span>
+                          {/* Nothing is uploaded yet, so the link is held */}
+                          <a
+                            href={row.reference}
+                            onClick={(event) => event.preventDefault()}
+                            className="mt-1 inline-flex items-center gap-1.5 rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                          >
+                            <FileText className="h-3.5 w-3.5 shrink-0" />
+                            {row.documentAction}
+                          </a>
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground">&ndash;</span>
+                      )}
+                    </td>
+                    {/* One side or the other, never both, and a dash where the
+                        movement did not go that way. */}
+                    <td
+                      className={cn(
+                        "whitespace-nowrap p-3 text-right font-semibold",
+                        opening ? "text-muted-foreground" : "text-green-600"
+                      )}
+                    >
+                      {incoming ? money(row.amount) : <span className="text-muted-foreground">&ndash;</span>}
+                    </td>
+                    <td className="whitespace-nowrap p-3 text-right font-semibold text-red-600">
+                      {incoming ? (
+                        <span className="text-muted-foreground">&ndash;</span>
+                      ) : (
+                        money(Math.abs(row.amount))
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap p-3 text-right font-bold">
+                      {money(row.balance)}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </CardContent>

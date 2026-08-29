@@ -20,6 +20,9 @@ import {
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   ChevronLeft,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
   ChevronRight,
   FileSpreadsheet,
   Loader2,
@@ -29,6 +32,20 @@ import {
 import { cn } from "@/lib/utils";
 import { toCsv, downloadCsv } from "@/lib/csv";
 import { smartSearch } from "@/lib/search/smartSearch";
+
+/**
+ * Which way a column is sorted.
+ *
+ * An unsorted column still shows a faint pair of arrows, so a sortable
+ * heading looks sortable before anybody clicks it.
+ */
+function SortMark({ direction }) {
+  if (!direction) {
+    return <ChevronsUpDown className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-40" />;
+  }
+  const Icon = direction === "asc" ? ChevronUp : ChevronDown;
+  return <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0" />;
+}
 
 export default function DataTable({
   columns,
@@ -48,9 +65,22 @@ export default function DataTable({
   filters,
   onRowClick,
   enableColumnSearch = true,
+  enableSorting = false,
 }) {
   const [searchValue, setSearchValue] = useState("");
   const [columnFilters, setColumnFilters] = useState({});
+  // Column key and direction, or null while the table is in its natural order.
+  const [sort, setSort] = useState(null);
+
+  // Off, then ascending, then descending, then back to the order the data came
+  // in - so a sort can always be taken back off.
+  const toggleSort = (columnKey) =>
+    setSort((prev) => {
+      if (prev?.key !== columnKey) return { key: columnKey, direction: "asc" };
+      return prev.direction === "asc"
+        ? { key: columnKey, direction: "desc" }
+        : null;
+    });
 
   const handleSearch = (value) => {
     setSearchValue(value);
@@ -80,13 +110,48 @@ export default function DataTable({
     });
   }) : searchedData;
 
+  /**
+   * What a column sorts on.
+   *
+   * A rendered cell can hold anything, so the column says what its value is:
+   * its own sortValue where it needs one, the export value where that already
+   * flattens the row, and the raw field otherwise.
+   */
+  const sortValueOf = (column, row) => {
+    if (column.sortValue) return column.sortValue(row);
+    if (column.exportValue) return column.exportValue(row);
+    return row[column.key];
+  };
+
+  const sortedData = (() => {
+    if (!sort) return filteredData;
+    const column = columns.find((c) => c.key === sort.key);
+    if (!column) return filteredData;
+    const direction = sort.direction === "asc" ? 1 : -1;
+    return [...filteredData].sort((a, b) => {
+      const left = sortValueOf(column, a);
+      const right = sortValueOf(column, b);
+      if (left === right) return 0;
+      // Blanks sort last whichever way the column is pointing.
+      if (left === null || left === undefined) return 1;
+      if (right === null || right === undefined) return -1;
+      if (typeof left === "number" && typeof right === "number") {
+        return (left - right) * direction;
+      }
+      return (
+        String(left).localeCompare(String(right), undefined, { numeric: true }) *
+        direction
+      );
+    });
+  })();
+
   // Calculate total pages based on filtered data
-  const calculatedTotalPages = Math.ceil(filteredData.length / pageSize) || 1;
+  const calculatedTotalPages = Math.ceil(sortedData.length / pageSize) || 1;
 
   // Paginate filtered data
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
-  const paginatedData = filteredData.slice(startIndex, endIndex);
+  const paginatedData = sortedData.slice(startIndex, endIndex);
 
   return (
     <div className="space-y-4">
@@ -185,11 +250,35 @@ export default function DataTable({
                         )}
                         style={{ width: column.width }}
                       >
-                        {column.header}
-                        {column.subHeader && (
-                          <span className="block text-[11px] font-normal text-muted-foreground">
-                            {column.subHeader}
-                          </span>
+                        {enableSorting && !column.disableSort ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleSort(column.key)}
+                            className="inline-flex items-start gap-1 rounded text-left hover:text-primary/80 focus:outline-none focus:ring-2 focus:ring-ring"
+                          >
+                            <span>
+                              {column.header}
+                              {column.subHeader && (
+                                <span className="block text-[11px] font-normal text-muted-foreground">
+                                  {column.subHeader}
+                                </span>
+                              )}
+                            </span>
+                            <SortMark
+                              direction={
+                                sort?.key === column.key ? sort.direction : null
+                              }
+                            />
+                          </button>
+                        ) : (
+                          <>
+                            {column.header}
+                            {column.subHeader && (
+                              <span className="block text-[11px] font-normal text-muted-foreground">
+                                {column.subHeader}
+                              </span>
+                            )}
+                          </>
                         )}
                       </TableHead>
                     ))}

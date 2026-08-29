@@ -1,6 +1,6 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,30 +11,44 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Info, Paperclip, FileCheck } from "lucide-react";
+import {
+  Paperclip,
+  FileCheck,
+  Plus,
+  Search,
+  Landmark,
+  FileSpreadsheet,
+  Upload,
+  Info,
+} from "lucide-react";
 import { EmptyState } from "@/components/shared/panels";
 import { cn } from "@/lib/utils";
-import { RECEIVING_BANKS } from "@/lib/constants";
+import { toCsv, downloadCsv } from "@/lib/csv";
+import { amountInWords } from "@/lib/amountInWords";
+import { Rial } from "@/components/shared/Rial";
+import { RECEIVING_BANKS, BANK_BRANCHES, ACCOUNT_TYPES } from "@/lib/constants";
 import { useFirm } from "@/lib/firm/context";
 import {
   accountBalance,
   branchLabel,
+  bankInitials,
   maskAccountNumber,
   formatDate,
   invoices,
   money,
 } from "../firmData";
 
-const ALL_BRANCHES = "all";
+const ALL_BANKS = "all";
 
 const emptyAccount = {
   bankName: "",
   bankBranch: "",
+  accountName: "",
   accountNumber: "",
   iban: "",
   openingBalance: "",
+  accountType: "",
   active: true,
-  branch: ALL_BRANCHES,
 };
 
 const emptyTransfer = {
@@ -45,15 +59,58 @@ const emptyTransfer = {
   reference: "",
 };
 
+/** Every field on the bank form is required, so the mark is part of the label. */
+function FieldLabel({ htmlFor, children }) {
+  return (
+    <Label htmlFor={htmlFor}>
+      {children}
+      <span className="text-destructive"> *</span>
+    </Label>
+  );
+}
+
+/** A fact with its heading beside it, for the account and balance columns. */
+function Pair({ label, children, strong }) {
+  return (
+    <p className="leading-relaxed">
+      <span className="font-semibold text-muted-foreground">{label} </span>
+      <span className={cn(strong && "font-bold text-primary")}>
+        {children || "-"}
+      </span>
+    </p>
+  );
+}
+
+/**
+ * A bank's mark.
+ *
+ * Real artwork is used where the file exists; where it does not, the bank's
+ * initials stand in. The fallback is drawn the same size and shape as the
+ * artwork it replaces, so a row of cards stays a row of cards either way.
+ */
+function BankMark({ bank }) {
+  return (
+    <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-secondary text-xs font-bold text-primary">
+      {bank.logo ? (
+        <img src={bank.logo} alt="" className="h-full w-full object-contain" />
+      ) : (
+        bankInitials(bank.bankName)
+      )}
+    </span>
+  );
+}
+
 /** How an account is named wherever it has to be picked from a list. */
 const accountLabel = (account, branches) =>
   account.accountNumber + " - " + branchLabel(branches, account.branchId);
 
-/** The two things this section does, one at a time. */
+/** The two lists this section holds, one at a time. */
 const TABS = [
-  { key: "add", label: "Add Bank Account" },
-  { key: "transfer", label: "Transfer Between Accounts" },
+  { key: "accounts", label: "Bank Accounts" },
+  { key: "transfer", label: "Account Transfers" },
 ];
+
+const PAGE_SIZES = [10, 25, 50];
 
 /**
  * The company's bank accounts, and money moved between them.
@@ -61,8 +118,12 @@ const TABS = [
  * A balance is never a stored, editable number - it is the running total of
  * everything recorded against the account, so nobody can type a balance the
  * transaction history does not support.
+ *
+ * The cards above the table are a filter as well as a summary: each bank has
+ * one, and choosing it narrows the table to that bank's accounts.
  */
 export default function BankAccountsSection({ onNavigateSection, canEdit }) {
+  const navigate = useNavigate();
   const firm = useFirm();
   const {
     bankAccounts,
@@ -70,7 +131,6 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
     transfers,
     addBankAccount,
     addTransfer,
-    setAccountActive,
   } = firm;
 
   const ledgers = {
@@ -80,7 +140,14 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
     invoices,
   };
 
-  const [tab, setTab] = useState("add");
+  const [tab, setTab] = useState("accounts");
+  // The form is opened deliberately rather than sitting open under the list.
+  const [adding, setAdding] = useState(false);
+  const [selectedBank, setSelectedBank] = useState(ALL_BANKS);
+  const [query, setQuery] = useState("");
+  const [pageSize, setPageSize] = useState(10);
+  const [page, setPage] = useState(1);
+
   const [draft, setDraft] = useState(emptyAccount);
   const [transfer, setTransfer] = useState(emptyTransfer);
   const [receipt, setReceipt] = useState(null);
@@ -88,6 +155,17 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
   const setMove = (name, value) =>
     setTransfer((prev) => ({ ...prev, [name]: value }));
+
+  const openAddBank = () => {
+    setDraft(emptyAccount);
+    setTab("accounts");
+    setAdding(true);
+  };
+
+  const closeAddBank = () => {
+    setDraft(emptyAccount);
+    setAdding(false);
+  };
 
   const balanceOf = (account) => accountBalance(account, ledgers);
   const accountById = (id) => bankAccounts.find((a) => a.id === Number(id));
@@ -103,20 +181,94 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
     0
   );
 
-  const canSaveAccount = canEdit && draft.bankName && draft.accountNumber.trim();
+  // One card per bank, however many accounts that bank holds.
+  const bankNames = [...new Set(bankAccounts.map((a) => a.bankName))];
+  const cards = bankNames.map((name) => {
+    const held = bankAccounts.filter((a) => a.bankName === name);
+    return {
+      name,
+      logo: held[0].logo,
+      accounts: held.length,
+      balance: held.reduce((sum, account) => sum + balanceOf(account), 0),
+    };
+  });
+
+  const choose = (name) => {
+    setSelectedBank(name);
+    setPage(1);
+  };
+
+  const search = query.trim().toLowerCase();
+  const listed = bankAccounts.filter((account) => {
+    if (selectedBank !== ALL_BANKS && account.bankName !== selectedBank) {
+      return false;
+    }
+    if (!search) return true;
+    return [
+      account.bankName,
+      account.accountName,
+      account.accountNumber,
+      account.iban,
+      account.swift,
+      account.bankBranch,
+    ]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(search));
+  });
+
+  const totalPages = Math.max(1, Math.ceil(listed.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const start = (currentPage - 1) * pageSize;
+  const shown = listed.slice(start, start + pageSize);
+
+  const exportAccounts = () =>
+    downloadCsv(
+      toCsv(
+        [
+          { key: "bankName", header: "Bank Name" },
+          { key: "bankBranch", header: "Branch" },
+          { key: "accountName", header: "Account Name" },
+          { key: "accountNumber", header: "Account No." },
+          { key: "iban", header: "IBAN" },
+          { key: "swift", header: "SWIFT Code" },
+          { key: "openingBalance", header: "Opening Balance" },
+          { key: "currentBalance", header: "Current Balance" },
+        ],
+        listed.map((account) => ({
+          ...account,
+          currentBalance: balanceOf(account),
+        }))
+      ),
+      "bank-accounts.csv"
+    );
+
+  // Every field on the form is required, so every field is checked.
+  const canSaveAccount =
+    canEdit &&
+    draft.bankName &&
+    draft.bankBranch &&
+    draft.accountName.trim() &&
+    draft.accountNumber.trim() &&
+    draft.iban.trim() &&
+    draft.openingBalance !== "" &&
+    draft.accountType;
 
   const saveAccount = () => {
     if (!canSaveAccount) return;
     addBankAccount({
       bankName: draft.bankName,
       bankBranch: draft.bankBranch,
+      accountName: draft.accountName,
       accountNumber: draft.accountNumber,
       iban: draft.iban,
-      branchId: draft.branch === ALL_BRANCHES ? null : Number(draft.branch),
+      accountType: draft.accountType,
+      // An account opened here serves the whole company until it is said to
+      // belong to one office.
+      branchId: null,
       openingBalance: Number(draft.openingBalance) || 0,
       active: draft.active,
     });
-    setDraft(emptyAccount);
+    closeAddBank();
   };
 
   // Money cannot be moved to the account it came from, and there has to be
@@ -144,173 +296,462 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
     setReceipt(null);
   };
 
+  /** Move money out of one named account, from the row it sits on. */
+  const transferFrom = (account) => {
+    setTab("transfer");
+    setMove("fromAccountId", String(account.id));
+  };
+
   return (
     <div className="space-y-6">
-      {/* Total first, then what each account holds */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <div className="rounded-lg border bg-card p-4">
-          <p className="text-xs font-semibold text-foreground">Total Balances</p>
-          <p className="mt-1 text-lg font-bold text-primary">
-            {money(totalBalance)}
-          </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="grid flex-1 grid-cols-2 gap-2 rounded-lg border p-1 sm:max-w-md">
+          {TABS.map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              onClick={() => setTab(option.key)}
+              className={cn(
+                "rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                tab === option.key
+                  ? "bg-secondary text-secondary-foreground"
+                  : "text-muted-foreground hover:bg-muted/50"
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
-        {bankAccounts.map((account) => (
-          <div key={account.id} className="rounded-lg border bg-card p-4">
-            <p className="text-xs font-semibold text-foreground">
-              {account.bankName}
-            </p>
-            <p className="mt-1 text-lg font-bold text-primary">
-              {money(balanceOf(account))}
-            </p>
-          </div>
-        ))}
+
+        {canEdit && (
+          <Button onClick={openAddBank}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Add New Bank
+          </Button>
+        )}
       </div>
 
-      <p className="flex items-start gap-2 text-xs text-muted-foreground">
-        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        Balances update automatically from invoices, receipts, expenses and
-        internal transfers.
-      </p>
-
-      {canEdit && (
+      {adding && canEdit && (
         <Card>
           <CardContent className="space-y-5 p-4 sm:p-6">
-            <p className="font-semibold text-primary">Account Management</p>
+            {/* The rule beside the heading marks where the form starts */}
+            <p className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
+              Add New Bank
+            </p>
 
-            {/* One job at a time: opening an account, or moving money */}
-            <div className="grid grid-cols-2 gap-2 rounded-lg border p-1">
-              {TABS.map((option) => (
-                <button
-                  key={option.key}
-                  type="button"
-                  onClick={() => setTab(option.key)}
-                  className={cn(
-                    "rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                    tab === option.key
-                      ? "bg-secondary text-secondary-foreground"
-                      : "text-muted-foreground hover:bg-muted/50"
-                  )}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="space-y-2">
+                <FieldLabel htmlFor="bankName">Bank Name</FieldLabel>
+                <Select
+                  value={draft.bankName}
+                  onValueChange={(value) => set("bankName", value)}
                 >
-                  {option.label}
-                </button>
-              ))}
+                  <SelectTrigger id="bankName">
+                    <SelectValue placeholder="Select Bank" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RECEIVING_BANKS.map((bank) => (
+                      <SelectItem key={bank} value={bank}>
+                        {bank}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <FieldLabel htmlFor="bankBranch">Bank Branch</FieldLabel>
+                <Select
+                  value={draft.bankBranch}
+                  onValueChange={(value) => set("bankBranch", value)}
+                >
+                  <SelectTrigger id="bankBranch">
+                    <SelectValue placeholder="Enter Bank Branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BANK_BRANCHES.map((branch) => (
+                      <SelectItem key={branch} value={branch}>
+                        {branch}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <FieldLabel htmlFor="accountName">Account Name</FieldLabel>
+                <Input
+                  id="accountName"
+                  value={draft.accountName}
+                  onChange={(e) => set("accountName", e.target.value)}
+                  placeholder="Enter Account Name"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FieldLabel htmlFor="accountNumber">Account Number</FieldLabel>
+                <Input
+                  id="accountNumber"
+                  value={draft.accountNumber}
+                  onChange={(e) => set("accountNumber", e.target.value)}
+                  placeholder="Enter Account Number"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FieldLabel htmlFor="iban">IBAN</FieldLabel>
+                <Input
+                  id="iban"
+                  value={draft.iban}
+                  onChange={(e) => set("iban", e.target.value)}
+                  placeholder="Enter IBAN"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FieldLabel htmlFor="openingBalance">Opening Balance</FieldLabel>
+                <Input
+                  id="openingBalance"
+                  type="number"
+                  min="0"
+                  step="0.001"
+                  value={draft.openingBalance}
+                  onChange={(e) => set("openingBalance", e.target.value)}
+                  placeholder="Enter Opening Balance"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FieldLabel htmlFor="accountType">Account Type</FieldLabel>
+                <Select
+                  value={draft.accountType}
+                  onValueChange={(value) => set("accountType", value)}
+                >
+                  <SelectTrigger id="accountType">
+                    <SelectValue placeholder="Select Account Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ACCOUNT_TYPES.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <FieldLabel htmlFor="accountStatus">Account Status</FieldLabel>
+                <Select
+                  value={draft.active ? "Active" : "Inactive"}
+                  onValueChange={(value) => set("active", value === "Active")}
+                >
+                  <SelectTrigger id="accountStatus">
+                    <SelectValue placeholder="Select Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            {tab === "add" ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="bankName">Bank Name *</Label>
-                    <Select
-                      value={draft.bankName}
-                      onValueChange={(value) => set("bankName", value)}
-                    >
-                      <SelectTrigger id="bankName">
-                        <SelectValue placeholder="Select bank" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {RECEIVING_BANKS.map((bank) => (
-                          <SelectItem key={bank} value={bank}>
-                            {bank}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={closeAddBank}>
+                Cancel
+              </Button>
+              <Button onClick={saveAccount} disabled={!canSaveAccount}>
+                Save Bank Account
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-                  <div className="space-y-2">
-                    <Label htmlFor="bankBranch">Bank Branch</Label>
+      {tab === "accounts" && (
+        <>
+          {/* One card for every bank, and one for all of them together */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <button
+              type="button"
+              onClick={() => choose(ALL_BANKS)}
+              className={cn(
+                "flex items-start gap-3 rounded-lg border p-4 text-left transition-colors",
+                selectedBank === ALL_BANKS
+                  ? "border-primary bg-secondary"
+                  : "hover:bg-muted/50"
+              )}
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-primary">
+                <Landmark className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold text-primary">
+                  All Banks
+                </span>
+                <span className="mt-2 flex justify-between gap-2 text-xs text-muted-foreground">
+                  <span>Total Banks</span>
+                  <span>Total Balance</span>
+                </span>
+                <span className="flex items-baseline justify-between gap-2">
+                  <span className="font-bold text-primary">
+                    {bankNames.length}
+                  </span>
+                  <span className="font-bold text-primary">
+                    {money(totalBalance)}
+                  </span>
+                </span>
+              </span>
+            </button>
+
+            {cards.map((bank) => (
+              <button
+                key={bank.name}
+                type="button"
+                onClick={() => choose(bank.name)}
+                className={cn(
+                  "flex items-start gap-3 rounded-lg border p-4 text-left transition-colors",
+                  selectedBank === bank.name
+                    ? "border-primary bg-secondary"
+                    : "hover:bg-muted/50"
+                )}
+              >
+                <BankMark bank={{ bankName: bank.name, logo: bank.logo }} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-semibold text-primary">
+                    {bank.name}
+                  </span>
+                  <span className="mt-2 flex justify-between gap-2 text-xs text-muted-foreground">
+                    <span>
+                      {bank.accounts}{" "}
+                      {bank.accounts === 1 ? "account" : "accounts"}
+                    </span>
+                  </span>
+                  <span className="block font-bold text-primary">
+                    {money(bank.balance)}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <Card>
+            <CardContent className="space-y-4 p-4 sm:p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="font-semibold text-primary">
+                  {selectedBank === ALL_BANKS
+                    ? "All Bank Accounts"
+                    : selectedBank}
+                </p>
+                <div className="flex flex-1 flex-wrap items-center justify-end gap-3">
+                  <div className="relative w-full sm:w-72">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
-                      id="bankBranch"
-                      value={draft.bankBranch}
-                      onChange={(e) => set("bankBranch", e.target.value)}
-                      placeholder="Enter bank branch"
+                      value={query}
+                      onChange={(e) => {
+                        setQuery(e.target.value);
+                        setPage(1);
+                      }}
+                      placeholder="Search by bank name or account..."
+                      className="pl-9"
                     />
                   </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="accountNumber">Account Number *</Label>
-                    <Input
-                      id="accountNumber"
-                      value={draft.accountNumber}
-                      onChange={(e) => set("accountNumber", e.target.value)}
-                      placeholder="Enter account number"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="iban">IBAN</Label>
-                    <Input
-                      id="iban"
-                      value={draft.iban}
-                      onChange={(e) => set("iban", e.target.value)}
-                      placeholder="Enter IBAN"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="openingBalance">Opening Balance</Label>
-                    <Input
-                      id="openingBalance"
-                      type="number"
-                      min="0"
-                      value={draft.openingBalance}
-                      onChange={(e) => set("openingBalance", e.target.value)}
-                      placeholder="Enter opening balance"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="accountStatus">Account Status</Label>
-                    <Select
-                      value={draft.active ? "Active" : "Inactive"}
-                      onValueChange={(value) => set("active", value === "Active")}
-                    >
-                      <SelectTrigger id="accountStatus">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Active">Active</SelectItem>
-                        <SelectItem value="Inactive">Inactive</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* An account either serves the whole company or one office */}
-                  <div className="space-y-2">
-                    <Label htmlFor="accountBranch">
-                      Account Belongs to Branch
-                    </Label>
-                    <Select
-                      value={draft.branch}
-                      onValueChange={(value) => set("branch", value)}
-                    >
-                      <SelectTrigger id="accountBranch">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={ALL_BRANCHES}>
-                          All Branches
-                        </SelectItem>
-                        {branches.map((branch) => (
-                          <SelectItem key={branch.id} value={String(branch.id)}>
-                            {branch.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="flex justify-end">
-                  <Button onClick={saveAccount} disabled={!canSaveAccount}>
-                    Save Bank Account
+                  <Button variant="outline" onClick={exportAccounts}>
+                    <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" />
+                    Export to Excel
                   </Button>
                 </div>
               </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+              {listed.length === 0 ? (
+                <EmptyState>No accounts match that search.</EmptyState>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[920px] text-sm">
+                      <thead>
+                        <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
+                          <th className="p-3 font-semibold">Bank Name</th>
+                          <th className="p-3 font-semibold">Branch Details</th>
+                          <th className="p-3 font-semibold">
+                            Bank Account Details
+                          </th>
+                          <th className="p-3 font-semibold">Balance</th>
+                          <th className="p-3 font-semibold">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {shown.map((account) => (
+                          <tr
+                            key={account.id}
+                            className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"
+                          >
+                            {/* The name opens the bank for editing */}
+                            <td className="p-3">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  navigate("/settings/bank/" + account.id)
+                                }
+                                className="rounded font-semibold text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                              >
+                                {account.bankName}
+                              </button>
+                            </td>
+                            <td className="p-3">
+                              <p className="font-semibold">
+                                {account.bankBranch || "-"}
+                              </p>
+                              {account.branchArea && (
+                                <p className="text-muted-foreground">
+                                  {account.branchArea}
+                                </p>
+                              )}
+                              {account.location && (
+                                <p className="text-muted-foreground">
+                                  {account.location}
+                                </p>
+                              )}
+                            </td>
+                            <td className="p-3">
+                              {/* Enough of the number to tell accounts apart */}
+                              <Pair label="Account No.:">
+                                {maskAccountNumber(account.accountNumber)}
+                              </Pair>
+                              <Pair label="IBAN:">{account.iban}</Pair>
+                              <Pair label="SWIFT Code:">{account.swift}</Pair>
+                            </td>
+                            <td className="p-3">
+                              <Pair label="Opening Balance:">
+                                {money(account.openingBalance)}
+                              </Pair>
+                              <Pair label="Current Balance:" strong>
+                                {money(balanceOf(account))}
+                              </Pair>
+                            </td>
+                            <td className="p-3">
+                              <div className="flex flex-wrap items-center gap-2 text-sm">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    onNavigateSection("transactions", {
+                                      accountId: account.id,
+                                    })
+                                  }
+                                  className="rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                                >
+                                  Account Activity
+                                </button>
+                                {canEdit && (
+                                  <>
+                                    <span className="text-muted-foreground">
+                                      |
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => transferFrom(account)}
+                                      className="rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                                    >
+                                      Transfer
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4 text-sm text-muted-foreground">
+                    <span>
+                      Showing {start + 1} to{" "}
+                      {Math.min(start + pageSize, listed.length)} of{" "}
+                      {listed.length} entries
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={String(pageSize)}
+                        onValueChange={(value) => {
+                          setPageSize(Number(value));
+                          setPage(1);
+                        }}
+                      >
+                        <SelectTrigger className="h-8 w-20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PAGE_SIZES.map((size) => (
+                            <SelectItem key={size} value={String(size)}>
+                              {size}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <span>per page</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        disabled={currentPage <= 1}
+                        onClick={() => setPage(currentPage - 1)}
+                      >
+                        ‹<span className="sr-only">Previous page</span>
+                      </Button>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                        (n) => (
+                          <Button
+                            key={n}
+                            variant={n === currentPage ? "default" : "ghost"}
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setPage(n)}
+                          >
+                            {n}
+                          </Button>
+                        )
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        disabled={currentPage >= totalPages}
+                        onClick={() => setPage(currentPage + 1)}
+                      >
+                        ›<span className="sr-only">Next page</span>
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
+
+      {tab === "transfer" && (
+        <>
+          {canEdit && (
+            <Card>
+              <CardContent className="space-y-5 p-4 sm:p-6">
+                {/* The rule beside the heading marks where the form starts */}
+                <p className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
+                  Transfer Between Accounts
+                </p>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="transferDate">Transfer Date</Label>
+                    <Input
+                      id="transferDate"
+                      type="date"
+                      value={transfer.date}
+                      onChange={(e) => setMove("date", e.target.value)}
+                    />
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="transferFrom">Transfer From</Label>
                     <Select
@@ -318,7 +759,7 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
                       onValueChange={(value) => setMove("fromAccountId", value)}
                     >
                       <SelectTrigger id="transferFrom">
-                        <SelectValue placeholder="Select source account" />
+                        <SelectValue placeholder="Select account" />
                       </SelectTrigger>
                       <SelectContent>
                         {bankAccounts.map((account) => (
@@ -328,9 +769,6 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Account Number &ndash; Office Branch
-                    </p>
                   </div>
 
                   <div className="space-y-2">
@@ -343,8 +781,8 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
                         <SelectValue placeholder="Select destination account" />
                       </SelectTrigger>
                       <SelectContent>
+                        {/* Money cannot be sent to the account it came from */}
                         {bankAccounts
-                          // Money cannot be moved to where it already is.
                           .filter(
                             (account) =>
                               String(account.id) !== transfer.fromAccountId
@@ -359,81 +797,102 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
                           ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Account Number &ndash; Office Branch
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="transferDate">Transfer Date</Label>
-                    <Input
-                      id="transferDate"
-                      type="date"
-                      value={transfer.date}
-                      onChange={(e) => setMove("date", e.target.value)}
-                    />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="transferAmount">Transfer Amount</Label>
+                    <div className="relative">
+                      <Input
+                        id="transferAmount"
+                        type="number"
+                        min="0"
+                        step="0.001"
+                        value={transfer.amount}
+                        onChange={(e) => setMove("amount", e.target.value)}
+                        placeholder="Enter amount"
+                        className="pr-10"
+                      />
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                        <Rial />
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Written out from the figure, so the two can never disagree */}
+                  <div className="space-y-2">
+                    <Label htmlFor="transferWords">
+                      Amount in Words (Auto-generated)
+                    </Label>
                     <Input
-                      id="transferAmount"
-                      type="number"
-                      min="1"
-                      value={transfer.amount}
-                      onChange={(e) => setMove("amount", e.target.value)}
-                      placeholder="Enter amount"
+                      id="transferWords"
+                      readOnly
+                      tabIndex={-1}
+                      className="bg-muted text-muted-foreground"
+                      value={amountInWords(transfer.amount) || "-"}
                     />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="transferReference">Reference Number</Label>
-                    <Input
-                      id="transferReference"
-                      value={transfer.reference}
-                      onChange={(e) => setMove("reference", e.target.value)}
-                      placeholder="Enter reference number"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Transfer Receipt</Label>
-                    {receipt ? (
-                      <div className="flex h-9 items-center justify-between gap-2 rounded-md border bg-muted/40 px-3">
-                        <span className="inline-flex min-w-0 items-center gap-1.5 text-sm text-green-600">
-                          <FileCheck className="h-3.5 w-3.5 shrink-0" />
-                          <span className="truncate">{receipt.name}</span>
-                        </span>
-                        <button
+                    <div className="flex gap-2">
+                      <Input
+                        id="transferReference"
+                        value={transfer.reference}
+                        onChange={(e) => setMove("reference", e.target.value)}
+                        placeholder="Enter reference number"
+                        className="flex-1"
+                      />
+                      {/* The file name lives in the tooltip, so the control
+                          stays icon-sized either way. */}
+                      {receipt ? (
+                        <Button
                           type="button"
+                          variant="outline"
+                          size="icon"
+                          className="shrink-0 border-green-600 text-green-600 hover:text-destructive"
+                          title={receipt.name + " - click to remove"}
                           onClick={() => setReceipt(null)}
-                          className="shrink-0 text-muted-foreground hover:text-destructive"
                         >
-                          &times;
-                          <span className="sr-only">Remove receipt</span>
-                        </button>
-                      </div>
-                    ) : (
-                      <label className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed px-3 text-sm text-muted-foreground hover:bg-muted/50">
-                        <Paperclip className="h-3.5 w-3.5" />
-                        Choose file
-                        <Input
-                          type="file"
-                          className="hidden"
-                          onChange={(e) =>
-                            e.target.files[0] && setReceipt(e.target.files[0])
-                          }
-                        />
-                      </label>
-                    )}
+                          <FileCheck className="h-4 w-4" />
+                          <span className="sr-only">
+                            {receipt.name} attached. Remove it.
+                          </span>
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="shrink-0"
+                          title="Upload transfer receipt"
+                          asChild
+                        >
+                          <label className="cursor-pointer">
+                            <Upload className="h-4 w-4" />
+                            <span className="sr-only">
+                              Upload transfer receipt
+                            </span>
+                            <Input
+                              type="file"
+                              className="hidden"
+                              onChange={(e) =>
+                                e.target.files[0] && setReceipt(e.target.files[0])
+                              }
+                            />
+                          </label>
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                <p className="flex items-start gap-2 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  An internal transfer reduces the source account and increases
-                  the destination account. It is not income and not an expense,
-                  so it never reaches the profit and loss.
+                <p className="flex items-start gap-2 rounded-lg border border-primary/30 bg-secondary p-4 text-sm text-primary">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>
+                    The transferred amount will be moved automatically from the
+                    source account to the destination account. Balances will be
+                    updated accordingly in both accounts.
+                  </span>
                 </p>
 
                 <div className="flex justify-end">
@@ -441,210 +900,83 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
                     Save Transfer
                   </Button>
                 </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+              </CardContent>
+            </Card>
+          )}
 
-      {/* Each tab shows the list its own work belongs to */}
-      {tab === "add" && (
-        <div>
-          <p className="mb-2 font-semibold text-primary">Bank Accounts</p>
-          <Card>
-            <CardContent className="overflow-x-auto p-0">
-              <table className="w-full min-w-[860px] text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
-                    <th className="p-3 font-semibold">Account</th>
-                    <th className="p-3 font-semibold">Office Branch</th>
-                    <th className="p-3 font-semibold">Balances</th>
-                    <th className="p-3 font-semibold">Status</th>
-                    <th className="p-3 font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bankAccounts.map((account) => (
-                    <tr
-                      key={account.id}
-                      className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"
-                    >
-                      <td className="p-3">
-                        <span className="block font-semibold">
-                          {account.bankName}
-                        </span>
-                        <span className="block text-xs text-muted-foreground">
-                          {account.bankBranch || "-"}
-                        </span>
-                        {/* Enough of the number to tell accounts apart, no more */}
-                        <span className="mt-1 block text-xs text-muted-foreground">
-                          {maskAccountNumber(account.accountNumber)}
-                        </span>
-                        <span className="block text-xs text-muted-foreground">
-                          {account.iban || "-"}
-                        </span>
-                      </td>
-                      <td className="p-3 text-muted-foreground">
-                        {account.branchId
-                          ? branchLabel(branches, account.branchId) + " Branch"
-                          : "All Branches"}
-                      </td>
-                      <td className="p-3">
-                        <span className="block text-xs text-muted-foreground">
-                          Opening Balance
-                        </span>
-                        <span className="block">
-                          {money(account.openingBalance)}
-                        </span>
-                        <span className="mt-1 block text-xs text-primary">
-                          Current Balance
-                        </span>
-                        <span className="block font-bold text-primary">
-                          {money(balanceOf(account))}
-                        </span>
-                      </td>
-                      <td className="p-3">
-                        <Badge variant={account.active ? "success" : "secondary"}>
-                          {account.active ? "Active" : "Inactive"}
-                        </Badge>
-                      </td>
-                      <td className="p-3">
-                        <div className="flex flex-wrap gap-3 text-sm">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              onNavigateSection("transactions", {
-                                accountId: account.id,
-                              })
-                            }
-                            className="rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
-                          >
-                            View
-                          </button>
-                          {canEdit && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setAccountActive(account.id, !account.active)
-                                }
-                                className="rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
-                              >
-                                {account.active ? "Disable" : "Enable"}
-                              </button>
-                              {/* Opens the transfer form with this account ready */}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setTab("transfer");
-                                  setMove("fromAccountId", String(account.id));
-                                }}
-                                className="rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
-                              >
-                                Transfer
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
-        </div>
-
-      )}
-
-      {tab === "transfer" && (
-        <div>
-          <p className="mb-2 font-semibold text-primary">Account Transfers</p>
-          <Card>
-            <CardContent className="overflow-x-auto p-0">
-              {transfers.length === 0 ? (
-                <div className="p-6">
-                  <EmptyState>
-                    Nothing has been moved between accounts yet.
-                  </EmptyState>
-                </div>
-              ) : (
-                <table className="w-full min-w-[860px] text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
-                      <th className="p-3 font-semibold">Transfer</th>
-                      <th className="p-3 font-semibold">From &rarr; To</th>
-                      <th className="p-3 font-semibold">Amount</th>
-                      <th className="p-3 font-semibold">Reference &amp; Receipt</th>
-                      <th className="p-3 font-semibold">Transferred By</th>
-                      <th className="p-3 font-semibold">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[...transfers]
-                      .sort((a, b) => b.date.localeCompare(a.date))
-                      .map((move) => (
+          <div>
+            <p className="mb-2 font-semibold text-primary">Account Transfers</p>
+            <Card>
+              <CardContent className="overflow-x-auto p-0">
+                {transfers.length === 0 ? (
+                  <div className="p-6">
+                    <EmptyState>No transfers recorded yet.</EmptyState>
+                  </div>
+                ) : (
+                  <table className="w-full min-w-[860px] text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
+                        <th className="p-3 font-semibold">Transfer No.</th>
+                        <th className="p-3 font-semibold">Date</th>
+                        <th className="p-3 font-semibold">From</th>
+                        <th className="p-3 font-semibold">To</th>
+                        <th className="p-3 font-semibold">Amount</th>
+                        <th className="p-3 font-semibold">Reference</th>
+                        <th className="p-3 font-semibold">Recorded By</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {transfers.map((move) => (
                         <tr
                           key={move.id}
                           className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"
                         >
+                          <td className="p-3 font-medium text-primary">
+                            {move.transferNo || "-"}
+                          </td>
                           <td className="p-3">
-                            <span className="block font-semibold">
-                              {move.transferNo}
-                            </span>
-                            <span className="block text-xs text-muted-foreground">
-                              {formatDate(move.date)}
-                            </span>
+                            {formatDate(move.date)}
                             {move.time && (
                               <span className="block text-xs text-muted-foreground">
                                 {move.time}
                               </span>
                             )}
                           </td>
-                          <td className="p-3 text-muted-foreground">
-                            <span className="block">
-                              {accountLine(accountById(move.fromAccountId))}
-                            </span>
-                            <span className="block">&darr;</span>
-                            <span className="block">
-                              {accountLine(accountById(move.toAccountId))}
-                            </span>
+                          <td className="p-3">
+                            {accountLine(accountById(move.fromAccountId))}
+                          </td>
+                          <td className="p-3">
+                            {accountLine(accountById(move.toAccountId))}
                           </td>
                           <td className="p-3 font-semibold">
                             {money(move.amount)}
                           </td>
-                          <td className="p-3">
-                            <span className="block">{move.reference || "-"}</span>
+                          <td className="p-3 text-muted-foreground">
+                            {move.reference || "-"}
                             {move.receipt && (
-                              <button
-                                type="button"
-                                title={move.receipt}
-                                className="mt-0.5 inline-flex items-center gap-1 rounded text-xs text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
-                              >
+                              <span className="mt-1 flex items-center gap-1.5 text-primary">
                                 <Paperclip className="h-3 w-3 shrink-0" />
                                 {move.receipt}
-                              </button>
+                              </span>
                             )}
                           </td>
                           <td className="p-3">
-                            <span className="block">{move.byName || "-"}</span>
-                            <span className="block text-xs text-muted-foreground">
-                              {move.byRole}
-                            </span>
-                          </td>
-                          <td className="p-3">
-                            {/* A transfer is only recorded once it has happened,
-                                so there is no pending state to show */}
-                            <Badge variant="success">Completed</Badge>
+                            {move.byName || "-"}
+                            {move.byRole && (
+                              <span className="block text-xs text-muted-foreground">
+                                {move.byRole}
+                              </span>
+                            )}
                           </td>
                         </tr>
                       ))}
-                  </tbody>
-                </table>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                    </tbody>
+                  </table>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </>
       )}
     </div>
   );

@@ -74,11 +74,15 @@ const SelectContent = React.forwardRef(
         {...props}
       >
         <SelectScrollUpButton />
+        {/* The list is as tall as it needs to be, up to the max-h on the
+            content above. It must not be pinned to the height of the trigger:
+            that leaves one row showing and everything else behind a scroll
+            button, which reads as an empty dropdown. */}
         <SelectPrimitive.Viewport
           className={cn(
             "p-1",
             position === "popper" &&
-              "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
+              "w-full min-w-[var(--radix-select-trigger-width)]"
           )}
         >
           {children}

@@ -43,6 +43,51 @@ export const COURT_LEVELS = [
 
 export const JUDICIAL_STATUSES = ["Approved", "Pending"];
 
+/** The three letters a branch is known by on an expense number. */
+const BRANCH_CODES = { Muscat: "MUS", Salalah: "SAL", Sohar: "SOH" };
+
+/** "EXP-MUS-000456" - the branch is part of the number, not just beside it. */
+const expenseNo = (branch, id) =>
+  "EXP-" +
+  (BRANCH_CODES[branch] || branch.slice(0, 3).toUpperCase()) +
+  "-" +
+  String(450 + id * 6).padStart(6, "0");
+
+/** "10:15 AM" as 615. */
+const clock = (time) => {
+  const [hours, rest] = String(time).split(":");
+  const minutes = Number(String(rest).slice(0, 2));
+  const pm = /PM/i.test(time);
+  const hour = Number(hours) % 12 + (pm ? 12 : 0);
+  return hour * 60 + minutes;
+};
+
+/** 700 as "11:40 AM". */
+const clockText = (minutes) => {
+  const total = ((minutes % 1440) + 1440) % 1440;
+  const hour = Math.floor(total / 60);
+  const shown = hour % 12 === 0 ? 12 : hour % 12;
+  return (
+    String(shown).padStart(2, "0") +
+    ":" +
+    String(total % 60).padStart(2, "0") +
+    (hour < 12 ? " AM" : " PM")
+  );
+};
+
+/**
+ * When the accountant saw it.
+ *
+ * The accountant sits between the person who raised the request and the
+ * finance manager who releases the money, so the time falls between theirs -
+ * halfway when both happened on the same day, and shortly after submission
+ * when the approval ran over to the next.
+ */
+const accountantTime = (submittedAt, submittedTime, approvedAt, approvedTime) =>
+  submittedAt === approvedAt
+    ? clockText(Math.round((clock(submittedTime) + clock(approvedTime)) / 2))
+    : clockText(clock(submittedTime) + 85);
+
 const e = (
   id,
   branch,
@@ -65,6 +110,7 @@ const e = (
   approvedTime
 ) => ({
   id,
+  expenseNo: expenseNo(branch, id),
   branch,
   client,
   opponent,
@@ -80,10 +126,23 @@ const e = (
   bank,
   accountNo,
   receipt: "receipt-" + String(id).padStart(3, "0") + ".pdf",
+  registrationReceipt: "registration-" + String(id).padStart(3, "0") + ".pdf",
+  caseRecord: "case-record-" + String(id).padStart(3, "0") + ".pdf",
   submittedBy,
   submittedAt,
   submittedTime,
-  approvedBy: "Finance Manager",
+  // Two approvals, not one: the accountant checks the expense, the finance
+  // manager releases the money, and the table has to show both.
+  accountantApprovedBy: "Khalid Al Balushi",
+  accountantApprovedAt: submittedAt,
+  accountantApprovedTime: accountantTime(
+    submittedAt,
+    submittedTime,
+    approvedAt,
+    approvedTime
+  ),
+  financeApprovedBy: "Ahmad Al Hinai",
+  approvedBy: "Ahmad Al Hinai",
   approvedAt,
   approvedTime,
   status: "Approved",

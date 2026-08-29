@@ -31,12 +31,9 @@ import {
   Undo2,
   X,
   Banknote,
-  History,
   Building2,
   FileText,
   CalendarDays,
-  Landmark,
-  Wallet,
   Tag,
   ListTree,
   AlignLeft,
@@ -159,24 +156,103 @@ function Route({ invoice }) {
   );
 }
 
-/** One labelled fact on a request card. */
-function Field({ icon, label, children }) {
+/**
+ * Every step this one request has been through.
+ *
+ * The supplier history answers what the firm has paid these people before;
+ * this answers what has happened to this request, which is a different
+ * question and so a different window.
+ */
+function RequestHistoryDialog({ invoice, onOpenChange }) {
+  return (
+    <Dialog open onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Request History</DialogTitle>
+          <DialogDescription>
+            {invoice.requestNo} &middot; {invoice.reference}
+          </DialogDescription>
+        </DialogHeader>
+
+        <ol className="space-y-3">
+          {invoice.history.map((entry, i) => (
+            <li key={i} className="flex gap-3 text-sm">
+              <span
+                aria-hidden="true"
+                className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary"
+              />
+              <span>
+                <span className="block font-medium">{entry.action}</span>
+                <span className="block text-xs text-muted-foreground">
+                  {formatDate(entry.at)} &middot; {entry.by}
+                </span>
+                {entry.reason && (
+                  <span className="mt-1 block text-xs">{entry.reason}</span>
+                )}
+              </span>
+            </li>
+          ))}
+        </ol>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/**
+ * The frames requests are drawn in, taken in turn.
+ *
+ * Consecutive cards read as one long page unless something separates them, so
+ * each request takes the next frame colour and no two neighbours match.
+ */
+const FRAMES = ["border-primary", "border-frame-alt"];
+
+/**
+ * Who the request is with.
+ *
+ * A request that has been decided names the person who decided it; one still
+ * moving names the step it is waiting at, because nobody has put their name to
+ * it yet.
+ */
+function approverOf(invoice) {
+  const decided = [...invoice.history]
+    .reverse()
+    .find((entry) => entry.action !== "Submitted");
+  if (decided) return decided.by;
+  return STATUS[invoice.status] || "Pending";
+}
+
+/** The bar between two facts that belong on one line. */
+function Divider() {
+  return <span className="px-2 text-muted-foreground">|</span>;
+}
+
+/**
+ * One panel of a request card.
+ *
+ * The heading carries the icon and, where there is one, the link that opens
+ * what sits behind the panel - so the action belongs to the fact it acts on
+ * rather than floating in a box of its own.
+ */
+function InfoBox({ icon, label, action, children }) {
   const Icon = icon;
   return (
-    <div className="flex items-start gap-3 p-4">
-      <span className="mt-0.5 shrink-0 rounded-lg bg-secondary p-2 text-secondary-foreground">
-        <Icon className="h-4 w-4" />
-      </span>
-      <div className="min-w-0">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <div className="mt-0.5 text-sm">{children}</div>
+    <div className="p-4">
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="shrink-0 rounded-lg bg-secondary p-2 text-secondary-foreground">
+            <Icon className="h-4 w-4" />
+          </span>
+          <span className="truncate text-sm font-medium">{label}</span>
+        </span>
+        {action}
       </div>
+      <div className="mt-3 text-sm">{children}</div>
     </div>
   );
 }
 
-/** The strip the fields sit in, so both rows of a card line up. */
-function FieldRow({ children }) {
+/** The strip the panels sit in, so every card lines up the same way. */
+function InfoRow({ children }) {
   return (
     <div className="grid grid-cols-1 divide-y rounded-lg border sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x">
       {children}
@@ -642,6 +718,7 @@ export default function GeneralInvoices({ partnersOnly = false }) {
   const [reason, setReason] = useState("");
   const [payingFor, setPayingFor] = useState(null);
   const [historyFor, setHistoryFor] = useState(null);
+  const [requestHistoryFor, setRequestHistoryFor] = useState(null);
   const [payment, setPayment] = useState({
     date: dayOffset(0),
     amount: "",
@@ -835,7 +912,7 @@ export default function GeneralInvoices({ partnersOnly = false }) {
           </Card>
         )}
 
-        {visible.map((invoice) => {
+        {visible.map((invoice, position) => {
           const total = invoiceTotal(invoice);
           const paid = amountPaid(invoice);
           const isAdmin = role === "admin";
@@ -861,48 +938,97 @@ export default function GeneralInvoices({ partnersOnly = false }) {
             invoice.status === "returned" && (isAdmin || role === "employee");
 
           return (
-            <Card key={invoice.id} className="border-2 border-primary/30">
+            <Card key={invoice.id} className={cn("border-2", FRAMES[position % FRAMES.length])}>
               <CardContent className="space-y-4 p-4 sm:p-6">
                 <Route invoice={invoice} />
 
-                <FieldRow>
-                  <Field icon={FileText} label="Request No.">
-                    <p className="font-semibold">{invoice.requestNo}</p>
-                    {invoice.branch && (
-                      <p className="text-xs text-muted-foreground">
-                        {invoice.branch} Branch
-                      </p>
-                    )}
-                  </Field>
-
-                  <Field icon={CalendarDays} label="Request Details">
+                <InfoRow>
+                  <InfoBox
+                    icon={FileText}
+                    label="Request Details"
+                    action={
+                      invoice.invoiceFile ? (
+                        <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-primary">
+                          <Paperclip className="h-3 w-3" />
+                          {invoice.invoiceFile}
+                        </span>
+                      ) : (
+                        <Badge variant="outline">No invoice copy</Badge>
+                      )
+                    }
+                  >
                     <p>
-                      {invoice.reference}
-                      <span className="text-muted-foreground">
-                        {" · Invoice " + invoice.invoiceNumber}
+                      <span className="font-semibold text-primary">
+                        {invoice.requestNo}
                       </span>
+                      {invoice.branch && (
+                        <>
+                          <Divider />
+                          {invoice.branch} Branch
+                        </>
+                      )}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDate(invoice.invoiceDate)} · {invoice.createdBy}
+                    <p className="mt-1 text-muted-foreground">
+                      {invoice.reference} &middot; Invoice {invoice.invoiceNumber}
                     </p>
-                  </Field>
+                  </InfoBox>
 
-                  <Field icon={Paperclip} label="Invoice Copy">
-                    {invoice.invoiceFile ? (
-                      <span className="inline-flex items-center gap-1 text-primary">
-                        <Paperclip className="h-3 w-3" />
-                        {invoice.invoiceFile}
-                      </span>
-                    ) : (
-                      <Badge variant="outline">No invoice copy</Badge>
-                    )}
-                  </Field>
-
-                  <div className="p-4">
-                    <p className="text-xs text-muted-foreground">
-                      Request Summary
+                  <InfoBox
+                    icon={CalendarDays}
+                    label="Submit Request"
+                    action={
+                      canReview && (
+                        <button
+                          type="button"
+                          onClick={() => setRequestHistoryFor(invoice)}
+                          className="rounded text-xs font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                          View Request History
+                        </button>
+                      )
+                    }
+                  >
+                    <p>
+                      <span className="text-muted-foreground">Applicant:</span>{" "}
+                      <span className="font-medium">{invoice.createdBy}</span>
                     </p>
-                    <div className="mt-1 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                    <p className="mt-1">
+                      <span className="text-muted-foreground">Approval:</span>{" "}
+                      <span className="font-medium">{approverOf(invoice)}</span>
+                    </p>
+                  </InfoBox>
+
+                  <InfoBox
+                    icon={Building2}
+                    label="Supplier details"
+                    action={
+                      canReview && (
+                        <button
+                          type="button"
+                          onClick={() => setHistoryFor(invoice)}
+                          className="rounded text-xs font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                          View Supplier History
+                        </button>
+                      )
+                    }
+                  >
+                    <p>
+                      <span className="font-medium">{invoice.supplier}</span>
+                      {accountFor(invoice.supplier)?.accountNumber && (
+                        <>
+                          <Divider />
+                          {accountFor(invoice.supplier).accountNumber}
+                        </>
+                      )}
+                    </p>
+                    <p className="mt-1 text-muted-foreground">
+                      {accountFor(invoice.supplier)?.bank || "No account on file"}
+                    </p>
+                  </InfoBox>
+
+                  <InfoBox icon={ClipboardList} label="Request Summary">
+                    <div className="flex flex-wrap gap-x-6 gap-y-1">
                       <span>
                         <span className="block text-[11px] text-muted-foreground">
                           Before VAT
@@ -929,34 +1055,8 @@ export default function GeneralInvoices({ partnersOnly = false }) {
                         Paid {money(paid)} of {money(total)}
                       </p>
                     )}
-                  </div>
-                </FieldRow>
-
-                <FieldRow>
-                  <Field icon={Building2} label="Supplier name">
-                    {invoice.supplier}
-                  </Field>
-                  <Field icon={Landmark} label="Supplier Account">
-                    {accountFor(invoice.supplier)?.bank || "-"}
-                  </Field>
-                  <Field icon={Wallet} label="Account">
-                    {accountFor(invoice.supplier)?.accountNumber || "-"}
-                  </Field>
-                  <div className="flex items-center p-4">
-                    {canReview && (
-                      <button
-                        type="button"
-                        onClick={() => setHistoryFor(invoice)}
-                        className="inline-flex items-center gap-2 rounded text-sm text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
-                      >
-                        <span className="rounded-lg bg-secondary p-2 text-secondary-foreground">
-                          <History className="h-4 w-4" />
-                        </span>
-                        View Supplier History
-                      </button>
-                    )}
-                  </div>
-                </FieldRow>
+                  </InfoBox>
+                </InfoRow>
 
                 <div className="rounded-lg border">
                   <p className="border-b px-4 py-2 text-sm font-semibold">
@@ -1183,6 +1283,13 @@ export default function GeneralInvoices({ partnersOnly = false }) {
           );
         })}
       </div>
+
+      {requestHistoryFor && (
+        <RequestHistoryDialog
+          invoice={requestHistoryFor}
+          onOpenChange={(open) => !open && setRequestHistoryFor(null)}
+        />
+      )}
 
       {historyFor && (
         <SupplierHistoryDialog
