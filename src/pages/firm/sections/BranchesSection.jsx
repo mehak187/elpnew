@@ -288,12 +288,6 @@ export default function BranchesSection({ canEdit }) {
         </CardContent>
       </Card>
 
-      <div className="rounded-lg border bg-muted/30 p-4 text-xs text-muted-foreground">
-        A branch number is the first part of every case file number raised at
-        that branch, so it is never reused. A branch that has records against it
-        is set to Inactive rather than removed.
-      </div>
-
       {/* The branch number opens its details for reading and editing */}
       <Dialog
         open={Boolean(editing)}

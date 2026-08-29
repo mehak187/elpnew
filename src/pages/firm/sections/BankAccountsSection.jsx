@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Info, Paperclip, FileCheck } from "lucide-react";
+import { Paperclip, FileCheck } from "lucide-react";
 import { EmptyState } from "@/components/shared/panels";
 import { cn } from "@/lib/utils";
 import { RECEIVING_BANKS } from "@/lib/constants";
@@ -166,11 +166,6 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
         ))}
       </div>
 
-      <p className="flex items-start gap-2 text-xs text-muted-foreground">
-        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        Balances update automatically from invoices, receipts, expenses and
-        internal transfers.
-      </p>
 
       {canEdit && (
         <Card>
@@ -429,12 +424,6 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
                   </div>
                 </div>
 
-                <p className="flex items-start gap-2 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  An internal transfer reduces the source account and increases
-                  the destination account. It is not income and not an expense,
-                  so it never reaches the profit and loss.
-                </p>
 
                 <div className="flex justify-end">
                   <Button onClick={saveTransfer} disabled={!canTransfer}>
