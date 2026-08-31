@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import BackButton from "@/components/shared/BackButton";
 import { Badge } from "@/components/ui/badge";
 import { User, ArrowLeft, Edit, Mail, Phone, Calendar, Building, Briefcase, GraduationCap, DollarSign, Globe, Languages } from "lucide-react";
 import { Rial } from "@/components/shared/Rial";
@@ -13,6 +14,28 @@ const employees = [
   { id: 4, emp_id: "4", name: "Sarah Al Lawati", arabicName: "سارة اللواتي", branch: "Muscat", dateOfJoining: "2019-09-05", dateOfBirth: "1992-04-10", gender: "Female", nationality: "Oman", department: "Administrative", designation: "Administrative", salary: "650.000", status: "Active", phone: "+968 9456 7890", email: "sarah@elp.com", languageOfCommunication: "English", educationalLevel: "Secondary Education", nationalIdentityExpire: "2029-04-10" },
   { id: 5, emp_id: "5", name: "Rajesh Kumar", arabicName: "", branch: "Salalah", dateOfJoining: "2023-02-28", dateOfBirth: "1987-09-08", gender: "Male", nationality: "India", department: "Accountant", designation: "Accountant", salary: "1200.000", status: "Inactive", phone: "+968 9567 8901", email: "rajesh@elp.com", languageOfCommunication: "English", educationalLevel: "Bachelor's Degree", nationalIdentityExpire: "2025-09-08", passportExpire: "2028-05-15", visaExpire: "2025-02-28", lawyerCardExpire: "2025-12-31" },
 ];
+
+/**
+ * One labelled fact with its icon.
+ *
+ * Declared out here rather than inside the page: a component built during
+ * render is a new component every time, and React throws away its state with
+ * every keystroke on the page around it.
+ */
+function InfoItem({ icon, label, value }) {
+  const Icon = icon;
+  return (
+    <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
+      <div className="p-2 rounded-lg bg-primary/10">
+        <Icon className="h-4 w-4 text-primary" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="text-sm font-medium truncate">{value || "-"}</p>
+      </div>
+    </div>
+  );
+}
 
 export default function EmployeeView() {
   const navigate = useNavigate();
@@ -31,26 +54,13 @@ export default function EmployeeView() {
     return variants[status] || "default";
   };
 
-  const InfoItem = ({ icon: Icon, label, value }) => (
-    <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
-      <div className="p-2 rounded-lg bg-primary/10">
-        <Icon className="h-4 w-4 text-primary" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="text-sm font-medium truncate">{value || "-"}</p>
-      </div>
-    </div>
-  );
 
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Page Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="rounded-full bg-secondary text-primary hover:bg-accent" onClick={() => navigate("/employees")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+          <BackButton fallback="/employees" />
           <div className="p-2 sm:p-3 rounded-xl bg-primary">
             <User className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
           </div>

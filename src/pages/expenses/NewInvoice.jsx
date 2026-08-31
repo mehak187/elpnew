@@ -1,5 +1,7 @@
 import { useNavigate } from "react-router-dom";
+import { useGoBack } from "@/lib/useGoBack";
 import { Button } from "@/components/ui/button";
+import BackButton from "@/components/shared/BackButton";
 import { ReceiptText, ArrowLeft } from "lucide-react";
 import { useExpenses } from "@/lib/expenses/context";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
@@ -8,6 +10,7 @@ import { firstReviewFor, dayOffset } from "./expenseData";
 
 export default function NewInvoice() {
   const navigate = useNavigate();
+  const goBack = useGoBack("/expense-requests");
   const { addInvoice } = useExpenses();
 
   const handleSubmit = (invoice) => {
@@ -41,14 +44,7 @@ export default function NewInvoice() {
     <div className="space-y-4 sm:space-y-6">
       {/* Page Header */}
       <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="rounded-full bg-secondary text-primary hover:bg-accent"
-          onClick={() => navigate("/expense-requests")}
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
+        <BackButton fallback="/expense-requests" />
         <div className="rounded-xl bg-primary p-2 sm:p-3">
           <ReceiptText className="h-5 w-5 text-primary-foreground sm:h-6 sm:w-6" />
         </div>
@@ -63,7 +59,7 @@ export default function NewInvoice() {
       </div>
 
       <InvoiceForm
-        onCancel={() => navigate("/expense-requests")}
+        onCancel={goBack}
         onSubmit={handleSubmit}
       />
     </div>

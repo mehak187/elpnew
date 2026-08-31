@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import BackButton from "@/components/shared/BackButton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -334,10 +335,14 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
       {adding && canEdit && (
         <Card>
           <CardContent className="space-y-5 p-4 sm:p-6">
-            {/* The rule beside the heading marks where the form starts */}
-            <p className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
-              Add New Bank
-            </p>
+            {/* The rule beside the heading marks where the form starts, and
+                the arrow is the way back out of it. */}
+            <div className="flex items-center gap-3">
+              <BackButton onBack={closeAddBank} />
+              <p className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
+                Add New Bank
+              </p>
+            </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-2">

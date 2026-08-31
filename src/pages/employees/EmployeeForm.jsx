@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import BackButton from "@/components/shared/BackButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -298,14 +299,7 @@ export default function EmployeeForm() {
       {/* Page Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full bg-secondary text-primary hover:bg-accent"
-            onClick={() => navigate("/employees")}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+          <BackButton fallback="/employees" />
           <div>
             <h1 className="text-xl font-bold text-primary sm:text-2xl">
               {activeSection === "information"

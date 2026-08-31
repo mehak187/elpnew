@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useGoBack } from "@/lib/useGoBack";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import BackButton from "@/components/shared/BackButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -37,6 +39,7 @@ function FieldLabel({ htmlFor, optional, children }) {
  */
 export default function BankEdit() {
   const navigate = useNavigate();
+  const goBack = useGoBack("/settings/firm");
   const { id } = useParams();
   const firm = useFirm();
   const { bankAccounts, branches, updateBankAccount } = firm;
@@ -64,7 +67,7 @@ export default function BankEdit() {
         <CardContent className="p-6">
           <EmptyState>That bank account is no longer on file.</EmptyState>
           <div className="mt-4 flex justify-center">
-            <Button variant="outline" onClick={() => navigate("/settings/firm")}>
+            <Button variant="outline" onClick={goBack}>
               Back to Company Profile
             </Button>
           </div>
@@ -114,14 +117,7 @@ export default function BankEdit() {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full bg-secondary text-primary hover:bg-accent"
-            onClick={() => navigate("/settings/firm")}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+          <BackButton fallback="/settings/firm" />
           <div className="rounded-xl bg-primary p-2 sm:p-3">
             <Landmark className="h-5 w-5 text-primary-foreground sm:h-6 sm:w-6" />
           </div>
@@ -337,7 +333,7 @@ export default function BankEdit() {
           </div>
 
           <div className="flex justify-end gap-2 border-t pt-4">
-            <Button variant="outline" onClick={() => navigate("/settings/firm")}>
+            <Button variant="outline" onClick={goBack}>
               Cancel
             </Button>
             <Button onClick={save} disabled={!canSave}>
