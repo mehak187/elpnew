@@ -278,8 +278,17 @@ export default function BranchesSection({ canEdit }) {
                       </span>
                     )}
                   </td>
-                  <td className="p-3 text-muted-foreground">
-                    {branch.address || "-"}
+                  {/* English above, Arabic below - one column, two lines */}
+                  <td className="p-3">
+                    <span className="block">{branch.address || "-"}</span>
+                    {branch.addressAr && (
+                      <span
+                        className="block text-xs text-muted-foreground"
+                        dir="rtl"
+                      >
+                        {branch.addressAr}
+                      </span>
+                    )}
                   </td>
                   <td className="p-3">
                     {managerName(branch.managerId) || (

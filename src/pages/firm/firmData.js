@@ -129,10 +129,17 @@ export const DOCUMENT_STATUS_VARIANT = {
 
 /* ----------------------------------------------------------- 3. Branches */
 
+/**
+ * The offices the company works from.
+ *
+ * Name and address are each held in both languages, because the table shows
+ * them one under the other in a single column - the Arabic is a second line
+ * of the same fact, not a column of its own.
+ */
 export const initialBranches = [
-  { id: 1, branchNumber: 1, name: "Muscat", nameAr: "فرع مسقط", address: "Shatti Al Qurum, Muscat", phone: "+968 2411 1111", email: "muscat@company.com", managerId: 1, active: true },
-  { id: 2, branchNumber: 2, name: "Salalah", nameAr: "فرع صلالة", address: "Al Saada Street, Salalah", phone: "+968 2329 2222", email: "salalah@company.com", managerId: 7, active: true },
-  { id: 3, branchNumber: 3, name: "Sohar", nameAr: "فرع صحار", address: "Falaj Al Qabail, Sohar", phone: "+968 2684 3333", email: "sohar@company.com", managerId: 11, active: true },
+  { id: 1, branchNumber: 1, name: "Muscat", nameAr: "مسقط", address: "Shatti Al Qurum, Muscat", addressAr: "شاطئ القرم، مسقط", phone: "+968 2411 1111", email: "muscat@company.com", managerId: 1, active: true },
+  { id: 2, branchNumber: 2, name: "Salalah", nameAr: "صلالة", address: "Al Saada Street, Salalah", addressAr: "شارع السعادة، صلالة", phone: "+968 2329 2222", email: "salalah@company.com", managerId: 7, active: true },
+  { id: 3, branchNumber: 3, name: "Sohar", nameAr: "صحار", address: "Falaj Al Qabail, Sohar", addressAr: "فلج القبائل، صحار", phone: "+968 2684 3333", email: "sohar@company.com", managerId: 11, active: true },
 ];
 
 /**
