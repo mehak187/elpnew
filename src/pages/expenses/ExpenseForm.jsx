@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import BackButton from "@/components/shared/BackButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -65,14 +66,7 @@ export default function ExpenseForm() {
       {/* Page Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full bg-secondary text-primary hover:bg-accent"
-            onClick={() => navigate("/expenses")}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+          <BackButton fallback="/expenses" />
           <div className="rounded-xl bg-primary p-2 sm:p-3">
             <WalletCards className="h-5 w-5 text-primary-foreground sm:h-6 sm:w-6" />
           </div>

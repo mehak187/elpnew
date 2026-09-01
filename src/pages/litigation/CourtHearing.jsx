@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import BackButton from "@/components/shared/BackButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -37,9 +38,7 @@ const columns = [
   { key: "notes", header: "Notes", width: "30%", cellClassName: "text-left" },
 ];
 
-export default function CourtHearing() {
-  const navigate = useNavigate();
-  const { id } = useParams();
+export default function CourtHearing() {  const { id } = useParams();
   const [pageSize, setPageSize] = useState(100);
   const [currentPage, setCurrentPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
@@ -67,9 +66,7 @@ export default function CourtHearing() {
     <div className="space-y-4 sm:space-y-6">
       {/* Page Header */}
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" className="rounded-full bg-secondary text-primary hover:bg-accent" onClick={() => navigate("/litigation")}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
+        <BackButton fallback="/litigation" />
         <div className="p-2 sm:p-3 rounded-xl bg-primary">
           <Gavel className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
         </div>
@@ -112,7 +109,12 @@ export default function CourtHearing() {
         <Card>
           <CardContent className="p-4 sm:p-6">
             <form onSubmit={handleSubmit} className="space-y-4">
-              <h3 className="font-semibold text-primary">Add New Hearing</h3>
+              {/* The way back out of the form, in the same place and with
+                  the same mark as on every page that opens over another. */}
+              <div className="flex items-center gap-3">
+                <BackButton onBack={() => setShowForm(false)} />
+                <h3 className="font-semibold text-primary">Add New Hearing</h3>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="date">Hearing Date *</Label>

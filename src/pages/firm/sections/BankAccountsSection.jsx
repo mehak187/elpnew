@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import BackButton from "@/components/shared/BackButton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,6 +49,7 @@ const emptyAccount = {
   iban: "",
   openingBalance: "",
   accountType: "",
+  logo: "",
   active: true,
 };
 
@@ -104,6 +106,188 @@ function BankMark({ bank }) {
 const accountLabel = (account, branches) =>
   account.accountNumber + " - " + branchLabel(branches, account.branchId);
 
+/**
+ * Picks the artwork a bank is drawn by.
+ *
+ * The file is read into the record itself rather than left as a reference to
+ * a file on disk, so the mark travels with the account and does not go blank
+ * the moment the page is reloaded.
+ */
+function BankLogoField({ logo, bankName, onPick }) {
+  const read = (file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => onPick(String(reader.result));
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <BankMark bank={{ bankName, logo }} />
+      {logo ? (
+        <Button
+          type="button"
+          variant="outline"
+          className="flex-1 border-green-600 text-green-600 hover:text-destructive"
+          title="Click to remove"
+          onClick={() => onPick("")}
+        >
+          <FileCheck className="mr-2 h-4 w-4 shrink-0" />
+          Logo attached
+        </Button>
+      ) : (
+        <Button type="button" variant="outline" className="flex-1" asChild>
+          <label className="cursor-pointer">
+            <Upload className="mr-2 h-4 w-4" />
+            Upload Logo
+            <Input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => read(e.target.files[0])}
+            />
+          </label>
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/** The fields a bank account is made of. */
+function BankFields({ draft, set }) {
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="space-y-2">
+        <FieldLabel htmlFor="bankName">Bank Name</FieldLabel>
+        <Select
+          value={draft.bankName}
+          onValueChange={(value) => set("bankName", value)}
+        >
+          <SelectTrigger id="bankName">
+            <SelectValue placeholder="Select Bank" />
+          </SelectTrigger>
+          <SelectContent>
+            {RECEIVING_BANKS.map((bank) => (
+              <SelectItem key={bank} value={bank}>
+                {bank}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <FieldLabel htmlFor="bankBranch">Bank Branch</FieldLabel>
+        <Select
+          value={draft.bankBranch}
+          onValueChange={(value) => set("bankBranch", value)}
+        >
+          <SelectTrigger id="bankBranch">
+            <SelectValue placeholder="Enter Bank Branch" />
+          </SelectTrigger>
+          <SelectContent>
+            {BANK_BRANCHES.map((branch) => (
+              <SelectItem key={branch} value={branch}>
+                {branch}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <FieldLabel htmlFor="accountName">Account Name</FieldLabel>
+        <Input
+          id="accountName"
+          value={draft.accountName}
+          onChange={(e) => set("accountName", e.target.value)}
+          placeholder="Enter Account Name"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <FieldLabel htmlFor="accountNumber">Account Number</FieldLabel>
+        <Input
+          id="accountNumber"
+          value={draft.accountNumber}
+          onChange={(e) => set("accountNumber", e.target.value)}
+          placeholder="Enter Account Number"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <FieldLabel htmlFor="iban">IBAN</FieldLabel>
+        <Input
+          id="iban"
+          value={draft.iban}
+          onChange={(e) => set("iban", e.target.value)}
+          placeholder="Enter IBAN"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <FieldLabel htmlFor="openingBalance">Opening Balance</FieldLabel>
+        <Input
+          id="openingBalance"
+          type="number"
+          min="0"
+          step="0.001"
+          value={draft.openingBalance}
+          onChange={(e) => set("openingBalance", e.target.value)}
+          placeholder="Enter Opening Balance"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <FieldLabel htmlFor="accountType">Account Type</FieldLabel>
+        <Select
+          value={draft.accountType}
+          onValueChange={(value) => set("accountType", value)}
+        >
+          <SelectTrigger id="accountType">
+            <SelectValue placeholder="Select Account Type" />
+          </SelectTrigger>
+          <SelectContent>
+            {ACCOUNT_TYPES.map((type) => (
+              <SelectItem key={type} value={type}>
+                {type}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <FieldLabel htmlFor="accountStatus">Account Status</FieldLabel>
+        <Select
+          value={draft.active ? "Active" : "Inactive"}
+          onValueChange={(value) => set("active", value === "Active")}
+        >
+          <SelectTrigger id="accountStatus">
+            <SelectValue placeholder="Select Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Active">Active</SelectItem>
+            <SelectItem value="Inactive">Inactive</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* The one field that is not required: without artwork the card falls
+          back to the bank's initials, which is a worse mark but never a
+          missing one. */}
+      <div className="space-y-2">
+        <Label>Bank Logo</Label>
+        <BankLogoField
+          logo={draft.logo}
+          bankName={draft.bankName || "Bank"}
+          onPick={(value) => set("logo", value)}
+        />
+      </div>
+    </div>
+  );
+}
+
 /** The two lists this section holds, one at a time. */
 const TABS = [
   { key: "accounts", label: "Bank Accounts" },
@@ -125,13 +309,8 @@ const PAGE_SIZES = [10, 25, 50];
 export default function BankAccountsSection({ onNavigateSection, canEdit }) {
   const navigate = useNavigate();
   const firm = useFirm();
-  const {
-    bankAccounts,
-    branches,
-    transfers,
-    addBankAccount,
-    addTransfer,
-  } = firm;
+  const { bankAccounts, branches, transfers, addBankAccount, addTransfer } =
+    firm;
 
   const ledgers = {
     payments: firm.payments,
@@ -178,29 +357,22 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
 
   const totalBalance = bankAccounts.reduce(
     (sum, account) => sum + balanceOf(account),
-    0
+    0,
   );
 
-  // One card per bank, however many accounts that bank holds.
+  // One card per account. Two accounts at the same bank get a card each, so
+  // the card names the account as well as the bank - otherwise the two would
+  // be indistinguishable.
   const bankNames = [...new Set(bankAccounts.map((a) => a.bankName))];
-  const cards = bankNames.map((name) => {
-    const held = bankAccounts.filter((a) => a.bankName === name);
-    return {
-      name,
-      logo: held[0].logo,
-      accounts: held.length,
-      balance: held.reduce((sum, account) => sum + balanceOf(account), 0),
-    };
-  });
 
-  const choose = (name) => {
-    setSelectedBank(name);
+  const choose = (value) => {
+    setSelectedBank(value);
     setPage(1);
   };
 
   const search = query.trim().toLowerCase();
   const listed = bankAccounts.filter((account) => {
-    if (selectedBank !== ALL_BANKS && account.bankName !== selectedBank) {
+    if (selectedBank !== ALL_BANKS && String(account.id) !== selectedBank) {
       return false;
     }
     if (!search) return true;
@@ -237,9 +409,9 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
         listed.map((account) => ({
           ...account,
           currentBalance: balanceOf(account),
-        }))
+        })),
       ),
-      "bank-accounts.csv"
+      "bank-accounts.csv",
     );
 
   // Every field on the form is required, so every field is checked.
@@ -262,6 +434,7 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
       accountNumber: draft.accountNumber,
       iban: draft.iban,
       accountType: draft.accountType,
+      logo: draft.logo,
       // An account opened here serves the whole company until it is said to
       // belong to one office.
       branchId: null,
@@ -302,10 +475,43 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
     setMove("fromAccountId", String(account.id));
   };
 
+  // Adding a bank takes over the section. Cards, tables and tabs all describe
+  // banks that already exist, and none of that helps while a new one is being
+  // entered - it only invites the form to be mistaken for part of the list.
+  if (adding && canEdit) {
+    return (
+      <Card>
+        <CardContent className="space-y-5 p-4 sm:p-6">
+          {/* The rule beside the heading marks where the form starts, and
+              the arrow is the way back out of it. */}
+          <div className="flex items-center gap-3">
+            <BackButton onBack={closeAddBank} />
+            <p className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
+              Add New Bank
+            </p>
+          </div>
+
+          <BankFields draft={draft} set={set} />
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={closeAddBank}>
+              Cancel
+            </Button>
+            <Button onClick={saveAccount} disabled={!canSaveAccount}>
+              Save Bank Account
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="grid flex-1 grid-cols-2 gap-2 rounded-lg border p-1 sm:max-w-md">
+      {/* The two lists and the way to add to them sit together on the right,
+          so every control on this row is in one place. */}
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <div className="grid flex-1 grid-cols-2 gap-2 rounded-lg border p-1 sm:max-w-xs sm:flex-none">
           {TABS.map((option) => (
             <button
               key={option.key}
@@ -315,7 +521,7 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
                 "rounded-md px-3 py-2 text-sm font-medium transition-colors",
                 tab === option.key
                   ? "bg-secondary text-secondary-foreground"
-                  : "text-muted-foreground hover:bg-muted/50"
+                  : "text-muted-foreground hover:bg-muted/50",
               )}
             >
               {option.label}
@@ -331,144 +537,6 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
         )}
       </div>
 
-      {adding && canEdit && (
-        <Card>
-          <CardContent className="space-y-5 p-4 sm:p-6">
-            {/* The rule beside the heading marks where the form starts */}
-            <p className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
-              Add New Bank
-            </p>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="space-y-2">
-                <FieldLabel htmlFor="bankName">Bank Name</FieldLabel>
-                <Select
-                  value={draft.bankName}
-                  onValueChange={(value) => set("bankName", value)}
-                >
-                  <SelectTrigger id="bankName">
-                    <SelectValue placeholder="Select Bank" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {RECEIVING_BANKS.map((bank) => (
-                      <SelectItem key={bank} value={bank}>
-                        {bank}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <FieldLabel htmlFor="bankBranch">Bank Branch</FieldLabel>
-                <Select
-                  value={draft.bankBranch}
-                  onValueChange={(value) => set("bankBranch", value)}
-                >
-                  <SelectTrigger id="bankBranch">
-                    <SelectValue placeholder="Enter Bank Branch" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {BANK_BRANCHES.map((branch) => (
-                      <SelectItem key={branch} value={branch}>
-                        {branch}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <FieldLabel htmlFor="accountName">Account Name</FieldLabel>
-                <Input
-                  id="accountName"
-                  value={draft.accountName}
-                  onChange={(e) => set("accountName", e.target.value)}
-                  placeholder="Enter Account Name"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <FieldLabel htmlFor="accountNumber">Account Number</FieldLabel>
-                <Input
-                  id="accountNumber"
-                  value={draft.accountNumber}
-                  onChange={(e) => set("accountNumber", e.target.value)}
-                  placeholder="Enter Account Number"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <FieldLabel htmlFor="iban">IBAN</FieldLabel>
-                <Input
-                  id="iban"
-                  value={draft.iban}
-                  onChange={(e) => set("iban", e.target.value)}
-                  placeholder="Enter IBAN"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <FieldLabel htmlFor="openingBalance">Opening Balance</FieldLabel>
-                <Input
-                  id="openingBalance"
-                  type="number"
-                  min="0"
-                  step="0.001"
-                  value={draft.openingBalance}
-                  onChange={(e) => set("openingBalance", e.target.value)}
-                  placeholder="Enter Opening Balance"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <FieldLabel htmlFor="accountType">Account Type</FieldLabel>
-                <Select
-                  value={draft.accountType}
-                  onValueChange={(value) => set("accountType", value)}
-                >
-                  <SelectTrigger id="accountType">
-                    <SelectValue placeholder="Select Account Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ACCOUNT_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <FieldLabel htmlFor="accountStatus">Account Status</FieldLabel>
-                <Select
-                  value={draft.active ? "Active" : "Inactive"}
-                  onValueChange={(value) => set("active", value === "Active")}
-                >
-                  <SelectTrigger id="accountStatus">
-                    <SelectValue placeholder="Select Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={closeAddBank}>
-                Cancel
-              </Button>
-              <Button onClick={saveAccount} disabled={!canSaveAccount}>
-                Save Bank Account
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {tab === "accounts" && (
         <>
           {/* One card for every bank, and one for all of them together */}
@@ -480,7 +548,7 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
                 "flex items-start gap-3 rounded-lg border p-4 text-left transition-colors",
                 selectedBank === ALL_BANKS
                   ? "border-primary bg-secondary"
-                  : "hover:bg-muted/50"
+                  : "hover:bg-muted/50",
               )}
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-primary">
@@ -505,31 +573,30 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
               </span>
             </button>
 
-            {cards.map((bank) => (
+            {bankAccounts.map((account) => (
               <button
-                key={bank.name}
+                key={account.id}
                 type="button"
-                onClick={() => choose(bank.name)}
+                onClick={() => choose(String(account.id))}
                 className={cn(
                   "flex items-start gap-3 rounded-lg border p-4 text-left transition-colors",
-                  selectedBank === bank.name
+                  selectedBank === String(account.id)
                     ? "border-primary bg-secondary"
-                    : "hover:bg-muted/50"
+                    : "hover:bg-muted/50",
                 )}
               >
-                <BankMark bank={{ bankName: bank.name, logo: bank.logo }} />
+                <BankMark bank={account} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold text-primary">
-                    {bank.name}
+                    {account.bankName}
                   </span>
-                  <span className="mt-2 flex justify-between gap-2 text-xs text-muted-foreground">
-                    <span>
-                      {bank.accounts}{" "}
-                      {bank.accounts === 1 ? "account" : "accounts"}
+                  {account.accountName && (
+                    <span className="mt-1 block truncate text-xs text-muted-foreground">
+                      {account.accountName}
                     </span>
-                  </span>
-                  <span className="block font-bold text-primary">
-                    {money(bank.balance)}
+                  )}
+                  <span className="mt-2 block font-bold text-primary">
+                    {money(balanceOf(account))}
                   </span>
                 </span>
               </button>
@@ -542,7 +609,8 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
                 <p className="font-semibold text-primary">
                   {selectedBank === ALL_BANKS
                     ? "All Bank Accounts"
-                    : selectedBank}
+                    : accountById(selectedBank)?.bankName ||
+                      "All Bank Accounts"}
                 </p>
                 <div className="flex flex-1 flex-wrap items-center justify-end gap-3">
                   <div className="relative w-full sm:w-72">
@@ -711,7 +779,7 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
                           >
                             {n}
                           </Button>
-                        )
+                        ),
                       )}
                       <Button
                         variant="ghost"
@@ -763,7 +831,10 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
                       </SelectTrigger>
                       <SelectContent>
                         {bankAccounts.map((account) => (
-                          <SelectItem key={account.id} value={String(account.id)}>
+                          <SelectItem
+                            key={account.id}
+                            value={String(account.id)}
+                          >
                             {accountLabel(account, branches)}
                           </SelectItem>
                         ))}
@@ -785,7 +856,7 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
                         {bankAccounts
                           .filter(
                             (account) =>
-                              String(account.id) !== transfer.fromAccountId
+                              String(account.id) !== transfer.fromAccountId,
                           )
                           .map((account) => (
                             <SelectItem
@@ -876,7 +947,8 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
                               type="file"
                               className="hidden"
                               onChange={(e) =>
-                                e.target.files[0] && setReceipt(e.target.files[0])
+                                e.target.files[0] &&
+                                setReceipt(e.target.files[0])
                               }
                             />
                           </label>

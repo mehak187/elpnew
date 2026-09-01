@@ -9,167 +9,524 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { EmptyState } from "@/components/shared/panels";
 import { Rial } from "@/components/shared/Rial";
-import { Save, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Save, Users, ChevronsRight, Upload, FileCheck } from "lucide-react";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
-import { employeeRecords } from "../employeeData";
 import {
-  PAYROLL_CLASSIFICATION,
-  PAYROLL_TYPES,
+  ALLOWANCES,
+  DEDUCTIONS,
   PAYMENT_MONTHS,
   PAYMENT_YEARS,
   PAYMENT_SOURCES,
+  DEFAULT_BANK,
   SOURCE_SHORT,
+  PAYROLL_BOOKING,
+  DEFAULT_BOOKING,
+  entersAmount,
+  hasPeriod,
+  MONTH_NAMES,
   categoriesOf,
   subcategoriesOf,
   salaryRecords,
-  amount,
+  totalEarnings,
+  totalDeductions,
+  netSalary,
   netAmount,
+  amount,
   period,
   formatDate,
 } from "../payrollData";
 
-const NOTES_LIMIT = 300;
 const PAGE_SIZE = 5;
 
-const emptyDraft = {
-  expenseType: "",
-  category: "",
-  subcategory: "",
-  employee: "",
-  payrollType: "",
-  month: "",
-  year: "",
-  basicSalary: "",
-  allowances: "",
-  deductions: "",
-  method: "",
-  source: "",
-  paymentDate: "",
-  reference: "",
-  notes: "",
-};
+const PAYSLIP_KEYS = [
+  "special",
+  "housing",
+  "transport",
+  "electricity",
+  "water",
+  "loan",
+  "administrative",
+];
 
-/** A label with its required mark, so the asterisk is coloured everywhere. */
-function FieldLabel({ htmlFor, required, children }) {
-  return (
-    <Label htmlFor={htmlFor}>
-      {children}
-      {required && <span className="text-destructive"> *</span>}
-    </Label>
-  );
+/** An employee record as the payslip form reads it: strings, and no blanks. */
+function fromEmployee(employee) {
+  const value = (key) => (employee?.[key] ? String(employee[key]) : "");
+  const payslip = { basic: value("salary") };
+  PAYSLIP_KEYS.forEach((key) => {
+    payslip[key] = value(key);
+  });
+  return payslip;
 }
 
-/** A numbered heading, ruled off from the fields below it. */
-function Step({ number, title }) {
+const emptyPayment = {
+  ...DEFAULT_BOOKING,
+  month: "",
+  year: "",
+  periodFrom: "",
+  periodTo: "",
+  amount: "",
+  method: "",
+  source: DEFAULT_BANK,
+  paymentDate: "",
+};
+
+/** A heading over one group of the payslip. */
+function Group({ title, children }) {
   return (
-    <p className="border-b pb-2 text-sm font-semibold text-primary">
-      {number}. {title}
-    </p>
+    <div className="space-y-4">
+      <p className="text-sm font-semibold text-primary">{title}</p>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+        {children}
+      </div>
+      <div className="border-b" />
+    </div>
   );
 }
 
 /**
- * What an employee has been paid, and the form that adds to it.
+ * One amount on the payslip, with the currency inside the box.
  *
- * Net amount is never typed in - it is read off the three figures above it
- * every render, so the total on the record cannot disagree with its parts.
+ * `readOnly` marks a figure that is worked out rather than entered; `highlight`
+ * marks the one figure the whole page is for.
  */
-export default function SalariesSection() {
+function Amount({ id, label, required, value, onChange, readOnly, highlight }) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>
+        {label}
+        {required && <span className="text-destructive"> *</span>}
+      </Label>
+      <div className="relative">
+        <Input
+          id={id}
+          type={readOnly ? "text" : "number"}
+          min={readOnly ? undefined : "0"}
+          step={readOnly ? undefined : "0.001"}
+          readOnly={readOnly}
+          tabIndex={readOnly ? -1 : undefined}
+          placeholder="0.000"
+          className={cn(
+            "pr-12",
+            readOnly && "text-muted-foreground",
+            readOnly && !highlight && "bg-muted",
+            highlight && "border-green-600 bg-green-50 font-bold text-green-700"
+          )}
+          value={value}
+          onChange={onChange}
+        />
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+          <Rial />
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** A settled figure inside the payment form's summary. */
+function Figure({ label, value }) {
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-semibold">{label}</p>
+      <div className="relative">
+        <Input
+          readOnly
+          tabIndex={-1}
+          className="bg-muted pr-12 text-muted-foreground"
+          value={amount(value)}
+        />
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+          <Rial />
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** A labelled select, since the payment form is made almost entirely of them. */
+function Choice({ id, label, value, onChange, placeholder, options }) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger id={id}>
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) =>
+            typeof option === "string" ? (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ) : (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            )
+          )}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+/**
+ * What an employee is paid, and the payments made against it.
+ *
+ * The page holds the monthly salary; the form behind "Add Salary / Bonus"
+ * records one payment of it. The payment never asks for the figures again - it
+ * reads them off the salary above, so a payslip and the payment that settles it
+ * cannot disagree.
+ */
+export default function SalariesSection({ employee, adding, onCloseAdd, onSave }) {
   const [records, setRecords] = useState(salaryRecords);
-  const [draft, setDraft] = useState(emptyDraft);
+  // Opened on what the employee is already paid, so the page shows the salary
+  // in force rather than a blank form somebody has to fill in from memory.
+  const [payslip, setPayslip] = useState(() => fromEmployee(employee));
+  const [payment, setPayment] = useState(emptyPayment);
+  const [receipt, setReceipt] = useState(null);
   const [page, setPage] = useState(1);
 
-  const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
+  const set = (name, value) =>
+    setPayslip((prev) => ({ ...prev, [name]: value }));
+  const onAmount = (name) => (e) => set(name, e.target.value);
+  const setPay = (name, value) =>
+    setPayment((prev) => ({ ...prev, [name]: value }));
 
-  // Choosing at one level of the classification clears everything below it.
-  const setExpenseType = (value) =>
-    setDraft((prev) => ({ ...prev, expenseType: value, category: "", subcategory: "" }));
-  const setCategory = (value) =>
-    setDraft((prev) => ({ ...prev, category: value, subcategory: "" }));
+  const earnings = totalEarnings(payslip);
+  const deductions = totalDeductions(payslip);
+  const net = netSalary(payslip);
+  const allowances = earnings - Number(payslip.basic || 0);
 
-  const num = (value) => Number(value || 0);
-  const net = num(draft.basicSalary) + num(draft.allowances) - num(draft.deductions);
+  // A bonus and a settlement are worked out elsewhere, so they bring their
+  // own figure; everything else is a month of the salary above.
+  const entersOwnAmount = entersAmount(payment.subcategory);
+  const showsPeriod = hasPeriod(payment.subcategory);
+  // The button names what is being saved. A bonus is not a salary, and saying
+  // so is the last chance to notice the wrong subcategory before it is booked.
+  const saveLabel =
+    payment.subcategory === "Bonus" ? "Save Bonus" : "Save Salary / Bonus";
 
-  const canSave =
-    draft.expenseType &&
-    draft.category &&
-    draft.employee &&
-    draft.payrollType &&
-    draft.month &&
-    draft.year &&
-    draft.method &&
-    draft.paymentDate;
+  const savePayslip = () => {
+    if (!(Number(payslip.basic) > 0)) return;
+    const saved = { salary: String(Number(payslip.basic)) };
+    PAYSLIP_KEYS.forEach((key) => {
+      saved[key] = Number(payslip[key]) || 0;
+    });
+    onSave(saved);
+  };
 
-  const save = () => {
-    if (!canSave) return;
-    // Basic pay and allowances are two lines on the record, not one figure,
-    // because the history shows them apart.
-    const entitlements = [];
-    if (num(draft.basicSalary)) {
-      entitlements.push({ label: "Basic Salary", value: num(draft.basicSalary) });
-    }
-    if (num(draft.allowances)) {
-      entitlements.push({
-        label: entitlements.length ? "Allowances" : draft.payrollType,
-        value: num(draft.allowances),
-      });
-    }
+  const closeAdd = () => {
+    setPayment(emptyPayment);
+    setReceipt(null);
+    onCloseAdd();
+  };
+
+  const canPay =
+    payment.expenseType &&
+    payment.category &&
+    payment.subcategory &&
+    payment.method &&
+    payment.paymentDate &&
+    (entersOwnAmount
+      ? Number(payment.amount) > 0 &&
+        (!showsPeriod || (payment.periodFrom && payment.periodTo))
+      : payment.month && payment.year);
+
+  const savePayment = () => {
+    if (!canPay) return;
+    // A month of salary is written down as its parts; anything else is
+    // written down as the one figure it was.
+    const figures = entersOwnAmount
+      ? { amount: Number(payment.amount) }
+      : {
+          basic: Number(payslip.basic) || 0,
+          allowances,
+          deductions,
+        };
+    const [year, month] = payment.paymentDate.split("-");
     setRecords((prev) => [
       {
         id: prev.reduce((max, r) => Math.max(max, r.id), 0) + 1,
-        paymentDate: draft.paymentDate,
-        expenseType: draft.expenseType,
-        category: draft.category,
-        subcategory: draft.subcategory,
-        month: draft.month,
-        year: draft.year,
-        method: draft.method,
-        source: draft.source,
-        entitlements,
-        deductions: draft.deductions === "" ? null : num(draft.deductions),
-        reference: draft.reference,
-        notes: draft.notes,
+        paymentDate: payment.paymentDate,
+        month: payment.month || MONTH_NAMES[Number(month) - 1],
+        year: payment.year || year,
+        periodFrom: payment.periodFrom,
+        periodTo: payment.periodTo,
+        ...figures,
+        method: payment.method,
+        source: payment.source,
+        receipt: receipt?.name || "",
+        notes: payment.subcategory,
       },
       ...prev,
     ]);
-    setDraft(emptyDraft);
     setPage(1);
+    closeAdd();
   };
 
-  const remove = (id) => setRecords((prev) => prev.filter((r) => r.id !== id));
+  /* ------------------------------------------------ the payment being added */
 
-  // Editing lifts the payment back into the form and takes it off the list, so
-  // saving puts one corrected record back rather than a second copy.
-  const edit = (record) => {
-    const basic = record.entitlements.find((l) => l.label === "Basic Salary");
-    const rest = record.entitlements.filter((l) => l !== basic);
-    setDraft({
-      ...emptyDraft,
-      expenseType: record.expenseType,
-      category: record.category,
-      subcategory: record.subcategory,
-      payrollType: record.expenseType,
-      month: record.month,
-      year: record.year,
-      basicSalary: basic ? String(basic.value) : "",
-      allowances: rest.length ? String(rest[0].value) : "",
-      deductions: record.deductions == null ? "" : String(record.deductions),
-      method: record.method,
-      source: record.source,
-      paymentDate: record.paymentDate,
-      reference: record.reference || "",
-      notes: record.notes || "",
-    });
-    remove(record.id);
-  };
+  if (adding) {
+    return (
+      <div className="space-y-6 rounded-lg border p-4 sm:p-6">
+        {/* Where the payment lands in the accounts. Choosing at one level
+            clears the levels below it, so a category can never be left
+            hanging under a type it does not belong to. */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="pay-type">Expense Type</Label>
+            <Select
+              value={payment.expenseType}
+              onValueChange={(value) =>
+                setPayment((prev) => ({
+                  ...prev,
+                  expenseType: value,
+                  category: "",
+                  subcategory: "",
+                }))
+              }
+            >
+              <SelectTrigger id="pay-type">
+                {/* Laid out inline rather than by class: the trigger clamps
+                    every span child to one line with display:-webkit-box,
+                    which would beat a flex utility and stack these two. */}
+                <span
+                  style={{ display: "flex" }}
+                  className="min-w-0 items-center gap-2"
+                >
+                  <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <SelectValue placeholder="Select expense type" />
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                {PAYROLL_BOOKING.map((type) => (
+                  <SelectItem key={type.name} value={type.name}>
+                    {type.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Choice
+            id="pay-category"
+            label="Category"
+            value={payment.category}
+            onChange={(value) =>
+              setPayment((prev) => ({ ...prev, category: value, subcategory: "" }))
+            }
+            placeholder="Select category"
+            options={categoriesOf(payment.expenseType).map((c) => c.name)}
+          />
+
+          <Choice
+            id="pay-subcategory"
+            label="Subcategory"
+            value={payment.subcategory}
+            onChange={(value) => setPay("subcategory", value)}
+            placeholder="Select subcategory"
+            options={subcategoriesOf(payment.expenseType, payment.category)}
+          />
+        </div>
+
+        {/* A settlement is not a month's pay: it covers a span of service and
+            its amount is worked out elsewhere, so it is entered rather than
+            read off the payslip. */}
+        {entersOwnAmount ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
+            {showsPeriod && (
+            <div className="space-y-2">
+              <Label htmlFor="pay-from">Period From</Label>
+              <Input
+                id="pay-from"
+                type="date"
+                value={payment.periodFrom}
+                onChange={(e) => setPay("periodFrom", e.target.value)}
+              />
+            </div>
+            )}
+
+            {showsPeriod && (
+            <div className="space-y-2">
+              <Label htmlFor="pay-to">Period To</Label>
+              <Input
+                id="pay-to"
+                type="date"
+                value={payment.periodTo}
+                onChange={(e) => setPay("periodTo", e.target.value)}
+              />
+            </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="pay-amount" className="text-green-700">
+                Net Amount Payable
+              </Label>
+              <div className="relative">
+                <Input
+                  id="pay-amount"
+                  type="number"
+                  min="0"
+                  step="0.001"
+                  placeholder="0.000"
+                  className="h-14 border-green-600 pr-12 text-2xl font-bold text-green-700"
+                  value={payment.amount}
+                  onChange={(e) => setPay("amount", e.target.value)}
+                />
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  <Rial />
+                </span>
+              </div>
+              <p className="text-sm text-green-700">
+                Net amount after deductions (if any).
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* What is being paid, and what it comes to */}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
+              <div className="rounded-lg border bg-muted/40 p-4">
+                <p className="mb-4 font-semibold text-primary">Amount Summary</p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <Figure label="Basic Salary" value={payslip.basic} />
+                  <Figure label="Total Allowances" value={allowances} />
+                  <Figure label="Total Deductions" value={deductions} />
+                </div>
+              </div>
+
+              <ChevronsRight
+                aria-hidden="true"
+                className="mx-auto hidden h-6 w-6 text-muted-foreground lg:block"
+              />
+
+              <div className="rounded-lg border border-green-600/40 bg-green-50 p-4">
+                <p className="mb-3 font-semibold text-green-700">
+                  Net Salary Payable
+                </p>
+                <div className="relative">
+                  <Input
+                    readOnly
+                    tabIndex={-1}
+                    className="h-14 border-green-600 bg-white pr-12 text-2xl font-bold text-green-700"
+                    value={amount(net)}
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                    <Rial />
+                  </span>
+                </div>
+                <p className="mt-3 text-sm text-green-700">
+                  Net amount after adding allowances and deducting deductions.
+                </p>
+              </div>
+            </div>
+
+            <div className="border-b" />
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
+              <Choice
+                id="pay-month"
+                label="Month"
+                value={payment.month}
+                onChange={(value) => setPay("month", value)}
+                placeholder="Select month"
+                options={PAYMENT_MONTHS}
+              />
+              <Choice
+                id="pay-year"
+                label="Year"
+                value={payment.year}
+                onChange={(value) => setPay("year", value)}
+                placeholder="Select year"
+                options={PAYMENT_YEARS}
+              />
+            </div>
+          </>
+        )}
+
+        <div className="border-b" />
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end sm:gap-6">
+          <Choice
+            id="pay-method"
+            label="Payment Method"
+            value={payment.method}
+            onChange={(value) => setPay("method", value)}
+            placeholder="Select method"
+            options={PAYMENT_METHODS}
+          />
+
+          <Choice
+            id="pay-bank"
+            label="Bank"
+            value={payment.source}
+            onChange={(value) => setPay("source", value)}
+            placeholder="Select bank or cash"
+            options={PAYMENT_SOURCES}
+          />
+
+          <div className="space-y-2">
+            <Label htmlFor="pay-date">Payment Date</Label>
+            <Input
+              id="pay-date"
+              type="date"
+              value={payment.paymentDate}
+              onChange={(e) => setPay("paymentDate", e.target.value)}
+            />
+          </div>
+
+          {/* The file name lives in the tooltip, so the control stays
+              icon-sized either way. */}
+          {receipt ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="shrink-0 border-green-600 text-green-600 hover:text-destructive"
+              title={receipt.name + " - click to remove"}
+              onClick={() => setReceipt(null)}
+            >
+              <FileCheck className="h-4 w-4" />
+              <span className="sr-only">{receipt.name} attached. Remove it.</span>
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="shrink-0"
+              title="Upload payment receipt"
+              asChild
+            >
+              <label className="cursor-pointer">
+                <Upload className="h-4 w-4" />
+                <span className="sr-only">Upload payment receipt</span>
+                <Input
+                  type="file"
+                  className="hidden"
+                  onChange={(e) => e.target.files[0] && setReceipt(e.target.files[0])}
+                />
+              </label>
+            </Button>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={closeAdd}>
+            Cancel
+          </Button>
+          <Button onClick={savePayment} disabled={!canPay}>
+            {saveLabel}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  /* --------------------------------------------------------- the salary itself */
 
   const totalPages = Math.max(1, Math.ceil(records.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -178,318 +535,94 @@ export default function SalariesSection() {
 
   return (
     <div className="space-y-6">
-      {/* Add a payment */}
-      <div className="rounded-lg border p-4">
-        <p className="mb-4 font-semibold text-primary">Add Salary / Allowance</p>
+      <div className="space-y-6 rounded-lg border p-4 sm:p-6">
+        <Group title="Salary & Allowances">
+          <Amount
+            id="salary-basic"
+            label="Basic Salary"
+            required
+            value={payslip.basic}
+            onChange={onAmount("basic")}
+          />
+          {ALLOWANCES.map((allowance) => (
+            <Amount
+              key={allowance.key}
+              id={"salary-" + allowance.key}
+              label={allowance.label}
+              value={payslip[allowance.key]}
+              onChange={onAmount(allowance.key)}
+            />
+          ))}
+        </Group>
+
+        <Group title="Deductions">
+          {DEDUCTIONS.map((deduction) => (
+            <Amount
+              key={deduction.key}
+              id={"salary-" + deduction.key}
+              label={deduction.label}
+              value={payslip[deduction.key]}
+              onChange={onAmount(deduction.key)}
+            />
+          ))}
+          <Amount
+            id="salary-total-deductions"
+            label="Total Deductions from Salary"
+            value={amount(deductions)}
+            readOnly
+          />
+        </Group>
 
         <div className="space-y-4">
-          <Step number="1" title="Expense Classification" />
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
-            <div className="space-y-2">
-              <FieldLabel htmlFor="salary-expense-type" required>
-                Expense Type
-              </FieldLabel>
-              <Select value={draft.expenseType} onValueChange={setExpenseType}>
-                <SelectTrigger id="salary-expense-type">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAYROLL_CLASSIFICATION.map((type) => (
-                    <SelectItem key={type.name} value={type.name}>
-                      {type.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <FieldLabel htmlFor="salary-category" required>
-                Category
-              </FieldLabel>
-              <Select
-                value={draft.category}
-                onValueChange={setCategory}
-                disabled={!draft.expenseType}
-              >
-                <SelectTrigger id="salary-category">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categoriesOf(draft.expenseType).map((category) => (
-                    <SelectItem key={category.name} value={category.name}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <FieldLabel htmlFor="salary-subcategory">Subcategory</FieldLabel>
-              <Select
-                value={draft.subcategory}
-                onValueChange={(value) => set("subcategory", value)}
-                disabled={!draft.category}
-              >
-                <SelectTrigger id="salary-subcategory">
-                  <SelectValue placeholder="Select subcategory" />
-                </SelectTrigger>
-                <SelectContent>
-                  {subcategoriesOf(draft.expenseType, draft.category).map((sub) => (
-                    <SelectItem key={sub.name} value={sub.name}>
-                      {sub.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <Step number="2" title="Payment Details" />
-
+          <p className="text-sm font-semibold text-primary">
+            Total Payable Amounts
+          </p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-            <div className="space-y-2">
-              <FieldLabel htmlFor="salary-employee" required>
-                Employee
-              </FieldLabel>
-              <Select
-                value={draft.employee}
-                onValueChange={(value) => set("employee", value)}
-              >
-                <SelectTrigger id="salary-employee">
-                  <SelectValue placeholder="Select employee" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employeeRecords.map((employee) => (
-                    <SelectItem key={employee.id} value={employee.name}>
-                      {employee.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <FieldLabel htmlFor="salary-payroll-type" required>
-                Payroll Type
-              </FieldLabel>
-              <Select
-                value={draft.payrollType}
-                onValueChange={(value) => set("payrollType", value)}
-              >
-                <SelectTrigger id="salary-payroll-type">
-                  <SelectValue placeholder="Select" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAYROLL_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                (Salary, Allowance, End of Service, etc.)
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <FieldLabel htmlFor="salary-month" required>
-                Payment Month
-              </FieldLabel>
-              <Select
-                value={draft.month}
-                onValueChange={(value) => set("month", value)}
-              >
-                <SelectTrigger id="salary-month">
-                  <SelectValue placeholder="Select month" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAYMENT_MONTHS.map((month) => (
-                    <SelectItem key={month.value} value={month.value}>
-                      {month.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <FieldLabel htmlFor="salary-year" required>
-                Payment Year
-              </FieldLabel>
-              <Select
-                value={draft.year}
-                onValueChange={(value) => set("year", value)}
-              >
-                <SelectTrigger id="salary-year">
-                  <SelectValue placeholder="Select year" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAYMENT_YEARS.map((year) => (
-                    <SelectItem key={year} value={year}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <FieldLabel htmlFor="salary-basic">
-                Basic Salary (<Rial />)
-              </FieldLabel>
-              <Input
-                id="salary-basic"
-                type="number"
-                min="0"
-                step="0.001"
-                placeholder="0.000"
-                value={draft.basicSalary}
-                onChange={(e) => set("basicSalary", e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <FieldLabel htmlFor="salary-allowances">
-                Allowances (<Rial />)
-              </FieldLabel>
-              <Input
-                id="salary-allowances"
-                type="number"
-                min="0"
-                step="0.001"
-                placeholder="0.000"
-                value={draft.allowances}
-                onChange={(e) => set("allowances", e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <FieldLabel htmlFor="salary-deductions">
-                Deductions (<Rial />)
-              </FieldLabel>
-              <Input
-                id="salary-deductions"
-                type="number"
-                min="0"
-                step="0.001"
-                placeholder="0.000"
-                value={draft.deductions}
-                onChange={(e) => set("deductions", e.target.value)}
-              />
-            </div>
-
-            {/* Worked out, not asked for */}
-            <div className="space-y-2">
-              <FieldLabel htmlFor="salary-net">
-                Net Amount (<Rial />)
-              </FieldLabel>
-              <Input
-                id="salary-net"
-                readOnly
-                tabIndex={-1}
-                className="bg-muted text-muted-foreground"
-                value={amount(net)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <FieldLabel htmlFor="salary-method" required>
-                Payment Method
-              </FieldLabel>
-              <Select
-                value={draft.method}
-                onValueChange={(value) => set("method", value)}
-              >
-                <SelectTrigger id="salary-method">
-                  <SelectValue placeholder="Select method" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAYMENT_METHODS.map((method) => (
-                    <SelectItem key={method} value={method}>
-                      {method}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <FieldLabel htmlFor="salary-source">Bank / Cash</FieldLabel>
-              <Select
-                value={draft.source}
-                onValueChange={(value) => set("source", value)}
-              >
-                <SelectTrigger id="salary-source">
-                  <SelectValue placeholder="Select bank or cash" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAYMENT_SOURCES.map((source) => (
-                    <SelectItem key={source} value={source}>
-                      {source}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <FieldLabel htmlFor="salary-date" required>
-                Payment Date
-              </FieldLabel>
-              <Input
-                id="salary-date"
-                type="date"
-                value={draft.paymentDate}
-                onChange={(e) => set("paymentDate", e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <FieldLabel htmlFor="salary-reference">
-                Reference / Voucher No.
-              </FieldLabel>
-              <Input
-                id="salary-reference"
-                placeholder="Enter reference number"
-                value={draft.reference}
-                onChange={(e) => set("reference", e.target.value)}
-              />
-            </div>
+            <Amount
+              id="salary-earnings"
+              label="Total Earnings (Salary + Allowances)"
+              value={amount(earnings)}
+              readOnly
+            />
+            <Amount
+              id="salary-deductions-total"
+              label="Total Deductions from Salary"
+              value={amount(deductions)}
+              readOnly
+            />
+            <Amount
+              id="salary-net"
+              label="Net Salary (After Deductions)"
+              value={amount(net)}
+              readOnly
+            />
+            <Amount
+              id="salary-payable"
+              label="Amount Payable"
+              value={amount(net)}
+              readOnly
+              highlight
+            />
           </div>
+        </div>
 
-          <div className="space-y-2">
-            <FieldLabel htmlFor="salary-notes">Notes</FieldLabel>
-            <div className="relative">
-              <Input
-                id="salary-notes"
-                maxLength={NOTES_LIMIT}
-                placeholder="Enter notes (optional)"
-                className="h-16 pr-16"
-                value={draft.notes}
-                onChange={(e) => set("notes", e.target.value)}
-              />
-              <span className="pointer-events-none absolute bottom-1.5 right-3 text-xs text-muted-foreground">
-                {draft.notes.length}/{NOTES_LIMIT}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex justify-end">
-            <Button type="button" onClick={save} disabled={!canSave}>
-              <Save className="mr-2 h-4 w-4" />
-              Save Salary / Allowance
-            </Button>
-          </div>
+        {/* The salary belongs to the employee, so it is saved onto the record
+            rather than only feeding the payment form below. */}
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            onClick={savePayslip}
+            disabled={!(Number(payslip.basic) > 0)}
+          >
+            <Save className="mr-2 h-4 w-4" />
+            Save Salary
+          </Button>
         </div>
       </div>
 
       {/* What has been paid */}
       <div className="rounded-lg border">
-        <p className="border-b p-4 font-semibold text-primary">
+        <p className="border-b p-4 text-lg font-bold text-primary">
           Salaries / Allowances History
         </p>
 
@@ -500,24 +633,17 @@ export default function SalariesSection() {
         ) : (
           <>
             <div className="overflow-x-auto p-4">
-              <table className="w-full min-w-[1000px] border text-sm">
+              <table className="w-full min-w-[860px] border text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
                     <th className="p-3 font-semibold">No.</th>
                     <th className="p-3 font-semibold">Payment Date</th>
-                    <th className="p-3 font-semibold">
-                      Expense Type
-                      <span className="block font-normal">
-                        Category / Subcategory
-                      </span>
-                    </th>
                     <th className="p-3 font-semibold">Month / Year</th>
-                    <th className="p-3 font-semibold">Payment Method</th>
                     <th className="p-3 font-semibold">
                       Payment Details (<Rial />)
                     </th>
+                    <th className="p-3 font-semibold">Payment Method</th>
                     <th className="p-3 font-semibold">Notes</th>
-                    <th className="p-3 font-semibold">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -526,29 +652,40 @@ export default function SalariesSection() {
                       key={record.id}
                       className="border-b transition-colors last:border-0 hover:bg-primary/10"
                     >
-                      <td className="p-3 align-top">
-                        <button
-                          type="button"
-                          onClick={() => edit(record)}
-                          className="rounded font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
-                        >
-                          {start + index + 1}
-                        </button>
+                      <td className="p-3 align-top font-medium text-primary">
+                        {start + index + 1}
                       </td>
                       <td className="whitespace-nowrap p-3 align-top">
                         {formatDate(record.paymentDate)}
                       </td>
-                      <td className="p-3 align-top">
-                        <span className="block font-semibold">
-                          {record.expenseType}
-                        </span>
-                        <span className="block text-muted-foreground">
-                          {record.category}
-                          {record.subcategory && " / " + record.subcategory}
-                        </span>
-                      </td>
                       <td className="whitespace-nowrap p-3 align-top">
                         {period(record)}
+                      </td>
+                      <td className="p-3 align-top">
+                        {record.amount == null ? (
+                          <span className="block">
+                            <span className="font-semibold">Basic Salary:</span>{" "}
+                            {amount(record.basic)}
+                            <span className="px-2 text-muted-foreground">|</span>
+                            <span className="font-semibold">Allowances:</span>{" "}
+                            {amount(record.allowances)}
+                            <span className="px-2 text-muted-foreground">|</span>
+                            <span className="font-semibold">Deductions:</span>{" "}
+                            {amount(record.deductions)}
+                          </span>
+                        ) : (
+                          record.periodFrom && (
+                            <span className="block">
+                              <span className="font-semibold">Period:</span>{" "}
+                              {formatDate(record.periodFrom)} -{" "}
+                              {formatDate(record.periodTo)}
+                            </span>
+                          )
+                        )}
+                        {/* The one figure that actually left the account */}
+                        <span className="mt-1 block font-semibold text-green-700">
+                          Net Amount: {amount(netAmount(record))}
+                        </span>
                       </td>
                       <td className="p-3 align-top">
                         <span className="block">{record.method}</span>
@@ -558,67 +695,8 @@ export default function SalariesSection() {
                           </span>
                         )}
                       </td>
-                      <td className="p-3 align-top">
-                        <span className="block">
-                          {record.entitlements.map((line, i) => (
-                            <span key={line.label}>
-                              {i > 0 && (
-                                <span className="px-2 text-muted-foreground">
-                                  |
-                                </span>
-                              )}
-                              <span className="font-semibold">
-                                {line.label}:
-                              </span>{" "}
-                              {amount(line.value)}
-                            </span>
-                          ))}
-                          {record.deductions != null && (
-                            <>
-                              <span className="px-2 text-muted-foreground">
-                                |
-                              </span>
-                              <span className="font-semibold">Deductions:</span>{" "}
-                              {amount(record.deductions)}
-                            </>
-                          )}
-                        </span>
-                        <span className="mt-1 block">
-                          <span className="font-semibold">Net Amount:</span>{" "}
-                          {amount(netAmount(record))}
-                        </span>
-                      </td>
                       <td className="p-3 align-top text-muted-foreground">
                         {record.notes || "-"}
-                      </td>
-                      <td className="p-3 align-top">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                              <span className="sr-only">
-                                Actions for payment {start + index + 1}
-                              </span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-white">
-                            <DropdownMenuItem onClick={() => edit(record)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => remove(record.id)}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
                       </td>
                     </tr>
                   ))}
@@ -628,8 +706,9 @@ export default function SalariesSection() {
 
             <div className="flex flex-wrap items-center justify-between gap-3 border-t p-4 text-sm text-muted-foreground">
               <span>
-                Showing {start + 1} to {Math.min(start + PAGE_SIZE, records.length)}{" "}
-                of {records.length} entries
+                Showing {start + 1} to{" "}
+                {Math.min(start + PAGE_SIZE, records.length)} of {records.length}{" "}
+                entries
               </span>
               <div className="flex items-center gap-1">
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (

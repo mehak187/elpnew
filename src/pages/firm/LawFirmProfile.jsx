@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import BackButton from "@/components/shared/BackButton";
 import {
   Select,
   SelectContent,
@@ -105,7 +105,6 @@ function HeadlineTile({ icon, label, value, note }) {
 }
 
 export default function LawFirmProfile() {
-  const navigate = useNavigate();
   const firm = useFirm();
 
   // The same figures the overview section reads, so the two cannot disagree.
@@ -137,9 +136,7 @@ export default function LawFirmProfile() {
       {/* Page Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="rounded-full bg-secondary text-primary hover:bg-accent" onClick={() => navigate("/dashboard")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+          <BackButton fallback="/dashboard" />
           <div className="rounded-xl bg-primary p-2 sm:p-3">
             <Building2 className="h-5 w-5 text-primary-foreground sm:h-6 sm:w-6" />
           </div>
@@ -229,7 +226,10 @@ export default function LawFirmProfile() {
           </CardContent>
         </Card>
 
-        <div className="w-full flex-1">
+        {/* min-w-0 or the column will not shrink: a flex child sizes itself to
+            its widest content by default, so one wide table in here would
+            stretch the whole page and push the sidebar off screen. */}
+        <div className="w-full min-w-0 flex-1">
           <Card>
             <CardContent className="p-4 sm:p-6">
               <div className="mb-6 border-b pb-3">

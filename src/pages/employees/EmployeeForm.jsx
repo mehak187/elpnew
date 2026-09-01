@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import BackButton from "@/components/shared/BackButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -69,6 +70,7 @@ const SECTIONS = [
   {
     key: "information",
     label: "Employee Information",
+    title: "Employee",
     icon: User,
     note: "Employee profile and basic information",
   },
@@ -95,9 +97,10 @@ const SECTIONS = [
     key: "salaries",
     label: "Salaries / Allowances",
     icon: Wallet,
-    note: "Manage employee salaries, allowances, and other payments",
-    // The payment form saves itself, so the header offers to jump to it.
-    action: "Add Salary / Allowance",
+    title: "Salary",
+    note: "Manage monthly salaries for employees",
+    // The payslip saves itself, so the header offers to jump to it.
+    action: "Add Salary / Bonus",
   },
   {
     key: "loans",
@@ -136,6 +139,51 @@ const SECTIONS = [
   },
 ];
 
+/**
+ * A phone number and the country it belongs to.
+ *
+ * The dial code is a field of its own rather than something typed into the
+ * number, so a number can be dialled without guessing which country it is
+ * from - and so two people cannot write the same number two ways.
+ */
+function PhoneField({ id, label, placeholder, dialCode, onDialCode, value, onChange }) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="flex gap-2">
+        <Select
+          value={dialCode || DEFAULT_DIAL_CODE}
+          onValueChange={onDialCode}
+        >
+          <SelectTrigger className="w-24 shrink-0" aria-label="Country code">
+            {/* The trigger shows the code alone. The flag and country belong
+                in the list, where they are what you choose by; once chosen,
+                the code is the only part that is dialled. */}
+            <SelectValue>{dialCode || DEFAULT_DIAL_CODE}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {COUNTRY_DIAL_CODES.map((country) => (
+              <SelectItem key={country.code} value={country.dial}>
+                {country.flag} {country.dial}
+                {/* Dimmed by opacity, not by a fixed grey: the row turns navy
+                    on hover, and a grey that reads on white vanishes on it. */}
+                <span className="opacity-70"> {country.name}</span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Input
+          id={id}
+          className="flex-1"
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+        />
+      </div>
+    </div>
+  );
+}
+
 /** A labelled field with its own icon sitting inside the box. */
 function IconField({ icon, id, label, ...props }) {
   const Icon = icon;
@@ -164,8 +212,11 @@ const STATUS_DOT = {
 const NOTES_LIMIT = 300;
 
 /** The first field of the form a section's header button jumps to. */
+/** Sections where the header button opens a form instead of scrolling to one. */
+const OPENS_A_FORM = ["salaries", "loans", "assistance"];
+
 const JUMP_TARGET = {
-  salaries: "salary-expense-type",
+  salaries: "salary-basic",
   loans: "loan-expense-type",
   assistance: "assistance-expense-type",
 };
@@ -199,10 +250,12 @@ const emptyFormData = {
 
 
 
+  dialCode: DEFAULT_DIAL_CODE,
   phone: "",
   email: "",
   address: "",
   emergencyName: "",
+  emergencyDialCode: DEFAULT_DIAL_CODE,
   emergencyPhone: "",
 };
 
@@ -219,6 +272,9 @@ export default function EmployeeForm() {
     : null;
 
   const [activeSection, setActiveSection] = useState("information");
+  // The section whose add form is open, if any. Held here because the button
+  // that opens it lives in the page header, above the section itself.
+  const [addingIn, setAddingIn] = useState(null);
   const [formData, setFormData] = useState(() => toFormData(record));
 
   // Reload when the route moves to a different employee without unmounting.
@@ -277,7 +333,7 @@ export default function EmployeeForm() {
   // top of the screen rather than pretending to save from up here.
   const jumpToForm = () => {
     const field = window.document.getElementById(
-      JUMP_TARGET[activeSection] || "salary-expense-type"
+      JUMP_TARGET[activeSection] || "salary-basic"
     );
     if (!field) return;
     field.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -298,27 +354,23 @@ export default function EmployeeForm() {
       {/* Page Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full bg-secondary text-primary hover:bg-accent"
-            onClick={() => navigate("/employees")}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+          <BackButton fallback="/employees" />
           <div>
             <h1 className="text-xl font-bold text-primary sm:text-2xl">
-              {activeSection === "information"
-                ? isEditMode
-                  ? formData.employeeName || "Employee"
-                  : "New Employee"
-                : current.label}
+              {current.title || current.label}
             </h1>
             <p className="text-xs text-primary/75 sm:text-sm">{current.note}</p>
           </div>
         </div>
         {current.action ? (
-          <Button type="button" onClick={jumpToForm}>
+          <Button
+            type="button"
+            onClick={() =>
+              OPENS_A_FORM.includes(activeSection)
+                ? setAddingIn(activeSection)
+                : jumpToForm()
+            }
+          >
             <Plus className="mr-2 h-4 w-4" />
             {current.action}
           </Button>
@@ -347,7 +399,10 @@ export default function EmployeeForm() {
                   <button
                     key={section.key}
                     type="button"
-                    onClick={() => setActiveSection(section.key)}
+                    onClick={() => {
+                      setActiveSection(section.key);
+                      setAddingIn(null);
+                    }}
                     className={cn(
                       "flex items-center gap-2.5 text-nowrap rounded-md px-3 py-2 text-left text-sm font-medium transition-colors",
                       activeSection === section.key
@@ -364,7 +419,10 @@ export default function EmployeeForm() {
           </CardContent>
         </Card>
 
-        <div className="w-full flex-1">
+        {/* min-w-0 or the column will not shrink: a flex child sizes itself to
+            its widest content by default, so one wide table in here would
+            stretch the whole page and push the sidebar off screen. */}
+        <div className="w-full min-w-0 flex-1">
           <Card>
             <CardContent className="p-4 sm:p-6">
               <div className="mb-6 flex items-center gap-3 border-b pb-3">
@@ -842,11 +900,30 @@ export default function EmployeeForm() {
                   </div>
                 )}
 
-                {activeSection === "salaries" && <SalariesSection />}
+                {activeSection === "salaries" && (
+                  <SalariesSection
+                    employee={formData}
+                    adding={addingIn === "salaries"}
+                    onCloseAdd={() => setAddingIn(null)}
+                    onSave={(payslip) =>
+                      setFormData((prev) => ({ ...prev, ...payslip }))
+                    }
+                  />
+                )}
 
-                {activeSection === "loans" && <LoansSection />}
+                {activeSection === "loans" && (
+                  <LoansSection
+                    adding={addingIn === "loans"}
+                    onCloseAdd={() => setAddingIn(null)}
+                  />
+                )}
 
-                {activeSection === "assistance" && <AssistanceSection />}
+                {activeSection === "assistance" && (
+                  <AssistanceSection
+                    adding={addingIn === "assistance"}
+                    onCloseAdd={() => setAddingIn(null)}
+                  />
+                )}
 
                 {activeSection === "daily" && <DailyActivitiesSection />}
 
@@ -859,14 +936,14 @@ export default function EmployeeForm() {
                     </p>
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
-                      <IconField
-                        icon={Phone}
+                      <PhoneField
                         id="phone"
-                        name="phone"
                         label="Phone Number *"
                         placeholder="Enter phone number"
+                        dialCode={formData.dialCode}
+                        onDialCode={(value) => set("dialCode", value)}
                         value={formData.phone}
-                        onChange={onChange}
+                        onChange={(e) => set("phone", e.target.value)}
                       />
 
                       <IconField
@@ -901,16 +978,25 @@ export default function EmployeeForm() {
                         onChange={onChange}
                       />
 
-                      <IconField
-                        icon={Phone}
+                      <PhoneField
                         id="emergencyPhone"
-                        name="emergencyPhone"
                         label="Emergency Contact Phone Number *"
                         placeholder="Enter emergency contact phone number"
+                        dialCode={formData.emergencyDialCode}
+                        onDialCode={(value) => set("emergencyDialCode", value)}
                         value={formData.emergencyPhone}
-                        onChange={onChange}
+                        onChange={(e) => set("emergencyPhone", e.target.value)}
                       />
                     </div>
+
+                    <p className="flex items-start gap-2 rounded-lg border border-primary/30 bg-secondary p-4 text-sm text-primary">
+                      <Info className="mt-0.5 h-4 w-4 shrink-0" />
+                      <span>
+                        <span className="font-semibold">Note: </span>
+                        Please provide accurate contact details to ensure
+                        effective communication in case of emergencies.
+                      </span>
+                    </p>
                   </div>
                 )}
 

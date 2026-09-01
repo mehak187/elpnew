@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useGoBack } from "@/lib/useGoBack";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import BackButton from "@/components/shared/BackButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +19,8 @@ import { Rial } from "@/components/shared/Rial";
 
 export default function PostJudgement() {
   const navigate = useNavigate();
+
+  const goBack = useGoBack("/litigation");
   const { id } = useParams();
   const [judgementFile, setJudgementFile] = useState(null);
   const [formData, setFormData] = useState({
@@ -44,9 +48,7 @@ export default function PostJudgement() {
     <div className="space-y-4 sm:space-y-6">
       {/* Page Header */}
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" className="rounded-full bg-secondary text-primary hover:bg-accent" onClick={() => navigate("/litigation")}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
+        <BackButton fallback="/litigation" />
         <div className="p-2 sm:p-3 rounded-xl bg-primary">
           <FileCheck className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
         </div>
@@ -211,7 +213,7 @@ export default function PostJudgement() {
             </div>
 
             <div className="flex justify-end gap-3">
-              <Button type="button" variant="outline" onClick={() => navigate("/litigation")}>
+              <Button type="button" variant="outline" onClick={goBack}>
                 Cancel
               </Button>
               <Button type="submit">

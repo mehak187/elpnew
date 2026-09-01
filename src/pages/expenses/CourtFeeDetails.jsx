@@ -1,6 +1,8 @@
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { useGoBack } from "@/lib/useGoBack";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import BackButton from "@/components/shared/BackButton";
 import { EmptyState } from "@/components/shared/panels";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, FileText, Briefcase } from "lucide-react";
@@ -66,7 +68,7 @@ function Stamp({ label, name, date, time }) {
  * new ones.
  */
 export default function CourtFeeDetails() {
-  const navigate = useNavigate();
+  const goBack = useGoBack("/court-fee-payments");
   const { id } = useParams();
   const { judicialExpenses } = useExpenses();
 
@@ -78,7 +80,7 @@ export default function CourtFeeDetails() {
         <CardContent className="p-6">
           <EmptyState>That expense is no longer on file.</EmptyState>
           <div className="mt-4 flex justify-center">
-            <Button variant="outline" onClick={() => navigate("/court-fee-payments")}>
+            <Button variant="outline" onClick={goBack}>
               Back to Judicial Authority Expenses
             </Button>
           </div>
@@ -90,14 +92,7 @@ export default function CourtFeeDetails() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="rounded-full bg-secondary text-primary hover:bg-accent"
-          onClick={() => navigate("/court-fee-payments")}
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
+        <BackButton fallback="/court-fee-payments" />
         <div className="rounded-xl bg-primary p-2 sm:p-3">
           <Briefcase className="h-5 w-5 text-primary-foreground sm:h-6 sm:w-6" />
         </div>

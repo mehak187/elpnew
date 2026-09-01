@@ -5,7 +5,37 @@ import { Button } from "@/components/ui/button";
 import DataTable from "@/components/shared/DataTable";
 import { Users, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { employeeRecords } from "./employeeData";
+import { withRial } from "@/lib/money";
+import {
+  employeeRecords,
+  netSalary,
+  totalAllowances,
+  totalDeductions,
+  amount,
+} from "./employeeData";
+
+/** A fact with its heading above it, where the pair needs the room. */
+function Fact({ label, children }) {
+  return (
+    <p className="leading-tight">
+      <span className="block font-semibold">{label}</span>
+      <span className="block">{children || "-"}</span>
+    </p>
+  );
+}
+
+/** A fact with its heading beside it, where the pair fits on one line. */
+function Inline({ label, children, strong }) {
+  return (
+    <p className={cn("leading-tight", strong && "text-primary")}>
+      <span className="font-semibold">{label} </span>
+      <span className={cn(strong && "font-semibold")}>{children || "-"}</span>
+    </p>
+  );
+}
+
+/** An amount with the Rial sign after it. */
+const money = (value) => withRial(amount(value));
 
 /** Standing, shown as a dot beside the employee number. */
 const STATUS_DOT = {
@@ -34,7 +64,7 @@ export default function EmployeesList() {
             title={row.status}
             className={cn(
               "h-2 w-2 shrink-0 rounded-full",
-              STATUS_DOT[row.status] || "bg-muted-foreground"
+              STATUS_DOT[row.status] || "bg-muted-foreground",
             )}
           />
           <button
@@ -54,7 +84,7 @@ export default function EmployeesList() {
       key: "name",
       header: "Employee Name",
       subHeader: "Nationality • Gender",
-      width: "20%",
+      width: "18%",
       exportValue: (row) =>
         row.name + " (" + row.nationality + " · " + row.gender + ")",
       render: (value, row) => (
@@ -68,29 +98,66 @@ export default function EmployeesList() {
     },
     {
       key: "dateOfJoining",
-      header: "Date of Joining",
-      width: "12%",
-      render: (value) => new Date(value).toLocaleDateString("en-GB"),
-    },
-    {
-      key: "branch",
-      header: "Branch",
-      width: "10%",
+      header: "Employment Details",
+      subHeader: "(Joining Date + Branch)",
+      width: "18%",
+      exportValue: (row) =>
+        new Date(row.dateOfJoining).toLocaleDateString("en-GB") +
+        " · " +
+        row.branch,
+      render: (_, row) => (
+        <div className="space-y-2 text-sm">
+          <Fact label="Date of Joining:">
+            {new Date(row.dateOfJoining).toLocaleDateString("en-GB")}
+          </Fact>
+          <div className="border-t pt-2">
+            <Fact label="Branch:">{row.branch}</Fact>
+          </div>
+        </div>
+      ),
     },
     {
       key: "department",
-      header: "Department",
-      width: "14%",
+      header: "Job Details",
+      subHeader: "(Department + Designation + Role)",
+      width: "22%",
+      exportValue: (row) =>
+        [row.department, row.designation, row.role].join(" · "),
+      render: (_, row) => (
+        <div className="space-y-1 text-sm">
+          <Inline label="Department:">{row.department}</Inline>
+          <Inline label="Designation:">{row.designation}</Inline>
+          <Inline label="Role:">{row.role}</Inline>
+        </div>
+      ),
     },
     {
-      key: "designation",
-      header: "Designation",
-      width: "16%",
-    },
-    {
-      key: "role",
-      header: "Role",
-      width: "16%",
+      key: "salary",
+      header: "Financial Details",
+      subHeader: "(Basic Salary • Allowances • Deductions • Net Salary)",
+      width: "30%",
+      exportValue: (row) =>
+        [
+          "Basic " + amount(row.salary),
+          "Allowances " + amount(totalAllowances(row)),
+          "Deductions " + amount(totalDeductions(row)),
+          "Net " + amount(netSalary(row)),
+        ].join(" · "),
+      // The net is worked out from the three above it, never stored, so the
+      // total on a row can never disagree with its parts.
+      sortValue: (row) => netSalary(row),
+      render: (_, row) => (
+        <div className="space-y-1 text-sm">
+          <Inline label="Basic Salary:">{money(row.salary)}</Inline>
+          <Inline label="Allowances:">{money(totalAllowances(row))}</Inline>
+          <Inline label="Deductions:">{money(totalDeductions(row))}</Inline>
+          <div className="mt-2 border-t pt-2">
+            <Inline label="Net Salary:" strong>
+              {money(netSalary(row))}
+            </Inline>
+          </div>
+        </div>
+      ),
     },
   ];
 
@@ -124,6 +191,7 @@ export default function EmployeesList() {
             data={employees}
             searchPlaceholder="Search employee by name, ID, department..."
             enableColumnSearch={false}
+            enableSorting
             currentPage={currentPage}
             totalPages={Math.ceil(employees.length / pageSize)}
             pageSize={pageSize}
