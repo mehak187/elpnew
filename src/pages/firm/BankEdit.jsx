@@ -14,10 +14,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/panels";
-import { ArrowLeft, Save, Landmark } from "lucide-react";
+import { Save, Landmark, Upload, FileCheck } from "lucide-react";
 import { RECEIVING_BANKS, BANK_BRANCHES, ACCOUNT_TYPES } from "@/lib/constants";
 import { useFirm } from "@/lib/firm/context";
-import { accountBalance, invoices, money } from "./firmData";
+import { accountBalance, bankInitials, invoices, money } from "./firmData";
 
 /** A required field, with the mark that says so. */
 function FieldLabel({ htmlFor, optional, children }) {
@@ -56,6 +56,7 @@ export default function BankEdit() {
     iban: account?.iban || "",
     swift: account?.swift || "",
     accountType: account?.accountType || "",
+    logo: account?.logo || "",
     openingBalance: String(account?.openingBalance ?? ""),
     branchId: account?.branchId ? String(account.branchId) : "all",
     active: account?.active ?? true,
@@ -77,6 +78,15 @@ export default function BankEdit() {
   }
 
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
+
+  // The artwork is read into the record itself, so the mark travels with the
+  // account rather than pointing at a file on somebody's disk.
+  const readLogo = (file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => set("logo", String(reader.result));
+    reader.readAsDataURL(file);
+  };
 
   const balance = accountBalance(account, {
     payments: firm.payments,
@@ -106,6 +116,7 @@ export default function BankEdit() {
       iban: draft.iban,
       swift: draft.swift,
       accountType: draft.accountType,
+      logo: draft.logo,
       openingBalance: Number(draft.openingBalance) || 0,
       branchId: draft.branchId === "all" ? null : Number(draft.branchId),
       active: draft.active,
@@ -209,6 +220,55 @@ export default function BankEdit() {
                   onChange={(e) => set("location", e.target.value)}
                   placeholder="Muscat, Oman"
                 />
+              </div>
+
+              {/* Optional: without artwork the card falls back to the bank's
+                  initials, which is a worse mark but never a missing one. */}
+              <div className="space-y-2">
+                <Label>Bank Logo</Label>
+                <div className="flex items-center gap-2">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-secondary text-xs font-bold text-primary">
+                    {draft.logo ? (
+                      <img
+                        src={draft.logo}
+                        alt=""
+                        className="h-full w-full object-contain"
+                      />
+                    ) : (
+                      bankInitials(draft.bankName || "Bank")
+                    )}
+                  </span>
+                  {draft.logo ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1 border-green-600 text-green-600 hover:text-destructive"
+                      title="Click to remove"
+                      onClick={() => set("logo", "")}
+                    >
+                      <FileCheck className="mr-2 h-4 w-4 shrink-0" />
+                      Logo attached
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1"
+                      asChild
+                    >
+                      <label className="cursor-pointer">
+                        <Upload className="mr-2 h-4 w-4" />
+                        Upload Logo
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => readLogo(e.target.files[0])}
+                        />
+                      </label>
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
