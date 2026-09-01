@@ -70,6 +70,7 @@ const SECTIONS = [
   {
     key: "information",
     label: "Employee Information",
+    title: "Employee",
     icon: User,
     note: "Employee profile and basic information",
   },
@@ -302,11 +303,7 @@ export default function EmployeeForm() {
           <BackButton fallback="/employees" />
           <div>
             <h1 className="text-xl font-bold text-primary sm:text-2xl">
-              {activeSection === "information"
-                ? isEditMode
-                  ? formData.employeeName || "Employee"
-                  : "New Employee"
-                : current.label}
+              {current.title || current.label}
             </h1>
             <p className="text-xs text-primary/75 sm:text-sm">{current.note}</p>
           </div>

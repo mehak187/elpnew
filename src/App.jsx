@@ -43,7 +43,6 @@ import CorporateList from "@/pages/corporate/CorporateList";
 // Employees Module
 import EmployeesList from "@/pages/employees/EmployeesList";
 import EmployeeForm from "@/pages/employees/EmployeeForm";
-import EmployeeView from "@/pages/employees/EmployeeView";
 
 // Finance Module
 import InvoicesList from "@/pages/finance/InvoicesList";
@@ -122,8 +121,8 @@ function App() {
               {/* Employees Module */}
               <Route path="employees" element={<EmployeesList />} />
               <Route path="employees/create" element={<EmployeeForm />} />
-              <Route path="employees/:id" element={<EmployeeView />} />
-              <Route path="employees/:id/edit" element={<EmployeeForm />} />
+              {/* Adding and editing are the same page; only the data differs. */}
+              <Route path="employees/:id" element={<EmployeeForm />} />
 
               {/* Finance Module */}
               <Route path="finance" element={<InvoicesList />} />
