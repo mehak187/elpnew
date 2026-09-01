@@ -430,8 +430,6 @@ export default function ExpensesPage() {
             exportFileName="expenses.csv"
             enableColumnSearch={false}
             itemLabel="expenses"
-            onAdd={() => navigate("/expenses/create")}
-            addLabel="Add Expense"
             currentPage={currentPage}
             totalPages={Math.ceil(rows.length / pageSize)}
             pageSize={pageSize}

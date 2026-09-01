@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Lock } from "lucide-react";
 import { useFirm } from "@/lib/firm/context";
+import { useLanguage, inLanguage } from "@/lib/language/context";
 import { nextBranchNumber, firmStaff } from "../firmData";
 
 const emptyBranch = {
@@ -167,6 +168,8 @@ function BranchFields({ draft, set, idPrefix, assignedNumber }) {
 export default function BranchesSection({ canEdit }) {
   const { branches, addBranch, updateBranch } = useFirm();
   const [adding, setAdding] = useState(false);
+  const { language } = useLanguage();
+  const dir = language === "ar" ? "rtl" : "ltr";
 
   const cancelAdd = () => {
     setDraft(emptyBranch);
@@ -278,28 +281,17 @@ export default function BranchesSection({ canEdit }) {
                       {branch.branchNumber}
                     </button>
                   </td>
+                  {/* One language, not both: the list is read in whichever
+                      language the interface is set to. Both are still held
+                      on the record and both are still entered on the form. */}
                   <td className="p-3">
-                    <span className="block font-medium">{branch.name}</span>
-                    {branch.nameAr && (
-                      <span
-                        className="block text-xs text-muted-foreground"
-                        dir="rtl"
-                      >
-                        {branch.nameAr}
-                      </span>
-                    )}
+                    <span className="block font-medium" dir={dir}>
+                      {inLanguage(language, branch.name, branch.nameAr)}
+                    </span>
                   </td>
-                  {/* English above, Arabic below - one column, two lines */}
-                  <td className="p-3">
-                    <span className="block">{branch.address || "-"}</span>
-                    {branch.addressAr && (
-                      <span
-                        className="block text-xs text-muted-foreground"
-                        dir="rtl"
-                      >
-                        {branch.addressAr}
-                      </span>
-                    )}
+                  <td className="p-3" dir={dir}>
+                    {inLanguage(language, branch.address, branch.addressAr) ||
+                      "-"}
                   </td>
                   <td className="p-3">
                     {managerName(branch.managerId) || (

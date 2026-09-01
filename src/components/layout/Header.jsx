@@ -45,6 +45,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useFirm } from "@/lib/firm/context";
+import { useLanguage, LANGUAGES } from "@/lib/language/context";
 import logo from "@/assets/logo2.png";
 
 /** The firm's mark. Height is set; the width follows the artwork. */
@@ -152,6 +153,7 @@ export default function Header({ onNavClick, activeNav }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { firmInfo } = useFirm();
+  const { language, setLanguage } = useLanguage();
 
   const isActive = (key) => {
     return activeNav === key || location.pathname.startsWith(`/${key}`);
@@ -343,6 +345,27 @@ export default function Header({ onNavClick, activeNav }) {
 
         {/* Spacer - push user to right */}
         <div className="flex-1" />
+
+        {/* Which language the records are read in. Beside the user menu
+            because it belongs to the person reading, not to the page. */}
+        <div className="mr-2 flex items-center gap-1 rounded-md border p-0.5">
+          {LANGUAGES.map((option) => (
+            <button
+              key={option.code}
+              type="button"
+              onClick={() => setLanguage(option.code)}
+              title={option.label}
+              className={cn(
+                "rounded px-2 py-1 text-xs font-semibold transition-colors",
+                language === option.code
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-secondary"
+              )}
+            >
+              {option.short}
+            </button>
+          ))}
+        </div>
 
         {/* User Dropdown */}
         <DropdownMenu>

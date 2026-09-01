@@ -286,8 +286,8 @@ export default function ClientDetails() {
                   className={cn(
                     "text-left text-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors",
                     activeSection === section.key
-                      ? "bg-secondary text-secondary-foreground"
-                      : "text-muted-foreground hover:bg-secondary hover:text-secondary-foreground"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-primary hover:bg-secondary"
                   )}
                 >
                   {section.label}
