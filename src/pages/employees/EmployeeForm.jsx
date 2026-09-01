@@ -212,6 +212,9 @@ const STATUS_DOT = {
 const NOTES_LIMIT = 300;
 
 /** The first field of the form a section's header button jumps to. */
+/** Sections where the header button opens a form instead of scrolling to one. */
+const OPENS_A_FORM = ["salaries"];
+
 const JUMP_TARGET = {
   salaries: "salary-basic",
   loans: "loan-expense-type",
@@ -269,6 +272,9 @@ export default function EmployeeForm() {
     : null;
 
   const [activeSection, setActiveSection] = useState("information");
+  // The section whose add form is open, if any. Held here because the button
+  // that opens it lives in the page header, above the section itself.
+  const [addingIn, setAddingIn] = useState(null);
   const [formData, setFormData] = useState(() => toFormData(record));
 
   // Reload when the route moves to a different employee without unmounting.
@@ -357,7 +363,14 @@ export default function EmployeeForm() {
           </div>
         </div>
         {current.action ? (
-          <Button type="button" onClick={jumpToForm}>
+          <Button
+            type="button"
+            onClick={() =>
+              OPENS_A_FORM.includes(activeSection)
+                ? setAddingIn(activeSection)
+                : jumpToForm()
+            }
+          >
             <Plus className="mr-2 h-4 w-4" />
             {current.action}
           </Button>
@@ -386,7 +399,10 @@ export default function EmployeeForm() {
                   <button
                     key={section.key}
                     type="button"
-                    onClick={() => setActiveSection(section.key)}
+                    onClick={() => {
+                      setActiveSection(section.key);
+                      setAddingIn(null);
+                    }}
                     className={cn(
                       "flex items-center gap-2.5 text-nowrap rounded-md px-3 py-2 text-left text-sm font-medium transition-colors",
                       activeSection === section.key
@@ -881,7 +897,16 @@ export default function EmployeeForm() {
                   </div>
                 )}
 
-                {activeSection === "salaries" && <SalariesSection />}
+                {activeSection === "salaries" && (
+                  <SalariesSection
+                    employee={formData}
+                    adding={addingIn === "salaries"}
+                    onCloseAdd={() => setAddingIn(null)}
+                    onSave={(payslip) =>
+                      setFormData((prev) => ({ ...prev, ...payslip }))
+                    }
+                  />
+                )}
 
                 {activeSection === "loans" && <LoansSection />}
 

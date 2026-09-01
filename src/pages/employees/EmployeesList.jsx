@@ -6,7 +6,13 @@ import DataTable from "@/components/shared/DataTable";
 import { Users, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { withRial } from "@/lib/money";
-import { employeeRecords, netSalary, amount } from "./employeeData";
+import {
+  employeeRecords,
+  netSalary,
+  totalAllowances,
+  totalDeductions,
+  amount,
+} from "./employeeData";
 
 /** A fact with its heading above it, where the pair needs the room. */
 function Fact({ label, children }) {
@@ -133,8 +139,8 @@ export default function EmployeesList() {
       exportValue: (row) =>
         [
           "Basic " + amount(row.salary),
-          "Allowances " + amount(row.allowances),
-          "Deductions " + amount(row.deductions),
+          "Allowances " + amount(totalAllowances(row)),
+          "Deductions " + amount(totalDeductions(row)),
           "Net " + amount(netSalary(row)),
         ].join(" · "),
       // The net is worked out from the three above it, never stored, so the
@@ -143,8 +149,8 @@ export default function EmployeesList() {
       render: (_, row) => (
         <div className="space-y-1 text-sm">
           <Inline label="Basic Salary:">{money(row.salary)}</Inline>
-          <Inline label="Allowances:">{money(row.allowances)}</Inline>
-          <Inline label="Deductions:">{money(row.deductions)}</Inline>
+          <Inline label="Allowances:">{money(totalAllowances(row))}</Inline>
+          <Inline label="Deductions:">{money(totalDeductions(row))}</Inline>
           <div className="mt-2 border-t pt-2">
             <Inline label="Net Salary:" strong>
               {money(netSalary(row))}

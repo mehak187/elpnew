@@ -12,7 +12,7 @@ import {
 import { EmptyState } from "@/components/shared/panels";
 import { Rial } from "@/components/shared/Rial";
 import { cn } from "@/lib/utils";
-import { Save } from "lucide-react";
+import { Save, Users, ChevronsRight, Upload, FileCheck } from "lucide-react";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
 import {
   ALLOWANCES,
@@ -21,6 +21,10 @@ import {
   PAYMENT_YEARS,
   PAYMENT_SOURCES,
   SOURCE_SHORT,
+  PAYROLL_BOOKING,
+  DEFAULT_BOOKING,
+  categoriesOf,
+  subcategoriesOf,
   salaryRecords,
   totalEarnings,
   totalDeductions,
@@ -31,24 +35,35 @@ import {
   formatDate,
 } from "../payrollData";
 
-const NOTES_LIMIT = 300;
 const PAGE_SIZE = 5;
 
-const emptyDraft = {
-  basic: "",
-  special: "",
-  housing: "",
-  transport: "",
-  electricity: "",
-  water: "",
-  loan: "",
-  administrative: "",
+const PAYSLIP_KEYS = [
+  "special",
+  "housing",
+  "transport",
+  "electricity",
+  "water",
+  "loan",
+  "administrative",
+];
+
+/** An employee record as the payslip form reads it: strings, and no blanks. */
+function fromEmployee(employee) {
+  const value = (key) => (employee?.[key] ? String(employee[key]) : "");
+  const payslip = { basic: value("salary") };
+  PAYSLIP_KEYS.forEach((key) => {
+    payslip[key] = value(key);
+  });
+  return payslip;
+}
+
+const emptyPayment = {
+  ...DEFAULT_BOOKING,
   month: "",
   year: "",
-  paymentDate: "",
   method: "",
   source: "",
-  notes: "",
+  paymentDate: "",
 };
 
 /** A heading over one group of the payslip. */
@@ -103,54 +118,323 @@ function Amount({ id, label, required, value, onChange, readOnly, highlight }) {
   );
 }
 
+/** A settled figure inside the payment form's summary. */
+function Figure({ label, value }) {
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-semibold">{label}</p>
+      <div className="relative">
+        <Input
+          readOnly
+          tabIndex={-1}
+          className="bg-muted pr-12 text-muted-foreground"
+          value={amount(value)}
+        />
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+          <Rial />
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** A labelled select, since the payment form is made almost entirely of them. */
+function Choice({ id, label, value, onChange, placeholder, options }) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger id={id}>
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) =>
+            typeof option === "string" ? (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ) : (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            )
+          )}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 /**
- * What an employee has been paid, and the form that adds to it.
+ * What an employee is paid, and the payments made against it.
  *
- * Nothing below the second group is ever typed: the totals, the net and the
- * amount payable are all read off the figures above them every render, so a
- * payslip cannot claim a net its own lines do not add up to.
+ * The page holds the monthly salary; the form behind "Add Salary / Bonus"
+ * records one payment of it. The payment never asks for the figures again - it
+ * reads them off the salary above, so a payslip and the payment that settles it
+ * cannot disagree.
  */
-export default function SalariesSection() {
+export default function SalariesSection({ employee, adding, onCloseAdd, onSave }) {
   const [records, setRecords] = useState(salaryRecords);
-  const [draft, setDraft] = useState(emptyDraft);
+  // Opened on what the employee is already paid, so the page shows the salary
+  // in force rather than a blank form somebody has to fill in from memory.
+  const [payslip, setPayslip] = useState(() => fromEmployee(employee));
+  const [payment, setPayment] = useState(emptyPayment);
+  const [receipt, setReceipt] = useState(null);
   const [page, setPage] = useState(1);
 
-  const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
+  const set = (name, value) =>
+    setPayslip((prev) => ({ ...prev, [name]: value }));
   const onAmount = (name) => (e) => set(name, e.target.value);
+  const setPay = (name, value) =>
+    setPayment((prev) => ({ ...prev, [name]: value }));
 
-  const earnings = totalEarnings(draft);
-  const deductions = totalDeductions(draft);
-  const net = netSalary(draft);
+  const earnings = totalEarnings(payslip);
+  const deductions = totalDeductions(payslip);
+  const net = netSalary(payslip);
+  const allowances = earnings - Number(payslip.basic || 0);
 
-  const canSave =
-    Number(draft.basic) > 0 &&
-    draft.month &&
-    draft.year &&
-    draft.paymentDate &&
-    draft.method;
+  const savePayslip = () => {
+    if (!(Number(payslip.basic) > 0)) return;
+    const saved = { salary: String(Number(payslip.basic)) };
+    PAYSLIP_KEYS.forEach((key) => {
+      saved[key] = Number(payslip[key]) || 0;
+    });
+    onSave(saved);
+  };
 
-  const save = () => {
-    if (!canSave) return;
+  const closeAdd = () => {
+    setPayment(emptyPayment);
+    setReceipt(null);
+    onCloseAdd();
+  };
+
+  const canPay =
+    payment.expenseType &&
+    payment.category &&
+    payment.subcategory &&
+    payment.month &&
+    payment.year &&
+    payment.method &&
+    payment.paymentDate;
+
+  const savePayment = () => {
+    if (!canPay) return;
     setRecords((prev) => [
       {
         id: prev.reduce((max, r) => Math.max(max, r.id), 0) + 1,
-        paymentDate: draft.paymentDate,
-        month: draft.month,
-        year: draft.year,
-        basic: Number(draft.basic) || 0,
-        // The allowances are kept as the one figure that was paid: a payslip
-        // records what happened, and must not move when the rates do.
-        allowances: earnings - (Number(draft.basic) || 0),
+        paymentDate: payment.paymentDate,
+        month: payment.month,
+        year: payment.year,
+        basic: Number(payslip.basic) || 0,
+        // Held as the figures that were paid: a payslip records what happened,
+        // and must not move when the rates do.
+        allowances,
         deductions,
-        method: draft.method,
-        source: draft.source,
-        notes: draft.notes,
+        method: payment.method,
+        source: payment.source,
+        receipt: receipt?.name || "",
+        notes: payment.subcategory + " for " + payment.month + " " + payment.year,
       },
       ...prev,
     ]);
-    setDraft(emptyDraft);
     setPage(1);
+    closeAdd();
   };
+
+  /* ------------------------------------------------ the payment being added */
+
+  if (adding) {
+    return (
+      <div className="space-y-6 rounded-lg border p-4 sm:p-6">
+        {/* Where the payment lands in the accounts. Choosing at one level
+            clears the levels below it, so a category can never be left
+            hanging under a type it does not belong to. */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="pay-type">Expense Type</Label>
+            <Select
+              value={payment.expenseType}
+              onValueChange={(value) =>
+                setPayment((prev) => ({
+                  ...prev,
+                  expenseType: value,
+                  category: "",
+                  subcategory: "",
+                }))
+              }
+            >
+              <SelectTrigger id="pay-type">
+                <Users className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
+                <SelectValue placeholder="Select expense type" />
+              </SelectTrigger>
+              <SelectContent>
+                {PAYROLL_BOOKING.map((type) => (
+                  <SelectItem key={type.name} value={type.name}>
+                    {type.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Choice
+            id="pay-category"
+            label="Category"
+            value={payment.category}
+            onChange={(value) =>
+              setPayment((prev) => ({ ...prev, category: value, subcategory: "" }))
+            }
+            placeholder="Select category"
+            options={categoriesOf(payment.expenseType).map((c) => c.name)}
+          />
+
+          <Choice
+            id="pay-subcategory"
+            label="Subcategory"
+            value={payment.subcategory}
+            onChange={(value) => setPay("subcategory", value)}
+            placeholder="Select subcategory"
+            options={subcategoriesOf(payment.expenseType, payment.category)}
+          />
+        </div>
+
+        {/* What is being paid, and what it comes to */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
+          <div className="rounded-lg border bg-muted/40 p-4">
+            <p className="mb-4 font-semibold text-primary">Amount Summary</p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <Figure label="Basic Salary" value={payslip.basic} />
+              <Figure label="Total Allowances" value={allowances} />
+              <Figure label="Total Deductions" value={deductions} />
+            </div>
+          </div>
+
+          <ChevronsRight
+            aria-hidden="true"
+            className="mx-auto hidden h-6 w-6 text-muted-foreground lg:block"
+          />
+
+          <div className="rounded-lg border border-green-600/40 bg-green-50 p-4">
+            <p className="mb-3 font-semibold text-green-700">
+              Net Salary Payable
+            </p>
+            <div className="relative">
+              <Input
+                readOnly
+                tabIndex={-1}
+                className="h-14 border-green-600 bg-white pr-12 text-2xl font-bold text-green-700"
+                value={amount(net)}
+              />
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                <Rial />
+              </span>
+            </div>
+            <p className="mt-3 text-sm text-green-700">
+              Net amount after adding allowances and deducting deductions.
+            </p>
+          </div>
+        </div>
+
+        <div className="border-b" />
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
+          <Choice
+            id="pay-month"
+            label="Month"
+            value={payment.month}
+            onChange={(value) => setPay("month", value)}
+            placeholder="Select month"
+            options={PAYMENT_MONTHS}
+          />
+          <Choice
+            id="pay-year"
+            label="Year"
+            value={payment.year}
+            onChange={(value) => setPay("year", value)}
+            placeholder="Select year"
+            options={PAYMENT_YEARS}
+          />
+        </div>
+
+        <div className="border-b" />
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end sm:gap-6">
+          <Choice
+            id="pay-method"
+            label="Payment Method"
+            value={payment.method}
+            onChange={(value) => setPay("method", value)}
+            placeholder="Select method"
+            options={PAYMENT_METHODS}
+          />
+          <Choice
+            id="pay-bank"
+            label="Bank"
+            value={payment.source}
+            onChange={(value) => setPay("source", value)}
+            placeholder="Select bank or cash"
+            options={PAYMENT_SOURCES}
+          />
+
+          <div className="space-y-2">
+            <Label htmlFor="pay-date">Payment Date</Label>
+            <Input
+              id="pay-date"
+              type="date"
+              value={payment.paymentDate}
+              onChange={(e) => setPay("paymentDate", e.target.value)}
+            />
+          </div>
+
+          {/* The file name lives in the tooltip, so the control stays
+              icon-sized either way. */}
+          {receipt ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="shrink-0 border-green-600 text-green-600 hover:text-destructive"
+              title={receipt.name + " - click to remove"}
+              onClick={() => setReceipt(null)}
+            >
+              <FileCheck className="h-4 w-4" />
+              <span className="sr-only">{receipt.name} attached. Remove it.</span>
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="shrink-0"
+              title="Upload payment receipt"
+              asChild
+            >
+              <label className="cursor-pointer">
+                <Upload className="h-4 w-4" />
+                <span className="sr-only">Upload payment receipt</span>
+                <Input
+                  type="file"
+                  className="hidden"
+                  onChange={(e) => e.target.files[0] && setReceipt(e.target.files[0])}
+                />
+              </label>
+            </Button>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={closeAdd}>
+            Cancel
+          </Button>
+          <Button onClick={savePayment} disabled={!canPay}>
+            Save Salary / Bonus
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  /* --------------------------------------------------------- the salary itself */
 
   const totalPages = Math.max(1, Math.ceil(records.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -159,14 +443,13 @@ export default function SalariesSection() {
 
   return (
     <div className="space-y-6">
-      {/* The payslip */}
       <div className="space-y-6 rounded-lg border p-4 sm:p-6">
         <Group title="Salary & Allowances">
           <Amount
             id="salary-basic"
             label="Basic Salary"
             required
-            value={draft.basic}
+            value={payslip.basic}
             onChange={onAmount("basic")}
           />
           {ALLOWANCES.map((allowance) => (
@@ -174,7 +457,7 @@ export default function SalariesSection() {
               key={allowance.key}
               id={"salary-" + allowance.key}
               label={allowance.label}
-              value={draft[allowance.key]}
+              value={payslip[allowance.key]}
               onChange={onAmount(allowance.key)}
             />
           ))}
@@ -186,7 +469,7 @@ export default function SalariesSection() {
               key={deduction.key}
               id={"salary-" + deduction.key}
               label={deduction.label}
-              value={draft[deduction.key]}
+              value={payslip[deduction.key]}
               onChange={onAmount(deduction.key)}
             />
           ))}
@@ -198,153 +481,47 @@ export default function SalariesSection() {
           />
         </Group>
 
-        <Group title="Total Payable Amounts">
-          <Amount
-            id="salary-earnings"
-            label="Total Earnings (Salary + Allowances)"
-            value={amount(earnings)}
-            readOnly
-          />
-          <Amount
-            id="salary-deductions-total"
-            label="Total Deductions from Salary"
-            value={amount(deductions)}
-            readOnly
-          />
-          <Amount
-            id="salary-net"
-            label="Net Salary (After Deductions)"
-            value={amount(net)}
-            readOnly
-          />
-          <Amount
-            id="salary-payable"
-            label="Amount Payable"
-            value={amount(net)}
-            readOnly
-            highlight
-          />
-        </Group>
-
         <div className="space-y-4">
-          <p className="text-sm font-semibold text-primary">Payment Details</p>
-
+          <p className="text-sm font-semibold text-primary">
+            Total Payable Amounts
+          </p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="salary-month">
-                Payment Month<span className="text-destructive"> *</span>
-              </Label>
-              <Select
-                value={draft.month}
-                onValueChange={(value) => set("month", value)}
-              >
-                <SelectTrigger id="salary-month">
-                  <SelectValue placeholder="Select month" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAYMENT_MONTHS.map((month) => (
-                    <SelectItem key={month.value} value={month.value}>
-                      {month.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="salary-year">
-                Payment Year<span className="text-destructive"> *</span>
-              </Label>
-              <Select
-                value={draft.year}
-                onValueChange={(value) => set("year", value)}
-              >
-                <SelectTrigger id="salary-year">
-                  <SelectValue placeholder="Select year" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAYMENT_YEARS.map((year) => (
-                    <SelectItem key={year} value={year}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="salary-date">
-                Payment Date<span className="text-destructive"> *</span>
-              </Label>
-              <Input
-                id="salary-date"
-                type="date"
-                value={draft.paymentDate}
-                onChange={(e) => set("paymentDate", e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="salary-method">
-                Payment Method<span className="text-destructive"> *</span>
-              </Label>
-              <Select
-                value={draft.method}
-                onValueChange={(value) => set("method", value)}
-              >
-                <SelectTrigger id="salary-method">
-                  <SelectValue placeholder="Select method" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAYMENT_METHODS.map((method) => (
-                    <SelectItem key={method} value={method}>
-                      {method}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="salary-source">Bank / Cash</Label>
-              <Select
-                value={draft.source}
-                onValueChange={(value) => set("source", value)}
-              >
-                <SelectTrigger id="salary-source">
-                  <SelectValue placeholder="Select bank or cash" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAYMENT_SOURCES.map((source) => (
-                    <SelectItem key={source} value={source}>
-                      {source}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2 lg:col-span-3">
-              <Label htmlFor="salary-notes">Notes</Label>
-              <div className="relative">
-                <Input
-                  id="salary-notes"
-                  maxLength={NOTES_LIMIT}
-                  placeholder="Enter notes (optional)"
-                  className="pr-16"
-                  value={draft.notes}
-                  onChange={(e) => set("notes", e.target.value)}
-                />
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                  {draft.notes.length}/{NOTES_LIMIT}
-                </span>
-              </div>
-            </div>
+            <Amount
+              id="salary-earnings"
+              label="Total Earnings (Salary + Allowances)"
+              value={amount(earnings)}
+              readOnly
+            />
+            <Amount
+              id="salary-deductions-total"
+              label="Total Deductions from Salary"
+              value={amount(deductions)}
+              readOnly
+            />
+            <Amount
+              id="salary-net"
+              label="Net Salary (After Deductions)"
+              value={amount(net)}
+              readOnly
+            />
+            <Amount
+              id="salary-payable"
+              label="Amount Payable"
+              value={amount(net)}
+              readOnly
+              highlight
+            />
           </div>
         </div>
 
+        {/* The salary belongs to the employee, so it is saved onto the record
+            rather than only feeding the payment form below. */}
         <div className="flex justify-end">
-          <Button type="button" onClick={save} disabled={!canSave}>
+          <Button
+            type="button"
+            onClick={savePayslip}
+            disabled={!(Number(payslip.basic) > 0)}
+          >
             <Save className="mr-2 h-4 w-4" />
             Save Salary
           </Button>

@@ -122,3 +122,63 @@ export const salaryRecords = [
 /** What was actually paid on a past payment. */
 export const netAmount = (record) =>
   num(record.basic) + num(record.allowances) - num(record.deductions);
+
+/* ------------------------------------------------- how a payment is booked */
+
+/**
+ * Where a payment to an employee lands in the accounts.
+ *
+ * Type -> Category -> Subcategory, the same three levels the rest of the
+ * system books expenses by. Only the branches an employee can be paid under
+ * are listed here; the full tree belongs to General Invoices.
+ */
+export const PAYROLL_BOOKING = [
+  {
+    name: "Employee Expenses",
+    categories: [
+      {
+        name: "Salaries & Bonuses",
+        subcategories: [
+          "Salary",
+          "Bonus",
+          "Overtime",
+          "Commission",
+          "Leave Salary",
+          "End of Service",
+        ],
+      },
+      {
+        name: "Allowances & Benefits",
+        subcategories: [
+          "Housing Allowance",
+          "Transportation Allowance",
+          "Phone Allowance",
+          "Other Allowance",
+        ],
+      },
+    ],
+  },
+  {
+    name: "Employee Advances & Loans",
+    categories: [
+      {
+        name: "Advances & Loans",
+        subcategories: ["Salary Advance", "Employee Loan", "Other Advance"],
+      },
+    ],
+  },
+];
+
+/** The categories under a type, and the subcategories under those. */
+export const categoriesOf = (type) =>
+  PAYROLL_BOOKING.find((t) => t.name === type)?.categories || [];
+
+export const subcategoriesOf = (type, category) =>
+  categoriesOf(type).find((c) => c.name === category)?.subcategories || [];
+
+/** What a salary is booked as unless somebody says otherwise. */
+export const DEFAULT_BOOKING = {
+  expenseType: "Employee Expenses",
+  category: "Salaries & Bonuses",
+  subcategory: "Salary",
+};
