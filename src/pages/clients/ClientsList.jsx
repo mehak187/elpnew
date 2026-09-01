@@ -195,8 +195,6 @@ export default function ClientsList() {
             data={processedClients}
             searchPlaceholder="Ask anything..."
             enableColumnSearch={false}
-            onAdd={() => navigate('/clients/create')}
-            addLabel="Add Client"
             currentPage={currentPage}
             totalPages={Math.ceil(processedClients.length / pageSize)}
             pageSize={pageSize}

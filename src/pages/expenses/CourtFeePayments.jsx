@@ -280,8 +280,6 @@ export default function CourtFeePayments() {
             enableColumnSearch={false}
             enableSorting
             itemLabel="expenses"
-            onAdd={() => navigate("/court-fee-payments/create")}
-            addLabel="Add Expense"
             currentPage={currentPage}
             totalPages={Math.ceil(judicialExpenses.length / pageSize)}
             pageSize={pageSize}
