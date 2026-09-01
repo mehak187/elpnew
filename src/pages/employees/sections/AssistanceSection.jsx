@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/panels";
 import { Rial } from "@/components/shared/Rial";
-import { cn } from "@/lib/utils";
 import { Save, FileText, FileImage } from "lucide-react";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
 import { useFirm } from "@/lib/firm/context";
@@ -77,7 +76,7 @@ const accountLabel = (account) =>
  * Cash has no account to choose, so choosing it settles the account field
  * rather than leaving a bank picker open over a payment that never touched one.
  */
-export default function AssistanceSection() {
+export default function AssistanceSection({ adding, onCloseAdd }) {
   const { bankAccounts } = useFirm();
 
   const [records, setRecords] = useState(assistanceRecords);
@@ -147,6 +146,7 @@ export default function AssistanceSection() {
     setDraft(emptyDraft);
     setProof(null);
     setPage(1);
+    onCloseAdd();
   };
 
   const openProof = (record) => {
@@ -160,10 +160,11 @@ export default function AssistanceSection() {
   const start = (currentPage - 1) * PAGE_SIZE;
   const shown = records.slice(start, start + PAGE_SIZE);
 
-  return (
-    <div className="space-y-6">
-      {/* Give assistance */}
-      <div className="rounded-lg border p-4">
+  // Adding takes over the section: the list describes assistance already
+  // given, and none of it helps while a new payment is being entered.
+  if (adding) {
+    return (
+      <div className="rounded-lg border p-4 sm:p-6">
         <p className="mb-4 font-semibold text-primary">Add Assistance</p>
 
         <div className="space-y-4">
@@ -355,7 +356,10 @@ export default function AssistanceSection() {
             </div>
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Button variant="outline" onClick={onCloseAdd}>
+              Cancel
+            </Button>
             <Button type="button" onClick={save} disabled={!canSave}>
               <Save className="mr-2 h-4 w-4" />
               Save Assistance
@@ -363,7 +367,11 @@ export default function AssistanceSection() {
           </div>
         </div>
       </div>
+    );
+  }
 
+  return (
+    <div className="space-y-6">
       {/* What has been given */}
       <div className="rounded-lg border">
         <p className="border-b p-4 font-semibold text-primary">Assistance List</p>
@@ -378,23 +386,31 @@ export default function AssistanceSection() {
               <table className="w-full min-w-[900px] border text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
-                    <th className="p-3 font-semibold">No.</th>
-                    <th className="p-3 font-semibold">Payment Date</th>
-                    <th className="p-3 font-semibold">
+                    {/* Widths are set here rather than left to the browser,
+                        and the proof sits with the payment it evidences: six
+                        columns fit, seven do not. */}
+                    <th className="p-3 font-semibold" style={{ width: "5%" }}>
+                      No.
+                    </th>
+                    <th className="whitespace-nowrap p-3 font-semibold" style={{ width: "11%" }}>
+                      Payment Date
+                    </th>
+                    <th className="p-3 font-semibold" style={{ width: "24%" }}>
                       Expense Type
                       <span className="block font-normal">
                         Category / Subcategory
                       </span>
                     </th>
-                    <th className="p-3 font-semibold">
+                    <th className="whitespace-nowrap p-3 font-semibold" style={{ width: "10%" }}>
                       Amount (<Rial />)
                     </th>
-                    <th className="p-3 font-semibold">
+                    <th className="p-3 font-semibold" style={{ width: "30%" }}>
                       Payment Method
                       <span className="block font-normal">Bank / Account</span>
                     </th>
-                    <th className="p-3 font-semibold">Transfer Proof</th>
-                    <th className="p-3 font-semibold">Notes</th>
+                    <th className="p-3 font-semibold" style={{ width: "20%" }}>
+                      Notes
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -434,24 +450,20 @@ export default function AssistanceSection() {
                         <span className="block text-muted-foreground">
                           {record.account}
                         </span>
-                      </td>
-                      <td className="p-3 align-top">
-                        <button
-                          type="button"
-                          onClick={() => openProof(record)}
-                          className="inline-flex items-center gap-1.5 rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
-                        >
-                          {isImage(record.proof) ? (
-                            <FileImage
-                              className={cn("h-4 w-4 shrink-0 text-green-600")}
-                            />
-                          ) : (
-                            <FileText
-                              className={cn("h-4 w-4 shrink-0 text-red-600")}
-                            />
-                          )}
-                          {record.proof}
-                        </button>
+                        {record.proof && (
+                          <button
+                            type="button"
+                            onClick={() => openProof(record)}
+                            className="mt-1 inline-flex items-center gap-1.5 rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                          >
+                            {isImage(record.proof) ? (
+                              <FileImage className="h-4 w-4 shrink-0 text-green-600" />
+                            ) : (
+                              <FileText className="h-4 w-4 shrink-0 text-red-600" />
+                            )}
+                            {record.proof}
+                          </button>
+                        )}
                       </td>
                       <td className="p-3 align-top text-muted-foreground">
                         {record.notes || "-"}
