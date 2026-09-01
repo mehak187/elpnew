@@ -7,38 +7,37 @@
  * why so few of the fields on the form are asked for.
  */
 
-const subs = (names) => names.map((name) => ({ name }));
+/** A loan taken for the first time, and money added to one already running. */
+export const NEW_LOAN = "New Loan";
+export const ADDITIONAL_LOAN = "Additional Loan";
 
-/** Expense Type -> Category -> Subcategory, for borrowing only. */
-export const LOAN_CLASSIFICATION = [
+/**
+ * Where a loan lands in the accounts.
+ *
+ * Only two things can happen: a loan is taken, or more is added to one that
+ * is already running. The form asks different questions for each, which is
+ * why the subcategory is chosen before anything else.
+ */
+export const LOAN_BOOKING = [
   {
-    name: "Loan",
-    children: [
-      {
-        name: "General",
-        children: subs(["Bank Loan", "Financing Facility", "Overdraft"]),
-      },
-      {
-        name: "Vehicle Finance",
-        children: subs(["Vehicle Loan", "Vehicle Lease"]),
-      },
-      {
-        name: "Property",
-        children: subs(["Mortgage", "Property Loan"]),
-      },
-      {
-        name: "Equipment",
-        children: subs(["Equipment Finance"]),
-      },
+    name: "Employee Expenses",
+    categories: [
+      { name: "Loan", subcategories: [NEW_LOAN, ADDITIONAL_LOAN] },
     ],
   },
 ];
 
 export const categoriesOf = (type) =>
-  LOAN_CLASSIFICATION.find((t) => t.name === type)?.children || [];
+  LOAN_BOOKING.find((t) => t.name === type)?.categories || [];
 
 export const subcategoriesOf = (type, category) =>
-  categoriesOf(type).find((c) => c.name === category)?.children || [];
+  categoriesOf(type).find((c) => c.name === category)?.subcategories || [];
+
+export const DEFAULT_LOAN_BOOKING = {
+  expenseType: "Employee Expenses",
+  category: "Loan",
+  subcategory: NEW_LOAN,
+};
 
 /* ------------------------------------------------------- the repayment plan */
 
@@ -80,6 +79,23 @@ export const period = (value) => {
   return MONTHS[Number(month) - 1] + " " + year;
 };
 
+/**
+ * The month a run of instalments ends on.
+ *
+ * Counted forward from the date the money goes out, so the end date cannot be
+ * typed to say something the instalment count does not.
+ */
+export function endDate(start, months) {
+  const count = Number(months);
+  if (!start || !count) return "";
+  const [year, month, day] = start.split("-").map(Number);
+  const date = new Date(year, month - 1 + count, day);
+  const pad = (n) => String(n).padStart(2, "0");
+  return (
+    date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate())
+  );
+}
+
 /** How the banks are written in the list, where the column is narrow. */
 export const SOURCE_SHORT = {
   "Bank Muscat": "Bank Muscat",
@@ -100,8 +116,8 @@ export const SOURCE_SHORT = {
  * not just the new draw.
  */
 export const loanRecords = [
-  { id: 1, paymentDate: "2026-08-26", expenseType: "Loan", category: "General", subcategory: "Bank Loan", method: "Bank Transfer", bank: "Bank Muscat", outstanding: 2000, newAmount: 5000, monthly: 700, proof: "loan_proof_260826.pdf", notes: "Business expansion loan" },
-  { id: 2, paymentDate: "2026-07-10", expenseType: "Loan", category: "General", subcategory: "Bank Loan", method: "Bank Transfer", bank: "National Bank of Oman", outstanding: 0, newAmount: 10000, monthly: 1000, proof: "loan_proof_100726.pdf", notes: "Working capital loan" },
-  { id: 3, paymentDate: "2026-05-18", expenseType: "Loan", category: "Vehicle Finance", subcategory: "Vehicle Loan", method: "Bank Transfer", bank: "Bank Dhofar", outstanding: 0, newAmount: 8500, monthly: 750, proof: "loan_proof_180526.pdf", notes: "Two office vehicles" },
-  { id: 4, paymentDate: "2026-02-04", expenseType: "Loan", category: "Equipment", subcategory: "Equipment Finance", method: "Cheque", bank: "Bank Muscat", outstanding: 0, newAmount: 3200, monthly: 400, proof: "loan_proof_040226.pdf", notes: "Server and network equipment" },
+  { id: 1, paymentDate: "2026-08-26", expenseType: "Employee Expenses", category: "Loan", subcategory: NEW_LOAN, method: "Bank Transfer", bank: "Bank Muscat", outstanding: 2000, newAmount: 5000, monthly: 700, proof: "loan_proof_260826.pdf", notes: "Business expansion loan" },
+  { id: 2, paymentDate: "2026-07-10", expenseType: "Employee Expenses", category: "Loan", subcategory: NEW_LOAN, method: "Bank Transfer", bank: "National Bank of Oman", outstanding: 0, newAmount: 10000, monthly: 1000, proof: "loan_proof_100726.pdf", notes: "Working capital loan" },
+  { id: 3, paymentDate: "2026-05-18", expenseType: "Employee Expenses", category: "Loan", subcategory: ADDITIONAL_LOAN, method: "Bank Transfer", bank: "Bank Dhofar", outstanding: 0, newAmount: 8500, monthly: 750, proof: "loan_proof_180526.pdf", notes: "Two office vehicles" },
+  { id: 4, paymentDate: "2026-02-04", expenseType: "Employee Expenses", category: "Loan", subcategory: NEW_LOAN, method: "Cheque", bank: "Bank Muscat", outstanding: 0, newAmount: 3200, monthly: 400, proof: "loan_proof_040226.pdf", notes: "Server and network equipment" },
 ];

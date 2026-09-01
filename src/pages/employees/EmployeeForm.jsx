@@ -213,7 +213,7 @@ const NOTES_LIMIT = 300;
 
 /** The first field of the form a section's header button jumps to. */
 /** Sections where the header button opens a form instead of scrolling to one. */
-const OPENS_A_FORM = ["salaries"];
+const OPENS_A_FORM = ["salaries", "loans"];
 
 const JUMP_TARGET = {
   salaries: "salary-basic",
@@ -911,7 +911,12 @@ export default function EmployeeForm() {
                   />
                 )}
 
-                {activeSection === "loans" && <LoansSection />}
+                {activeSection === "loans" && (
+                  <LoansSection
+                    adding={addingIn === "loans"}
+                    onCloseAdd={() => setAddingIn(null)}
+                  />
+                )}
 
                 {activeSection === "assistance" && <AssistanceSection />}
 
