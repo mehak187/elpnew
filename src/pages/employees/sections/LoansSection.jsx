@@ -418,7 +418,10 @@ export default function LoansSection() {
         ) : (
           <>
             <div className="overflow-x-auto p-4">
-              <table className="w-full min-w-[1000px] border text-sm">
+              {/* Wide on purpose: the financial column carries six figures and
+                  the columns beside it collapse if the table is allowed to
+                  squeeze. It scrolls sideways instead. */}
+              <table className="w-full min-w-[1280px] border text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
                     <th className="p-3 font-semibold">No.</th>
@@ -433,10 +436,12 @@ export default function LoansSection() {
                     <th className="p-3 font-semibold">Payment Method</th>
                     {/* The money and the schedule read as one story, so they
                         are told in one column rather than side by side. */}
-                    <th className="p-3 font-semibold">
+                    <th className="p-3 font-semibold" style={{ width: "32%" }}>
                       Financial Details (<Rial />)
                     </th>
-                    <th className="p-3 font-semibold">Transfer Proof</th>
+                    <th className="whitespace-nowrap p-3 font-semibold">
+                      Transfer Proof
+                    </th>
                     <th className="p-3 font-semibold">Notes</th>
                   </tr>
                 </thead>

@@ -57,6 +57,12 @@ export const PAYMENT_MONTHS = [
   { value: "Q4", label: "Q4 (Oct - Dec)" },
 ];
 
+/** The short month names, in the order a date gives them. */
+export const MONTH_NAMES = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
 export const PAYMENT_YEARS = ["2024", "2025", "2026", "2027"];
 
 /** Where the money leaves from. Cash is listed with the banks, not apart. */
@@ -69,6 +75,9 @@ export const PAYMENT_SOURCES = [
   "Ahli Bank",
   "Cash",
 ];
+
+/** The account nearly every payment leaves from. */
+export const DEFAULT_BANK = "Bank Muscat";
 
 /** How the banks are written in the history, where the column is narrow. */
 export const SOURCE_SHORT = {
@@ -121,7 +130,9 @@ export const salaryRecords = [
 
 /** What was actually paid on a past payment. */
 export const netAmount = (record) =>
-  num(record.basic) + num(record.allowances) - num(record.deductions);
+  record.amount != null
+    ? num(record.amount)
+    : num(record.basic) + num(record.allowances) - num(record.deductions);
 
 /* ------------------------------------------------- how a payment is booked */
 
@@ -140,11 +151,12 @@ export const PAYROLL_BOOKING = [
         name: "Salaries & Bonuses",
         subcategories: [
           "Salary",
+          "Salary Advance",
           "Bonus",
           "Overtime",
           "Commission",
           "Leave Salary",
-          "End of Service",
+          "End of Service Benefit",
         ],
       },
       {
@@ -163,7 +175,7 @@ export const PAYROLL_BOOKING = [
     categories: [
       {
         name: "Advances & Loans",
-        subcategories: ["Salary Advance", "Employee Loan", "Other Advance"],
+        subcategories: ["Employee Loan", "Other Advance"],
       },
     ],
   },
@@ -177,6 +189,23 @@ export const subcategoriesOf = (type, category) =>
   categoriesOf(type).find((c) => c.name === category)?.subcategories || [];
 
 /** What a salary is booked as unless somebody says otherwise. */
+/**
+ * Payments whose amount is not the monthly salary.
+ *
+ * A bonus and an end-of-service settlement are worked out elsewhere, so their
+ * figure is entered rather than read off the payslip - and the payslip summary
+ * is not shown, because it would be describing a different payment.
+ */
+export const ENTERED_AMOUNT = ["Bonus", "End of Service Benefit"];
+
+/** Payments that cover a span of service rather than one month. */
+export const WITH_PERIOD = ["End of Service Benefit"];
+
+export const entersAmount = (subcategory) =>
+  ENTERED_AMOUNT.includes(subcategory);
+
+export const hasPeriod = (subcategory) => WITH_PERIOD.includes(subcategory);
+
 export const DEFAULT_BOOKING = {
   expenseType: "Employee Expenses",
   category: "Salaries & Bonuses",

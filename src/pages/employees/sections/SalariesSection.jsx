@@ -20,9 +20,13 @@ import {
   PAYMENT_MONTHS,
   PAYMENT_YEARS,
   PAYMENT_SOURCES,
+  DEFAULT_BANK,
   SOURCE_SHORT,
   PAYROLL_BOOKING,
   DEFAULT_BOOKING,
+  entersAmount,
+  hasPeriod,
+  MONTH_NAMES,
   categoriesOf,
   subcategoriesOf,
   salaryRecords,
@@ -61,8 +65,11 @@ const emptyPayment = {
   ...DEFAULT_BOOKING,
   month: "",
   year: "",
+  periodFrom: "",
+  periodTo: "",
+  amount: "",
   method: "",
-  source: "",
+  source: DEFAULT_BANK,
   paymentDate: "",
 };
 
@@ -193,6 +200,15 @@ export default function SalariesSection({ employee, adding, onCloseAdd, onSave }
   const net = netSalary(payslip);
   const allowances = earnings - Number(payslip.basic || 0);
 
+  // A bonus and a settlement are worked out elsewhere, so they bring their
+  // own figure; everything else is a month of the salary above.
+  const entersOwnAmount = entersAmount(payment.subcategory);
+  const showsPeriod = hasPeriod(payment.subcategory);
+  // The button names what is being saved. A bonus is not a salary, and saying
+  // so is the last chance to notice the wrong subcategory before it is booked.
+  const saveLabel =
+    payment.subcategory === "Bonus" ? "Save Bonus" : "Save Salary / Bonus";
+
   const savePayslip = () => {
     if (!(Number(payslip.basic) > 0)) return;
     const saved = { salary: String(Number(payslip.basic)) };
@@ -212,28 +228,38 @@ export default function SalariesSection({ employee, adding, onCloseAdd, onSave }
     payment.expenseType &&
     payment.category &&
     payment.subcategory &&
-    payment.month &&
-    payment.year &&
     payment.method &&
-    payment.paymentDate;
+    payment.paymentDate &&
+    (entersOwnAmount
+      ? Number(payment.amount) > 0 &&
+        (!showsPeriod || (payment.periodFrom && payment.periodTo))
+      : payment.month && payment.year);
 
   const savePayment = () => {
     if (!canPay) return;
+    // A month of salary is written down as its parts; anything else is
+    // written down as the one figure it was.
+    const figures = entersOwnAmount
+      ? { amount: Number(payment.amount) }
+      : {
+          basic: Number(payslip.basic) || 0,
+          allowances,
+          deductions,
+        };
+    const [year, month] = payment.paymentDate.split("-");
     setRecords((prev) => [
       {
         id: prev.reduce((max, r) => Math.max(max, r.id), 0) + 1,
         paymentDate: payment.paymentDate,
-        month: payment.month,
-        year: payment.year,
-        basic: Number(payslip.basic) || 0,
-        // Held as the figures that were paid: a payslip records what happened,
-        // and must not move when the rates do.
-        allowances,
-        deductions,
+        month: payment.month || MONTH_NAMES[Number(month) - 1],
+        year: payment.year || year,
+        periodFrom: payment.periodFrom,
+        periodTo: payment.periodTo,
+        ...figures,
         method: payment.method,
         source: payment.source,
         receipt: receipt?.name || "",
-        notes: payment.subcategory + " for " + payment.month + " " + payment.year,
+        notes: payment.subcategory,
       },
       ...prev,
     ]);
@@ -264,8 +290,16 @@ export default function SalariesSection({ employee, adding, onCloseAdd, onSave }
               }
             >
               <SelectTrigger id="pay-type">
-                <Users className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
-                <SelectValue placeholder="Select expense type" />
+                {/* Laid out inline rather than by class: the trigger clamps
+                    every span child to one line with display:-webkit-box,
+                    which would beat a flex utility and stack these two. */}
+                <span
+                  style={{ display: "flex" }}
+                  className="min-w-0 items-center gap-2"
+                >
+                  <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <SelectValue placeholder="Select expense type" />
+                </span>
               </SelectTrigger>
               <SelectContent>
                 {PAYROLL_BOOKING.map((type) => (
@@ -298,63 +332,120 @@ export default function SalariesSection({ employee, adding, onCloseAdd, onSave }
           />
         </div>
 
-        {/* What is being paid, and what it comes to */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
-          <div className="rounded-lg border bg-muted/40 p-4">
-            <p className="mb-4 font-semibold text-primary">Amount Summary</p>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <Figure label="Basic Salary" value={payslip.basic} />
-              <Figure label="Total Allowances" value={allowances} />
-              <Figure label="Total Deductions" value={deductions} />
-            </div>
-          </div>
-
-          <ChevronsRight
-            aria-hidden="true"
-            className="mx-auto hidden h-6 w-6 text-muted-foreground lg:block"
-          />
-
-          <div className="rounded-lg border border-green-600/40 bg-green-50 p-4">
-            <p className="mb-3 font-semibold text-green-700">
-              Net Salary Payable
-            </p>
-            <div className="relative">
+        {/* A settlement is not a month's pay: it covers a span of service and
+            its amount is worked out elsewhere, so it is entered rather than
+            read off the payslip. */}
+        {entersOwnAmount ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
+            {showsPeriod && (
+            <div className="space-y-2">
+              <Label htmlFor="pay-from">Period From</Label>
               <Input
-                readOnly
-                tabIndex={-1}
-                className="h-14 border-green-600 bg-white pr-12 text-2xl font-bold text-green-700"
-                value={amount(net)}
+                id="pay-from"
+                type="date"
+                value={payment.periodFrom}
+                onChange={(e) => setPay("periodFrom", e.target.value)}
               />
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                <Rial />
-              </span>
             </div>
-            <p className="mt-3 text-sm text-green-700">
-              Net amount after adding allowances and deducting deductions.
-            </p>
+            )}
+
+            {showsPeriod && (
+            <div className="space-y-2">
+              <Label htmlFor="pay-to">Period To</Label>
+              <Input
+                id="pay-to"
+                type="date"
+                value={payment.periodTo}
+                onChange={(e) => setPay("periodTo", e.target.value)}
+              />
+            </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="pay-amount" className="text-green-700">
+                Net Amount Payable
+              </Label>
+              <div className="relative">
+                <Input
+                  id="pay-amount"
+                  type="number"
+                  min="0"
+                  step="0.001"
+                  placeholder="0.000"
+                  className="h-14 border-green-600 pr-12 text-2xl font-bold text-green-700"
+                  value={payment.amount}
+                  onChange={(e) => setPay("amount", e.target.value)}
+                />
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  <Rial />
+                </span>
+              </div>
+              <p className="text-sm text-green-700">
+                Net amount after deductions (if any).
+              </p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <>
+            {/* What is being paid, and what it comes to */}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
+              <div className="rounded-lg border bg-muted/40 p-4">
+                <p className="mb-4 font-semibold text-primary">Amount Summary</p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <Figure label="Basic Salary" value={payslip.basic} />
+                  <Figure label="Total Allowances" value={allowances} />
+                  <Figure label="Total Deductions" value={deductions} />
+                </div>
+              </div>
 
-        <div className="border-b" />
+              <ChevronsRight
+                aria-hidden="true"
+                className="mx-auto hidden h-6 w-6 text-muted-foreground lg:block"
+              />
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
-          <Choice
-            id="pay-month"
-            label="Month"
-            value={payment.month}
-            onChange={(value) => setPay("month", value)}
-            placeholder="Select month"
-            options={PAYMENT_MONTHS}
-          />
-          <Choice
-            id="pay-year"
-            label="Year"
-            value={payment.year}
-            onChange={(value) => setPay("year", value)}
-            placeholder="Select year"
-            options={PAYMENT_YEARS}
-          />
-        </div>
+              <div className="rounded-lg border border-green-600/40 bg-green-50 p-4">
+                <p className="mb-3 font-semibold text-green-700">
+                  Net Salary Payable
+                </p>
+                <div className="relative">
+                  <Input
+                    readOnly
+                    tabIndex={-1}
+                    className="h-14 border-green-600 bg-white pr-12 text-2xl font-bold text-green-700"
+                    value={amount(net)}
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                    <Rial />
+                  </span>
+                </div>
+                <p className="mt-3 text-sm text-green-700">
+                  Net amount after adding allowances and deducting deductions.
+                </p>
+              </div>
+            </div>
+
+            <div className="border-b" />
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
+              <Choice
+                id="pay-month"
+                label="Month"
+                value={payment.month}
+                onChange={(value) => setPay("month", value)}
+                placeholder="Select month"
+                options={PAYMENT_MONTHS}
+              />
+              <Choice
+                id="pay-year"
+                label="Year"
+                value={payment.year}
+                onChange={(value) => setPay("year", value)}
+                placeholder="Select year"
+                options={PAYMENT_YEARS}
+              />
+            </div>
+          </>
+        )}
 
         <div className="border-b" />
 
@@ -367,6 +458,7 @@ export default function SalariesSection({ employee, adding, onCloseAdd, onSave }
             placeholder="Select method"
             options={PAYMENT_METHODS}
           />
+
           <Choice
             id="pay-bank"
             label="Bank"
@@ -427,7 +519,7 @@ export default function SalariesSection({ employee, adding, onCloseAdd, onSave }
             Cancel
           </Button>
           <Button onClick={savePayment} disabled={!canPay}>
-            Save Salary / Bonus
+            {saveLabel}
           </Button>
         </div>
       </div>
@@ -570,16 +662,26 @@ export default function SalariesSection({ employee, adding, onCloseAdd, onSave }
                         {period(record)}
                       </td>
                       <td className="p-3 align-top">
-                        <span className="block">
-                          <span className="font-semibold">Basic Salary:</span>{" "}
-                          {amount(record.basic)}
-                          <span className="px-2 text-muted-foreground">|</span>
-                          <span className="font-semibold">Allowances:</span>{" "}
-                          {amount(record.allowances)}
-                          <span className="px-2 text-muted-foreground">|</span>
-                          <span className="font-semibold">Deductions:</span>{" "}
-                          {amount(record.deductions)}
-                        </span>
+                        {record.amount == null ? (
+                          <span className="block">
+                            <span className="font-semibold">Basic Salary:</span>{" "}
+                            {amount(record.basic)}
+                            <span className="px-2 text-muted-foreground">|</span>
+                            <span className="font-semibold">Allowances:</span>{" "}
+                            {amount(record.allowances)}
+                            <span className="px-2 text-muted-foreground">|</span>
+                            <span className="font-semibold">Deductions:</span>{" "}
+                            {amount(record.deductions)}
+                          </span>
+                        ) : (
+                          record.periodFrom && (
+                            <span className="block">
+                              <span className="font-semibold">Period:</span>{" "}
+                              {formatDate(record.periodFrom)} -{" "}
+                              {formatDate(record.periodTo)}
+                            </span>
+                          )
+                        )}
                         {/* The one figure that actually left the account */}
                         <span className="mt-1 block font-semibold text-green-700">
                           Net Amount: {amount(netAmount(record))}
