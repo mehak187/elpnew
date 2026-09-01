@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
+import LanguageProvider from "@/lib/language/LanguageProvider";
 import FirmProvider from "@/lib/firm/FirmProvider";
 import ExpensesProvider from "@/lib/expenses/ExpensesProvider";
 import SuppliersProvider from "@/lib/suppliers/SuppliersProvider";
@@ -56,6 +57,7 @@ import Execution from "@/pages/litigation/Execution";
 
 function App() {
   return (
+    <LanguageProvider>
     <FirmProvider>
       <ExpensesProvider>
         <SuppliersProvider>
@@ -146,6 +148,7 @@ function App() {
         </SuppliersProvider>
       </ExpensesProvider>
     </FirmProvider>
+    </LanguageProvider>
   );
 }
 

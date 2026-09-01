@@ -90,43 +90,24 @@ export const officeFiles = [
   { fileNo: "58", label: "58 - Debt Recovery" },
 ];
 
+/**
+ * The cases this client has running.
+ *
+ *  is the court a case has reached and  says
+ * whether it is still live. The two are counted separately above the table:
+ * a closed case still belongs to the level it ended at.
+ */
 export const clientLinkedCases = [
-  {
-    id: 1,
-    fileNo: "21",
-    opponent: "Al Noor Trading LLC",
-    court: "Muscat Primary Court",
-    litigationLevel: "Primary",
-    stageNumber: 1,
-    caseStage: "Case Registration",
-    caseStatus: "Active",
-    updateDate: "2025-01-12",
-    update: "Reviewing documents",
-  },
-  {
-    id: 2,
-    fileNo: "34",
-    opponent: "Muscat Logistics SAOC",
-    court: "Court of Appeal",
-    litigationLevel: "Appeal",
-    stageNumber: 2,
-    caseStage: "Court Hearing",
-    caseStatus: "Active",
-    updateDate: "2025-02-03",
-    update: "Memo submitted, awaiting hearing date",
-  },
-  {
-    id: 3,
-    fileNo: "47",
-    opponent: "Salim Al Hinai",
-    court: "Labour Court",
-    litigationLevel: "Primary",
-    stageNumber: 3,
-    caseStage: "Post Judgement",
-    caseStatus: "Closed",
-    updateDate: "2024-12-19",
-    update: "Judgement issued, awaiting execution",
-  },
+  { id: 1, fileNo: "21", opponent: "Al Noor Trading LLC", court: "Muscat Primary Court", litigationLevel: "Primary", caseStage: "Case Registration", caseStatus: "Active", updateDate: "2025-01-12", update: "Reviewing documents" },
+  { id: 2, fileNo: "34", opponent: "Muscat Logistics SAOC", court: "Court of Appeal", litigationLevel: "Appeal", caseStage: "Commencing", caseStatus: "Active", updateDate: "2025-02-04", update: "Memo submitted, awaiting hearing date" },
+  { id: 3, fileNo: "47", opponent: "Salim Al Harthi", court: "Labour Court", litigationLevel: "Primary", caseStage: "Adjournments", caseStatus: "Active", updateDate: "2024-11-19", update: "Judgement issued, awaiting execution" },
+  { id: 4, fileNo: "52", opponent: "Oman Development LLC", court: "Execution Court", litigationLevel: "Execution", caseStage: "Enforcement", caseStatus: "Active", updateDate: "2025-03-01", update: "Execution procedures in progress" },
+  { id: 5, fileNo: "58", opponent: "Bright Future Trading", court: "Execution Court", litigationLevel: "Execution", caseStage: "Settlement", caseStatus: "Closed", updateDate: "2025-04-21", update: "Case closed after full execution" },
+  { id: 6, fileNo: "63", opponent: "Gulf Metals SAOC", court: "Muscat Primary Court", litigationLevel: "Primary", caseStage: "Pleadings", caseStatus: "Active", updateDate: "2025-01-28", update: "Statement of defence filed" },
+  { id: 7, fileNo: "70", opponent: "Rustaq Developments", court: "Court of Appeal", litigationLevel: "Appeal", caseStage: "Adjournments", caseStatus: "Active", updateDate: "2025-02-17", update: "Hearing adjourned to next month" },
+  { id: 8, fileNo: "74", opponent: "Seeb Wholesale", court: "Supreme Court", litigationLevel: "Supreme", caseStage: "Commencing", caseStatus: "Active", updateDate: "2025-03-14", update: "Appeal registered at Supreme Court" },
+  { id: 9, fileNo: "81", opponent: "Batinah Transport", court: "Execution Court", litigationLevel: "Execution", caseStage: "Enforcement", caseStatus: "Active", updateDate: "2025-04-02", update: "Assets identified for seizure" },
+  { id: 10, fileNo: "88", opponent: "Amerat Contracting", court: "Execution Court", litigationLevel: "Execution", caseStage: "Settlement", caseStatus: "Closed", updateDate: "2025-04-30", update: "Settled and file closed" },
 ];
 
 export const clientInvoices = [
