@@ -16,7 +16,7 @@ export default function FinancialSection({
   onSelectChange,
 }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 sm:gap-6">
       {/* VATIN No. - entities only, individuals have none */}
       {clientType !== "Individual" && (
         <div className="space-y-2">
@@ -67,7 +67,7 @@ export default function FinancialSection({
 
       {/* Pay Fees on Their Behalf */}
       <div className="space-y-2">
-        <Label htmlFor="payFeesOnBehalf">Pay Fees on Their Behalf?</Label>
+        <Label htmlFor="payFeesOnBehalf">Pay Fees on Their Behalf? *</Label>
         <Select
           value={formData.payFeesOnBehalf}
           onValueChange={(value) => onSelectChange("payFeesOnBehalf", value)}
@@ -84,7 +84,7 @@ export default function FinancialSection({
 
       {/* Payment Delay Period - standard terms plus a custom number of days */}
       <div className="space-y-2">
-        <Label htmlFor="paymentDelayPeriod">Payment Delay Period</Label>
+        <Label htmlFor="paymentDelayPeriod">Payment Delay Period *</Label>
         <Select
           value={formData.paymentDelayPeriod}
           onValueChange={(value) => onSelectChange("paymentDelayPeriod", value)}
