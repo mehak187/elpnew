@@ -138,6 +138,51 @@ const SECTIONS = [
   },
 ];
 
+/**
+ * A phone number and the country it belongs to.
+ *
+ * The dial code is a field of its own rather than something typed into the
+ * number, so a number can be dialled without guessing which country it is
+ * from - and so two people cannot write the same number two ways.
+ */
+function PhoneField({ id, label, placeholder, dialCode, onDialCode, value, onChange }) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="flex gap-2">
+        <Select
+          value={dialCode || DEFAULT_DIAL_CODE}
+          onValueChange={onDialCode}
+        >
+          <SelectTrigger className="w-24 shrink-0" aria-label="Country code">
+            {/* The trigger shows the code alone. The flag and country belong
+                in the list, where they are what you choose by; once chosen,
+                the code is the only part that is dialled. */}
+            <SelectValue>{dialCode || DEFAULT_DIAL_CODE}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {COUNTRY_DIAL_CODES.map((country) => (
+              <SelectItem key={country.code} value={country.dial}>
+                {country.flag} {country.dial}
+                {/* Dimmed by opacity, not by a fixed grey: the row turns navy
+                    on hover, and a grey that reads on white vanishes on it. */}
+                <span className="opacity-70"> {country.name}</span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Input
+          id={id}
+          className="flex-1"
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+        />
+      </div>
+    </div>
+  );
+}
+
 /** A labelled field with its own icon sitting inside the box. */
 function IconField({ icon, id, label, ...props }) {
   const Icon = icon;
@@ -201,10 +246,12 @@ const emptyFormData = {
 
 
 
+  dialCode: DEFAULT_DIAL_CODE,
   phone: "",
   email: "",
   address: "",
   emergencyName: "",
+  emergencyDialCode: DEFAULT_DIAL_CODE,
   emergencyPhone: "",
 };
 
@@ -850,14 +897,14 @@ export default function EmployeeForm() {
                     </p>
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
-                      <IconField
-                        icon={Phone}
+                      <PhoneField
                         id="phone"
-                        name="phone"
                         label="Phone Number *"
                         placeholder="Enter phone number"
+                        dialCode={formData.dialCode}
+                        onDialCode={(value) => set("dialCode", value)}
                         value={formData.phone}
-                        onChange={onChange}
+                        onChange={(e) => set("phone", e.target.value)}
                       />
 
                       <IconField
@@ -892,16 +939,25 @@ export default function EmployeeForm() {
                         onChange={onChange}
                       />
 
-                      <IconField
-                        icon={Phone}
+                      <PhoneField
                         id="emergencyPhone"
-                        name="emergencyPhone"
                         label="Emergency Contact Phone Number *"
                         placeholder="Enter emergency contact phone number"
+                        dialCode={formData.emergencyDialCode}
+                        onDialCode={(value) => set("emergencyDialCode", value)}
                         value={formData.emergencyPhone}
-                        onChange={onChange}
+                        onChange={(e) => set("emergencyPhone", e.target.value)}
                       />
                     </div>
+
+                    <p className="flex items-start gap-2 rounded-lg border border-primary/30 bg-secondary p-4 text-sm text-primary">
+                      <Info className="mt-0.5 h-4 w-4 shrink-0" />
+                      <span>
+                        <span className="font-semibold">Note: </span>
+                        Please provide accurate contact details to ensure
+                        effective communication in case of emergencies.
+                      </span>
+                    </p>
                   </div>
                 )}
 
