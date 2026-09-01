@@ -419,7 +419,10 @@ export default function EmployeeForm() {
           </CardContent>
         </Card>
 
-        <div className="w-full flex-1">
+        {/* min-w-0 or the column will not shrink: a flex child sizes itself to
+            its widest content by default, so one wide table in here would
+            stretch the whole page and push the sidebar off screen. */}
+        <div className="w-full min-w-0 flex-1">
           <Card>
             <CardContent className="p-4 sm:p-6">
               <div className="mb-6 flex items-center gap-3 border-b pb-3">

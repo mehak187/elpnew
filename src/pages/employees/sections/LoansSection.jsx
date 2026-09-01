@@ -24,7 +24,6 @@ import {
   schedule,
   amount,
   formatDate,
-  period,
   SOURCE_SHORT,
 } from "../loanData";
 
@@ -65,6 +64,21 @@ function Step({ number, title }) {
 /** The note under a field that says where its figure came from. */
 function Hint({ children }) {
   return <p className="text-xs text-muted-foreground">{children}</p>;
+}
+
+/**
+ * One figure on the loans list, kept whole.
+ *
+ * The label and its number never separate; the bar that follows sits inside
+ * the same unbreakable piece, so a line break lands between figures.
+ */
+function Money({ label, children, last }) {
+  return (
+    <span className="inline-block whitespace-nowrap">
+      <span className="font-semibold">{label}</span> {children}
+      {!last && <span className="px-2 text-muted-foreground">|</span>}
+    </span>
+  );
 }
 
 /** A worked-out figure, shown rather than asked for. */
@@ -424,25 +438,30 @@ export default function LoansSection() {
               <table className="w-full min-w-[1280px] border text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
-                    <th className="p-3 font-semibold">No.</th>
-                    <th className="p-3 font-semibold">Payment Date</th>
-                    <th className="p-3 font-semibold">
+                    {/* Six columns, because eight will not fit: the date
+                        already carries the month and year, and the proof
+                        belongs with the payment it evidences. */}
+                    <th className="p-3 font-semibold" style={{ width: "5%" }}>
+                      No.
+                    </th>
+                    <th className="whitespace-nowrap p-3 font-semibold" style={{ width: "11%" }}>
+                      Payment Date
+                    </th>
+                    <th className="p-3 font-semibold" style={{ width: "18%" }}>
                       Expense Type
                       <span className="block font-normal">
                         Category / Subcategory
                       </span>
                     </th>
-                    <th className="p-3 font-semibold">Month / Year</th>
-                    <th className="p-3 font-semibold">Payment Method</th>
-                    {/* The money and the schedule read as one story, so they
-                        are told in one column rather than side by side. */}
-                    <th className="p-3 font-semibold" style={{ width: "32%" }}>
+                    <th className="p-3 font-semibold" style={{ width: "30%" }}>
                       Financial Details (<Rial />)
                     </th>
-                    <th className="whitespace-nowrap p-3 font-semibold">
-                      Transfer Proof
+                    <th className="p-3 font-semibold" style={{ width: "20%" }}>
+                      Payment Method
                     </th>
-                    <th className="p-3 font-semibold">Notes</th>
+                    <th className="p-3 font-semibold" style={{ width: "16%" }}>
+                      Notes
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -468,48 +487,48 @@ export default function LoansSection() {
                             {record.category} / {record.subcategory}
                           </span>
                         </td>
-                        <td className="whitespace-nowrap p-3 align-top">
-                          {period(record.paymentDate)}
+                        <td className="p-3 align-top">
+                          {/* Each figure is one unbreakable piece, so a narrow
+                              column wraps between them rather than stranding a
+                              number on its own line. */}
+                          <span className="block">
+                            <Money label="Outstanding:">
+                              {amount(record.outstanding)}
+                            </Money>
+                            <Money label="New Amount:">
+                              {amount(record.newAmount)}
+                            </Money>
+                            <Money label="Total Loan:" last>
+                              {amount(loanTotal)}
+                            </Money>
+                          </span>
+                          <span className="mt-1 block text-muted-foreground">
+                            <Money label="Monthly:">
+                              {amount(plan.installment)}
+                            </Money>
+                            <Money label="Last:">{amount(plan.last)}</Money>
+                            <Money label="Months:" last>{plan.months}</Money>
+                          </span>
                         </td>
                         <td className="p-3 align-top">
-                          <span className="block">{record.method}</span>
+                          <span className="block whitespace-nowrap">
+                            {record.method}
+                          </span>
                           {record.bank && (
-                            <span className="block text-muted-foreground">
+                            <span className="block whitespace-nowrap text-muted-foreground">
                               ({SOURCE_SHORT[record.bank] || record.bank})
                             </span>
                           )}
-                        </td>
-                        <td className="p-3 align-top">
-                          <span className="block">
-                            <span className="font-semibold">Outstanding:</span>{" "}
-                            {amount(record.outstanding)}
-                            <span className="px-2 text-muted-foreground">|</span>
-                            <span className="font-semibold">New Amount:</span>{" "}
-                            {amount(record.newAmount)}
-                            <span className="px-2 text-muted-foreground">|</span>
-                            <span className="font-semibold">Total Loan:</span>{" "}
-                            {amount(loanTotal)}
-                          </span>
-                          <span className="mt-1 block text-muted-foreground">
-                            <span className="font-semibold">Monthly:</span>{" "}
-                            {amount(plan.installment)}
-                            <span className="px-2">|</span>
-                            <span className="font-semibold">Last:</span>{" "}
-                            {amount(plan.last)}
-                            <span className="px-2">|</span>
-                            <span className="font-semibold">Months:</span>{" "}
-                            {plan.months}
-                          </span>
-                        </td>
-                        <td className="p-3 align-top">
-                          <button
-                            type="button"
-                            onClick={() => openProof(record)}
-                            className="inline-flex items-center gap-1.5 rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
-                          >
-                            <FileText className="h-4 w-4 shrink-0 text-red-600" />
-                            {record.proof}
-                          </button>
+                          {record.proof && (
+                            <button
+                              type="button"
+                              onClick={() => openProof(record)}
+                              className="mt-1 inline-flex items-center gap-1.5 rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                            >
+                              <FileText className="h-4 w-4 shrink-0 text-red-600" />
+                              <span className="truncate">{record.proof}</span>
+                            </button>
+                          )}
                         </td>
                         <td className="p-3 align-top text-muted-foreground">
                           {record.notes || "-"}
