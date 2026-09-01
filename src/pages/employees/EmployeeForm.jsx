@@ -97,9 +97,10 @@ const SECTIONS = [
     key: "salaries",
     label: "Salaries / Allowances",
     icon: Wallet,
-    note: "Manage employee salaries, allowances, and other payments",
-    // The payment form saves itself, so the header offers to jump to it.
-    action: "Add Salary / Allowance",
+    title: "Salary",
+    note: "Manage monthly salaries for employees",
+    // The payslip saves itself, so the header offers to jump to it.
+    action: "Add Salary / Bonus",
   },
   {
     key: "loans",
@@ -212,7 +213,7 @@ const NOTES_LIMIT = 300;
 
 /** The first field of the form a section's header button jumps to. */
 const JUMP_TARGET = {
-  salaries: "salary-expense-type",
+  salaries: "salary-basic",
   loans: "loan-expense-type",
   assistance: "assistance-expense-type",
 };
@@ -326,7 +327,7 @@ export default function EmployeeForm() {
   // top of the screen rather than pretending to save from up here.
   const jumpToForm = () => {
     const field = window.document.getElementById(
-      JUMP_TARGET[activeSection] || "salary-expense-type"
+      JUMP_TARGET[activeSection] || "salary-basic"
     );
     if (!field) return;
     field.scrollIntoView({ behavior: "smooth", block: "center" });
