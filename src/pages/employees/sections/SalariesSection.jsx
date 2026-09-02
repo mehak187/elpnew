@@ -125,6 +125,22 @@ function Amount({ id, label, required, value, onChange, readOnly, highlight }) {
   );
 }
 
+/**
+ * One line of a payslip in the history: what it is, then how much.
+ *
+ * `tone` colours the amount and never the label, so a row can be scanned
+ * down the left for what is being read and across for whether it went out
+ * (red) or is what is left (green).
+ */
+function PayLine({ label, tone, className, children }) {
+  return (
+    <span className={cn("block leading-relaxed", className)}>
+      <span className="font-semibold">{label}</span>{" "}
+      <span className={cn("font-semibold", tone)}>{children}</span>
+    </span>
+  );
+}
+
 /** A settled figure inside the payment form's summary. */
 function Figure({ label, value }) {
   return (
@@ -662,30 +678,37 @@ export default function SalariesSection({ employee, adding, onCloseAdd, onSave }
                         {period(record)}
                       </td>
                       <td className="p-3 align-top">
+                        {/* One figure per line. Colour is carried by the
+                            number alone: the labels stay black so the eye
+                            reads down the words and across to the money. */}
                         {record.amount == null ? (
-                          <span className="block">
-                            <span className="font-semibold">Basic Salary:</span>{" "}
-                            {amount(record.basic)}
-                            <span className="px-2 text-muted-foreground">|</span>
-                            <span className="font-semibold">Allowances:</span>{" "}
-                            {amount(record.allowances)}
-                            <span className="px-2 text-muted-foreground">|</span>
-                            <span className="font-semibold">Deductions:</span>{" "}
-                            {amount(record.deductions)}
-                          </span>
+                          <>
+                            <PayLine label="Basic Salary:">
+                              {amount(record.basic)}
+                            </PayLine>
+                            <PayLine label="Allowances:">
+                              {amount(record.allowances)}
+                            </PayLine>
+                            <PayLine label="Deductions:" tone="text-red-600">
+                              {amount(record.deductions)}
+                            </PayLine>
+                          </>
                         ) : (
                           record.periodFrom && (
-                            <span className="block">
-                              <span className="font-semibold">Period:</span>{" "}
+                            <PayLine label="Period:">
                               {formatDate(record.periodFrom)} -{" "}
                               {formatDate(record.periodTo)}
-                            </span>
+                            </PayLine>
                           )
                         )}
                         {/* The one figure that actually left the account */}
-                        <span className="mt-1 block font-semibold text-green-700">
-                          Net Amount: {amount(netAmount(record))}
-                        </span>
+                        <PayLine
+                          label="Net Amount:"
+                          tone="text-green-700"
+                          className="mt-1"
+                        >
+                          {amount(netAmount(record))}
+                        </PayLine>
                       </td>
                       <td className="p-3 align-top">
                         <span className="block">{record.method}</span>
