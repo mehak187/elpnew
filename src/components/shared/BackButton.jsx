@@ -30,6 +30,8 @@ export default function BackButton({
     );
   }
 
+  // The arrow alone. The word is still carried in the tooltip and read out to
+  // screen readers, so nothing is lost for anyone who needs it spelled out.
   return (
     <Button
       variant="ghost"

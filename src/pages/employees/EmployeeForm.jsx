@@ -259,8 +259,30 @@ const emptyFormData = {
   emergencyPhone: "",
 };
 
+/**
+ * An employee record as the form reads it.
+ *
+ * The record calls the two names `name` and `nameAr`, because that is what
+ * a list of employees needs; the form calls them English and Arabic full
+ * names, because that is what somebody filling it in is being asked for.
+ * The two are mapped here rather than renamed on either side.
+ */
 const toFormData = (record) =>
-  record ? { ...emptyFormData, ...record } : emptyFormData;
+  record
+    ? {
+        ...emptyFormData,
+        ...record,
+        employeeName: record.name || "",
+        arabicName: record.nameAr || "",
+      }
+    : emptyFormData;
+
+/** And back again, so what is saved is what the list reads. */
+const toRecord = (formData) => ({
+  ...formData,
+  name: formData.employeeName,
+  nameAr: formData.arabicName,
+});
 
 export default function EmployeeForm() {
   const navigate = useNavigate();
@@ -325,6 +347,11 @@ export default function EmployeeForm() {
   const set = (name, value) => setFormData((prev) => ({ ...prev, [name]: value }));
   const onChange = (e) => set(e.target.name, e.target.value);
 
+  // A new employee has one side to it: the basic information. Everything
+  // else - documents, salary, loans - is filed against an employee, and there
+  // is no employee to file it against until this form is saved.
+  const sections = isEditMode ? SECTIONS : SECTIONS.slice(0, 1);
+
   const current = SECTIONS.find((s) => s.key === activeSection) || SECTIONS[0];
   const employeeNo = record?.empNo || nextEmployeeNo(employeeRecords);
   const hasLeft = HAS_LEFT.includes(formData.status);
@@ -343,7 +370,7 @@ export default function EmployeeForm() {
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log(isEditMode ? "Updating employee:" : "Creating employee:", {
-      ...formData,
+      ...toRecord(formData),
       empNo: employeeNo,
     });
     navigate("/employees");
@@ -393,7 +420,7 @@ export default function EmployeeForm() {
               Employee Details
             </p>
             <nav className="flex flex-row gap-1 overflow-x-auto lg:flex-col">
-              {SECTIONS.map((section) => {
+              {sections.map((section) => {
                 const Icon = section.icon;
                 return (
                   <button
@@ -429,17 +456,21 @@ export default function EmployeeForm() {
                 <h2 className="text-base font-semibold text-primary">
                   {current.label}
                 </h2>
-                {/* Standing travels with the record, whichever side is open */}
-                <span className="inline-flex items-center gap-1.5 text-sm">
-                  {formData.status}
-                  <span
-                    aria-hidden="true"
-                    className={cn(
-                      "h-2 w-2 rounded-full",
-                      STATUS_DOT[formData.status] || "bg-muted-foreground"
-                    )}
-                  />
-                </span>
+                {/* Standing travels with the record, whichever side is open -
+                    but only once there is a record. A new employee has not
+                    been created yet, so there is nothing to be Active. */}
+                {isEditMode && (
+                  <span className="inline-flex items-center gap-1.5 text-sm">
+                    {formData.status}
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        "h-2 w-2 rounded-full",
+                        STATUS_DOT[formData.status] || "bg-muted-foreground"
+                      )}
+                    />
+                  </span>
+                )}
               </div>
 
               <form id="employee-form" onSubmit={handleSubmit}>
