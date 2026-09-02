@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
 import LanguageProvider from "@/lib/language/LanguageProvider";
+import CircularsProvider from "@/lib/circulars/CircularsProvider";
+import CircularGate from "@/components/layout/CircularGate";
 import FirmProvider from "@/lib/firm/FirmProvider";
 import ExpensesProvider from "@/lib/expenses/ExpensesProvider";
 import SuppliersProvider from "@/lib/suppliers/SuppliersProvider";
@@ -58,6 +60,10 @@ import Execution from "@/pages/litigation/Execution";
 function App() {
   return (
     <LanguageProvider>
+    <CircularsProvider>
+      {/* Nothing can be done until every circular addressed to the signed-in
+          person has been acknowledged. */}
+      <CircularGate />
     <FirmProvider>
       <ExpensesProvider>
         <SuppliersProvider>
@@ -148,6 +154,7 @@ function App() {
         </SuppliersProvider>
       </ExpensesProvider>
     </FirmProvider>
+    </CircularsProvider>
     </LanguageProvider>
   );
 }

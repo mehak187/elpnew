@@ -27,7 +27,12 @@ export const money = (amount) =>
 
 export { changePercent } from "@/lib/metrics";
 
-export const CURRENT_USER = { name: "Mohammed Al Yahyaei", role: "admin" };
+// `group` is what circulars are addressed to - see lib/circulars.
+export const CURRENT_USER = {
+  name: "Mohammed Al Yahyaei",
+  role: "admin",
+  group: "Administration",
+};
 
 /* ---------------------------------------------------------------- summary */
 

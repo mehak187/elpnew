@@ -82,6 +82,7 @@ export const DOCUMENT_TYPES = [
   "Membership Certificate",
   "Office Lease Contract",
   "Apartment Lease Contract",
+  "Work Rules",
   "Other",
 ];
 

@@ -192,11 +192,18 @@ export const subcategoriesOf = (type, category) =>
 /**
  * Payments whose amount is not the monthly salary.
  *
- * A bonus and an end-of-service settlement are worked out elsewhere, so their
- * figure is entered rather than read off the payslip - and the payslip summary
- * is not shown, because it would be describing a different payment.
+ * A bonus, overtime, a commission, leave pay and an end-of-service settlement
+ * are all worked out elsewhere, so the figure is entered rather than read off
+ * the payslip - and the payslip summary is not shown, because it would be
+ * describing a different payment. Nothing is asked for but the amount.
  */
-export const ENTERED_AMOUNT = ["Bonus", "End of Service Benefit"];
+export const ENTERED_AMOUNT = [
+  "Bonus",
+  "Overtime",
+  "Commission",
+  "Leave Salary",
+  "End of Service Benefit",
+];
 
 /** Payments that cover a span of service rather than one month. */
 export const WITH_PERIOD = ["End of Service Benefit"];
