@@ -107,50 +107,16 @@ const accountLabel = (account, branches) =>
   account.accountNumber + " - " + branchLabel(branches, account.branchId);
 
 /**
- * Picks the artwork a bank is drawn by.
+ * Reads a picked logo into the record itself.
  *
- * The file is read into the record itself rather than left as a reference to
- * a file on disk, so the mark travels with the account and does not go blank
- * the moment the page is reloaded.
+ * The file travels with the account rather than as a reference to somebody's
+ * disk, so the mark does not go blank the moment the page is reloaded.
  */
-function BankLogoField({ logo, bankName, onPick }) {
-  const read = (file) => {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => onPick(String(reader.result));
-    reader.readAsDataURL(file);
-  };
-
-  return (
-    <div className="flex items-center gap-2">
-      <BankMark bank={{ bankName, logo }} />
-      {logo ? (
-        <Button
-          type="button"
-          variant="outline"
-          className="flex-1 border-green-600 text-green-600 hover:text-destructive"
-          title="Click to remove"
-          onClick={() => onPick("")}
-        >
-          <FileCheck className="mr-2 h-4 w-4 shrink-0" />
-          Logo attached
-        </Button>
-      ) : (
-        <Button type="button" variant="outline" className="flex-1" asChild>
-          <label className="cursor-pointer">
-            <Upload className="mr-2 h-4 w-4" />
-            Upload Logo
-            <Input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => read(e.target.files[0])}
-            />
-          </label>
-        </Button>
-      )}
-    </div>
-  );
+function readLogo(file, set) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => set("logo", String(reader.result));
+  reader.readAsDataURL(file);
 }
 
 /** The fields a bank account is made of. */
@@ -159,21 +125,62 @@ function BankFields({ draft, set }) {
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <div className="space-y-2">
         <FieldLabel htmlFor="bankName">Bank Name</FieldLabel>
-        <Select
-          value={draft.bankName}
-          onValueChange={(value) => set("bankName", value)}
-        >
-          <SelectTrigger id="bankName">
-            <SelectValue placeholder="Select Bank" />
-          </SelectTrigger>
-          <SelectContent>
-            {RECEIVING_BANKS.map((bank) => (
-              <SelectItem key={bank} value={bank}>
-                {bank}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <Select
+            value={draft.bankName}
+            onValueChange={(value) => set("bankName", value)}
+          >
+            <SelectTrigger id="bankName">
+              <SelectValue placeholder="Select Bank" />
+            </SelectTrigger>
+            <SelectContent>
+              {RECEIVING_BANKS.map((bank) => (
+                <SelectItem key={bank} value={bank}>
+                  {bank}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {/* Beside the bank it belongs to, not in a field of its own: the
+              logo describes the bank name, so it sits with it. */}
+          {draft.logo ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="shrink-0 overflow-hidden border-green-600 p-1 hover:border-destructive"
+              title="Bank logo attached - click to remove"
+              onClick={() => set("logo", "")}
+            >
+              <img
+                src={draft.logo}
+                alt=""
+                className="h-full w-full object-contain"
+              />
+              <span className="sr-only">Logo attached. Remove it.</span>
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="shrink-0"
+              title="Upload bank logo"
+              asChild
+            >
+              <label className="cursor-pointer">
+                <Upload className="h-4 w-4" />
+                <span className="sr-only">Upload bank logo</span>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => readLogo(e.target.files[0], set)}
+                />
+              </label>
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -271,18 +278,6 @@ function BankFields({ draft, set }) {
             <SelectItem value="Inactive">Inactive</SelectItem>
           </SelectContent>
         </Select>
-      </div>
-
-      {/* The one field that is not required: without artwork the card falls
-          back to the bank's initials, which is a worse mark but never a
-          missing one. */}
-      <div className="space-y-2">
-        <Label>Bank Logo</Label>
-        <BankLogoField
-          logo={draft.logo}
-          bankName={draft.bankName || "Bank"}
-          onPick={(value) => set("logo", value)}
-        />
       </div>
     </div>
   );

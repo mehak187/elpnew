@@ -17,7 +17,7 @@ import { EmptyState } from "@/components/shared/panels";
 import { Save, Landmark, Upload, FileCheck } from "lucide-react";
 import { RECEIVING_BANKS, BANK_BRANCHES, ACCOUNT_TYPES } from "@/lib/constants";
 import { useFirm } from "@/lib/firm/context";
-import { accountBalance, bankInitials, invoices, money } from "./firmData";
+import { accountBalance, invoices, money } from "./firmData";
 
 /** A required field, with the mark that says so. */
 function FieldLabel({ htmlFor, optional, children }) {
@@ -156,25 +156,66 @@ export default function BankEdit() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-2">
                 <FieldLabel htmlFor="bankName">Bank Name</FieldLabel>
-                <Select
-                  value={draft.bankName}
-                  onValueChange={(value) => set("bankName", value)}
-                >
-                  <SelectTrigger id="bankName">
-                    <SelectValue placeholder="Select Bank" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {/* The bank already on the account is offered even if it is
+                <div className="flex gap-2">
+                  <Select
+                    value={draft.bankName}
+                    onValueChange={(value) => set("bankName", value)}
+                  >
+                    <SelectTrigger id="bankName">
+                      <SelectValue placeholder="Select Bank" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {/* The bank already on the account is offered even if it is
                         not one of the standing choices. */}
-                    {[...new Set([draft.bankName, ...RECEIVING_BANKS])]
-                      .filter(Boolean)
-                      .map((bank) => (
-                        <SelectItem key={bank} value={bank}>
-                          {bank}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+                      {[...new Set([draft.bankName, ...RECEIVING_BANKS])]
+                        .filter(Boolean)
+                        .map((bank) => (
+                          <SelectItem key={bank} value={bank}>
+                            {bank}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  {/* Beside the bank it belongs to, not in a field of its own: the
+                logo describes the bank name, so it sits with it. */}
+                  {draft.logo ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="shrink-0 overflow-hidden border-green-600 p-1 hover:border-destructive"
+                      title="Bank logo attached - click to remove"
+                      onClick={() => set("logo", "")}
+                    >
+                      <img
+                        src={draft.logo}
+                        alt=""
+                        className="h-full w-full object-contain"
+                      />
+                      <span className="sr-only">Logo attached. Remove it.</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="shrink-0"
+                      title="Upload bank logo"
+                      asChild
+                    >
+                      <label className="cursor-pointer">
+                        <Upload className="h-4 w-4" />
+                        <span className="sr-only">Upload bank logo</span>
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => readLogo(e.target.files[0])}
+                        />
+                      </label>
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -220,55 +261,6 @@ export default function BankEdit() {
                   onChange={(e) => set("location", e.target.value)}
                   placeholder="Muscat, Oman"
                 />
-              </div>
-
-              {/* Optional: without artwork the card falls back to the bank's
-                  initials, which is a worse mark but never a missing one. */}
-              <div className="space-y-2">
-                <Label>Bank Logo</Label>
-                <div className="flex items-center gap-2">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-secondary text-xs font-bold text-primary">
-                    {draft.logo ? (
-                      <img
-                        src={draft.logo}
-                        alt=""
-                        className="h-full w-full object-contain"
-                      />
-                    ) : (
-                      bankInitials(draft.bankName || "Bank")
-                    )}
-                  </span>
-                  {draft.logo ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="flex-1 border-green-600 text-green-600 hover:text-destructive"
-                      title="Click to remove"
-                      onClick={() => set("logo", "")}
-                    >
-                      <FileCheck className="mr-2 h-4 w-4 shrink-0" />
-                      Logo attached
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="flex-1"
-                      asChild
-                    >
-                      <label className="cursor-pointer">
-                        <Upload className="mr-2 h-4 w-4" />
-                        Upload Logo
-                        <Input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => readLogo(e.target.files[0])}
-                        />
-                      </label>
-                    </Button>
-                  )}
-                </div>
               </div>
             </div>
           </div>
@@ -340,7 +332,9 @@ export default function BankEdit() {
               </div>
 
               <div className="space-y-2">
-                <FieldLabel htmlFor="openingBalance">Opening Balance</FieldLabel>
+                <FieldLabel htmlFor="openingBalance">
+                  Opening Balance
+                </FieldLabel>
                 <Input
                   id="openingBalance"
                   type="number"
