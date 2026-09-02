@@ -19,6 +19,7 @@ import {
   Network,
   Landmark,
   Info,
+  Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -34,6 +35,7 @@ import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 import OverviewSection from "./sections/OverviewSection";
 import FirmInformationSection from "./sections/FirmInformationSection";
 import DocumentsSection from "./sections/DocumentsSection";
+import CircularsSection from "./sections/CircularsSection";
 import BranchesSection from "./sections/BranchesSection";
 import BankAccountsSection from "./sections/BankAccountsSection";
 import TransactionsSection from "./sections/TransactionsSection";
@@ -68,6 +70,12 @@ const SECTIONS = [
     label: "Documents",
     icon: FileText,
     note: "Licences, certificates and reports on file",
+  },
+  {
+    key: "circulars",
+    label: "Circulars",
+    icon: Megaphone,
+    note: "Notices everyone must read before using the system",
   },
   {
     key: "overview",
@@ -247,6 +255,9 @@ export default function LawFirmProfile() {
               )}
               {activeSection === "documents" && (
                 <DocumentsSection canEdit={canEditDocuments} />
+              )}
+              {activeSection === "circulars" && (
+                <CircularsSection canEdit={isAdmin} />
               )}
               {activeSection === "branches" && (
                 <BranchesSection canEdit={isAdmin} />
