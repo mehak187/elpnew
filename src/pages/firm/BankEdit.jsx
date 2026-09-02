@@ -126,7 +126,7 @@ export default function BankEdit() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex items-center gap-3">
         <div className="flex items-center gap-3">
           <BackButton fallback="/settings/firm" />
           <div className="rounded-xl bg-primary p-2 sm:p-3">
@@ -141,10 +141,6 @@ export default function BankEdit() {
             </p>
           </div>
         </div>
-        <Button onClick={save} disabled={!canSave}>
-          <Save className="mr-2 h-4 w-4" />
-          Save Changes
-        </Button>
       </div>
 
       <Card>
