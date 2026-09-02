@@ -223,7 +223,9 @@ export default function SalariesSection({ employee, adding, onCloseAdd, onSave }
   // The button names what is being saved. A bonus is not a salary, and saying
   // so is the last chance to notice the wrong subcategory before it is booked.
   const saveLabel =
-    payment.subcategory === "Bonus" ? "Save Bonus" : "Save Salary / Bonus";
+    entersOwnAmount && !showsPeriod
+      ? "Save " + payment.subcategory
+      : "Save Salary / Bonus";
 
   const savePayslip = () => {
     if (!(Number(payslip.basic) > 0)) return;
