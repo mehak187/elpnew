@@ -139,54 +139,65 @@ export default function InvoicesSection() {
 
   return (
     <div className="space-y-6">
-      {/* Each box is also the filter for the table below it */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
-        {VIEWS.map((option) => {
-          const matching = clientInvoices.filter(option.match);
-          const total = matching.reduce((sum, i) => sum + i.amount, 0);
-          const selected = view === option.key;
+      {/* One strip rather than six boxes: these are five readings of the
+          same set of invoices plus the date that matters most, so they read
+          across as one line. Each cell is also the filter for the table
+          below it, and the selected one is underlined. */}
+      <Card>
+        <CardContent className="grid grid-cols-1 divide-y p-0 sm:grid-cols-2 sm:divide-x lg:grid-cols-6 lg:divide-y-0">
+          {VIEWS.map((option) => {
+            const matching = clientInvoices.filter(option.match);
+            const total = matching.reduce((sum, i) => sum + i.amount, 0);
+            const selected = view === option.key;
 
-          return (
-            <button
-              key={option.key}
-              type="button"
-              onClick={() => {
-                setView(option.key);
-                setCurrentPage(1);
-              }}
-              className={cn(
-                "rounded-lg border p-4 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-ring",
-                selected ? "border-primary bg-secondary" : "hover:bg-muted/50"
-              )}
-            >
-              <p className="text-xs text-muted-foreground">{option.label}</p>
-              <p className={cn("mt-1 text-2xl font-bold", option.tone)}>
-                {matching.length}
-              </p>
-              <p className="mt-1 text-sm font-medium">{money(total)}</p>
-            </button>
-          );
-        })}
+            return (
+              <button
+                key={option.key}
+                type="button"
+                onClick={() => {
+                  setView(option.key);
+                  setCurrentPage(1);
+                }}
+                className="relative px-4 py-3 text-left transition-colors hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-ring"
+              >
+                {/* The count belongs to the name - it says how many of
+                    these there are, not a figure of its own. */}
+                <p className={cn("text-sm font-semibold", option.tone)}>
+                  {option.label} ({matching.length})
+                </p>
+                <p className="mt-1 text-lg font-bold">{money(total)}</p>
+                {selected && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-primary"
+                  />
+                )}
+              </button>
+            );
+          })}
 
-        {/* A date rather than a count, so it opens what is owed instead of
-            filtering to itself. */}
-        <button
-          type="button"
-          onClick={() => {
-            setView("unpaid");
-            setCurrentPage(1);
-          }}
-          className="rounded-lg border p-4 text-left transition-colors hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <p className="text-xs text-muted-foreground">
-            Oldest Unpaid Invoice Date
-          </p>
-          <p className="mt-1 text-lg font-bold text-amber-600">
-            {oldestDue ? formatDate(oldestDue) : "-"}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">Earliest due date</p>
-        </button>
-      </div>
+          {/* A date rather than a count, so it opens what is owed instead
+              of filtering to itself. */}
+          <button
+            type="button"
+            onClick={() => {
+              setView("unpaid");
+              setCurrentPage(1);
+            }}
+            className="px-4 py-3 text-left transition-colors hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-ring"
+          >
+            <p className="text-xs text-muted-foreground">
+              Oldest Unpaid Invoice Date
+            </p>
+            <p className="mt-1 text-base font-bold text-amber-600">
+              {oldestDue ? formatDate(oldestDue) : "-"}
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Earliest due date
+            </p>
+          </button>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent className="p-4 sm:p-6">
