@@ -61,7 +61,7 @@ const SECTIONS = [
   },
   { key: "cases", label: "Cases", existingOnly: true },
   { key: "documents", label: "Documents", existingOnly: true },
-  { key: "management", label: "Client Management", existingOnly: true },
+  { key: "management", label: "Client Team", existingOnly: true },
   {
     key: "financial",
     label: "Financial Details",
