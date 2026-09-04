@@ -8,14 +8,14 @@ const ALL_STAGES = "all";
 const CLOSED = "closed";
 
 /**
- * The boxes above the table, in the order a case moves through them.
+ * The tabs above the table, in the order a case moves through them.
  *
- * `matches` is what each box counts and filters by. Closed is last and cuts
+ * `matches` is what each tab counts and filters by. Closed is last and cuts
  * across the rest: a case that has finished still belongs to the level it
  * ended at, so it is counted in both places on purpose.
  */
 const STAGES = [
-  { key: ALL_STAGES, label: "All Stages", matches: () => true },
+  { key: ALL_STAGES, label: "All Cases", matches: () => true },
   { key: "Primary", label: "Primary" },
   { key: "Appeal", label: "Appeal" },
   { key: "Supreme", label: "Supreme" },
@@ -29,9 +29,9 @@ const matcher = (stage) =>
 /**
  * The cases a client has running, counted by the stage they have reached.
  *
- * The boxes are the filter as well as the summary - the same pattern the bank
- * cards use on Company Profile - so the count and the list it stands for can
- * never disagree.
+ * The tabs are the filter as well as the summary - the same strip Company
+ * Profile uses for Bank Accounts - so the count and the list it stands for
+ * can never disagree.
  */
 export default function LinkedCasesSection() {
   const navigate = useNavigate();
@@ -105,25 +105,26 @@ export default function LinkedCasesSection() {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      {/* One compact strip rather than six large boxes: the stages are a
+          choice of what to list, and each carries its own count. */}
+      <div className="flex w-fit max-w-full flex-wrap gap-1 rounded-lg border p-1">
         {STAGES.map((option) => (
           <button
             key={option.key}
             type="button"
             onClick={() => choose(option.key)}
             className={cn(
-              "rounded-lg border p-4 text-left transition-colors",
+              "rounded-md px-3 py-2 text-sm font-medium transition-colors",
               stage === option.key
-                ? "border-primary bg-secondary"
-                : "hover:bg-muted/50"
+                ? "bg-secondary text-secondary-foreground"
+                : "text-muted-foreground hover:bg-muted/50"
             )}
           >
-            {/* Named first, counted below - the same way a bank card reads */}
-            <span className="block text-sm text-muted-foreground">
-              {option.label}
-            </span>
-            <span className="mt-2 block text-xl font-bold text-primary">
-              {clientLinkedCases.filter(matcher(option)).length}
+            {option.label}
+            {/* Dimmed rather than a second colour, so it reads as part of
+                the label on both the selected tab and the rest. */}
+            <span className="ml-1.5 opacity-70">
+              ({clientLinkedCases.filter(matcher(option)).length})
             </span>
           </button>
         ))}
