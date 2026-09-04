@@ -27,31 +27,30 @@ import MergeSection from "./sections/MergeSection";
 /**
  * Sections of the client record.
  *
- * `form` marks the three that edit the client itself and share one save button.
+ * `form` marks the page that edits the client itself, whose three boxes share
  * `existingOnly` hides the sections that need a saved client behind them -
  * there are no documents, cases or invoices to show while one is being created.
- * `required` is a function so conditional fields (VATIN, custom payment days)
- * are only demanded when they actually apply.
+ * one save button. `required` is a function so conditional fields (VATIN,
+ * custom payment days) are only demanded when they actually apply.
  */
 const SECTIONS = [
   {
-    key: "basic",
-    label: "Basic Info",
+    key: "info",
+    label: "Client Information",
     form: true,
-    required: () => [
+    required: (formData, clientType) => [
       "arabicName",
       "englishName",
       "referenceNo",
       "referenceExpiryDate",
       "poaNo",
       "poaExpiryDate",
-    ],
-  },
-  {
-    key: "contact",
-    label: "Contact Details",
-    form: true,
-    required: () => [
+      ...(clientType !== "Individual" ? ["vatinNo"] : []),
+      "receivingBank",
+      "receivingAccount",
+      ...(formData.paymentDelayPeriod === "custom"
+        ? ["paymentDelayCustomDays"]
+        : []),
       "mobile",
       "email",
       "languageOfCommunication",
@@ -62,19 +61,6 @@ const SECTIONS = [
   { key: "cases", label: "Cases", existingOnly: true },
   { key: "documents", label: "Documents", existingOnly: true },
   { key: "management", label: "Client Team", existingOnly: true },
-  {
-    key: "financial",
-    label: "Financial Details",
-    form: true,
-    required: (formData, clientType) => [
-      ...(clientType !== "Individual" ? ["vatinNo"] : []),
-      "receivingBank",
-      "receivingAccount",
-      ...(formData.paymentDelayPeriod === "custom"
-        ? ["paymentDelayCustomDays"]
-        : []),
-    ],
-  },
   { key: "contracts", label: "Client Contracts", existingOnly: true },
   { key: "invoices", label: "Invoices", existingOnly: true },
   { key: "commission", label: "Commission", existingOnly: true },
@@ -82,6 +68,26 @@ const SECTIONS = [
   { key: "merge", label: "Merge Clients", existingOnly: true },
 ];
 
+
+/**
+ * One titled box on the Client Information page.
+ *
+ * The three boxes are separated by space rather than by a divider, so the
+ * page reads as three things about one client rather than one long form.
+ */
+function SectionCard({ title, aside, children }) {
+  return (
+    <Card>
+      <CardContent className="p-4 sm:p-6">
+        <div className="mb-6 flex items-center gap-4 border-b pb-3">
+          <h2 className="text-base font-semibold text-primary">{title}</h2>
+          {aside}
+        </div>
+        {children}
+      </CardContent>
+    </Card>
+  );
+}
 
 /** Today as a plain YYYY-MM-DD in the user's own timezone. */
 const todayIso = () => {
@@ -172,7 +178,7 @@ export default function ClientDetails() {
   const [statusOverride, setStatusOverride] = useState(
     () => record?.statusOverride || (record ? "auto" : "Active")
   );
-  const [activeSection, setActiveSection] = useState("basic");
+  const [activeSection, setActiveSection] = useState("info");
   const [formData, setFormData] = useState(() => toFormData(record));
 
   // Reload when the route moves to a different client without unmounting.
@@ -182,7 +188,7 @@ export default function ClientDetails() {
     setClientType(record?.type || "Individual");
     setStatusOverride(record?.statusOverride || (record ? "auto" : "Active"));
     setFormData(toFormData(record));
-    setActiveSection("basic");
+    setActiveSection("info");
   }
 
   const sections = SECTIONS.filter((s) => isExisting || !s.existingOnly);
@@ -331,74 +337,96 @@ export default function ClientDetails() {
           </CardContent>
         </Card>
 
-        <div className="w-full flex-1 space-y-4">
-          <Card>
-            <CardContent className="p-4 sm:p-6">
-              <div className="mb-6 flex items-center gap-4 border-b pb-3">
-                <h2 className="text-base font-semibold text-primary">
-                  {current.label}
-                </h2>
-                {activeSection === "basic" && isExisting && (
-                  <StatusDot status={status} isGood={status === "Active"} />
-                )}
-                {/* Live cases still open, which is what File Status is about */}
-                {activeSection === "analytics" && (
-                  <span className="text-base font-bold text-primary">
-                    {activeCaseCount}
-                  </span>
-                )}
-              </div>
+        <div className="w-full min-w-0 flex-1 space-y-4 sm:space-y-6">
+          {current.form ? (
+            /* Three boxes, one form, one save button: everything that is the
+               client itself, on one page. */
+            <form
+              id="client-form"
+              onSubmit={handleSubmit}
+              className="space-y-4 sm:space-y-6"
+            >
+              <SectionCard
+                title="Basic Info"
+                aside={
+                  isExisting && (
+                    <StatusDot
+                      status={status}
+                      isGood={status === "Active"}
+                    />
+                  )
+                }
+              >
+                <BasicSection
+                  formData={formData}
+                  clientType={clientType}
+                  status={status}
+                  statusLocked={statusLocked}
+                  statusNote={statusNote}
+                  onChange={handleChange}
+                  onClientTypeChange={setClientType}
+                  onStatusChange={setStatusOverride}
+                  onFileChange={handleSelectChange}
+                />
+              </SectionCard>
 
-              {/* Editable sections share one form and one save button */}
-              <form id="client-form" onSubmit={handleSubmit}>
-                {activeSection === "basic" && (
-                  <BasicSection
-                    formData={formData}
-                    clientType={clientType}
-                    status={status}
-                    statusLocked={statusLocked}
-                    statusNote={statusNote}
-                    onChange={handleChange}
-                    onClientTypeChange={setClientType}
-                    onStatusChange={setStatusOverride}
-                    onFileChange={handleSelectChange}
-                  />
-                )}
-                {activeSection === "contact" && (
-                  <ContactSection
-                    formData={formData}
-                    onChange={handleChange}
-                    onSelectChange={handleSelectChange}
-                  />
-                )}
-                {activeSection === "financial" && (
-                  <FinancialSection
-                    formData={formData}
-                    clientType={clientType}
-                    onChange={handleChange}
-                    onSelectChange={handleSelectChange}
-                  />
-                )}
-              </form>
+              <SectionCard title="Financial Details">
+                <FinancialSection
+                  formData={formData}
+                  clientType={clientType}
+                  onChange={handleChange}
+                  onSelectChange={handleSelectChange}
+                />
+              </SectionCard>
 
-              {activeSection === "commission" && (
-                <CommissionSection clientNo={record?.clientNo} />
-              )}
-              {activeSection === "documents" && (
-                <DocumentsSection formData={formData} onChange={handleChange} />
-              )}
-              {activeSection === "contracts" && <ClientContractsSection />}
-              {activeSection === "cases" && <LinkedCasesSection />}
-              {activeSection === "invoices" && <InvoicesSection />}
-              {activeSection === "management" && record && (
-                <ClientManagementSection client={record} />
-              )}
-              {activeSection === "analytics" && <AnalyticsSection />}
-              {activeSection === "merge" && record && (
-                <MergeSection client={record} />
-              )}
-            </CardContent>
-          </Card>
+              {/* Communication Methods belongs to this box - it is how the
+                  client is contacted, not a subject of its own. */}
+              <SectionCard title="Contact Details">
+                <ContactSection
+                  formData={formData}
+                  onChange={handleChange}
+                  onSelectChange={handleSelectChange}
+                />
+              </SectionCard>
+            </form>
+          ) : (
+            <Card>
+              <CardContent className="p-4 sm:p-6">
+                <div className="mb-6 flex items-center gap-4 border-b pb-3">
+                  <h2 className="text-base font-semibold text-primary">
+                    {current.label}
+                  </h2>
+                  {/* Live cases still open, which is what File Status is
+                      about */}
+                  {activeSection === "analytics" && (
+                    <span className="text-base font-bold text-primary">
+                      {activeCaseCount}
+                    </span>
+                  )}
+                </div>
+
+                {activeSection === "commission" && (
+                  <CommissionSection clientNo={record?.clientNo} />
+                )}
+                {activeSection === "documents" && (
+                  <DocumentsSection
+                    formData={formData}
+                    onChange={handleChange}
+                  />
+                )}
+                {activeSection === "contracts" && <ClientContractsSection />}
+                {activeSection === "cases" && <LinkedCasesSection />}
+                {activeSection === "invoices" && <InvoicesSection />}
+                {activeSection === "management" && record && (
+                  <ClientManagementSection client={record} />
+                )}
+                {activeSection === "analytics" && <AnalyticsSection />}
+                {activeSection === "merge" && record && (
+                  <MergeSection client={record} />
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
