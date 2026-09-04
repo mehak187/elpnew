@@ -93,26 +93,24 @@ export default function InvoicesSection() {
 
   const columns = [
     {
-      key: "date",
-      header: "Date",
-      width: "14%",
+      // The invoice is the row, so its number leads - and carries its
+      // standing with it rather than in a column of its own.
+      key: "invoiceNo",
+      header: "Invoice No.",
+      width: "18%",
+      exportValue: (row) => row.invoiceNo + " (" + row.status + ")",
       render: (value, row) => (
         <div>
-          <span className="block">{value}</span>
+          <span className="block font-medium">{value}</span>
           <span className="mt-0.5 block text-xs font-medium">
             <StatusDot status={row.status} />
           </span>
         </div>
       ),
     },
-    {
-      key: "invoiceNo",
-      header: "Invoice No.",
-      width: "16%",
-      cellClassName: "font-medium",
-    },
+    { key: "date", header: "Invoice Date", width: "14%" },
     { key: "dueDate", header: "Due Date", width: "13%" },
-    { key: "details", header: "Details", width: "25%" },
+    { key: "details", header: "Details", width: "24%" },
     {
       key: "amount",
       header: "Invoice Amount",
@@ -131,7 +129,7 @@ export default function InvoicesSection() {
     {
       key: "notes",
       header: "Notes",
-      width: "17%",
+      width: "16%",
       render: (value) =>
         value || <span className="text-muted-foreground">-</span>,
     },
