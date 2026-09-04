@@ -13,35 +13,73 @@ import { clientDisplayName } from "./clientRecords";
 import { useClients } from "@/lib/clients/context";
 
 
-/** Has this date already passed? */
-const hasExpired = (date) => {
-  if (!date) return false;
+/** Papers are chased a month before they lapse, so that is the warning. */
+const EXPIRING_SOON_DAYS = 30;
+
+const DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * How long a document has left, as one of three states.
+ *
+ * A paper with no expiry date is not a fourth state - it simply says nothing,
+ * because there is nothing to say. Both the reference and the power of
+ * attorney are read the same way, so the rule lives here once.
+ */
+function expiryState(date) {
+  if (!date) return "none";
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  return new Date(date) < today;
-};
+  const days = Math.ceil((new Date(date) - today) / DAY);
+  if (days < 0) return "expired";
+  if (days <= EXPIRING_SOON_DAYS) return "soon";
+  return "valid";
+}
 
-/** A date, with a red dot beside it once it has expired. */
+/**
+ * A date and what it means, in the cell the date already lives in.
+ *
+ * The state is said in words as well as colour: red on its own tells anyone
+ * who cannot see it nothing at all, and tells everyone else only that
+ * something is wrong - not whether the paper has weeks left or has already
+ * lapsed.
+ */
 function ExpiryDate({ date }) {
-  if (!date) return <span className="text-xs text-muted-foreground">-</span>;
-  const expired = hasExpired(date);
+  const state = expiryState(date);
+  if (state === "none") return null;
+
   return (
-    <p
-      className={cn(
-        "flex items-center gap-1.5 text-xs",
-        expired ? "font-medium text-red-600" : "text-muted-foreground"
+    <p className="flex flex-wrap items-center gap-1.5 text-xs">
+      {/* Only an expired date is printed in red; a date with weeks left is
+          still a perfectly good date. */}
+      <span
+        className={cn(
+          state === "expired"
+            ? "font-medium text-red-600"
+            : "text-muted-foreground"
+        )}
+      >
+        {date}
+      </span>
+
+      {state === "soon" && (
+        <span
+          aria-hidden="true"
+          className="h-2 w-2 shrink-0 rounded-full bg-red-500"
+        />
       )}
-    >
-      {date}
-      {expired && (
-        <>
-          <span
-            aria-hidden="true"
-            className="h-2 w-2 shrink-0 rounded-full bg-red-500"
-          />
-          <span className="sr-only">Expired</span>
-        </>
-      )}
+
+      <span
+        className={cn(
+          "font-medium",
+          state === "valid" && "text-green-600",
+          state === "soon" && "text-red-600",
+          state === "expired" && "text-red-600"
+        )}
+      >
+        {state === "valid" && "Active"}
+        {state === "soon" && "Expiring Soon"}
+        {state === "expired" && "Expired"}
+      </span>
     </p>
   );
 }
@@ -117,7 +155,7 @@ export default function ClientsList() {
     },
     {
       key: "type",
-      header: "Type",
+      header: "Client Type",
       width: "12%"
     },
     {
