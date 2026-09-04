@@ -139,36 +139,42 @@ export default function ClientsList() {
     {
       key: "clientNo",
       header: "Client No.",
-      width: "10%",
+      width: "14%",
+      exportValue: (row) => row.clientNo + " (" + row.status + ")",
+      // Standing sits with the number rather than in a column of its own:
+      // it belongs to the client, not to a separate fact about them.
       render: (value, row) => (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate(`/clients/${row.id}`);
-          }}
-          className="font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring rounded"
-        >
-          {value}
-        </button>
-      )
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/clients/${row.id}`);
+            }}
+            className="rounded font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            {value}
+          </button>
+          <StatusDot status={row.status} isGood={row.status === "Active"} />
+        </div>
+      ),
     },
     {
       key: "type",
       header: "Client Type",
-      width: "12%"
+      width: "13%"
     },
     {
       key: "clientName",
       header: "Client Name",
-      width: "22%",
+      width: "25%",
       cellClassName: "font-medium",
     },
     {
       // Number, expiry and the attached copy read as one block per record.
       key: "referenceNo",
       header: "Reference No.",
-      width: "20%",
+      width: "24%",
       render: (value, row) => (
         <div className="space-y-1">
           <p>{value}</p>
@@ -180,7 +186,7 @@ export default function ClientsList() {
     {
       key: "poaNo",
       header: "POA No.",
-      width: "20%",
+      width: "24%",
       render: (value, row) => (
         <div className="space-y-1">
           <p>{value}</p>
@@ -188,12 +194,6 @@ export default function ClientsList() {
           <DocumentLink url={row.attachments?.poaCopy} />
         </div>
       ),
-    },
-    {
-      key: "status",
-      header: "Status",
-      width: "10%",
-      render: (value) => <StatusDot status={value} isGood={value === "Active"} />,
     },
   ];
 
