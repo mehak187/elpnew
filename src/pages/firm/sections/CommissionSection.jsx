@@ -310,7 +310,9 @@ export default function CommissionSection() {
       {adding && (
         <Card>
           <CardContent className="space-y-6 p-4 sm:p-6">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 sm:gap-6">
+            {/* Four to a row rather than six: at six the two long labels wrap
+                on to a second line and the fields stop lining up. */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
               {/* The group is asked for first, so the person list below it is
                   a handful of names rather than the whole firm. */}
               <div className="space-y-2">
