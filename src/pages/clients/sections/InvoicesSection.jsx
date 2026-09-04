@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import DataTable from "@/components/shared/DataTable";
+import SummaryStrip from "@/components/shared/SummaryStrip";
 import { cn } from "@/lib/utils";
 import { INVOICE_STATUS_DOT } from "@/lib/constants";
 import { withRial } from "@/lib/money";
@@ -137,10 +138,45 @@ export default function InvoicesSection() {
 
   return (
     <div className="space-y-6">
-      {/* One strip rather than six boxes: these are five readings of the
-          same set of invoices plus the date that matters most, so they read
-          across as one line. Each cell is also the filter for the table
-          below it, and the selected one is underlined. */}
+      {/* Each cell is also the filter for the table below it, so the
+          figure and the rows it stands for can never disagree. */}
+      <SummaryStrip
+        items={[
+          ...VIEWS.map((option) => {
+            const matching = clientInvoices.filter(option.match);
+            return {
+              key: option.key,
+              label: option.label,
+              count: matching.length,
+              tone: option.tone,
+              value: money(matching.reduce((sum, i) => sum + i.amount, 0)),
+              selected: view === option.key,
+              onClick: () => {
+                setView(option.key);
+                setCurrentPage(1);
+              },
+            };
+          }),
+          {
+            // A date rather than a count, so it opens what is owed
+            // instead of filtering to itself.
+            key: "oldest",
+            label: "Oldest Unpaid Invoice Date",
+            tone: "text-muted-foreground",
+            value: (
+              <span className="text-amber-600">
+                {oldestDue ? formatDate(oldestDue) : "-"}
+              </span>
+            ),
+            note: "Earliest due date",
+            onClick: () => {
+              setView("unpaid");
+              setCurrentPage(1);
+            },
+          },
+        ]}
+      />
+
       <Card>
         <CardContent className="grid grid-cols-1 divide-y p-0 sm:grid-cols-2 sm:divide-x lg:grid-cols-6 lg:divide-y-0">
           {VIEWS.map((option) => {

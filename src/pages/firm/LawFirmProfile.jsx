@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import BackButton from "@/components/shared/BackButton";
+import SummaryStrip from "@/components/shared/SummaryStrip";
 import {
   Select,
   SelectContent,
@@ -20,6 +21,7 @@ import {
   Landmark,
   Info,
   Megaphone,
+  Percent,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -39,6 +41,7 @@ import CircularsSection from "./sections/CircularsSection";
 import BranchesSection from "./sections/BranchesSection";
 import BankAccountsSection from "./sections/BankAccountsSection";
 import TransactionsSection from "./sections/TransactionsSection";
+import CommissionSection from "./sections/CommissionSection";
 
 /**
  * The profile's sections, in the order the company is read: what it is, where
@@ -89,28 +92,16 @@ const SECTIONS = [
     icon: Wallet,
     note: "Every movement through the bank accounts",
   },
+  {
+    // Commission is worked out across clients rather than inside any one
+    // of them, which is why it belongs to the company and not to a client.
+    key: "commission",
+    label: "Commission",
+    icon: Percent,
+    note: "What referred work has earned, on paid fees",
+  },
 ];
 
-/** One headline figure, with the part of it worth knowing underneath. */
-function HeadlineTile({ icon, label, value, note }) {
-  const Icon = icon;
-  return (
-    <Card>
-      <CardContent className="flex items-center gap-4 p-4">
-        <span className="shrink-0 rounded-xl bg-secondary p-3 text-primary">
-          <Icon className="h-6 w-6" />
-        </span>
-        <div className="min-w-0">
-          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-            {label}
-          </p>
-          <p className="text-2xl font-bold text-primary">{value}</p>
-          <p className="text-xs text-muted-foreground">{note}</p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 export default function LawFirmProfile() {
   const firm = useFirm();
@@ -176,32 +167,30 @@ export default function LawFirmProfile() {
       </div>
 
       {/* What the company amounts to, before any one section of it */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <HeadlineTile
-          icon={Briefcase}
-          label="Total Cases"
-          value={figures.cases.total}
-          note={figures.cases.active + " Active"}
-        />
-        <HeadlineTile
-          icon={Users}
-          label="Total Clients"
-          value={figures.clients.total}
-          note={figures.clients.withOpenCases + " With Open Cases"}
-        />
-        <HeadlineTile
-          icon={Wallet}
-          label="Total Bank Balance"
-          value={money(figures.bank.total)}
-          note={"Across " + firm.bankAccounts.length + " Accounts"}
-        />
-        <HeadlineTile
-          icon={FileText}
-          label="Documents"
-          value={firm.documents.length}
-          note={expiringDocuments + " Expiring Soon"}
-        />
-      </div>
+      <SummaryStrip
+        items={[
+          {
+            label: "Total Cases",
+            value: figures.cases.total,
+            note: figures.cases.active + " Active",
+          },
+          {
+            label: "Total Clients",
+            value: figures.clients.total,
+            note: figures.clients.withOpenCases + " With Open Cases",
+          },
+          {
+            label: "Total Bank Balance",
+            value: money(figures.bank.total),
+            note: "Across " + firm.bankAccounts.length + " Accounts",
+          },
+          {
+            label: "Documents",
+            value: firm.documents.length,
+            note: expiringDocuments + " Expiring Soon",
+          },
+        ]}
+      />
 
       <div className="flex flex-col items-start gap-4 sm:gap-6 lg:flex-row">
         {/* Section navigation */}
@@ -274,6 +263,7 @@ export default function LawFirmProfile() {
                   canRecord={canRecord}
                 />
               )}
+              {activeSection === "commission" && <CommissionSection />}
             </CardContent>
           </Card>
         </div>

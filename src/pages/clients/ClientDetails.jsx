@@ -15,7 +15,7 @@ import { activeCaseCount } from "./clientCases";
 import BasicSection from "./sections/BasicSection";
 import ContactSection from "./sections/ContactSection";
 import FinancialSection from "./sections/FinancialSection";
-import CommissionSection from "./sections/CommissionSection";
+
 import ClientManagementSection from "./sections/ClientManagementSection";
 import DocumentsSection from "./sections/DocumentsSection";
 import ClientContractsSection from "./sections/ClientContractsSection";
@@ -63,7 +63,7 @@ const SECTIONS = [
   { key: "management", label: "Client Team", existingOnly: true },
   { key: "contracts", label: "Client Contracts", existingOnly: true },
   { key: "invoices", label: "Invoices", existingOnly: true },
-  { key: "commission", label: "Commission", existingOnly: true },
+
   { key: "analytics", label: "File Status", existingOnly: true },
   { key: "merge", label: "Merge Clients", existingOnly: true },
 ];
@@ -405,9 +405,7 @@ export default function ClientDetails() {
                   )}
                 </div>
 
-                {activeSection === "commission" && (
-                  <CommissionSection clientNo={record?.clientNo} />
-                )}
+
                 {activeSection === "documents" && (
                   <DocumentsSection
                     formData={formData}
