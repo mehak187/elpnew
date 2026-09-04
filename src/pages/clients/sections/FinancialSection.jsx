@@ -15,22 +15,24 @@ export default function FinancialSection({
   onChange,
   onSelectChange,
 }) {
+  // An individual may or may not be VAT registered, so the field is asked
+  // for either way and only demanded of an entity.
+  const vatinRequired = clientType !== "Individual";
+
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 sm:gap-6">
-      {/* VATIN No. - entities only, individuals have none */}
-      {clientType !== "Individual" && (
-        <div className="space-y-2">
-          <Label htmlFor="vatinNo">VATIN No. *</Label>
-          <Input
-            id="vatinNo"
-            name="vatinNo"
-            value={formData.vatinNo}
-            onChange={onChange}
-            placeholder="Enter VATIN number"
-            required
-          />
-        </div>
-      )}
+      {/* VATIN No. */}
+      <div className="space-y-2">
+        <Label htmlFor="vatinNo">VATIN No.{vatinRequired && " *"}</Label>
+        <Input
+          id="vatinNo"
+          name="vatinNo"
+          value={formData.vatinNo}
+          onChange={onChange}
+          placeholder="Enter VATIN number"
+          required={vatinRequired}
+        />
+      </div>
 
       {/* Receiving Bank */}
       <div className="space-y-2">
