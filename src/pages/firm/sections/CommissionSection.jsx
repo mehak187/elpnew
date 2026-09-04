@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import DataTable from "@/components/shared/DataTable";
+import BackButton from "@/components/shared/BackButton";
 import {
   Plus,
   Info,
@@ -293,13 +294,18 @@ export default function CommissionSection() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+        <div className="flex items-center gap-3">
+          {/* The form opened in place of the list, so back means close it
+              and show the list again. */}
+          {adding && <BackButton onBack={closeForm} />}
+          <div>
           <h2 className="font-semibold text-primary">
             {adding ? "Add Commission" : "Commission Records"}
           </h2>
           <p className="text-xs text-muted-foreground">
             Worked out on collected legal fees, before VAT
           </p>
+          </div>
         </div>
         <Button type="button" onClick={() => setAdding(true)} disabled={adding}>
           <Plus className="mr-1.5 h-4 w-4" />
