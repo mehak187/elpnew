@@ -97,17 +97,28 @@ export const officeFiles = [
  * whether it is still live. The two are counted separately above the table:
  * a closed case still belongs to the level it ended at.
  */
+/**
+ * The client's files, one row each.
+ *
+ * `caseNumbers` holds every number the file has been given as it moved up:
+ * the same dispute is registered afresh at each level, so a file at the
+ * Supreme Court still carries its Primary and Appeal numbers. Keeping them
+ * together is what lets one row show a file's whole history.
+ *
+ * `litigationLevel` is where the file stands now - the level its next
+ * hearing belongs to - which is what the stage tabs count.
+ */
 export const clientLinkedCases = [
-  { id: 1, fileNo: "21", opponent: "Al Noor Trading LLC", court: "Muscat Primary Court", litigationLevel: "Primary", caseStage: "Case Registration", caseStatus: "Active", updateDate: "2025-01-12", update: "Reviewing documents" },
-  { id: 2, fileNo: "34", opponent: "Muscat Logistics SAOC", court: "Court of Appeal", litigationLevel: "Appeal", caseStage: "Commencing", caseStatus: "Active", updateDate: "2025-02-04", update: "Memo submitted, awaiting hearing date" },
-  { id: 3, fileNo: "47", opponent: "Salim Al Harthi", court: "Labour Court", litigationLevel: "Primary", caseStage: "Adjournments", caseStatus: "Active", updateDate: "2024-11-19", update: "Judgement issued, awaiting execution" },
-  { id: 4, fileNo: "52", opponent: "Oman Development LLC", court: "Execution Court", litigationLevel: "Execution", caseStage: "Enforcement", caseStatus: "Active", updateDate: "2025-03-01", update: "Execution procedures in progress" },
-  { id: 5, fileNo: "58", opponent: "Bright Future Trading", court: "Execution Court", litigationLevel: "Execution", caseStage: "Settlement", caseStatus: "Closed", updateDate: "2025-04-21", update: "Case closed after full execution" },
-  { id: 6, fileNo: "63", opponent: "Gulf Metals SAOC", court: "Muscat Primary Court", litigationLevel: "Primary", caseStage: "Pleadings", caseStatus: "Active", updateDate: "2025-01-28", update: "Statement of defence filed" },
-  { id: 7, fileNo: "70", opponent: "Rustaq Developments", court: "Court of Appeal", litigationLevel: "Appeal", caseStage: "Adjournments", caseStatus: "Active", updateDate: "2025-02-17", update: "Hearing adjourned to next month" },
-  { id: 8, fileNo: "74", opponent: "Seeb Wholesale", court: "Supreme Court", litigationLevel: "Supreme", caseStage: "Commencing", caseStatus: "Active", updateDate: "2025-03-14", update: "Appeal registered at Supreme Court" },
-  { id: 9, fileNo: "81", opponent: "Batinah Transport", court: "Execution Court", litigationLevel: "Execution", caseStage: "Enforcement", caseStatus: "Active", updateDate: "2025-04-02", update: "Assets identified for seizure" },
-  { id: 10, fileNo: "88", opponent: "Amerat Contracting", court: "Execution Court", litigationLevel: "Execution", caseStage: "Settlement", caseStatus: "Closed", updateDate: "2025-04-30", update: "Settled and file closed" },
+  { id: 1, fileNo: "21", opponent: "Al Noor Trading LLC", caseNumbers: { Primary: "125/2026" }, litigationLevel: "Primary", caseStage: "Case Registration", caseStatus: "Active", court: "Muscat Primary Court", governorate: "Muscat", location: "Muscat", updateDate: "2025-01-12", update: "Reviewing documents" },
+  { id: 2, fileNo: "34", opponent: "Muscat Logistics SAOC", caseNumbers: { Primary: "98/2025", Appeal: "88/2026" }, litigationLevel: "Appeal", caseStage: "Commencing", caseStatus: "Active", court: "Court of Appeal", governorate: "Muscat", location: "Muscat", updateDate: "2025-02-04", update: "Memo submitted, awaiting hearing date" },
+  { id: 3, fileNo: "47", opponent: "Salim Al Harthi", caseNumbers: { Primary: "212/2025" }, litigationLevel: "Primary", caseStage: "Adjournments", caseStatus: "Active", court: "Labour Court", governorate: "Muscat", location: "Seeb", updateDate: "2024-11-19", update: "Judgement issued, awaiting execution" },
+  { id: 4, fileNo: "52", opponent: "Oman Development LLC", caseNumbers: { Primary: "145/2024", Execution: "3021/2026" }, litigationLevel: "Execution", caseStage: "Enforcement", caseStatus: "Active", court: "Execution Court", governorate: "Muscat", location: "Muscat", updateDate: "2025-03-01", update: "Execution procedures in progress" },
+  { id: 5, fileNo: "58", opponent: "Bright Future Trading", caseNumbers: { Primary: "77/2024", Execution: "2884/2025" }, litigationLevel: "Execution", caseStage: "Settlement", caseStatus: "Closed", court: "Execution Court", governorate: "Dhofar", location: "Salalah", updateDate: "2025-04-21", update: "Case closed after full execution" },
+  { id: 6, fileNo: "63", opponent: "Gulf Metals SAOC", caseNumbers: { Primary: "301/2026" }, litigationLevel: "Primary", caseStage: "Pleadings", caseStatus: "Active", court: "Investment & Commerce Court", governorate: "Muscat", location: "Muscat", updateDate: "2025-01-28", update: "Statement of defence filed" },
+  { id: 7, fileNo: "70", opponent: "Rustaq Developments", caseNumbers: { Primary: "66/2025", Appeal: "120/2026" }, litigationLevel: "Appeal", caseStage: "Adjournments", caseStatus: "Active", court: "Court of Appeal", governorate: "Al Batinah North", location: "Rustaq", updateDate: "2025-02-17", update: "Hearing adjourned to next month" },
+  { id: 8, fileNo: "74", opponent: "Seeb Wholesale", caseNumbers: { Primary: "188/2024", Appeal: "52/2025", Supreme: "41/2026" }, litigationLevel: "Supreme", caseStage: "Commencing", caseStatus: "Active", court: "Supreme Court", governorate: "Muscat", location: "Muscat", updateDate: "2025-03-14", update: "Appeal registered at Supreme Court" },
+  { id: 9, fileNo: "81", opponent: "Batinah Transport", caseNumbers: { Primary: "233/2025", Execution: "3110/2026" }, litigationLevel: "Execution", caseStage: "Enforcement", caseStatus: "Active", court: "Execution Court", governorate: "Al Batinah South", location: "Barka", updateDate: "2025-04-02", update: "Assets identified for seizure" },
+  { id: 10, fileNo: "88", opponent: "Amerat Contracting", caseNumbers: { Primary: "154/2024", Appeal: "31/2025", Execution: "2990/2025" }, litigationLevel: "Execution", caseStage: "Settlement", caseStatus: "Closed", court: "Execution Court", governorate: "Muscat", location: "Al Amerat", updateDate: "2025-04-30", update: "Settled and file closed" },
 ];
 
 export const clientInvoices = [
