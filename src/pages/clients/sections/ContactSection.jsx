@@ -1,7 +1,9 @@
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { MessageCircle, Mail } from "lucide-react";
 import { COUNTRY_DIAL_CODES } from "@/lib/constants";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -10,12 +12,49 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+/**
+ * A notification channel, switched on or off.
+ *
+ * Stored as "Yes"/"No" the way it always was - the switch changes how the
+ * setting is asked for, not what the client record holds.
+ */
+function NotificationToggle({ id, icon, label, value, onChange }) {
+  const Icon = icon;
+  const on = value === "Yes";
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id} className="flex items-center gap-1.5">
+        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+        {label}
+      </Label>
+      {/* The height of a field, so the row stays level with the ones
+          beside it. */}
+      <div className="flex h-9 items-center gap-2">
+        <Switch
+          id={id}
+          checked={on}
+          onCheckedChange={(next) => onChange(next ? "Yes" : "No")}
+        />
+        <span
+          className={cn(
+            "text-sm font-medium",
+            on ? "text-green-600" : "text-muted-foreground"
+          )}
+        >
+          {on ? "ON" : "OFF"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function ContactSection({ formData, onChange, onSelectChange }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
       {/* Mobile - the country code is picked, not typed into the number */}
       <div className="space-y-2">
-        <Label htmlFor="mobile">Mobile *</Label>
+        <Label htmlFor="mobile">Mobile Number *</Label>
         <div className="flex gap-2">
           <Select
             value={formData.mobileDialCode}
@@ -94,62 +133,43 @@ export default function ContactSection({ formData, onChange, onSelectChange }) {
         </Select>
       </div>
 
-      {/* Instant WhatsApp Notification */}
-      <div className="space-y-2">
-        <Label
-          htmlFor="whatsappNotification"
-          className="flex items-center gap-1.5"
-        >
-          <MessageCircle className="h-3.5 w-3.5 text-muted-foreground" />
-          Instant WhatsApp Notification
-        </Label>
-        <Select
-          value={formData.whatsappNotification}
-          onValueChange={(value) => onSelectChange("whatsappNotification", value)}
-        >
-          <SelectTrigger id="whatsappNotification">
-            <SelectValue placeholder="Please Select" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Yes">Yes</SelectItem>
-            <SelectItem value="No">No</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Both channels are a switch rather than a list: on or off is the
+          whole of the setting, and it reads at a glance. */}
+      <NotificationToggle
+        id="whatsappNotification"
+        icon={MessageCircle}
+        label="Instant WhatsApp Notification"
+        value={formData.whatsappNotification}
+        onChange={(value) => onSelectChange("whatsappNotification", value)}
+      />
 
-      {/* Instant Email Notification */}
-      <div className="space-y-2">
-        <Label htmlFor="emailNotification" className="flex items-center gap-1.5">
-          <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-          Instant Email Notification
-        </Label>
-        <Select
-          value={formData.emailNotification}
-          onValueChange={(value) => onSelectChange("emailNotification", value)}
-        >
-          <SelectTrigger id="emailNotification">
-            <SelectValue placeholder="Please Select" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Yes">Yes</SelectItem>
-            <SelectItem value="No">No</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <NotificationToggle
+        id="emailNotification"
+        icon={Mail}
+        label="Instant Email Notification"
+        value={formData.emailNotification}
+        onChange={(value) => onSelectChange("emailNotification", value)}
+      />
 
-      {/* Both channels fire on every saved update, so say so plainly. */}
+      {/* Switching a channel on does not put the client on every save. Only
+          an event the firm has marked as the client's business is sent, and
+          an internal one never is - so say exactly that, here, where the
+          switch is turned on. */}
       {(formData.whatsappNotification === "Yes" ||
         formData.emailNotification === "Yes") && (
         <div className="sm:col-span-2 lg:col-span-4">
           <p className="rounded-md border-l-4 border-l-blue-500 bg-blue-50 px-3 py-2 text-xs text-blue-900">
-            Every update saved against this client is sent immediately by
+            Sent by
             {formData.whatsappNotification === "Yes" &&
             formData.emailNotification === "Yes"
               ? " WhatsApp and email"
               : formData.whatsappNotification === "Yes"
-              ? " WhatsApp"
-              : " email"}
-            .
+                ? " WhatsApp"
+                : " email"}
+            , but only for events marked{" "}
+            <span className="font-semibold">Client Notification: Yes</span>{" "}
+            &mdash; Case, Hearing, Judgment, Financial, Document or Contract.
+            Internal events are never sent to the client.
           </p>
         </div>
       )}
