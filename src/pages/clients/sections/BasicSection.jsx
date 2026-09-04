@@ -9,6 +9,14 @@ import {
 } from "@/components/ui/select";
 import { Upload, Paperclip, X } from "lucide-react";
 import { CLIENT_TYPES } from "@/lib/constants";
+import { MANUAL_CLIENT_STATUSES } from "@/lib/clientStatus";
+
+/** A stored date as it is read on the page: 2026-09-04 becomes 04/09/2026. */
+const formatDate = (iso) => {
+  if (!iso) return "";
+  const [year, month, day] = iso.split("-");
+  return day + "/" + month + "/" + year;
+};
 
 /**
  * A number and the copy that proves it, kept in one field.
@@ -80,22 +88,31 @@ function NumberWithCopy({
 export default function BasicSection({
   formData,
   clientType,
+  status,
+  statusLocked,
+  statusNote,
   onChange,
   onClientTypeChange,
+  onStatusChange,
   onFileChange,
 }) {
+  const statusOptions = MANUAL_CLIENT_STATUSES.includes(status)
+    ? MANUAL_CLIENT_STATUSES
+    : [...MANUAL_CLIENT_STATUSES, status];
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-      {/* Date of Registration */}
+      {/* Date of Registration - stamped by the system on creation.
+          The day a client came on to the books is a record of what happened,
+          not a choice, so it is shown rather than asked for. */}
       <div className="space-y-2">
-        <Label htmlFor="dateOfRegistration">Date of Registration *</Label>
+        <Label htmlFor="dateOfRegistration">Date of Registration</Label>
         <Input
           id="dateOfRegistration"
-          name="dateOfRegistration"
-          type="date"
-          value={formData.dateOfRegistration}
-          onChange={onChange}
-          required
+          value={formatDate(formData.dateOfRegistration)}
+          readOnly
+          tabIndex={-1}
+          className="cursor-default bg-muted text-muted-foreground"
         />
       </div>
 
@@ -116,9 +133,9 @@ export default function BasicSection({
         </Select>
       </div>
 
-      {/* Client's Arabic Name */}
+      {/* Client Name (Arabic) */}
       <div className="space-y-2">
-        <Label htmlFor="arabicName">Client&apos;s Arabic Name *</Label>
+        <Label htmlFor="arabicName">Client Name (Arabic) *</Label>
         <Input
           id="arabicName"
           name="arabicName"
@@ -130,9 +147,9 @@ export default function BasicSection({
         />
       </div>
 
-      {/* Client's English Name */}
+      {/* Client Name (English) */}
       <div className="space-y-2">
-        <Label htmlFor="englishName">Client&apos;s English Name *</Label>
+        <Label htmlFor="englishName">Client Name (English) *</Label>
         <Input
           id="englishName"
           name="englishName"
@@ -193,6 +210,32 @@ export default function BasicSection({
         />
       </div>
 
+      {/* Status. Merged is never offered as a choice - it is the outcome of a
+          merge - but a client that has been merged still has to be able to say
+          so, so its own status is listed alongside. */}
+      <div className="space-y-2">
+        <Label htmlFor="clientStatus">Status</Label>
+        <Select
+          value={status}
+          onValueChange={onStatusChange}
+          disabled={statusLocked}
+        >
+          <SelectTrigger id="clientStatus">
+            <SelectValue placeholder="Select status" />
+          </SelectTrigger>
+          <SelectContent>
+            {statusOptions.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {statusNote && (
+          <p className="text-xs text-muted-foreground">{statusNote}</p>
+        )}
+      </div>
+
       {/* Deactivation Date - the client turns Inactive on this day */}
       <div className="space-y-2">
         <Label htmlFor="deactivationDate">Deactivation Date</Label>
@@ -202,6 +245,20 @@ export default function BasicSection({
           type="date"
           value={formData.deactivationDate}
           onChange={onChange}
+        />
+      </div>
+
+      {/* Why the client was deactivated. Given the width of two fields
+          because it is a sentence rather than a value, but the height of one
+          so the row stays level with the fields beside it. */}
+      <div className="space-y-2 sm:col-span-2">
+        <Label htmlFor="deactivationReason">Deactivation Reason</Label>
+        <Input
+          id="deactivationReason"
+          name="deactivationReason"
+          value={formData.deactivationReason}
+          onChange={onChange}
+          placeholder="Reason for deactivating this client"
         />
       </div>
 

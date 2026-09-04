@@ -39,7 +39,6 @@ const SECTIONS = [
     label: "Basic Info",
     form: true,
     required: () => [
-      "dateOfRegistration",
       "arabicName",
       "englishName",
       "referenceNo",
@@ -84,9 +83,23 @@ const SECTIONS = [
 ];
 
 
+/** Today as a plain YYYY-MM-DD in the user's own timezone. */
+const todayIso = () => {
+  const now = new Date();
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 10);
+};
+
+/**
+ * A record as the form holds it.
+ *
+ * A client being created is stamped with today: the date of registration is
+ * the day the record was made, so it is filled in here rather than asked for.
+ */
 const toFormData = (record) =>
   !record
-    ? emptyFormData
+    ? { ...emptyFormData, dateOfRegistration: todayIso() }
     : {
         dateOfRegistration: record.dateOfRegistration || "",
         arabicName: record.arabicName || "",
@@ -109,6 +122,7 @@ const toFormData = (record) =>
         whatsappNotification: record.whatsappNotification || "No",
         emailNotification: record.emailNotification || "No",
         deactivationDate: record.deactivationDate || "",
+        deactivationReason: record.deactivationReason || "",
         referenceCopy: record.attachments?.referenceCopy || "",
         poaCopy: record.attachments?.poaCopy || "",
       };
@@ -135,6 +149,7 @@ const emptyFormData = {
   whatsappNotification: "No",
   emailNotification: "No",
   deactivationDate: "",
+  deactivationReason: "",
   referenceCopy: "",
   poaCopy: "",
 };
@@ -152,8 +167,10 @@ export default function ClientDetails() {
     : null;
 
   const [clientType, setClientType] = useState(() => record?.type || "Individual");
+  // A client being created is Active from the day it is created; an existing
+  // one keeps whatever it was pinned to, or "auto" to follow its open cases.
   const [statusOverride, setStatusOverride] = useState(
-    () => record?.statusOverride || "auto"
+    () => record?.statusOverride || (record ? "auto" : "Active")
   );
   const [activeSection, setActiveSection] = useState("basic");
   const [formData, setFormData] = useState(() => toFormData(record));
@@ -163,14 +180,31 @@ export default function ClientDetails() {
   if (id !== loadedId) {
     setLoadedId(id);
     setClientType(record?.type || "Individual");
-    setStatusOverride(record?.statusOverride || "auto");
+    setStatusOverride(record?.statusOverride || (record ? "auto" : "Active"));
     setFormData(toFormData(record));
     setActiveSection("basic");
   }
 
   const sections = SECTIONS.filter((s) => isExisting || !s.existingOnly);
   const current = sections.find((s) => s.key === activeSection) || sections[0];
-  const status = record ? deriveClientStatus(record) : null;
+
+  // Read from the form rather than the saved record, so the field, the dot
+  // beside the heading and the deactivation date can never disagree.
+  const status = deriveClientStatus({
+    ...record,
+    activeCases: record?.activeCases || 0,
+    statusOverride: statusOverride === "auto" ? null : statusOverride,
+    deactivationDate: formData.deactivationDate || null,
+  });
+
+  // Two things settle the standing on their own, leaving the Status field
+  // nothing to decide: a merge, and a deactivation date that has arrived.
+  const statusNote = record?.mergedIntoClientNo
+    ? "Set by the merge."
+    : formData.deactivationDate && formData.deactivationDate <= todayIso()
+      ? "Set by the deactivation date."
+      : "";
+  const statusLocked = Boolean(statusNote);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -304,7 +338,7 @@ export default function ClientDetails() {
                 <h2 className="text-base font-semibold text-primary">
                   {current.label}
                 </h2>
-                {activeSection === "basic" && (
+                {activeSection === "basic" && isExisting && (
                   <StatusDot status={status} isGood={status === "Active"} />
                 )}
                 {/* Live cases still open, which is what File Status is about */}
@@ -321,8 +355,12 @@ export default function ClientDetails() {
                   <BasicSection
                     formData={formData}
                     clientType={clientType}
+                    status={status}
+                    statusLocked={statusLocked}
+                    statusNote={statusNote}
                     onChange={handleChange}
                     onClientTypeChange={setClientType}
+                    onStatusChange={setStatusOverride}
                     onFileChange={handleSelectChange}
                   />
                 )}
