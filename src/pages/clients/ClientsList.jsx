@@ -11,29 +11,8 @@ import { useListFilter } from "@/lib/useListFilter";
 import { deriveClientStatus } from "@/lib/clientStatus";
 import { clientDisplayName } from "./clientRecords";
 import { useClients } from "@/lib/clients/context";
+import { expiryState, EXPIRY_LABEL } from "@/lib/expiry";
 
-
-/** Papers are chased a month before they lapse, so that is the warning. */
-const EXPIRING_SOON_DAYS = 30;
-
-const DAY = 24 * 60 * 60 * 1000;
-
-/**
- * How long a document has left, as one of three states.
- *
- * A paper with no expiry date is not a fourth state - it simply says nothing,
- * because there is nothing to say. Both the reference and the power of
- * attorney are read the same way, so the rule lives here once.
- */
-function expiryState(date) {
-  if (!date) return "none";
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const days = Math.ceil((new Date(date) - today) / DAY);
-  if (days < 0) return "expired";
-  if (days <= EXPIRING_SOON_DAYS) return "soon";
-  return "valid";
-}
 
 /**
  * A date and what it means, in the cell the date already lives in.
@@ -76,9 +55,7 @@ function ExpiryDate({ date }) {
           state === "expired" && "text-red-600"
         )}
       >
-        {state === "valid" && "Active"}
-        {state === "soon" && "Expiring Soon"}
-        {state === "expired" && "Expired"}
+        {EXPIRY_LABEL[state]}
       </span>
     </p>
   );

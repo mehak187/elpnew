@@ -1,40 +1,29 @@
 // Sample records for the client profile sections. In the live system each of
 // these comes from the API, scoped to the client being viewed.
 
+import { dayOffset } from "./clientRecords";
+
+/**
+ * The papers filed against this client.
+ *
+ * `documentDate` is the date on the document itself, not the day it was
+ * uploaded - a certificate issued in March that reaches the office in June
+ * is a March document, and the expiry it is read against belongs to that
+ * date.
+ *
+ * Status is not held here. It is read off the expiry date every render, so a
+ * paper cannot sit in the list calling itself valid after its date has
+ * passed. Expiries are generated around today so the demo always shows all
+ * three states.
+ */
 export const clientDocuments = [
-  {
-    id: 1,
-    documentType: "Power of Attorney",
-    fileName: "poa-2024.pdf",
-    fileUrl: "/documents/sample-poa.pdf",
-    uploadDate: "2024-01-20",
-    expiryDate: "2025-12-31",
-    status: "Valid",
-    notes: "Signed before the notary in Muscat.",
-    linkedFileNo: null,
-  },
-  {
-    id: 2,
-    documentType: "Commercial Registration",
-    fileName: "cr-certificate.pdf",
-    fileUrl: "/documents/sample-reference.pdf",
-    uploadDate: "2024-01-20",
-    expiryDate: "2025-06-15",
-    status: "Expiring Soon",
-    notes: "",
-    linkedFileNo: null,
-  },
-  {
-    id: 3,
-    documentType: "ID Card",
-    fileName: "id-card.pdf",
-    fileUrl: "/documents/sample-reference.pdf",
-    uploadDate: "2024-02-02",
-    expiryDate: "",
-    status: "Valid",
-    notes: "",
-    linkedFileNo: null,
-  },
+  { id: 1, serial: 1, documentType: "Power of Attorney", fileName: "poa-2024.pdf", fileUrl: "/documents/sample-poa.pdf", documentDate: dayOffset(-960), expiryDate: dayOffset(400), notes: "Signed before the notary in Muscat.", linkedFileNo: null },
+  { id: 2, serial: 2, documentType: "Commercial Registration", fileName: "cr-certificate.pdf", fileUrl: "/documents/sample-reference.pdf", documentDate: dayOffset(-960), expiryDate: dayOffset(300), notes: "", linkedFileNo: null },
+  { id: 3, serial: 3, documentType: "ID Card", fileName: "id-card.pdf", fileUrl: "/documents/sample-reference.pdf", documentDate: dayOffset(-945), expiryDate: "", notes: "", linkedFileNo: null },
+  { id: 4, serial: 4, documentType: "Tax Card", fileName: "tax-card.pdf", fileUrl: "/documents/sample-reference.pdf", documentDate: dayOffset(-942), expiryDate: "", notes: "", linkedFileNo: null },
+  { id: 5, serial: 5, documentType: "Trade License", fileName: "trade-license.pdf", fileUrl: "/documents/sample-reference.pdf", documentDate: dayOffset(-937), expiryDate: dayOffset(150), notes: "", linkedFileNo: null },
+  { id: 6, serial: 6, documentType: "Memorandum of Association", fileName: "moa.pdf", fileUrl: "/documents/sample-reference.pdf", documentDate: dayOffset(-920), expiryDate: dayOffset(18), notes: "", linkedFileNo: null },
+  { id: 7, serial: 7, documentType: "Share Certificate", fileName: "share-certificate.pdf", fileUrl: "/documents/sample-reference.pdf", documentDate: dayOffset(-915), expiryDate: dayOffset(-45), notes: "", linkedFileNo: null },
 ];
 
 
