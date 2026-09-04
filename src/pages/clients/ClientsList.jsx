@@ -85,22 +85,27 @@ function ExpiryDate({ date }) {
 }
 
 /**
- * The one format an uploaded document is ever shown in - the same icon and the
- * same word, wherever it appears.
+ * The attached copy, offered as the icon alone.
+ *
+ * It sits on the same line as the number it belongs to rather than under it:
+ * the word "Document" repeated down two columns of every row said nothing the
+ * icon does not, and cost each row a line to say it. The word is kept in the
+ * tooltip and read out to screen readers.
  */
-function DocumentLink({ url }) {
+function DocumentLink({ url, label }) {
   if (!url) return null;
   return (
     <button
       type="button"
+      title={label}
       onClick={(e) => {
         e.stopPropagation();
         window.open(url, "_blank", "noopener,noreferrer");
       }}
-      className="flex items-center gap-1.5 rounded text-xs font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+      className="shrink-0 rounded text-primary hover:text-primary/70 focus:outline-none focus:ring-2 focus:ring-ring"
     >
-      <FileText className="h-3.5 w-3.5 shrink-0" />
-      Document
+      <FileText className="h-4 w-4" />
+      <span className="sr-only">{label}</span>
     </button>
   );
 }
@@ -177,9 +182,14 @@ export default function ClientsList() {
       width: "24%",
       render: (value, row) => (
         <div className="space-y-1">
-          <p>{value}</p>
+          <p className="flex items-center gap-2">
+            {value}
+            <DocumentLink
+              url={row.attachments?.referenceCopy}
+              label="Open reference document"
+            />
+          </p>
           <ExpiryDate date={row.referenceExpiryDate} />
-          <DocumentLink url={row.attachments?.referenceCopy} />
         </div>
       ),
     },
@@ -189,9 +199,14 @@ export default function ClientsList() {
       width: "24%",
       render: (value, row) => (
         <div className="space-y-1">
-          <p>{value}</p>
+          <p className="flex items-center gap-2">
+            {value}
+            <DocumentLink
+              url={row.attachments?.poaCopy}
+              label="Open power of attorney"
+            />
+          </p>
           <ExpiryDate date={row.poaExpiryDate} />
-          <DocumentLink url={row.attachments?.poaCopy} />
         </div>
       ),
     },
