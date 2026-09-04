@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import DataTable from "@/components/shared/DataTable";
 import SearchableSelect from "@/components/shared/SearchableSelect";
-import { Upload, FileText, FileCheck, Trash2 } from "lucide-react";
+import { Upload, FileText, FileCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CONTRACT_TYPES } from "@/lib/constants";
 import { formatDate, dayOffset } from "@/pages/firm/firmData";
@@ -156,7 +156,7 @@ export default function ClientContractsSection() {
     {
       key: "fileName",
       header: "Contract Document",
-      width: "21%",
+      width: "25%",
       render: (value, row) => (
         <button
           type="button"
@@ -173,34 +173,12 @@ export default function ClientContractsSection() {
     {
       key: "notes",
       header: "Notes",
-      width: "20%",
+      width: "24%",
       render: (value, row) => (
         <span className="text-muted-foreground">
           {row.title ? row.title + ". " : ""}
           {value || "-"}
         </span>
-      ),
-    },
-    {
-      key: "actions",
-      header: "Delete",
-      width: "8%",
-      disableFilter: true,
-      render: (_, row) => (
-        <div className="flex items-center justify-center">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-red-500 hover:text-red-600"
-            title="Delete contract"
-            onClick={() =>
-              setContracts((prev) => prev.filter((c) => c.id !== row.id))
-            }
-          >
-            <Trash2 className="h-4 w-4" />
-            <span className="sr-only">Delete {row.fileName}</span>
-          </Button>
-        </div>
       ),
     },
   ];
