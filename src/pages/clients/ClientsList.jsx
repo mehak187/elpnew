@@ -11,58 +11,78 @@ import { useListFilter } from "@/lib/useListFilter";
 import { deriveClientStatus } from "@/lib/clientStatus";
 import { clientDisplayName } from "./clientRecords";
 import { useClients } from "@/lib/clients/context";
+import { expiryState, EXPIRY_LABEL } from "@/lib/expiry";
 
 
-/** Has this date already passed? */
-const hasExpired = (date) => {
-  if (!date) return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return new Date(date) < today;
-};
-
-/** A date, with a red dot beside it once it has expired. */
+/**
+ * A date and what it means, in the cell the date already lives in.
+ *
+ * The state is said in words as well as colour: red on its own tells anyone
+ * who cannot see it nothing at all, and tells everyone else only that
+ * something is wrong - not whether the paper has weeks left or has already
+ * lapsed.
+ */
 function ExpiryDate({ date }) {
-  if (!date) return <span className="text-xs text-muted-foreground">-</span>;
-  const expired = hasExpired(date);
+  const state = expiryState(date);
+  if (state === "none") return null;
+
   return (
-    <p
-      className={cn(
-        "flex items-center gap-1.5 text-xs",
-        expired ? "font-medium text-red-600" : "text-muted-foreground"
+    <p className="flex flex-wrap items-center gap-1.5 text-xs">
+      {/* Only an expired date is printed in red; a date with weeks left is
+          still a perfectly good date. */}
+      <span
+        className={cn(
+          state === "expired"
+            ? "font-medium text-red-600"
+            : "text-muted-foreground"
+        )}
+      >
+        {date}
+      </span>
+
+      {state === "soon" && (
+        <span
+          aria-hidden="true"
+          className="h-2 w-2 shrink-0 rounded-full bg-red-500"
+        />
       )}
-    >
-      {date}
-      {expired && (
-        <>
-          <span
-            aria-hidden="true"
-            className="h-2 w-2 shrink-0 rounded-full bg-red-500"
-          />
-          <span className="sr-only">Expired</span>
-        </>
-      )}
+
+      <span
+        className={cn(
+          "font-medium",
+          state === "valid" && "text-green-600",
+          state === "soon" && "text-red-600",
+          state === "expired" && "text-red-600"
+        )}
+      >
+        {EXPIRY_LABEL[state]}
+      </span>
     </p>
   );
 }
 
 /**
- * The one format an uploaded document is ever shown in - the same icon and the
- * same word, wherever it appears.
+ * The attached copy, offered as the icon alone.
+ *
+ * It sits on the same line as the number it belongs to rather than under it:
+ * the word "Document" repeated down two columns of every row said nothing the
+ * icon does not, and cost each row a line to say it. The word is kept in the
+ * tooltip and read out to screen readers.
  */
-function DocumentLink({ url }) {
+function DocumentLink({ url, label }) {
   if (!url) return null;
   return (
     <button
       type="button"
+      title={label}
       onClick={(e) => {
         e.stopPropagation();
         window.open(url, "_blank", "noopener,noreferrer");
       }}
-      className="flex items-center gap-1.5 rounded text-xs font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+      className="shrink-0 rounded text-primary hover:text-primary/70 focus:outline-none focus:ring-2 focus:ring-ring"
     >
-      <FileText className="h-3.5 w-3.5 shrink-0" />
-      Document
+      <FileText className="h-4 w-4" />
+      <span className="sr-only">{label}</span>
     </button>
   );
 }
@@ -101,61 +121,71 @@ export default function ClientsList() {
     {
       key: "clientNo",
       header: "Client No.",
-      width: "10%",
+      width: "14%",
+      exportValue: (row) => row.clientNo + " (" + row.status + ")",
+      // Standing sits with the number rather than in a column of its own:
+      // it belongs to the client, not to a separate fact about them.
       render: (value, row) => (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate(`/clients/${row.id}`);
-          }}
-          className="font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring rounded"
-        >
-          {value}
-        </button>
-      )
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/clients/${row.id}`);
+            }}
+            className="rounded font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            {value}
+          </button>
+          <StatusDot status={row.status} isGood={row.status === "Active"} />
+        </div>
+      ),
     },
     {
       key: "type",
-      header: "Type",
-      width: "12%"
+      header: "Client Type",
+      width: "13%"
     },
     {
       key: "clientName",
       header: "Client Name",
-      width: "22%",
+      width: "25%",
       cellClassName: "font-medium",
     },
     {
       // Number, expiry and the attached copy read as one block per record.
       key: "referenceNo",
       header: "Reference No.",
-      width: "20%",
+      width: "24%",
       render: (value, row) => (
         <div className="space-y-1">
-          <p>{value}</p>
+          <p className="flex items-center gap-2">
+            {value}
+            <DocumentLink
+              url={row.attachments?.referenceCopy}
+              label="Open reference document"
+            />
+          </p>
           <ExpiryDate date={row.referenceExpiryDate} />
-          <DocumentLink url={row.attachments?.referenceCopy} />
         </div>
       ),
     },
     {
       key: "poaNo",
       header: "POA No.",
-      width: "20%",
+      width: "24%",
       render: (value, row) => (
         <div className="space-y-1">
-          <p>{value}</p>
+          <p className="flex items-center gap-2">
+            {value}
+            <DocumentLink
+              url={row.attachments?.poaCopy}
+              label="Open power of attorney"
+            />
+          </p>
           <ExpiryDate date={row.poaExpiryDate} />
-          <DocumentLink url={row.attachments?.poaCopy} />
         </div>
       ),
-    },
-    {
-      key: "status",
-      header: "Status",
-      width: "10%",
-      render: (value) => <StatusDot status={value} isGood={value === "Active"} />,
     },
   ];
 

@@ -24,6 +24,7 @@ import {
   HandCoins,
   HeartHandshake,
   CalendarClock,
+  Megaphone,
   Gauge,
   MapPin,
   ShieldCheck,
@@ -53,6 +54,7 @@ import LoansSection from "./sections/LoansSection";
 import AssistanceSection from "./sections/AssistanceSection";
 import DailyActivitiesSection from "./sections/DailyActivitiesSection";
 import PerformanceSection from "./sections/PerformanceSection";
+import EmployeeCircularsSection from "./sections/CircularsSection";
 import {
   employeeRecords,
   nextEmployeeNo,
@@ -124,6 +126,12 @@ const SECTIONS = [
     icon: CalendarClock,
     note: "Record today's working time and activities",
     save: "Save Daily Activity",
+  },
+  {
+    key: "circulars",
+    label: "Circulars",
+    icon: Megaphone,
+    note: "Notices addressed to this employee",
   },
   {
     key: "performance",
@@ -957,6 +965,10 @@ export default function EmployeeForm() {
                 )}
 
                 {activeSection === "daily" && <DailyActivitiesSection />}
+
+                {activeSection === "circulars" && (
+                  <EmployeeCircularsSection employee={formData} />
+                )}
 
                 {activeSection === "performance" && <PerformanceSection />}
 

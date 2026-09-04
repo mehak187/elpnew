@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
+import SummaryStrip from "@/components/shared/SummaryStrip";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import DataTable from "@/components/shared/DataTable";
 import { Wallet, Plus } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useExpenses } from "@/lib/expenses/context";
 import { useSuppliers } from "@/lib/suppliers/context";
 import { findType, linkLabel } from "./links";
@@ -95,26 +95,6 @@ const omr = (amount) =>
  * how many expenses of this kind there are, and what they came to. A total on
  * its own cannot tell one large expense from twenty small ones.
  */
-function SummaryTile({ label, count, amount, selected, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "rounded-lg border bg-card p-4 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-ring",
-        selected ? "border-primary ring-1 ring-primary" : "hover:bg-muted/50"
-      )}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-          {label}
-        </p>
-        <p className="text-lg font-bold text-primary">{count}</p>
-      </div>
-      <p className="mt-1 text-lg font-semibold">{money(amount)}</p>
-    </button>
-  );
-}
 
 /** One field inside a stacked column. */
 function Line({ label, children }) {
@@ -401,25 +381,23 @@ export default function ExpensesPage() {
         </Button>
       </div>
 
-      {/* Each box is also the filter for the table below it */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        {GROUPS.map((option) => {
+      {/* Each cell is also the filter for the table below it */}
+      <SummaryStrip
+        items={GROUPS.map((option) => {
           const matching = records.filter(option.match);
-          return (
-            <SummaryTile
-              key={option.key}
-              label={option.label}
-              count={matching.length}
-              amount={matching.reduce((sum, row) => sum + row.total, 0)}
-              selected={group === option.key}
-              onClick={() => {
-                setGroup(option.key);
-                setCurrentPage(1);
-              }}
-            />
-          );
+          return {
+            key: option.key,
+            label: option.label,
+            count: matching.length,
+            value: money(matching.reduce((sum, row) => sum + row.total, 0)),
+            selected: group === option.key,
+            onClick: () => {
+              setGroup(option.key);
+              setCurrentPage(1);
+            },
+          };
         })}
-      </div>
+      />
 
       <Card>
         <CardContent className="p-4 sm:p-6">

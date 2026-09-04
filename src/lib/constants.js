@@ -112,6 +112,10 @@ export const DOCUMENT_TYPES = [
   "Power of Attorney",
   "Commercial Registration",
   "ID Card",
+  "Tax Card",
+  "Trade License",
+  "Memorandum of Association",
+  "Share Certificate",
   "Instructions",
 ];
 

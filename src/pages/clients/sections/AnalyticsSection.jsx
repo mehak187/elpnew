@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import BarTrendChart from "@/components/shared/BarTrendChart";
+import SummaryStrip from "@/components/shared/SummaryStrip";
 import {
   clientCases,
   liveCases,
@@ -130,35 +131,40 @@ export default function AnalyticsSection() {
         deliberately excluded.
       </p>
 
-      {/* Lifetime activity, each figure with what those files claim */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <Metric
-          label="Total Cases Received"
-          value={totalReceived}
-          amount={claimTotal(liveCases)}
-        />
-        <Metric
-          label="Open Cases"
-          value={open.length}
-          amount={claimTotal(open)}
-        />
-        <Metric
-          label="Closed Cases"
-          value={closed.length}
-          amount={claimTotal(closed)}
-        />
-        <Metric
-          label="Cases in Progress"
-          value={inProgress}
-          amount={claimTotal(liveCases.filter(isInProgress))}
-        />
-        {/* Struck off, so counted apart from everything above */}
-        <Metric
-          label="Deleted from the System"
-          value={deletedCases.length}
-          amount={claimTotal(deletedCases)}
-        />
-      </div>
+      {/* Lifetime activity, each figure with what those files claim
+          between them: the count says how busy the client is, the total
+          says how much is riding on it. */}
+      <SummaryStrip
+        items={[
+          {
+            label: "Total Cases Received",
+            count: totalReceived,
+            value: money(claimTotal(liveCases)),
+          },
+          {
+            label: "Open Cases",
+            count: open.length,
+            value: money(claimTotal(open)),
+          },
+          {
+            label: "Closed Cases",
+            count: closed.length,
+            value: money(claimTotal(closed)),
+          },
+          {
+            label: "Cases in Progress",
+            count: inProgress,
+            value: money(claimTotal(liveCases.filter(isInProgress))),
+          },
+          {
+            // Struck off, so counted apart from everything above
+            label: "Deleted from the System",
+            tone: "text-muted-foreground",
+            count: deletedCases.length,
+            value: money(claimTotal(deletedCases)),
+          },
+        ]}
+      />
 
       <Card>
         <CardContent className="p-4 sm:p-6">

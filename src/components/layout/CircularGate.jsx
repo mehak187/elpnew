@@ -8,14 +8,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Megaphone } from "lucide-react";
-import { useCirculars, pendingFor } from "@/lib/circulars/context";
+import {
+  useCirculars,
+  pendingFor,
+  formatDate,
+} from "@/lib/circulars/context";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
-
-/** "2026-02-03" as "03/02/2026". */
-const formatDate = (value) => {
-  const [year, month, day] = String(value).split("-");
-  return `${day}/${month}/${year}`;
-};
 
 /**
  * The circulars a person has to read before they can do anything else.
@@ -57,7 +55,8 @@ export default function CircularGate() {
             Circular {circular.circularNo}
           </DialogTitle>
           <DialogDescription>
-            {formatDate(circular.date)} &middot; {circular.targetGroup}
+            {formatDate(circular.date)} &middot;{" "}
+            {circular.targetGroup}
           </DialogDescription>
         </DialogHeader>
 

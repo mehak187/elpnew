@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -11,13 +10,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/panels";
-import { Search, FileSpreadsheet } from "lucide-react";
-import { toCsv, downloadCsv } from "@/lib/csv";
+import { Save } from "lucide-react";
 import { useFirm } from "@/lib/firm/context";
 import { useLanguage, inLanguage } from "@/lib/language/context";
 import { BRANCH_ROLES, staffFor } from "@/pages/firm/firmData";
-
-const PAGE_SIZES = [10, 25, 50];
 
 /**
  * Who runs this client's work at each branch.
@@ -49,27 +45,44 @@ const personIn = (branchId, role, teams) => {
   return staffFor(branchId, role).find((s) => String(s.id) === id) || null;
 };
 
+const emptyRoles = () =>
+  Object.fromEntries(BRANCH_ROLES.map((role) => [role, ""]));
+
 export default function ClientManagementSection({ client }) {
   const { branches } = useFirm();
   const { language } = useLanguage();
 
-  const [branchId, setBranchId] = useState(
-    client.branchId ? String(client.branchId) : String(branches[0]?.id || "")
-  );
   const [teams, setTeams] = useState(INITIAL_TEAMS);
-  const [query, setQuery] = useState("");
-  const [pageSize, setPageSize] = useState(10);
 
-  // Every change lands on the record straight away - there is no draft here to
-  // save, so a Save button would only be something else to forget to press.
-  const assign = (role, personId) =>
-    setTeams((prev) => ({
-      ...prev,
-      [branchId]: { ...prev[branchId], [role]: personId },
-    }));
+  const firstBranch = client.branchId
+    ? String(client.branchId)
+    : String(branches[0]?.id || "");
+
+  const [branchId, setBranchId] = useState(firstBranch);
+  // Edited here and only written to the client on Save, so a half-made team
+  // never reaches the table below.
+  const [draft, setDraft] = useState(
+    () => teams[firstBranch] || emptyRoles()
+  );
 
   const branchName = (branch) =>
     inLanguage(language, branch.name, branch.nameAr);
+
+  /** Move the form to a branch, showing whatever that branch already has. */
+  const openBranch = (id) => {
+    setBranchId(id);
+    setDraft(teams[id] || emptyRoles());
+  };
+
+  const assign = (role, personId) =>
+    setDraft((prev) => ({ ...prev, [role]: personId }));
+
+  const save = () =>
+    setTeams((prev) => ({ ...prev, [branchId]: { ...draft } }));
+
+  // Every role is required, so a branch is never listed half-staffed.
+  const canSave =
+    branchId && BRANCH_ROLES.every((role) => draft[role]);
 
   /** The branches with a team on them, and who is on each. */
   const staffed = branches
@@ -82,31 +95,6 @@ export default function ClientManagementSection({ client }) {
     }))
     .filter((row) => row.team.some((r) => r.person));
 
-  const search = query.trim().toLowerCase();
-  const shown = staffed.filter(({ branch, team }) => {
-    if (!search) return true;
-    return [branchName(branch), ...team.map((r) => r.person?.name)]
-      .filter(Boolean)
-      .some((value) => value.toLowerCase().includes(search));
-  });
-
-  const exportTeams = () =>
-    downloadCsv(
-      toCsv(
-        [{ key: "branch", header: "Branch" }].concat(
-          BRANCH_ROLES.map((role) => ({ key: role, header: role }))
-        ),
-        shown.map(({ branch, team }) => {
-          const row = { branch: branchName(branch) };
-          team.forEach(({ role, person }) => {
-            row[role] = person?.name || "";
-          });
-          return row;
-        })
-      ),
-      "client-management.csv"
-    );
-
   return (
     <div className="space-y-6">
       {/* The branch plus its four roles, on one row where there is room */}
@@ -115,7 +103,7 @@ export default function ClientManagementSection({ client }) {
           <Label htmlFor="managementBranch">
             Branch Name<span className="text-destructive"> *</span>
           </Label>
-          <Select value={branchId} onValueChange={setBranchId}>
+          <Select value={branchId} onValueChange={openBranch}>
             <SelectTrigger id="managementBranch">
               <SelectValue placeholder="Please Select" />
             </SelectTrigger>
@@ -141,7 +129,7 @@ export default function ClientManagementSection({ client }) {
                 <span className="text-destructive"> *</span>
               </Label>
               <Select
-                value={teams[branchId]?.[role] || ""}
+                value={draft[role] || ""}
                 onValueChange={(value) => assign(role, value)}
                 disabled={people.length === 0}
               >
@@ -165,69 +153,53 @@ export default function ClientManagementSection({ client }) {
         })}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="relative w-full sm:w-72">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search..."
-            className="pl-9"
-          />
-        </div>
-        <div className="flex items-center gap-3">
-          {/* How many branch sections to show at once */}
-          <Select
-            value={String(pageSize)}
-            onValueChange={(value) => setPageSize(Number(value))}
-          >
-            <SelectTrigger className="w-20" aria-label="Rows per page">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PAGE_SIZES.map((size) => (
-                <SelectItem key={size} value={String(size)}>
-                  {size}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Button variant="outline" onClick={exportTeams}>
-            <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" />
-            Excel
-          </Button>
-        </div>
+      <div className="flex justify-end">
+        <Button type="button" onClick={save} disabled={!canSave}>
+          <Save className="mr-2 h-4 w-4" />
+          Save
+        </Button>
       </div>
 
-      {/* One section per branch, so a change shows up where it belongs */}
-      {shown.length === 0 ? (
-        <EmptyState>No branch team matches that search.</EmptyState>
-      ) : (
-        shown.slice(0, pageSize).map(({ branch, team }) => (
-          <Card key={branch.id}>
-            <CardContent className="p-0">
-              <p className="p-4 text-lg font-bold text-primary">
-                {branchName(branch)} Branch Management
-              </p>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[720px] text-sm">
-                  <thead>
-                    <tr className="border-y bg-muted/50 text-left text-xs font-semibold text-primary">
-                      <th className="p-3">#</th>
-                      {BRANCH_ROLES.map((role) => (
-                        <th key={role} className="p-3">
-                          {role}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {/* One row: one person per role, for this branch alone */}
-                    <tr className="transition-colors hover:bg-primary/10">
-                      <td className="p-3 text-muted-foreground">1</td>
+      {/* Every branch that has a team, one row each. The branch name opens
+          that team in the form above, which is the only way to change it. */}
+      <Card>
+        <CardContent className="p-0">
+          {staffed.length === 0 ? (
+            <div className="p-6">
+              <EmptyState>
+                No branch team has been saved for this client yet.
+              </EmptyState>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] text-sm">
+                <thead>
+                  <tr className="border-b text-left text-sm font-semibold text-primary">
+                    <th className="p-4">Branch Name</th>
+                    {BRANCH_ROLES.map((role) => (
+                      <th key={role} className="p-4">
+                        {role}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {staffed.map(({ branch, team }) => (
+                    <tr
+                      key={branch.id}
+                      className="border-b transition-colors last:border-0 hover:bg-primary/10"
+                    >
+                      <td className="p-4">
+                        <button
+                          type="button"
+                          onClick={() => openBranch(String(branch.id))}
+                          className="rounded font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                          {branch.branchNumber} - {branchName(branch)}
+                        </button>
+                      </td>
                       {team.map(({ role, person }) => (
-                        <td key={role} className="p-3">
+                        <td key={role} className="p-4">
                           {person ? (
                             person.name
                           ) : (
@@ -238,13 +210,13 @@ export default function ClientManagementSection({ client }) {
                         </td>
                       ))}
                     </tr>
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        ))
-      )}
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
+import SummaryStrip from "@/components/shared/SummaryStrip";
 import { Button } from "@/components/ui/button";
 import DataTable from "@/components/shared/DataTable";
 import { cn } from "@/lib/utils";
@@ -256,19 +257,14 @@ export default function CourtFeePayments() {
       </div>
 
       {/* What the firm has paid the courts, by what it was paid for */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        {tiles.map((tile) => (
-          <div key={tile.label} className="rounded-lg border bg-card p-4">
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                {tile.label}
-              </p>
-              <p className="text-lg font-bold text-primary">{tile.count}</p>
-            </div>
-            <p className="mt-1 text-lg font-semibold">{money(tile.amount)}</p>
-          </div>
-        ))}
-      </div>
+      <SummaryStrip
+        items={tiles.map((tile) => ({
+          key: tile.label,
+          label: tile.label,
+          count: tile.count,
+          value: money(tile.amount),
+        }))}
+      />
 
       <Card>
         <CardContent className="p-4 sm:p-6">
