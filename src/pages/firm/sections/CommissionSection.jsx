@@ -545,17 +545,21 @@ export default function CommissionSection() {
         </Card>
       )}
 
-      <DataTable
-        columns={columns}
-        data={records}
-        searchPlaceholder="Search commissions..."
-        exportFileName="commission-records.csv"
-        enableColumnSearch={false}
-        currentPage={currentPage}
-        pageSize={pageSize}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={setPageSize}
-      />
+      {/* Hidden while the form is open: a page is one thing at a time,
+          either the records or the form that adds to them. */}
+      {!adding && (
+        <DataTable
+          columns={columns}
+          data={records}
+          searchPlaceholder="Search commissions..."
+          exportFileName="commission-records.csv"
+          enableColumnSearch={false}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+        />
+      )}
     </div>
   );
 }

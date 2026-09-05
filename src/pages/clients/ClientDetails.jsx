@@ -221,6 +221,24 @@ export default function ClientDetails() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  /**
+   * Sets the status by hand.
+   *
+   * Going back to Active leaves nothing to explain, so the deactivation
+   * date and reason go with it rather than lingering as stale answers to
+   * a question nobody is asking any more.
+   */
+  const chooseStatus = (value) => {
+    setStatusOverride(value);
+    if (value === "Active") {
+      setFormData((prev) => ({
+        ...prev,
+        deactivationDate: "",
+        deactivationReason: "",
+      }));
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -365,7 +383,7 @@ export default function ClientDetails() {
                   statusNote={statusNote}
                   onChange={handleChange}
                   onClientTypeChange={setClientType}
-                  onStatusChange={setStatusOverride}
+                  onStatusChange={chooseStatus}
                   onFileChange={handleSelectChange}
                 />
               </SectionCard>
@@ -416,7 +434,7 @@ export default function ClientDetails() {
                 {activeSection === "cases" && <LinkedCasesSection />}
                 {activeSection === "invoices" && <InvoicesSection />}
                 {activeSection === "management" && record && (
-                  <ClientManagementSection client={record} />
+                  <ClientManagementSection />
                 )}
                 {activeSection === "analytics" && <AnalyticsSection />}
                 {activeSection === "merge" && record && (

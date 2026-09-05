@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import DataTable from "@/components/shared/DataTable";
 import { Users, Plus, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { StatusDot } from "@/components/shared/panels";
+import { IdStatusDot } from "@/components/shared/panels";
 import ActiveFilters from "@/components/shared/ActiveFilters";
 import { useListFilter } from "@/lib/useListFilter";
 import { deriveClientStatus } from "@/lib/clientStatus";
@@ -126,7 +126,11 @@ export default function ClientsList() {
       // Standing sits with the number rather than in a column of its own:
       // it belongs to the client, not to a separate fact about them.
       render: (value, row) => (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="flex items-center gap-2">
+          <IdStatusDot
+            status={row.status}
+            isGood={row.status === "Active"}
+          />
           <button
             type="button"
             onClick={(e) => {
@@ -137,8 +141,7 @@ export default function ClientsList() {
           >
             {value}
           </button>
-          <StatusDot status={row.status} isGood={row.status === "Active"} />
-        </div>
+        </span>
       ),
     },
     {

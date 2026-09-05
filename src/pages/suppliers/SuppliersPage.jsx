@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import DataTable from "@/components/shared/DataTable";
 import { Truck, Plus, FileSpreadsheet } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { IdStatusDot } from "@/components/shared/panels";
 import { toCsv, downloadCsv } from "@/lib/csv";
 import { useSuppliers } from "@/lib/suppliers/context";
 
@@ -23,13 +23,9 @@ export default function SuppliersPage() {
       width: "14%",
       render: (value, row) => (
         <span className="inline-flex items-center gap-2">
-          <span
-            aria-hidden="true"
-            title={row.status}
-            className={cn(
-              "h-2 w-2 shrink-0 rounded-full",
-              row.status === "Active" ? "bg-green-500" : "bg-gray-400"
-            )}
+          <IdStatusDot
+            status={row.status}
+            tone={row.status === "Active" ? "bg-green-500" : "bg-gray-400"}
           />
           <button
             type="button"
@@ -38,7 +34,6 @@ export default function SuppliersPage() {
           >
             {value}
           </button>
-          <span className="sr-only">{row.status}</span>
         </span>
       ),
     },

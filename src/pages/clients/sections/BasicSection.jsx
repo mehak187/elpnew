@@ -96,6 +96,8 @@ export default function BasicSection({
   onStatusChange,
   onFileChange,
 }) {
+  const isInactive = status !== "Active";
+
   const statusOptions = MANUAL_CLIENT_STATUSES.includes(status)
     ? MANUAL_CLIENT_STATUSES
     : [...MANUAL_CLIENT_STATUSES, status];
@@ -236,31 +238,37 @@ export default function BasicSection({
         )}
       </div>
 
-      {/* Deactivation Date - the client turns Inactive on this day */}
-      <div className="space-y-2">
-        <Label htmlFor="deactivationDate">Deactivation Date</Label>
-        <Input
-          id="deactivationDate"
-          name="deactivationDate"
-          type="date"
-          value={formData.deactivationDate}
-          onChange={onChange}
-        />
-      </div>
+      {/* When and why the client was deactivated. Both only exist while
+          the client is Inactive: an active client has no date to give and
+          nothing to explain, so asking would only invite stale answers. */}
+      {isInactive && (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="deactivationDate">Deactivation Date</Label>
+            <Input
+              id="deactivationDate"
+              name="deactivationDate"
+              type="date"
+              value={formData.deactivationDate}
+              onChange={onChange}
+            />
+          </div>
 
-      {/* Why the client was deactivated. Given the width of two fields
-          because it is a sentence rather than a value, but the height of one
-          so the row stays level with the fields beside it. */}
-      <div className="space-y-2 sm:col-span-2">
-        <Label htmlFor="deactivationReason">Deactivation Reason</Label>
-        <Input
-          id="deactivationReason"
-          name="deactivationReason"
-          value={formData.deactivationReason}
-          onChange={onChange}
-          placeholder="Reason for deactivating this client"
-        />
-      </div>
+          {/* Given the width of two fields because it is a sentence
+              rather than a value, but the height of one so the row stays
+              level with the fields beside it. */}
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="deactivationReason">Deactivation Reason</Label>
+            <Input
+              id="deactivationReason"
+              name="deactivationReason"
+              value={formData.deactivationReason}
+              onChange={onChange}
+              placeholder="Reason for deactivating this client"
+            />
+          </div>
+        </>
+      )}
 
     </div>
   );

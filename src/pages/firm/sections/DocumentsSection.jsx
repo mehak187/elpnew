@@ -21,7 +21,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/shared/panels";
-import { Upload, FileCheck, FileText, Trash2 } from "lucide-react";
+import BackButton from "@/components/shared/BackButton";
+import { Upload, FileCheck, FileText, Trash2, Plus } from "lucide-react";
 import { useFirm } from "@/lib/firm/context";
 import {
   DOCUMENT_TYPES,
@@ -54,6 +55,8 @@ export default function DocumentsSection({ canEdit }) {
   const [draft, setDraft] = useState(emptyDraft);
   const [file, setFile] = useState(null);
   const [editing, setEditing] = useState(null);
+  // The page is the list until someone asks to add to it.
+  const [adding, setAdding] = useState(false);
 
   const setField = (name, value) =>
     setDraft((prev) => ({ ...prev, [name]: value }));
@@ -70,6 +73,11 @@ export default function DocumentsSection({ canEdit }) {
       fileName: file.name,
       fileUrl: URL.createObjectURL(file),
     });
+    closeForm();
+  };
+
+  const closeForm = () => {
+    setAdding(false);
     setDraft(emptyDraft);
     setFile(null);
   };
@@ -89,10 +97,32 @@ export default function DocumentsSection({ canEdit }) {
 
   return (
     <div className="space-y-6">
-      {/* Add a document */}
       {canEdit && (
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            onClick={() => setAdding(true)}
+            disabled={adding}
+          >
+            <Plus className="mr-1.5 h-4 w-4" />
+            Add Document
+          </Button>
+        </div>
+      )}
+
+      {/* The form takes the place of the list while it is being filled in:
+          a page is one thing at a time, either the documents on file or the
+          form that adds to them. */}
+      {canEdit && adding && (
         <Card>
           <CardContent className="space-y-4 p-4">
+            <div className="flex items-center gap-3">
+              <BackButton onBack={closeForm} />
+              <p className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
+                Add Document
+              </p>
+            </div>
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-2">
                 <Label htmlFor="documentBranch">Branch</Label>
@@ -196,7 +226,10 @@ export default function DocumentsSection({ canEdit }) {
               </div>
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Button variant="outline" onClick={closeForm}>
+                Cancel
+              </Button>
               <Button type="button" onClick={handleSave} disabled={!canSave}>
                 Save Document
               </Button>
@@ -206,6 +239,7 @@ export default function DocumentsSection({ canEdit }) {
       )}
 
       {/* What is on file */}
+      {!adding && (
       <Card>
         <CardContent className="overflow-x-auto p-0">
           {documents.length === 0 ? (
@@ -299,6 +333,7 @@ export default function DocumentsSection({ canEdit }) {
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* The document reference opens its details for reading and editing */}
       <Dialog
