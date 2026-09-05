@@ -46,6 +46,7 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useFirm } from "@/lib/firm/context";
 import { useLanguage, LANGUAGES } from "@/lib/language/context";
+import NotificationBell from "./NotificationBell";
 import logo from "@/assets/logo2.png";
 
 /** The firm's mark. Height is set; the width follows the artwork. */
@@ -189,21 +190,25 @@ export default function Header({ onNavClick, activeNav }) {
                     <p className="px-4 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       {section.name}
                     </p>
-                    {section.items.map((item) => (
-                      <Link
-                        key={item.key}
-                        to={item.path}
-                        onClick={() => onNavClick && onNavClick(item.key)}
-                        className={cn(
-                          "flex items-center mt-1 gap-3 px-4 py-3 rounded-md text-nowrap text-sm font-medium transition-colors",
-                          isActive(item.key)
-                            ? "bg-primary text-primary-foreground"
-                            : "text-primary hover:bg-secondary"
-                        )}
-                      >
-                        {item.name}
-                      </Link>
-                    ))}
+                    {section.items.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <Link
+                          key={item.key}
+                          to={item.path}
+                          onClick={() => onNavClick && onNavClick(item.key)}
+                          className={cn(
+                            "flex items-center mt-1 gap-3 px-4 py-3 rounded-md text-nowrap text-sm font-medium transition-colors",
+                            isActive(item.key)
+                              ? "bg-primary text-primary-foreground"
+                              : "text-primary hover:bg-secondary"
+                          )}
+                        >
+                          {Icon && <Icon className="h-4 w-4 shrink-0" />}
+                          {item.name}
+                        </Link>
+                      );
+                    })}
                   </div>
                 ) : (
                   <Link
@@ -217,6 +222,9 @@ export default function Header({ onNavClick, activeNav }) {
                         : "text-primary hover:bg-secondary"
                     )}
                   >
+                    {section.icon && (
+                      <section.icon className="h-4 w-4 shrink-0" />
+                    )}
                     {section.name}
                   </Link>
                 )
@@ -345,6 +353,10 @@ export default function Header({ onNavClick, activeNav }) {
 
         {/* Spacer - push user to right */}
         <div className="flex-1" />
+
+        {/* Papers running out. Before the language switch, because it is
+            the one thing here that asks for something to be done. */}
+        <NotificationBell />
 
         {/* Which language the records are read in. Beside the user menu
             because it belongs to the person reading, not to the page. */}

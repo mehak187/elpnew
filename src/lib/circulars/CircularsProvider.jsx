@@ -102,6 +102,55 @@ const initialAudit = [
   { id: 8, at: "18/03/2026 02:20 PM", action: "Issued", circularNo: "CIR-2026-003", by: "Mohammed Al Yahyaei", detail: "Administration" },
 ];
 
+const ACK_KEY = "elp.circular.acknowledgements";
+
+/**
+ * Acknowledgements already given, from this browser.
+ *
+ * An acknowledgement is a statement that someone read something. It cannot
+ * be asked for again just because the page was reloaded - that would make
+ * the prompt look broken and the record meaningless. Held separately from
+ * the circulars themselves so new circulars still arrive with the app.
+ */
+function readAcknowledgements() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(ACK_KEY));
+    return Array.isArray(saved) ? saved : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeAcknowledgements(entries) {
+  try {
+    localStorage.setItem(ACK_KEY, JSON.stringify(entries));
+  } catch {
+    // A browser that refuses storage still works; it just asks again.
+  }
+}
+
+/** The seeded circulars with this browser's acknowledgements folded in. */
+function withSavedAcknowledgements(circulars) {
+  const saved = readAcknowledgements();
+  if (!saved.length) return circulars;
+
+  return circulars.map((circular) => {
+    const mine = saved.filter(
+      (entry) =>
+        entry.circularNo === circular.circularNo &&
+        !circular.acknowledgements.some((a) => a.name === entry.name)
+    );
+    if (!mine.length) return circular;
+    return {
+      ...circular,
+      acknowledgements: [
+        ...circular.acknowledgements,
+        ...mine.map((entry) => ({ name: entry.name, at: entry.at })),
+      ],
+    };
+  });
+}
+
 /**
  * Holds the firm's circulars, who has acknowledged them, and what has happened
  * to them.
@@ -116,7 +165,9 @@ const initialAudit = [
  * audit trail.
  */
 export default function CircularsProvider({ children }) {
-  const [circulars, setCirculars] = useState(initialCirculars);
+  const [circulars, setCirculars] = useState(() =>
+    withSavedAcknowledgements(initialCirculars)
+  );
   const [audit, setAudit] = useState(initialAudit);
 
   const log = (action, circularNo, by, detail = "") =>
@@ -193,16 +244,22 @@ export default function CircularsProvider({ children }) {
   const acknowledge = (id, name) => {
     const circular = circulars.find((c) => c.id === id);
     if (!circular) return;
+    const at = stamp();
+
     setCirculars((prev) =>
       prev.map((c) =>
         c.id === id
-          ? {
-              ...c,
-              acknowledgements: [...c.acknowledgements, { name, at: stamp() }],
-            }
+          ? { ...c, acknowledgements: [...c.acknowledgements, { name, at }] }
           : c
       )
     );
+
+    // Written down straight away, so a reload does not ask again.
+    writeAcknowledgements([
+      ...readAcknowledgements(),
+      { circularNo: circular.circularNo, name, at },
+    ]);
+
     log("Acknowledged", circular.circularNo, name);
   };
 
