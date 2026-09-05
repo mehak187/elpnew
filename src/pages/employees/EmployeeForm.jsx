@@ -18,11 +18,9 @@ import {
   ArrowLeft,
   Info,
   User,
-  Briefcase,
   FileText,
   Wallet,
-  HandCoins,
-  HeartHandshake,
+
   CalendarClock,
   Megaphone,
   Gauge,
@@ -49,9 +47,9 @@ import {
   COUNTRY_DIAL_CODES,
   EMPLOYEE_DOCUMENT_TYPES,
 } from "@/lib/constants";
-import SalariesSection from "./sections/SalariesSection";
-import LoansSection from "./sections/LoansSection";
-import AssistanceSection from "./sections/AssistanceSection";
+import FinancialBenefitsSection from "./sections/FinancialBenefitsSection";
+
+
 import DailyActivitiesSection from "./sections/DailyActivitiesSection";
 import PerformanceSection from "./sections/PerformanceSection";
 import EmployeeCircularsSection from "./sections/CircularsSection";
@@ -70,24 +68,16 @@ import {
  */
 const SECTIONS = [
   {
+    // Who the person is, what they do and how to reach them: three
+    // entries in this menu that were all one answer, so they are one page
+    // with a box each.
     key: "information",
     label: "Employee Information",
     title: "Employee",
     icon: User,
-    note: "Employee profile and basic information",
+    note: "Employee profile, job description and contact details",
   },
-  {
-    key: "job",
-    label: "Job Description",
-    icon: Briefcase,
-    note: "Define and manage employee job description details",
-  },
-  {
-    key: "addresses",
-    label: "Addresses",
-    icon: MapPin,
-    note: "Manage employee contact and address details",
-  },
+
   {
     key: "documents",
     label: "Documents",
@@ -96,29 +86,13 @@ const SECTIONS = [
     save: "Save Changes",
   },
   {
-    key: "salaries",
-    label: "Salaries / Allowances",
+    // Salary, loans, assistance and commission were four entries in this
+    // menu, all answering the same question: what the firm pays this
+    // person, and why. One page with four tabs instead.
+    key: "benefits",
+    label: "Financial Benefits",
     icon: Wallet,
-    title: "Salary",
-    note: "Manage monthly salaries for employees",
-    // The payslip saves itself, so the header offers to jump to it.
-    action: "Add Salary / Bonus",
-  },
-  {
-    key: "loans",
-    label: "Loans",
-    icon: HandCoins,
-    note: "Manage loans taken by the firm",
-    // The loan form saves itself, so the header offers to jump to it.
-    action: "Add Loan",
-  },
-  {
-    key: "assistance",
-    label: "Assistance",
-    icon: HeartHandshake,
-    note: "Manage financial assistance and charitable aid",
-    // The assistance form saves itself, so the header offers to jump to it.
-    action: "Add Assistance",
+    note: "Salaries, loans, assistance and commission",
   },
   {
     key: "daily",
@@ -221,13 +195,26 @@ const NOTES_LIMIT = 300;
 
 /** The first field of the form a section's header button jumps to. */
 /** Sections where the header button opens a form instead of scrolling to one. */
-const OPENS_A_FORM = ["salaries", "loans", "assistance"];
 
-const JUMP_TARGET = {
-  salaries: "salary-basic",
-  loans: "loan-expense-type",
-  assistance: "assistance-expense-type",
-};
+/**
+ * One titled box on the Employee Information page.
+ *
+ * The boxes are separated by space rather than by a divider, so the page
+ * reads as three things about one person rather than one long form.
+ */
+function SectionCard({ title, aside, children }) {
+  return (
+    <Card>
+      <CardContent className="p-4 sm:p-6">
+        <div className="mb-6 flex items-center gap-3 border-b pb-3">
+          <h2 className="text-base font-semibold text-primary">{title}</h2>
+          {aside}
+        </div>
+        {children}
+      </CardContent>
+    </Card>
+  );
+}
 
 const IMAGE_TYPES = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
 
@@ -304,7 +291,6 @@ export default function EmployeeForm() {
   const [activeSection, setActiveSection] = useState("information");
   // The section whose add form is open, if any. Held here because the button
   // that opens it lives in the page header, above the section itself.
-  const [addingIn, setAddingIn] = useState(null);
   const [formData, setFormData] = useState(() => toFormData(record));
 
   // Reload when the route moves to a different employee without unmounting.
@@ -361,19 +347,12 @@ export default function EmployeeForm() {
   const sections = isEditMode ? SECTIONS : SECTIONS.slice(0, 1);
 
   const current = SECTIONS.find((s) => s.key === activeSection) || SECTIONS[0];
+  const isInfo = activeSection === "information";
   const employeeNo = record?.empNo || nextEmployeeNo(employeeRecords);
   const hasLeft = HAS_LEFT.includes(formData.status);
 
   // The section saves itself lower down, so the header brings the form to the
   // top of the screen rather than pretending to save from up here.
-  const jumpToForm = () => {
-    const field = window.document.getElementById(
-      JUMP_TARGET[activeSection] || "salary-basic"
-    );
-    if (!field) return;
-    field.scrollIntoView({ behavior: "smooth", block: "center" });
-    field.focus();
-  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -397,19 +376,9 @@ export default function EmployeeForm() {
             <p className="text-xs text-primary/75 sm:text-sm">{current.note}</p>
           </div>
         </div>
-        {current.action ? (
-          <Button
-            type="button"
-            onClick={() =>
-              OPENS_A_FORM.includes(activeSection)
-                ? setAddingIn(activeSection)
-                : jumpToForm()
-            }
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            {current.action}
-          </Button>
-        ) : (
+        {/* Financial Benefits carries its own Add buttons, one per tab, so
+            the page header has nothing to offer there. */}
+        {activeSection !== "benefits" && (
           <Button type="submit" form="employee-form">
             <Save className="mr-2 h-4 w-4" />
             {current.save ||
@@ -434,10 +403,7 @@ export default function EmployeeForm() {
                   <button
                     key={section.key}
                     type="button"
-                    onClick={() => {
-                      setActiveSection(section.key);
-                      setAddingIn(null);
-                    }}
+                    onClick={() => setActiveSection(section.key)}
                     className={cn(
                       "flex items-center gap-2.5 text-nowrap rounded-md px-3 py-2 text-left text-sm font-medium transition-colors",
                       activeSection === section.key
@@ -458,31 +424,65 @@ export default function EmployeeForm() {
             its widest content by default, so one wide table in here would
             stretch the whole page and push the sidebar off screen. */}
         <div className="w-full min-w-0 flex-1">
-          <Card>
-            <CardContent className="p-4 sm:p-6">
-              <div className="mb-6 flex items-center gap-3 border-b pb-3">
-                <h2 className="text-base font-semibold text-primary">
-                  {current.label}
-                </h2>
-                {/* Standing travels with the record, whichever side is open -
-                    but only once there is a record. A new employee has not
-                    been created yet, so there is nothing to be Active. */}
-                {isEditMode && (
-                  <span className="inline-flex items-center gap-1.5 text-sm">
-                    {formData.status}
-                    <span
-                      aria-hidden="true"
-                      className={cn(
-                        "h-2 w-2 rounded-full",
-                        STATUS_DOT[formData.status] || "bg-muted-foreground"
-                      )}
-                    />
-                  </span>
-                )}
-              </div>
+          {/* On the merged page the three boxes are the frame, so the
+              page's own card steps out of the way rather than drawing a
+              border around three borders. */}
+          <Card className={cn(isInfo && "border-0 bg-transparent shadow-none")}>
+            <CardContent
+              className={cn(
+                "p-4 sm:p-6",
+                isInfo && "space-y-4 p-0 sm:space-y-6 sm:p-0"
+              )}
+            >
+              {!isInfo && (
+                <div className="mb-6 flex items-center gap-3 border-b pb-3">
+                  <h2 className="text-base font-semibold text-primary">
+                    {current.label}
+                  </h2>
+                  {/* Standing travels with the record, whichever side is
+                      open - but only once there is a record. */}
+                  {isEditMode && (
+                    <span className="inline-flex items-center gap-1.5 text-sm">
+                      {formData.status}
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          "h-2 w-2 rounded-full",
+                          STATUS_DOT[formData.status] || "bg-muted-foreground"
+                        )}
+                      />
+                    </span>
+                  )}
+                </div>
+              )}
 
-              <form id="employee-form" onSubmit={handleSubmit}>
-                {activeSection === "information" && (
+              <form
+                id="employee-form"
+                onSubmit={handleSubmit}
+                className={cn(isInfo && "space-y-4 sm:space-y-6")}
+              >
+                {isInfo && (
+                  <>
+                {/* Standing travels with the record - but only once there
+                    is one. A new employee has not been created yet, so
+                    there is nothing to be Active. */}
+                <SectionCard
+                  title="Employee Information"
+                  aside={
+                    isEditMode && (
+                      <span className="inline-flex items-center gap-1.5 text-sm">
+                        {formData.status}
+                        <span
+                          aria-hidden="true"
+                          className={cn(
+                            "h-2 w-2 rounded-full",
+                            STATUS_DOT[formData.status] || "bg-muted-foreground"
+                          )}
+                        />
+                      </span>
+                    )
+                  }
+                >
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
                       {/* Given by the system, so it is shown and not asked for */}
@@ -655,13 +655,10 @@ export default function EmployeeForm() {
                       </div>
                     )}
                   </div>
-                )}
+                </SectionCard>
 
-                {activeSection === "job" && (
+                <SectionCard title="Job Description Information">
                   <div className="space-y-6">
-                    <p className="font-semibold text-primary">
-                      Job Description Information
-                    </p>
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
                       <div className="space-y-2">
@@ -746,7 +743,7 @@ export default function EmployeeForm() {
 
                     </div>
                   </div>
-                )}
+                </SectionCard>
 
                 {activeSection === "documents" && (
                   <div className="space-y-6">
@@ -939,28 +936,12 @@ export default function EmployeeForm() {
                   </div>
                 )}
 
-                {activeSection === "salaries" && (
-                  <SalariesSection
+                {activeSection === "benefits" && (
+                  <FinancialBenefitsSection
                     employee={formData}
-                    adding={addingIn === "salaries"}
-                    onCloseAdd={() => setAddingIn(null)}
-                    onSave={(payslip) =>
+                    onSaveSalary={(payslip) =>
                       setFormData((prev) => ({ ...prev, ...payslip }))
                     }
-                  />
-                )}
-
-                {activeSection === "loans" && (
-                  <LoansSection
-                    adding={addingIn === "loans"}
-                    onCloseAdd={() => setAddingIn(null)}
-                  />
-                )}
-
-                {activeSection === "assistance" && (
-                  <AssistanceSection
-                    adding={addingIn === "assistance"}
-                    onCloseAdd={() => setAddingIn(null)}
                   />
                 )}
 
@@ -972,11 +953,8 @@ export default function EmployeeForm() {
 
                 {activeSection === "performance" && <PerformanceSection />}
 
-                {activeSection === "addresses" && (
+                <SectionCard title="Contact &amp; Address Information">
                   <div className="space-y-6">
-                    <p className="font-semibold text-primary">
-                      Contact &amp; Address Information
-                    </p>
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
                       <PhoneField
@@ -1041,6 +1019,8 @@ export default function EmployeeForm() {
                       </span>
                     </p>
                   </div>
+                </SectionCard>
+                  </>
                 )}
 
                 {/* Not yet specified, so nothing is invented for them */}

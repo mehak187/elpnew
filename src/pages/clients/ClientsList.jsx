@@ -40,10 +40,16 @@ function ExpiryDate({ date }) {
         {date}
       </span>
 
-      {state === "soon" && (
+      {/* Hollow while the date is only approaching, solid once it has
+          passed: the shape says how far gone it is, not just that
+          something is wrong. */}
+      {state !== "valid" && (
         <span
           aria-hidden="true"
-          className="h-2 w-2 shrink-0 rounded-full bg-red-500"
+          className={cn(
+            "h-2 w-2 shrink-0 rounded-full",
+            state === "expired" ? "bg-red-500" : "border-2 border-red-500"
+          )}
         />
       )}
 
