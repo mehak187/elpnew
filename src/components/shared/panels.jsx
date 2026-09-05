@@ -200,3 +200,30 @@ export function StatusDot({ status, isGood }) {
     </span>
   );
 }
+
+/**
+ * Standing beside an ID number, as a dot alone.
+ *
+ * Always before the number, never with the word. A table of IDs is scanned
+ * down its left edge, and "Active" repeated on every row is noise the colour
+ * already carries. The word stays in the tooltip and is read out to screen
+ * readers, so nothing is lost for anyone who needs it spelled out.
+ *
+ * `tone` is for records with more than two states - an employee on leave is
+ * neither healthy nor a problem. Without it the dot is green or red.
+ */
+export function IdStatusDot({ status, isGood, tone }) {
+  return (
+    <>
+      <span
+        aria-hidden="true"
+        title={status}
+        className={cn(
+          "h-2 w-2 shrink-0 rounded-full",
+          tone || (isGood ? "bg-green-500" : "bg-red-500")
+        )}
+      />
+      <span className="sr-only">{status}</span>
+    </>
+  );
+}

@@ -21,7 +21,8 @@ import {
 } from "@/components/ui/dialog";
 import DataTable from "@/components/shared/DataTable";
 import SearchableSelect from "@/components/shared/SearchableSelect";
-import { Upload, FileText, FileCheck } from "lucide-react";
+import BackButton from "@/components/shared/BackButton";
+import { Upload, FileText, FileCheck, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CONTRACT_TYPES } from "@/lib/constants";
 import { formatDate, dayOffset } from "@/pages/firm/firmData";
@@ -59,6 +60,8 @@ export default function ClientContractsSection() {
   const [file, setFile] = useState(null);
   const [draft, setDraft] = useState(emptyContract);
   const [editing, setEditing] = useState(null);
+  // The page is the list until someone asks to add to it.
+  const [adding, setAdding] = useState(false);
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -69,6 +72,12 @@ export default function ClientContractsSection() {
 
   const canSave =
     file && draft.startDate && (!isSpecific || draft.caseFileNo);
+
+  const closeForm = () => {
+    setAdding(false);
+    setFile(null);
+    setDraft(emptyContract);
+  };
 
   const handleSave = () => {
     setContracts((prev) => [
@@ -82,8 +91,7 @@ export default function ClientContractsSection() {
         fileUrl: URL.createObjectURL(file),
       },
     ]);
-    setFile(null);
-    setDraft(emptyContract);
+    closeForm();
   };
 
   const saveEdit = () => {
@@ -185,9 +193,26 @@ export default function ClientContractsSection() {
 
   return (
     <div className="space-y-6">
-      {/* Add a contract */}
+      <div className="flex justify-end">
+        <Button type="button" onClick={() => setAdding(true)} disabled={adding}>
+          <Plus className="mr-1.5 h-4 w-4" />
+          Add Contract
+        </Button>
+      </div>
+
+      {/* The form takes the place of the list while it is being filled in:
+          a page is one thing at a time, either the contracts on file or the
+          form that adds to them. */}
+      {adding && (
       <Card>
         <CardContent className="space-y-4 p-4">
+          <div className="flex items-center gap-3">
+            <BackButton onBack={closeForm} />
+            <p className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
+              Add Contract
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-2">
               <Label htmlFor="contractType">Contract Type *</Label>
@@ -308,14 +333,19 @@ export default function ClientContractsSection() {
             </div>
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Button variant="outline" onClick={closeForm}>
+              Cancel
+            </Button>
             <Button type="button" onClick={handleSave} disabled={!canSave}>
               Save Contract
             </Button>
           </div>
         </CardContent>
       </Card>
+      )}
 
+      {!adding && (
       <DataTable
         columns={columns}
         data={rows}
@@ -326,6 +356,7 @@ export default function ClientContractsSection() {
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
       />
+      )}
 
       {/* The serial number opens the contract for reading and editing */}
       <Dialog

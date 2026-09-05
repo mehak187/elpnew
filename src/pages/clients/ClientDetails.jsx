@@ -3,7 +3,20 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import BackButton from "@/components/shared/BackButton";
-import { UserPlus, Save, ArrowLeft, ArrowRight } from "lucide-react";
+import {
+  UserPlus,
+  Save,
+  ArrowLeft,
+  ArrowRight,
+  User,
+  Briefcase,
+  FileText,
+  Users,
+  FileSignature,
+  Receipt,
+  BarChart3,
+  GitMerge,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DEFAULT_DIAL_CODE } from "@/lib/constants";
 import { deriveClientStatus } from "@/lib/clientStatus";
@@ -37,6 +50,7 @@ const SECTIONS = [
   {
     key: "info",
     label: "Client Information",
+    icon: User,
     form: true,
     required: (formData, clientType) => [
       "arabicName",
@@ -58,14 +72,24 @@ const SECTIONS = [
       "emailNotification",
     ],
   },
-  { key: "cases", label: "Cases", existingOnly: true },
-  { key: "documents", label: "Documents", existingOnly: true },
-  { key: "management", label: "Client Team", existingOnly: true },
-  { key: "contracts", label: "Client Contracts", existingOnly: true },
-  { key: "invoices", label: "Invoices", existingOnly: true },
+  { key: "cases", label: "Cases", icon: Briefcase, existingOnly: true },
+  { key: "documents", label: "Documents", icon: FileText, existingOnly: true },
+  { key: "management", label: "Client Team", icon: Users, existingOnly: true },
+  {
+    key: "contracts",
+    label: "Client Contracts",
+    icon: FileSignature,
+    existingOnly: true,
+  },
+  { key: "invoices", label: "Invoices", icon: Receipt, existingOnly: true },
 
-  { key: "analytics", label: "File Status", existingOnly: true },
-  { key: "merge", label: "Merge Clients", existingOnly: true },
+  {
+    key: "analytics",
+    label: "File Status",
+    icon: BarChart3,
+    existingOnly: true,
+  },
+  { key: "merge", label: "Merge Clients", icon: GitMerge, existingOnly: true },
 ];
 
 
@@ -221,6 +245,24 @@ export default function ClientDetails() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  /**
+   * Sets the status by hand.
+   *
+   * Going back to Active leaves nothing to explain, so the deactivation
+   * date and reason go with it rather than lingering as stale answers to
+   * a question nobody is asking any more.
+   */
+  const chooseStatus = (value) => {
+    setStatusOverride(value);
+    if (value === "Active") {
+      setFormData((prev) => ({
+        ...prev,
+        deactivationDate: "",
+        deactivationReason: "",
+      }));
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -318,21 +360,25 @@ export default function ClientDetails() {
               Client Details
             </p>
             <nav className="flex flex-row lg:flex-col gap-1 overflow-x-auto">
-              {sections.map((section) => (
-                <button
-                  key={section.key}
-                  type="button"
-                  onClick={() => setActiveSection(section.key)}
-                  className={cn(
-                    "text-left text-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                    activeSection === section.key
-                      ? "bg-primary text-primary-foreground"
-                      : "text-primary hover:bg-secondary"
-                  )}
-                >
-                  {section.label}
-                </button>
-              ))}
+              {sections.map((section) => {
+                const Icon = section.icon;
+                return (
+                  <button
+                    key={section.key}
+                    type="button"
+                    onClick={() => setActiveSection(section.key)}
+                    className={cn(
+                      "flex items-center gap-2.5 text-nowrap rounded-md px-3 py-2 text-left text-sm font-medium transition-colors",
+                      activeSection === section.key
+                        ? "bg-primary text-primary-foreground"
+                        : "text-primary hover:bg-secondary"
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {section.label}
+                  </button>
+                );
+              })}
             </nav>
           </CardContent>
         </Card>
@@ -365,7 +411,7 @@ export default function ClientDetails() {
                   statusNote={statusNote}
                   onChange={handleChange}
                   onClientTypeChange={setClientType}
-                  onStatusChange={setStatusOverride}
+                  onStatusChange={chooseStatus}
                   onFileChange={handleSelectChange}
                 />
               </SectionCard>
@@ -416,7 +462,7 @@ export default function ClientDetails() {
                 {activeSection === "cases" && <LinkedCasesSection />}
                 {activeSection === "invoices" && <InvoicesSection />}
                 {activeSection === "management" && record && (
-                  <ClientManagementSection client={record} />
+                  <ClientManagementSection />
                 )}
                 {activeSection === "analytics" && <AnalyticsSection />}
                 {activeSection === "merge" && record && (

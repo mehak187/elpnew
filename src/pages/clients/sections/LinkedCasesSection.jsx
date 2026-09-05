@@ -1,30 +1,44 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DataTable from "@/components/shared/DataTable";
+import { IdStatusDot } from "@/components/shared/panels";
 import { cn } from "@/lib/utils";
 import { clientLinkedCases } from "../clientMockData";
 
 const ALL_STAGES = "all";
+const ACTIVE = "active";
 const CLOSED = "closed";
+
+/** A file that has finished is closed, wherever it got to. */
+const isClosed = (row) => row.caseStatus === "Closed";
 
 /**
  * The tabs above the table, in the order a case moves through them.
  *
- * `matches` is what each tab counts and filters by. Closed is last and cuts
- * across the rest: a case that has finished still belongs to the level it
- * ended at, so it is counted in both places on purpose.
+ * `matches` is what each tab counts and filters by. Closed is last and is a
+ * level in its own right rather than a state a file can be in while it sits
+ * somewhere else: a closed file is no longer under Execution, so it is
+ * counted once, under Closed.
+ *
+ * All Cases is everything the client has ever had, finished or not, so
+ * Active Cases sits beside it for the work actually in hand.
  */
 const STAGES = [
   { key: ALL_STAGES, label: "All Cases", matches: () => true },
+  { key: ACTIVE, label: "Active", matches: (c) => !isClosed(c) },
   { key: "Primary", label: "Primary" },
   { key: "Appeal", label: "Appeal" },
   { key: "Supreme", label: "Supreme" },
   { key: "Execution", label: "Execution" },
-  { key: CLOSED, label: "Closed", matches: (c) => c.caseStatus === "Closed" },
+  { key: CLOSED, label: "Closed", matches: isClosed },
 ];
 
 const matcher = (stage) =>
-  stage.matches || ((c) => c.litigationLevel === stage.key);
+  stage.matches ||
+  ((c) => !isClosed(c) && c.litigationLevel === stage.key);
+
+/** Where the file stands: the level it is at, or Closed once it is done. */
+const levelOf = (row) => (isClosed(row) ? "Closed" : row.litigationLevel);
 
 /**
  * The levels a file collects a number at, in the order it collects them.
@@ -33,7 +47,7 @@ const matcher = (stage) =>
  * fall out of step.
  */
 const LEVELS = STAGES.filter(
-  (s) => s.key !== ALL_STAGES && s.key !== CLOSED
+  (s) => s.key !== ALL_STAGES && s.key !== ACTIVE && s.key !== CLOSED
 ).map((s) => s.key);
 
 /** The numbers a file carries, oldest level first. */
@@ -42,27 +56,6 @@ const numbersOf = (row) =>
     level,
     row.caseNumbers[level],
   ]);
-
-/**
- * Whether the file is still running.
- *
- * Closed is grey rather than red: a finished file is not a problem, it is
- * simply finished.
- */
-function FileStatus({ status }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 text-xs">
-      <span
-        aria-hidden="true"
-        className={cn(
-          "h-2 w-2 shrink-0 rounded-full",
-          status === "Active" ? "bg-green-500" : "bg-muted-foreground"
-        )}
-      />
-      <span className="text-muted-foreground">{status}</span>
-    </span>
-  );
-}
 
 /** A labelled line inside a cell: what it is, then what it says. */
 function DetailLine({ label, children }) {
@@ -102,10 +95,16 @@ export default function LinkedCasesSection() {
     {
       key: "fileNo",
       header: "File No.",
-      width: "10%",
+      width: "8%",
       exportValue: (row) => row.fileNo + " (" + row.caseStatus + ")",
       render: (value, row) => (
-        <div className="space-y-1">
+        <span className="flex items-center gap-2">
+          {/* Closed is grey rather than red: a finished file is not a
+              problem, it is simply finished. */}
+          <IdStatusDot
+            status={row.caseStatus}
+            tone={isClosed(row) ? "bg-muted-foreground" : "bg-green-500"}
+          />
           <button
             type="button"
             onClick={() => navigate("/litigation")}
@@ -113,17 +112,16 @@ export default function LinkedCasesSection() {
           >
             {value}
           </button>
-          <FileStatus status={row.caseStatus} />
-        </div>
+        </span>
       ),
     },
-    { key: "opponent", header: "Opponent", width: "16%" },
+    { key: "opponent", header: "Opponent", width: "14%" },
     {
       // Every number the same file has been given as it moved up. One file
       // is registered afresh at each level, so the numbers belong together.
       key: "caseNumbers",
       header: "Case Numbers",
-      width: "18%",
+      width: "16%",
       exportValue: (row) =>
         numbersOf(row)
           .map(([level, no]) => level + ": " + no)
@@ -139,17 +137,24 @@ export default function LinkedCasesSection() {
       ),
     },
     {
-      // Where the file stands now, and what is happening at that level.
+      // Where the file stands now, and what is happening at that level. A
+      // closed file reads as Closed, with the level it ended at underneath:
+      // it is not still under Execution once it is done.
       key: "litigationLevel",
       header: "Case Level",
-      width: "14%",
+      width: "12%",
       exportValue: (row) =>
-        [row.litigationLevel, row.caseStatus, row.caseStage].join(" - "),
-      render: (value, row) => (
+        isClosed(row)
+          ? "Closed - ended at " + row.litigationLevel + " - " + row.caseStage
+          : [row.litigationLevel, row.caseStatus, row.caseStage].join(" - "),
+      render: (_, row) => (
         <div className="space-y-1">
-          <p className="font-semibold">{value}</p>
+          <p className="font-semibold">{levelOf(row)}</p>
           <p className="text-xs text-muted-foreground">
-            {row.caseStatus} &bull; {row.caseStage}
+            {isClosed(row)
+              ? "Ended at " + row.litigationLevel
+              : row.caseStatus}{" "}
+            &bull; {row.caseStage}
           </p>
         </div>
       ),
@@ -157,7 +162,7 @@ export default function LinkedCasesSection() {
     {
       key: "court",
       header: "Court Details",
-      width: "24%",
+      width: "22%",
       exportValue: (row) =>
         [row.court, row.governorate, row.location].join(" - "),
       render: (_, row) => (
@@ -169,9 +174,11 @@ export default function LinkedCasesSection() {
       ),
     },
     {
+      // The widest column in the table: it carries the most detail and it
+      // is the part anyone opening this page came to read.
       key: "update",
       header: "Latest Update",
-      width: "18%",
+      width: "28%",
       exportValue: (row) => row.updateDate + " - " + (row.update || "-"),
       render: (value, row) => (
         <div className="space-y-1">

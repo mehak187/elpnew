@@ -8,6 +8,10 @@ import { CircularsContext, ACTIVE, COMPLETED, CANCELLED, stamp } from "./context
  * to a group: it is read by many people, and the firm has to be able to say
  * which of them have read it and when.
  *
+ * `branch` is the office it applies to - "general" when it covers the whole
+ * company, which most of them do - and `fileName`/`fileUrl` hold the written
+ * circular itself, when one was signed and filed behind the wording.
+ *
  * `supersedes` and `supersededBy` link the versions of one instruction. A
  * correction never edits what went out - it issues a new circular and points
  * the two at each other, so the original and everyone who acknowledged it stay
@@ -17,6 +21,9 @@ const initialCirculars = [
   {
     id: 1,
     circularNo: "CIR-2026-001",
+    branch: "general",
+    fileName: "circular-2026-001.pdf",
+    fileUrl: "/documents/sample-reference.pdf",
     date: "2026-01-12",
     targetGroup: "All Employees",
     content:
@@ -34,6 +41,9 @@ const initialCirculars = [
   {
     id: 2,
     circularNo: "CIR-2026-004",
+    branch: "general",
+    fileName: "circular-2026-004.pdf",
+    fileUrl: "/documents/sample-reference.pdf",
     date: "2026-01-20",
     targetGroup: "All Employees",
     content:
@@ -49,6 +59,9 @@ const initialCirculars = [
   {
     id: 3,
     circularNo: "CIR-2026-002",
+    branch: "1",
+    fileName: "",
+    fileUrl: "",
     date: "2026-02-03",
     targetGroup: "Lawyers",
     content:
@@ -62,6 +75,9 @@ const initialCirculars = [
   {
     id: 4,
     circularNo: "CIR-2026-003",
+    branch: "general",
+    fileName: "circular-2026-003.pdf",
+    fileUrl: "/documents/sample-reference.pdf",
     date: "2026-03-18",
     targetGroup: "Administration",
     content:

@@ -51,7 +51,13 @@ const OUTGOING = { expense: "Expense", payment: "Payment" };
  * client and case, and a transfer writes one row out of one account and one row
  * into the other so both histories stay complete.
  */
-export default function TransactionsSection({ initialAccountId, canRecord }) {
+export default function TransactionsSection({
+  initialAccountId,
+  canRecord,
+  // Hidden where the account has already been chosen on the way in, so
+  // the page does not ask the same question twice.
+  showAccountPicker = true,
+}) {
   const firm = useFirm();
   const { bankAccounts, payments, expenses, transfers, addPayment, addExpense, addTransfer } = firm;
 
@@ -144,21 +150,28 @@ export default function TransactionsSection({ initialAccountId, canRecord }) {
     <div className="space-y-6">
       {/* Account selector */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-2">
-          <Label htmlFor="txAccount">Bank Account</Label>
-          <Select value={accountId} onValueChange={setAccountId}>
-            <SelectTrigger id="txAccount" className="w-full sm:w-80">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {bankAccounts.map((a) => (
-                <SelectItem key={a.id} value={String(a.id)}>
-                  {a.bankName} &ndash; {a.accountNumber}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {showAccountPicker ? (
+          <div className="space-y-2">
+            <Label htmlFor="txAccount">Bank Account</Label>
+            <Select value={accountId} onValueChange={setAccountId}>
+              <SelectTrigger id="txAccount" className="w-full sm:w-80">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {bankAccounts.map((a) => (
+                  <SelectItem key={a.id} value={String(a.id)}>
+                    {a.bankName} &ndash; {a.accountNumber}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <p className="font-semibold text-primary">
+            {account ? account.bankName : ""}
+            {account?.accountNumber ? " - " + account.accountNumber : ""}
+          </p>
+        )}
 
         {account && (
           <p className="text-sm">

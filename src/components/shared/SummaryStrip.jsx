@@ -33,7 +33,9 @@ export default function SummaryStrip({ items, className }) {
     <Card className={className}>
       <CardContent
         className={cn(
-          "grid grid-cols-1 divide-y p-0 sm:divide-x lg:divide-y-0",
+          // Dashed rules: they separate readings of one set of records,
+          // which is a lighter job than dividing one thing from another.
+          "grid grid-cols-1 divide-y divide-dashed p-0 sm:divide-x lg:divide-y-0",
           columns
         )}
       >
@@ -48,17 +50,25 @@ export default function SummaryStrip({ items, className }) {
               className={cn(
                 "relative px-4 py-3 text-left",
                 item.onClick &&
-                  "transition-colors hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-ring"
+                  // focus-visible, not focus: a mouse click should not
+                  // leave a ring drawn round the cell, but a keyboard
+                  // user still has to be able to see where they are.
+                  "transition-colors hover:bg-muted/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
               )}
             >
               <p
                 className={cn(
-                  "text-sm font-semibold",
+                  "flex items-center gap-2 text-sm font-semibold",
                   item.tone || "text-primary"
                 )}
               >
-                {item.label}
-                {item.count !== undefined && " (" + item.count + ")"}
+                {/* A logo or icon, where the cell stands for something
+                    with a face of its own - a bank, say. */}
+                {item.mark}
+                <span className="min-w-0 truncate">
+                  {item.label}
+                  {item.count !== undefined && " (" + item.count + ")"}
+                </span>
               </p>
               <p className="mt-1 text-lg font-bold">{item.value}</p>
               {item.note && (
@@ -69,7 +79,12 @@ export default function SummaryStrip({ items, className }) {
               {item.selected && (
                 <span
                   aria-hidden="true"
-                  className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-primary"
+                  // bg-current, so the line is whatever colour the label
+                  // is - red under Unpaid, green under Paid.
+                  className={cn(
+                    "absolute inset-x-0 bottom-0 h-0.5 bg-current",
+                    item.tone || "text-primary"
+                  )}
                 />
               )}
             </Cell>

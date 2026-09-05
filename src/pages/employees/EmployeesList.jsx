@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import DataTable from "@/components/shared/DataTable";
 import { Users, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { IdStatusDot } from "@/components/shared/panels";
 import { withRial } from "@/lib/money";
 import {
   employeeRecords,
@@ -60,12 +61,9 @@ export default function EmployeesList() {
       render: (value, row) => (
         <span className="flex items-center gap-2">
           {/* Standing shown as a dot, so the number keeps the column to itself */}
-          <span
-            title={row.status}
-            className={cn(
-              "h-2 w-2 shrink-0 rounded-full",
-              STATUS_DOT[row.status] || "bg-muted-foreground",
-            )}
+          <IdStatusDot
+            status={row.status}
+            tone={STATUS_DOT[row.status] || "bg-muted-foreground"}
           />
           <button
             type="button"

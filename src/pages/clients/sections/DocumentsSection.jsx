@@ -224,7 +224,7 @@ export default function DocumentsSection({ formData, onChange }) {
         <button
           type="button"
           onClick={() => setOpenId(row.id === openId ? null : row.id)}
-          className="rounded font-semibold text-primary underline underline-offset-2 focus:outline-none focus:ring-2 focus:ring-ring"
+          className="rounded font-semibold text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
         >
           {value}
         </button>
@@ -290,8 +290,8 @@ export default function DocumentsSection({ formData, onChange }) {
         </Button>
       </div>
 
-      {/* The form takes the place above the table only while it is being
-          filled in, so the list is what the page normally shows. */}
+      {/* The form takes the place of the list while it is being filled
+          in. */}
       {adding && (
         <Card>
           <CardContent className="space-y-4 p-4">
@@ -420,6 +420,11 @@ export default function DocumentsSection({ formData, onChange }) {
         </Card>
       )}
 
+      {/* The list is hidden while the form is open: a page is one thing
+          at a time, either the documents on file or the form that adds
+          to them. */}
+      {!adding && (
+        <>
       <p className="flex items-start gap-2 rounded-md border-l-4 border-l-blue-500 bg-blue-50 px-3 py-2 text-xs text-blue-900">
         <Info className="mt-0.5 h-4 w-4 shrink-0" />
         <span>
@@ -507,6 +512,8 @@ export default function DocumentsSection({ formData, onChange }) {
           document, not the upload date.
         </span>
       </p>
+        </>
+      )}
     </div>
   );
 }

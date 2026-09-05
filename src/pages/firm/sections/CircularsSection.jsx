@@ -13,7 +13,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/panels";
-import { Plus, Lock, Search, FileSpreadsheet, Ban } from "lucide-react";
+import {
+  Plus,
+  Lock,
+  Search,
+  FileSpreadsheet,
+  Ban,
+  Upload,
+  FileCheck,
+  FileText,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toCsv, downloadCsv } from "@/lib/csv";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
@@ -29,6 +38,8 @@ import {
   today,
 } from "@/lib/circulars/context";
 import CircularDetails from "./CircularDetails";
+import { useFirm } from "@/lib/firm/context";
+import { GENERAL_BRANCH } from "../firmData";
 
 const CONTENT_LIMIT = 1000;
 
@@ -44,7 +55,16 @@ const PAGE_SIZE = 10;
 const emptyDraft = {
   date: today(),
   targetGroup: "All Employees",
+  // Most circulars are the whole company's business, so General leads.
+  branch: GENERAL_BRANCH,
   content: "",
+};
+
+/** The office a circular is for, as it reads on the page. */
+const branchLabelFor = (circular, branches) => {
+  if (!circular.branch || circular.branch === GENERAL_BRANCH) return "General";
+  const branch = branches.find((b) => String(b.id) === String(circular.branch));
+  return branch ? branch.name : "General";
 };
 
 /** A required field, with the mark that says so. */
@@ -69,11 +89,14 @@ function FieldLabel({ htmlFor, children }) {
 export default function CircularsSection({ canEdit }) {
   const { circulars, audit, issueCircular, reviseCircular, cancelCircular } =
     useCirculars();
+  const { branches } = useFirm();
 
   // The circular being corrected, if any. Null while nothing is open.
   const [editing, setEditing] = useState(null);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState(emptyDraft);
+  // The written circular itself, when one is attached.
+  const [file, setFile] = useState(null);
   const [detailsFor, setDetailsFor] = useState(null);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -82,9 +105,12 @@ export default function CircularsSection({ canEdit }) {
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
   const circularNo = nextCircularNo(circulars);
   const open = adding || editing;
+  // A correction that attaches nothing keeps the paper already on file.
+  const attachedName = file ? file.name : editing?.fileName || "";
 
   const startNew = () => {
     setDraft(emptyDraft);
+    setFile(null);
     setEditing(null);
     setAdding(true);
   };
@@ -95,14 +121,17 @@ export default function CircularsSection({ canEdit }) {
       // date the original went out.
       date: today(),
       targetGroup: circular.targetGroup,
+      branch: circular.branch || GENERAL_BRANCH,
       content: circular.content,
     });
+    setFile(null);
     setAdding(false);
     setEditing(circular);
   };
 
   const close = () => {
     setDraft(emptyDraft);
+    setFile(null);
     setAdding(false);
     setEditing(null);
   };
@@ -116,8 +145,13 @@ export default function CircularsSection({ canEdit }) {
       circularNo,
       date: draft.date,
       targetGroup: draft.targetGroup,
+      branch: draft.branch,
       content: draft.content.trim(),
       issuedBy: CURRENT_USER.name,
+      // A correction that attaches no new paper keeps the old one: the
+      // wording changed, the signed document behind it did not.
+      fileName: file ? file.name : editing?.fileName || "",
+      fileUrl: file ? URL.createObjectURL(file) : editing?.fileUrl || "",
     };
     if (editing) reviseCircular(editing.id, circular);
     else issueCircular(circular);
@@ -148,7 +182,17 @@ export default function CircularsSection({ canEdit }) {
           { key: "circularNo", header: "Circular No." },
           { key: "content", header: "Subject / Content" },
           { key: "date", header: "Date", exportValue: (r) => formatDate(r.date) },
-          { key: "targetGroup", header: "Target Group" },
+          { key: "targetGroup", header: "Target Audience" },
+          {
+            key: "branch",
+            header: "Branch",
+            exportValue: (r) => branchLabelFor(r, branches),
+          },
+          {
+            key: "fileName",
+            header: "Document",
+            exportValue: (r) => r.fileName || "",
+          },
           { key: "issuedBy", header: "Issued By" },
           {
             key: "acknowledgement",
@@ -168,8 +212,10 @@ export default function CircularsSection({ canEdit }) {
 
   /* ------------------------------------------------- issuing or correcting */
 
-  if (open && canEdit) {
-    return (
+  // Rendered in place of the list: a page is one thing at a time, either
+  // the circulars on file or the form that issues one.
+  const form =
+    open && canEdit ? (
       <Card>
         <CardContent className="space-y-5 p-4 sm:p-6">
           {/* The way back out of the form, in the same place and with the
@@ -189,24 +235,73 @@ export default function CircularsSection({ canEdit }) {
             </p>
           )}
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
             <div className="space-y-2">
               <Label htmlFor="circularNo">Circular Number</Label>
-              <div className="relative">
-                {/* Given by the system: a circular is referred to by its number
-                    long after it was issued, so it cannot be typed. */}
+              <div className="flex gap-2">
+                <div className="relative min-w-0 flex-1">
+                  {/* Given by the system: a circular is referred to by its
+                      number long after it was issued, so it cannot be
+                      typed. */}
+                  <Input
+                    id="circularNo"
+                    readOnly
+                    tabIndex={-1}
+                    className="bg-muted pr-9"
+                    value={circularNo}
+                  />
+                  <Lock
+                    aria-hidden="true"
+                    className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+                  />
+                </div>
+
+                {/* The written circular, attached to the number it will be
+                    filed under. An icon rather than a field of its own: the
+                    file name lives in the tooltip, so the control stays the
+                    size of a button whether or not anything is attached. */}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  asChild
+                  title={
+                    attachedName
+                      ? attachedName + " attached - click to replace"
+                      : "Upload the written circular"
+                  }
+                  className={cn(
+                    "shrink-0",
+                    attachedName && "border-green-600 text-green-600"
+                  )}
+                >
+                  <label htmlFor="circularFile" className="cursor-pointer">
+                    {attachedName ? (
+                      <FileCheck className="h-4 w-4" />
+                    ) : (
+                      <Upload className="h-4 w-4" />
+                    )}
+                    <span className="sr-only">
+                      {attachedName
+                        ? attachedName + " attached. Choose another."
+                        : "Upload the written circular"}
+                    </span>
+                  </label>
+                </Button>
                 <Input
-                  id="circularNo"
-                  readOnly
-                  tabIndex={-1}
-                  className="bg-muted pr-9"
-                  value={circularNo}
-                />
-                <Lock
-                  aria-hidden="true"
-                  className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+                  id="circularFile"
+                  type="file"
+                  className="hidden"
+                  onChange={(e) =>
+                    e.target.files[0] && setFile(e.target.files[0])
+                  }
                 />
               </div>
+
+              {attachedName && (
+                <p className="truncate text-xs text-green-700">
+                  {attachedName}
+                </p>
+              )}
             </div>
 
 
@@ -218,6 +313,30 @@ export default function CircularsSection({ canEdit }) {
                 value={draft.date}
                 onChange={(e) => set("date", e.target.value)}
               />
+            </div>
+
+            {/* Which office the circular is for, asked before which people in
+                it: the office narrows the field, the group narrows it again.
+                General first, because a circular usually covers the whole
+                company. */}
+            <div className="space-y-2">
+              <Label htmlFor="circularBranch">Branch</Label>
+              <Select
+                value={draft.branch}
+                onValueChange={(value) => set("branch", value)}
+              >
+                <SelectTrigger id="circularBranch">
+                  <SelectValue placeholder="Select branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={GENERAL_BRANCH}>General</SelectItem>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.id} value={String(branch.id)}>
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -255,6 +374,7 @@ export default function CircularsSection({ canEdit }) {
             </p>
           </div>
 
+
           <p className="rounded-lg border border-primary/30 bg-secondary p-4 text-sm text-primary">
             Once issued, everyone in {draft.targetGroup} is stopped at sign-in
             until they acknowledge this circular.
@@ -270,8 +390,7 @@ export default function CircularsSection({ canEdit }) {
           </div>
         </CardContent>
       </Card>
-    );
-  }
+    ) : null;
 
   /* ------------------------------------------------------ what is on file */
 
@@ -296,7 +415,7 @@ export default function CircularsSection({ canEdit }) {
             Export Excel
           </Button>
           {canEdit && (
-            <Button onClick={startNew}>
+            <Button onClick={startNew} disabled={Boolean(open)}>
               <Plus className="mr-1.5 h-4 w-4" />
               New Circular
             </Button>
@@ -304,6 +423,10 @@ export default function CircularsSection({ canEdit }) {
         </div>
       </div>
 
+      {form}
+
+      {!open && (
+        <>
       <div>
         <p className="mb-2 text-lg font-bold text-primary">Issued Circulars</p>
         <Card>
@@ -316,25 +439,25 @@ export default function CircularsSection({ canEdit }) {
               <table className="w-full min-w-[1000px] text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                    <th className="p-3 font-semibold" style={{ width: "11%" }}>
+                    <th className="p-3 font-semibold" style={{ width: "10%" }}>
                       Circular No.
                     </th>
-                    <th className="p-3 font-semibold" style={{ width: "17%" }}>
+                    <th className="p-3 font-semibold" style={{ width: "20%" }}>
                       Subject / Content (Preview)
                     </th>
-                    <th className="p-3 font-semibold" style={{ width: "10%" }}>
+                    <th className="p-3 font-semibold" style={{ width: "9%" }}>
                       Date
                     </th>
-                    <th className="p-3 font-semibold" style={{ width: "12%" }}>
-                      Target Group
+                    <th className="p-3 font-semibold" style={{ width: "16%" }}>
+                      Target Audience
                     </th>
                     <th className="p-3 font-semibold" style={{ width: "14%" }}>
                       Issued By
                     </th>
-                    <th className="p-3 font-semibold" style={{ width: "16%" }}>
+                    <th className="p-3 font-semibold" style={{ width: "14%" }}>
                       Acknowledgement
                     </th>
-                    <th className="p-3 font-semibold" style={{ width: "20%" }}>
+                    <th className="p-3 font-semibold" style={{ width: "13%" }}>
                       Status
                     </th>
                   </tr>
@@ -373,7 +496,14 @@ export default function CircularsSection({ canEdit }) {
                       <td className="whitespace-nowrap p-3">
                         {formatDate(circular.date)}
                       </td>
-                      <td className="p-3">{circular.targetGroup}</td>
+                      {/* Who it is for, and at which office - one answer
+                          in two parts, so they read together. */}
+                      <td className="p-3">
+                        <span className="block">{circular.targetGroup}</span>
+                        <span className="block text-xs text-muted-foreground">
+                          {branchLabelFor(circular, branches)}
+                        </span>
+                      </td>
                       <td className="p-3">{circular.issuedBy}</td>
                       {/* Counted, never typed */}
                       <td className="p-3">
@@ -407,6 +537,26 @@ export default function CircularsSection({ canEdit }) {
                           >
                             <Ban className="h-3 w-3 shrink-0" />
                             Cancel circular
+                          </button>
+                        )}
+
+                        {/* The written circular, where the row's other
+                            actions are. Shown only when there is one. */}
+                        {circular.fileUrl && (
+                          <button
+                            type="button"
+                            title={"View " + circular.fileName}
+                            onClick={() =>
+                              window.open(
+                                circular.fileUrl,
+                                "_blank",
+                                "noopener,noreferrer"
+                              )
+                            }
+                            className="mt-1 flex items-center gap-1 rounded text-xs text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                          >
+                            <FileText className="h-3 w-3 shrink-0" />
+                            View document
                           </button>
                         )}
                       </td>
@@ -501,6 +651,8 @@ export default function CircularsSection({ canEdit }) {
           </Card>
         )}
       </div>
+        </>
+      )}
 
       {detailsFor && (
         <CircularDetails

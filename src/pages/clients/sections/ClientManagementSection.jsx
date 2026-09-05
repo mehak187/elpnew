@@ -9,8 +9,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import BackButton from "@/components/shared/BackButton";
 import { EmptyState } from "@/components/shared/panels";
-import { Save } from "lucide-react";
+import { Plus, Save, AlertTriangle } from "lucide-react";
 import { useFirm } from "@/lib/firm/context";
 import { useLanguage, inLanguage } from "@/lib/language/context";
 import { BRANCH_ROLES, staffFor } from "@/pages/firm/firmData";
@@ -20,8 +21,8 @@ import { BRANCH_ROLES, staffFor } from "@/pages/firm/firmData";
  *
  * Held per branch rather than as one set: the same client can be handled by
  * Muscat and by Salalah, and each office staffs the four roles from its own
- * people. Switching the branch picker therefore shows that branch's team - it
- * does not throw the other branch's away.
+ * people. A branch therefore has one team, and only one - a second assignment
+ * against the same branch would be two answers to the same question.
  */
 const INITIAL_TEAMS = {
   1: {
@@ -48,41 +49,66 @@ const personIn = (branchId, role, teams) => {
 const emptyRoles = () =>
   Object.fromEntries(BRANCH_ROLES.map((role) => [role, ""]));
 
-export default function ClientManagementSection({ client }) {
+export default function ClientManagementSection() {
   const { branches } = useFirm();
   const { language } = useLanguage();
 
   const [teams, setTeams] = useState(INITIAL_TEAMS);
-
-  const firstBranch = client.branchId
-    ? String(client.branchId)
-    : String(branches[0]?.id || "");
-
-  const [branchId, setBranchId] = useState(firstBranch);
-  // Edited here and only written to the client on Save, so a half-made team
-  // never reaches the table below.
-  const [draft, setDraft] = useState(
-    () => teams[firstBranch] || emptyRoles()
-  );
+  // Null while the page is just the list. "add" for a new branch team, or the
+  // branch id being edited.
+  const [mode, setMode] = useState(null);
+  const [branchId, setBranchId] = useState("");
+  const [draft, setDraft] = useState(emptyRoles);
 
   const branchName = (branch) =>
     inLanguage(language, branch.name, branch.nameAr);
 
-  /** Move the form to a branch, showing whatever that branch already has. */
+  const openAdd = () => {
+    setMode("add");
+    setBranchId("");
+    setDraft(emptyRoles());
+  };
+
+  /** Opens a branch's existing team in the section above the table. */
   const openBranch = (id) => {
+    setMode("edit");
     setBranchId(id);
-    setDraft(teams[id] || emptyRoles());
+    setDraft({ ...emptyRoles(), ...teams[id] });
+  };
+
+  const close = () => {
+    setMode(null);
+    setBranchId("");
+    setDraft(emptyRoles());
   };
 
   const assign = (role, personId) =>
     setDraft((prev) => ({ ...prev, [role]: personId }));
 
-  const save = () =>
-    setTeams((prev) => ({ ...prev, [branchId]: { ...draft } }));
+  /**
+   * Changing the branch starts that branch's team afresh.
+   *
+   * People belong to one office, so the four names picked for Muscat mean
+   * nothing at Salalah - carrying them across would offer staff who do not
+   * work there.
+   */
+  const chooseBranch = (id) => {
+    setBranchId(id);
+    setDraft(emptyRoles());
+  };
 
-  // Every role is required, so a branch is never listed half-staffed.
+  // A branch already in the table cannot be added a second time. Said here
+  // rather than by hiding it from the list, so the reason is on screen.
+  const alreadyStaffed = mode === "add" && Boolean(teams[branchId]);
+
   const canSave =
-    branchId && BRANCH_ROLES.every((role) => draft[role]);
+    branchId && !alreadyStaffed && BRANCH_ROLES.every((role) => draft[role]);
+
+  const save = () => {
+    if (!canSave) return;
+    setTeams((prev) => ({ ...prev, [branchId]: { ...draft } }));
+    close();
+  };
 
   /** The branches with a team on them, and who is on each. */
   const staffed = branches
@@ -95,73 +121,127 @@ export default function ClientManagementSection({ client }) {
     }))
     .filter((row) => row.team.some((r) => r.person));
 
+  const editingBranch = branches.find((b) => String(b.id) === branchId);
+
   return (
     <div className="space-y-6">
-      {/* The branch plus its four roles, on one row where there is room */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 sm:gap-6">
-        <div className="space-y-2">
-          <Label htmlFor="managementBranch">
-            Branch Name<span className="text-destructive"> *</span>
-          </Label>
-          <Select value={branchId} onValueChange={openBranch}>
-            <SelectTrigger id="managementBranch">
-              <SelectValue placeholder="Please Select" />
-            </SelectTrigger>
-            <SelectContent>
-              {branches.map((branch) => (
-                <SelectItem key={branch.id} value={String(branch.id)}>
-                  {branch.branchNumber} - {branchName(branch)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* The roles this branch staffs, filled from that branch only */}
-        {BRANCH_ROLES.map((role) => {
-          const people = staffFor(branchId, role);
-          const fieldId = "role-" + role.replace(/\s+/g, "-").toLowerCase();
-
-          return (
-            <div key={role} className="space-y-2">
-              <Label htmlFor={fieldId}>
-                {role}
-                <span className="text-destructive"> *</span>
-              </Label>
-              <Select
-                value={draft[role] || ""}
-                onValueChange={(value) => assign(role, value)}
-                disabled={people.length === 0}
-              >
-                <SelectTrigger id={fieldId}>
-                  <SelectValue
-                    placeholder={
-                      people.length ? "Please Select" : "No one in this branch"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {people.map((person) => (
-                    <SelectItem key={person.id} value={String(person.id)}>
-                      {person.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          );
-        })}
-      </div>
-
       <div className="flex justify-end">
-        <Button type="button" onClick={save} disabled={!canSave}>
-          <Save className="mr-2 h-4 w-4" />
-          Save
+        <Button type="button" onClick={openAdd}>
+          <Plus className="mr-1.5 h-4 w-4" />
+          Add Client Team
         </Button>
       </div>
 
+      {/* The form opens above the table, never in place of it: the list of
+          branch teams is the page, and it should not vanish to make room. */}
+      {mode && (
+        <Card>
+          <CardContent className="space-y-6 p-4 sm:p-6">
+            <div className="flex items-center gap-3">
+              <BackButton onBack={close} />
+              <p className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
+                {mode === "add"
+                  ? "Add Client Team"
+                  : "Client Team - " +
+                    (editingBranch ? branchName(editingBranch) : "")}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 sm:gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="managementBranch">
+                  Branch Name<span className="text-destructive"> *</span>
+                </Label>
+                <Select
+                  value={branchId}
+                  onValueChange={chooseBranch}
+                  // The branch of an existing team is what is being edited, so
+                  // it is not up for changing here.
+                  disabled={mode === "edit"}
+                >
+                  <SelectTrigger id="managementBranch">
+                    <SelectValue placeholder="Please Select" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch.id} value={String(branch.id)}>
+                        {branch.branchNumber} - {branchName(branch)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* The roles this branch staffs, filled from that branch only */}
+              {BRANCH_ROLES.map((role) => {
+                const people = staffFor(branchId, role);
+                const fieldId = "role-" + role.replace(/\s+/g, "-").toLowerCase();
+
+                return (
+                  <div key={role} className="space-y-2">
+                    <Label htmlFor={fieldId}>
+                      {role}
+                      <span className="text-destructive"> *</span>
+                    </Label>
+                    <Select
+                      value={draft[role] || ""}
+                      onValueChange={(value) => assign(role, value)}
+                      disabled={!branchId || alreadyStaffed || !people.length}
+                    >
+                      <SelectTrigger id={fieldId}>
+                        <SelectValue
+                          placeholder={
+                            !branchId
+                              ? "Select a branch first"
+                              : people.length
+                                ? "Please Select"
+                                : "No one in this branch"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {people.map((person) => (
+                          <SelectItem key={person.id} value={String(person.id)}>
+                            {person.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              })}
+            </div>
+
+            {alreadyStaffed && (
+              <p className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  This branch already has a Client Team. Please use the table
+                  below to edit the existing assignment.
+                </span>
+              </p>
+            )}
+
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Button variant="outline" onClick={close}>
+                Cancel
+              </Button>
+              <Button onClick={save} disabled={!canSave}>
+                <Save className="mr-2 h-4 w-4" />
+                Save
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Every branch that has a team, one row each. The branch name opens
-          that team in the form above, which is the only way to change it. */}
+          that team above, which is the only way to change it.
+
+          Hidden while a new team is being added: nothing on the form needs
+          the list, and a blank form is easier to read on its own. Editing
+          keeps it, because the row being changed is in it. */}
+      {mode !== "add" && (
       <Card>
         <CardContent className="p-0">
           {staffed.length === 0 ? (
@@ -217,6 +297,7 @@ export default function ClientManagementSection({ client }) {
           )}
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }
