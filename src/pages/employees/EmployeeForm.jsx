@@ -18,7 +18,6 @@ import {
   ArrowLeft,
   Info,
   User,
-  Briefcase,
   FileText,
   Wallet,
 
@@ -69,24 +68,16 @@ import {
  */
 const SECTIONS = [
   {
+    // Who the person is, what they do and how to reach them: three
+    // entries in this menu that were all one answer, so they are one page
+    // with a box each.
     key: "information",
     label: "Employee Information",
     title: "Employee",
     icon: User,
-    note: "Employee profile and basic information",
+    note: "Employee profile, job description and contact details",
   },
-  {
-    key: "job",
-    label: "Job Description",
-    icon: Briefcase,
-    note: "Define and manage employee job description details",
-  },
-  {
-    key: "addresses",
-    label: "Addresses",
-    icon: MapPin,
-    note: "Manage employee contact and address details",
-  },
+
   {
     key: "documents",
     label: "Documents",
@@ -204,6 +195,26 @@ const NOTES_LIMIT = 300;
 
 /** The first field of the form a section's header button jumps to. */
 /** Sections where the header button opens a form instead of scrolling to one. */
+
+/**
+ * One titled box on the Employee Information page.
+ *
+ * The boxes are separated by space rather than by a divider, so the page
+ * reads as three things about one person rather than one long form.
+ */
+function SectionCard({ title, aside, children }) {
+  return (
+    <Card>
+      <CardContent className="p-4 sm:p-6">
+        <div className="mb-6 flex items-center gap-3 border-b pb-3">
+          <h2 className="text-base font-semibold text-primary">{title}</h2>
+          {aside}
+        </div>
+        {children}
+      </CardContent>
+    </Card>
+  );
+}
 
 const IMAGE_TYPES = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
 
@@ -336,6 +347,7 @@ export default function EmployeeForm() {
   const sections = isEditMode ? SECTIONS : SECTIONS.slice(0, 1);
 
   const current = SECTIONS.find((s) => s.key === activeSection) || SECTIONS[0];
+  const isInfo = activeSection === "information";
   const employeeNo = record?.empNo || nextEmployeeNo(employeeRecords);
   const hasLeft = HAS_LEFT.includes(formData.status);
 
@@ -412,31 +424,65 @@ export default function EmployeeForm() {
             its widest content by default, so one wide table in here would
             stretch the whole page and push the sidebar off screen. */}
         <div className="w-full min-w-0 flex-1">
-          <Card>
-            <CardContent className="p-4 sm:p-6">
-              <div className="mb-6 flex items-center gap-3 border-b pb-3">
-                <h2 className="text-base font-semibold text-primary">
-                  {current.label}
-                </h2>
-                {/* Standing travels with the record, whichever side is open -
-                    but only once there is a record. A new employee has not
-                    been created yet, so there is nothing to be Active. */}
-                {isEditMode && (
-                  <span className="inline-flex items-center gap-1.5 text-sm">
-                    {formData.status}
-                    <span
-                      aria-hidden="true"
-                      className={cn(
-                        "h-2 w-2 rounded-full",
-                        STATUS_DOT[formData.status] || "bg-muted-foreground"
-                      )}
-                    />
-                  </span>
-                )}
-              </div>
+          {/* On the merged page the three boxes are the frame, so the
+              page's own card steps out of the way rather than drawing a
+              border around three borders. */}
+          <Card className={cn(isInfo && "border-0 bg-transparent shadow-none")}>
+            <CardContent
+              className={cn(
+                "p-4 sm:p-6",
+                isInfo && "space-y-4 p-0 sm:space-y-6 sm:p-0"
+              )}
+            >
+              {!isInfo && (
+                <div className="mb-6 flex items-center gap-3 border-b pb-3">
+                  <h2 className="text-base font-semibold text-primary">
+                    {current.label}
+                  </h2>
+                  {/* Standing travels with the record, whichever side is
+                      open - but only once there is a record. */}
+                  {isEditMode && (
+                    <span className="inline-flex items-center gap-1.5 text-sm">
+                      {formData.status}
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          "h-2 w-2 rounded-full",
+                          STATUS_DOT[formData.status] || "bg-muted-foreground"
+                        )}
+                      />
+                    </span>
+                  )}
+                </div>
+              )}
 
-              <form id="employee-form" onSubmit={handleSubmit}>
-                {activeSection === "information" && (
+              <form
+                id="employee-form"
+                onSubmit={handleSubmit}
+                className={cn(isInfo && "space-y-4 sm:space-y-6")}
+              >
+                {isInfo && (
+                  <>
+                {/* Standing travels with the record - but only once there
+                    is one. A new employee has not been created yet, so
+                    there is nothing to be Active. */}
+                <SectionCard
+                  title="Employee Information"
+                  aside={
+                    isEditMode && (
+                      <span className="inline-flex items-center gap-1.5 text-sm">
+                        {formData.status}
+                        <span
+                          aria-hidden="true"
+                          className={cn(
+                            "h-2 w-2 rounded-full",
+                            STATUS_DOT[formData.status] || "bg-muted-foreground"
+                          )}
+                        />
+                      </span>
+                    )
+                  }
+                >
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
                       {/* Given by the system, so it is shown and not asked for */}
@@ -609,13 +655,10 @@ export default function EmployeeForm() {
                       </div>
                     )}
                   </div>
-                )}
+                </SectionCard>
 
-                {activeSection === "job" && (
+                <SectionCard title="Job Description Information">
                   <div className="space-y-6">
-                    <p className="font-semibold text-primary">
-                      Job Description Information
-                    </p>
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
                       <div className="space-y-2">
@@ -700,7 +743,7 @@ export default function EmployeeForm() {
 
                     </div>
                   </div>
-                )}
+                </SectionCard>
 
                 {activeSection === "documents" && (
                   <div className="space-y-6">
@@ -910,11 +953,8 @@ export default function EmployeeForm() {
 
                 {activeSection === "performance" && <PerformanceSection />}
 
-                {activeSection === "addresses" && (
+                <SectionCard title="Contact &amp; Address Information">
                   <div className="space-y-6">
-                    <p className="font-semibold text-primary">
-                      Contact &amp; Address Information
-                    </p>
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
                       <PhoneField
@@ -979,6 +1019,8 @@ export default function EmployeeForm() {
                       </span>
                     </p>
                   </div>
+                </SectionCard>
+                  </>
                 )}
 
                 {/* Not yet specified, so nothing is invented for them */}
