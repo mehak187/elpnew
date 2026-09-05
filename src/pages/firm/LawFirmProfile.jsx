@@ -87,10 +87,14 @@ const SECTIONS = [
     note: "Cases, clients and money, at a glance",
   },
   {
+    // Not in the menu any more: an account's history is read by picking
+    // that bank on the Bank Accounts page, which is where anyone looking
+    // for it already is. The section stays so the links into it still work.
     key: "transactions",
     label: "Manage Transactions",
     icon: Wallet,
     note: "Every movement through the bank accounts",
+    hidden: true,
   },
   {
     // Commission is worked out across clients rather than inside any one
@@ -200,7 +204,7 @@ export default function LawFirmProfile() {
               Office Management
             </p>
             <nav className="flex flex-row gap-1 overflow-x-auto lg:flex-col">
-              {SECTIONS.map((section) => {
+              {SECTIONS.filter((section) => !section.hidden).map((section) => {
                 const Icon = section.icon;
                 return (
                   <button
@@ -253,7 +257,7 @@ export default function LawFirmProfile() {
               )}
               {activeSection === "bank" && (
                 <BankAccountsSection
-                  onNavigateSection={goToSection}
+                  canRecord={canRecord}
                   canEdit={isAdmin}
                 />
               )}

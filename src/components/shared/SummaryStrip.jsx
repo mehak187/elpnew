@@ -58,12 +58,17 @@ export default function SummaryStrip({ items, className }) {
             >
               <p
                 className={cn(
-                  "text-sm font-semibold",
+                  "flex items-center gap-2 text-sm font-semibold",
                   item.tone || "text-primary"
                 )}
               >
-                {item.label}
-                {item.count !== undefined && " (" + item.count + ")"}
+                {/* A logo or icon, where the cell stands for something
+                    with a face of its own - a bank, say. */}
+                {item.mark}
+                <span className="min-w-0 truncate">
+                  {item.label}
+                  {item.count !== undefined && " (" + item.count + ")"}
+                </span>
               </p>
               <p className="mt-1 text-lg font-bold">{item.value}</p>
               {item.note && (

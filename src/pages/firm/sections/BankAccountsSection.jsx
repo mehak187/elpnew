@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import BackButton from "@/components/shared/BackButton";
 import { Card, CardContent } from "@/components/ui/card";
+import SummaryStrip from "@/components/shared/SummaryStrip";
+import TransactionsSection from "./TransactionsSection";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -90,9 +92,14 @@ function Pair({ label, children, strong }) {
  * initials stand in. The fallback is drawn the same size and shape as the
  * artwork it replaces, so a row of cards stays a row of cards either way.
  */
-function BankMark({ bank }) {
+function BankMark({ bank, className }) {
   return (
-    <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-secondary text-xs font-bold text-primary">
+    <span
+      className={cn(
+        "flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-secondary text-xs font-bold text-primary",
+        className
+      )}
+    >
       {bank.logo ? (
         <img src={bank.logo} alt="" className="h-full w-full object-contain" />
       ) : (
@@ -301,7 +308,7 @@ const PAGE_SIZES = [10, 25, 50];
  * The cards above the table are a filter as well as a summary: each bank has
  * one, and choosing it narrows the table to that bank's accounts.
  */
-export default function BankAccountsSection({ onNavigateSection, canEdit }) {
+export default function BankAccountsSection({ canEdit, canRecord }) {
   const navigate = useNavigate();
   const firm = useFirm();
   const { bankAccounts, branches, transfers, addBankAccount, addTransfer } =
@@ -534,78 +541,45 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
 
       {tab === "accounts" && (
         <>
-          {/* One card for every bank, and one for all of them together */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <button
-              type="button"
-              onClick={() => choose(ALL_BANKS)}
-              className={cn(
-                "flex items-start gap-3 rounded-lg border p-4 text-left transition-colors",
-                selectedBank === ALL_BANKS
-                  ? "border-primary bg-secondary"
-                  : "hover:bg-muted/50",
-              )}
-            >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-primary">
-                <Landmark className="h-5 w-5" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block font-semibold text-primary">
-                  All Banks
-                </span>
-                <span className="mt-2 flex justify-between gap-2 text-xs text-muted-foreground">
-                  <span>Total Banks</span>
-                  <span>Total Balance</span>
-                </span>
-                <span className="flex items-baseline justify-between gap-2">
-                  <span className="font-bold text-primary">
-                    {bankNames.length}
+          {/* Every bank in one strip, with all of them together first.
+              Choosing one is choosing what the page is about: the list of
+              accounts, or that account's history. */}
+          <SummaryStrip
+            items={[
+              {
+                key: ALL_BANKS,
+                mark: (
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-secondary text-primary">
+                    <Landmark className="h-4 w-4" />
                   </span>
-                  <span className="font-bold text-primary">
-                    {money(totalBalance)}
-                  </span>
-                </span>
-              </span>
-            </button>
+                ),
+                label: "Total Bank",
+                value: money(totalBalance),
+                note: bankNames.length + " banks",
+                selected: selectedBank === ALL_BANKS,
+                onClick: () => choose(ALL_BANKS),
+              },
+              ...bankAccounts.map((account) => ({
+                key: account.id,
+                mark: <BankMark bank={account} className="h-7 w-7" />,
+                label: account.bankName,
+                value: money(balanceOf(account)),
+                note: account.accountName,
+                selected: selectedBank === String(account.id),
+                onClick: () => choose(String(account.id)),
+              })),
+            ]}
+          />
 
-            {bankAccounts.map((account) => (
-              <button
-                key={account.id}
-                type="button"
-                onClick={() => choose(String(account.id))}
-                className={cn(
-                  "flex items-start gap-3 rounded-lg border p-4 text-left transition-colors",
-                  selectedBank === String(account.id)
-                    ? "border-primary bg-secondary"
-                    : "hover:bg-muted/50",
-                )}
-              >
-                <BankMark bank={account} />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-semibold text-primary">
-                    {account.bankName}
-                  </span>
-                  {account.accountName && (
-                    <span className="mt-1 block truncate text-xs text-muted-foreground">
-                      {account.accountName}
-                    </span>
-                  )}
-                  <span className="mt-2 block font-bold text-primary">
-                    {money(balanceOf(account))}
-                  </span>
-                </span>
-              </button>
-            ))}
-          </div>
-
+          {/* All Banks is the list of accounts; one bank is that account's
+              history. The strip above is not a filter on one table - it
+              chooses which question the page is answering. */}
+          {selectedBank === ALL_BANKS ? (
           <Card>
             <CardContent className="space-y-4 p-4 sm:p-6">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="font-semibold text-primary">
-                  {selectedBank === ALL_BANKS
-                    ? "All Bank Accounts"
-                    : accountById(selectedBank)?.bankName ||
-                      "All Bank Accounts"}
+                  All Bank Accounts
                 </p>
                 <div className="flex flex-1 flex-wrap items-center justify-end gap-3">
                   <div className="relative w-full sm:w-72">
@@ -697,11 +671,7 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
                               <div className="flex flex-wrap items-center gap-2 text-sm">
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    onNavigateSection("transactions", {
-                                      accountId: account.id,
-                                    })
-                                  }
+                                  onClick={() => choose(String(account.id))}
                                   className="rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
                                 >
                                   Account Activity
@@ -791,6 +761,16 @@ export default function BankAccountsSection({ onNavigateSection, canEdit }) {
               )}
             </CardContent>
           </Card>
+          ) : (
+            // Keyed on the account so picking another bank starts its
+            // history afresh rather than leaving the last one on screen.
+            <TransactionsSection
+              key={selectedBank}
+              initialAccountId={selectedBank}
+              showAccountPicker={false}
+              canRecord={canRecord}
+            />
+          )}
         </>
       )}
 
