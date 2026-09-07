@@ -554,17 +554,19 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                   </span>
                 ),
                 label: "Total Bank",
+                trailing: bankNames.length,
                 value: money(totalBalance),
-                note: bankNames.length + " banks",
                 selected: selectedBank === ALL_BANKS,
                 onClick: () => choose(ALL_BANKS),
               },
               ...bankAccounts.map((account) => ({
                 key: account.id,
                 mark: <BankMark bank={account} className="h-7 w-7" />,
+                // Name and balance only. An account name on every
+                // cell pushes the banks off one row, and the row is what
+                // makes them comparable.
                 label: account.bankName,
                 value: money(balanceOf(account)),
-                note: account.accountName,
                 selected: selectedBank === String(account.id),
                 onClick: () => choose(String(account.id)),
               })),

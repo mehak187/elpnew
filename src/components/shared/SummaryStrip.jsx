@@ -13,6 +13,10 @@ const COLUMNS = {
   4: "sm:grid-cols-2 lg:grid-cols-4",
   5: "sm:grid-cols-2 lg:grid-cols-5",
   6: "sm:grid-cols-2 lg:grid-cols-6",
+  7: "sm:grid-cols-3 lg:grid-cols-7",
+  8: "sm:grid-cols-4 lg:grid-cols-8",
+  9: "sm:grid-cols-3 lg:grid-cols-9",
+  10: "sm:grid-cols-5 lg:grid-cols-10",
 };
 
 /**
@@ -27,7 +31,7 @@ const COLUMNS = {
  * says how many of these there are rather than being a figure of its own.
  */
 export default function SummaryStrip({ items, className }) {
-  const columns = COLUMNS[Math.min(Math.max(items.length, 2), 6)];
+  const columns = COLUMNS[Math.min(Math.max(items.length, 2), 10)];
 
   return (
     <Card className={className}>
@@ -69,6 +73,11 @@ export default function SummaryStrip({ items, className }) {
                   {item.label}
                   {item.count !== undefined && " (" + item.count + ")"}
                 </span>
+                {/* A figure that belongs to the name rather than to the
+                    value below it - how many banks, not how much. */}
+                {item.trailing !== undefined && (
+                  <span className="ml-auto shrink-0">{item.trailing}</span>
+                )}
               </p>
               <p className="mt-1 text-lg font-bold">{item.value}</p>
               {item.note && (
@@ -82,7 +91,7 @@ export default function SummaryStrip({ items, className }) {
                   // bg-current, so the line is whatever colour the label
                   // is - red under Unpaid, green under Paid.
                   className={cn(
-                    "absolute inset-x-0 bottom-0 h-0.5 bg-current",
+                    "absolute inset-x-0 bottom-0 h-1 bg-current",
                     item.tone || "text-primary"
                   )}
                 />

@@ -198,11 +198,13 @@ export default function LawFirmProfile() {
         <div className="w-full min-w-0 flex-1">
           <Card>
             <CardContent className="p-4 sm:p-6">
+              {/* The name of the section, and nothing else. The line that
+                  used to sit under it only said again what the section
+                  plainly is. */}
               <div className="mb-6 border-b pb-3">
                 <h2 className="text-base font-semibold text-primary">
                   {current.label}
                 </h2>
-                <p className="text-xs text-muted-foreground">{current.note}</p>
               </div>
 
               {activeSection === "overview" && (
