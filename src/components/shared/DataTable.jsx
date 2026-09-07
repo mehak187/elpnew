@@ -8,6 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import AiSearch from "./AiSearch";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -158,17 +159,12 @@ export default function DataTable({
       {/* Filters and Search Row */}
       <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
 
-        {/* Global Search */}
-        <div className="relative w-full sm:w-80 lg:w-96">
-          <Sparkles className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
-          <Input
-            type="search"
-            value={searchValue}
-            onChange={(e) => handleSearch(e.target.value)}
-            placeholder={searchPlaceholder}
-            className="pl-9"
-          />
-        </div>
+        {/* Global Search, first on the row wherever it appears */}
+        <AiSearch
+          value={searchValue}
+          onChange={handleSearch}
+          placeholder={searchPlaceholder}
+        />
 
         {/* Custom Filters */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">

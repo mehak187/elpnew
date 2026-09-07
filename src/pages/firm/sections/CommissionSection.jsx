@@ -255,19 +255,15 @@ export default function CommissionSection() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* The section's own heading, so the way to add to it sits on the
+          same line rather than costing a row of its own. */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
         <div className="flex items-center gap-3">
-          {/* The form opened in place of the list, so back means close it
-              and show the list again. */}
+          {/* The form opened above the list, so back means close it. */}
           {adding && <BackButton onBack={closeForm} />}
-          <div>
-          <h2 className="font-semibold text-primary">
+          <h2 className="text-base font-semibold text-primary">
             {adding ? "Add Commission" : "Commission Records"}
           </h2>
-          <p className="text-xs text-muted-foreground">
-            Worked out on collected legal fees, before VAT
-          </p>
-          </div>
         </div>
         <Button type="button" onClick={() => setAdding(true)} disabled={adding}>
           <Plus className="mr-1.5 h-4 w-4" />
@@ -507,10 +503,9 @@ export default function CommissionSection() {
         </Card>
       )}
 
-      {/* Hidden while the form is open: a page is one thing at a time,
-          either the records or the form that adds to them. */}
-      {!adding && (
-        <DataTable
+      {/* The list stays under the form rather than making way for it: a
+          new record is judged against the ones already there. */}
+      <DataTable
           columns={columns}
           data={records}
           searchPlaceholder="Search commissions..."
@@ -518,10 +513,9 @@ export default function CommissionSection() {
           enableColumnSearch={false}
           currentPage={currentPage}
           pageSize={pageSize}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={setPageSize}
-        />
-      )}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
+      />
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import BackButton from "@/components/shared/BackButton";
-import SummaryStrip from "@/components/shared/SummaryStrip";
+
 import {
   Select,
   SelectContent,
@@ -13,8 +13,7 @@ import {
 import {
   Building2,
   ArrowLeft,
-  Briefcase,
-  Users,
+
   Wallet,
   FileText,
   Network,
@@ -30,8 +29,7 @@ import {
   canEditFirmSettings,
   canManageDocuments,
 } from "@/lib/permissions";
-import { useFirm } from "@/lib/firm/context";
-import { overviewFigures, documentStatus, money } from "./firmData";
+
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 
 import OverviewSection from "./sections/OverviewSection";
@@ -57,6 +55,7 @@ const SECTIONS = [
     note: "Core legal and registration information",
   },
   {
+    ownsHeader: true,
     key: "branches",
     label: "Branches",
     icon: Network,
@@ -69,12 +68,14 @@ const SECTIONS = [
     note: "Manage all bank accounts and view account balances",
   },
   {
+    ownsHeader: true,
     key: "documents",
     label: "Documents",
     icon: FileText,
     note: "Licences, certificates and reports on file",
   },
   {
+    ownsHeader: true,
     key: "circulars",
     label: "Circulars",
     icon: Megaphone,
@@ -99,6 +100,7 @@ const SECTIONS = [
   {
     // Commission is worked out across clients rather than inside any one
     // of them, which is why it belongs to the company and not to a client.
+    ownsHeader: true,
     key: "commission",
     label: "Commission",
     icon: Percent,
@@ -108,14 +110,6 @@ const SECTIONS = [
 
 
 export default function LawFirmProfile() {
-  const firm = useFirm();
-
-  // The same figures the overview section reads, so the two cannot disagree.
-  const figures = overviewFigures(firm);
-  const expiringDocuments = firm.documents.filter(
-    (document) => documentStatus(document) === "Expiring Soon"
-  ).length;
-
   const [activeSection, setActiveSection] = useState("information");
   // Carries context when one section links into another, such as opening the
   // transaction history on a particular account.
@@ -170,31 +164,6 @@ export default function LawFirmProfile() {
         </div>
       </div>
 
-      {/* What the company amounts to, before any one section of it */}
-      <SummaryStrip
-        items={[
-          {
-            label: "Total Cases",
-            value: figures.cases.total,
-            note: figures.cases.active + " Active",
-          },
-          {
-            label: "Total Clients",
-            value: figures.clients.total,
-            note: figures.clients.withOpenCases + " With Open Cases",
-          },
-          {
-            label: "Total Bank Balance",
-            value: money(figures.bank.total),
-            note: "Across " + firm.bankAccounts.length + " Accounts",
-          },
-          {
-            label: "Documents",
-            value: firm.documents.length,
-            note: expiringDocuments + " Expiring Soon",
-          },
-        ]}
-      />
 
       <div className="flex flex-col items-start gap-4 sm:gap-6 lg:flex-row">
         {/* Section navigation */}
@@ -233,12 +202,16 @@ export default function LawFirmProfile() {
         <div className="w-full min-w-0 flex-1">
           <Card>
             <CardContent className="p-4 sm:p-6">
-              <div className="mb-6 border-b pb-3">
-                <h2 className="text-base font-semibold text-primary">
-                  {current.label}
-                </h2>
-                <p className="text-xs text-muted-foreground">{current.note}</p>
-              </div>
+              {/* The name of the section, and nothing else. A section that
+                  carries an Add button draws its own heading instead, so the
+                  button can share the line with it. */}
+              {!current.ownsHeader && (
+                <div className="mb-6 border-b pb-3">
+                  <h2 className="text-base font-semibold text-primary">
+                    {current.label}
+                  </h2>
+                </div>
+              )}
 
               {activeSection === "overview" && (
                 <OverviewSection onNavigateSection={goToSection} />

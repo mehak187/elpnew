@@ -125,8 +125,11 @@ export default function ClientManagementSection() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
-        <Button type="button" onClick={openAdd}>
+      {/* The section's own heading, so the way to add to it sits on the
+          same line rather than costing a row of its own. */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+        <h2 className="text-base font-semibold text-primary">Client Team</h2>
+        <Button type="button" onClick={openAdd} disabled={mode === "add"}>
           <Plus className="mr-1.5 h-4 w-4" />
           Add Client Team
         </Button>
@@ -237,11 +240,7 @@ export default function ClientManagementSection() {
 
       {/* Every branch that has a team, one row each. The branch name opens
           that team above, which is the only way to change it.
-
-          Hidden while a new team is being added: nothing on the form needs
-          the list, and a blank form is easier to read on its own. Editing
-          keeps it, because the row being changed is in it. */}
-      {mode !== "add" && (
+ */}
       <Card>
         <CardContent className="p-0">
           {staffed.length === 0 ? (
@@ -297,7 +296,6 @@ export default function ClientManagementSection() {
           )}
         </CardContent>
       </Card>
-      )}
     </div>
   );
 }

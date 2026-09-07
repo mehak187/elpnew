@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,15 +22,59 @@ import {
 import { EmptyState } from "@/components/shared/panels";
 import BackButton from "@/components/shared/BackButton";
 import { Upload, FileCheck, FileText, Trash2, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { expiryState, EXPIRY_LABEL } from "@/lib/expiry";
 import { useFirm } from "@/lib/firm/context";
 import {
   DOCUMENT_TYPES,
   GENERAL_BRANCH,
-  DOCUMENT_STATUS_VARIANT,
   branchLabel,
-  documentStatus,
   formatDate,
 } from "../firmData";
+
+/**
+ * An expiry date and what it means.
+ *
+ * The same three states, the same two marks and the same words the client
+ * papers use: hollow while the date is only approaching, solid once it has
+ * passed. A document that expires is the same problem wherever it is filed,
+ * so it is shown the same way.
+ */
+function ExpiryDate({ date }) {
+  const state = expiryState(date);
+
+  if (state === "none") {
+    return <span className="text-muted-foreground">No expiry</span>;
+  }
+
+  return (
+    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <span
+        className={cn(
+          state === "expired" && "font-semibold text-red-600"
+        )}
+      >
+        {formatDate(date)}
+      </span>
+      <span
+        className={cn(
+          "inline-flex items-center gap-1.5 text-xs font-medium",
+          state === "valid" ? "text-green-600" : "text-red-600"
+        )}
+      >
+        <span
+          aria-hidden="true"
+          className={cn(
+            "h-2 w-2 shrink-0 rounded-full",
+            state === "expired" ? "bg-red-500" : "border-2 border-red-500",
+            state === "valid" && "border-0 bg-green-500"
+          )}
+        />
+        {EXPIRY_LABEL[state]}
+      </span>
+    </span>
+  );
+}
 
 const emptyDraft = {
   branch: GENERAL_BRANCH,
@@ -97,8 +140,11 @@ export default function DocumentsSection({ canEdit }) {
 
   return (
     <div className="space-y-6">
-      {canEdit && (
-        <div className="flex justify-end">
+      {/* The section's own heading, so the way to add to it sits on the
+          same line rather than costing a row of its own. */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+        <h2 className="text-base font-semibold text-primary">Documents</h2>
+        {canEdit && (
           <Button
             type="button"
             onClick={() => setAdding(true)}
@@ -107,8 +153,8 @@ export default function DocumentsSection({ canEdit }) {
             <Plus className="mr-1.5 h-4 w-4" />
             Add Document
           </Button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* The form takes the place of the list while it is being filled in:
           a page is one thing at a time, either the documents on file or the
@@ -238,8 +284,8 @@ export default function DocumentsSection({ canEdit }) {
         </Card>
       )}
 
-      {/* What is on file */}
-      {!adding && (
+      {/* The list stays under the form rather than making way for it: a
+          new record is judged against the ones already there. */}
       <Card>
         <CardContent className="overflow-x-auto p-0">
           {documents.length === 0 ? (
@@ -256,12 +302,12 @@ export default function DocumentsSection({ canEdit }) {
                   <th className="p-3 font-semibold">Document</th>
                   <th className="p-3 font-semibold">Expiry Date</th>
                   <th className="p-3 font-semibold">Notes</th>
-                  <th className="p-3 font-semibold">Delete</th>
+
                 </tr>
               </thead>
               <tbody>
                 {documents.map((document) => {
-                  const status = documentStatus(document);
+
                   return (
                     <tr
                       key={document.id}
@@ -292,39 +338,12 @@ export default function DocumentsSection({ canEdit }) {
                         </button>
                       </td>
                       <td className="p-3">
-                        {document.expiryDate ? (
-                          <span className="flex flex-col gap-1">
-                            {formatDate(document.expiryDate)}
-                            {status !== "Active" && (
-                              <Badge variant={DOCUMENT_STATUS_VARIANT[status]}>
-                                {status}
-                              </Badge>
-                            )}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">
-                            No expiry
-                          </span>
-                        )}
+                        <ExpiryDate date={document.expiryDate} />
                       </td>
                       <td className="p-3 text-muted-foreground">
                         {document.notes || "-"}
                       </td>
-                      <td className="p-3">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-red-500 hover:text-red-600"
-                          title="Delete document"
-                          disabled={!canEdit}
-                          onClick={() => removeDocument(document.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">
-                            Delete {document.docId}
-                          </span>
-                        </Button>
-                      </td>
+
                     </tr>
                   );
                 })}
@@ -333,7 +352,6 @@ export default function DocumentsSection({ canEdit }) {
           )}
         </CardContent>
       </Card>
-      )}
 
       {/* The document reference opens its details for reading and editing */}
       <Dialog
@@ -437,11 +455,32 @@ export default function DocumentsSection({ canEdit }) {
             </div>
           )}
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditing(null)}>
-              Close
-            </Button>
-            {canEdit && <Button onClick={saveEdit}>Save Changes</Button>}
+          {/* Deleting is deliberately not a button in every row. A document
+              is opened first, read, and only then thrown away - so a licence
+              cannot go on a stray click down a column of identical bins. */}
+          <DialogFooter className="sm:justify-between">
+            {canEdit ? (
+              <Button
+                variant="outline"
+                className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
+                onClick={() => {
+                  removeDocument(editing.id);
+                  setEditing(null);
+                }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Document
+              </Button>
+            ) : (
+              <span />
+            )}
+
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setEditing(null)}>
+                Close
+              </Button>
+              {canEdit && <Button onClick={saveEdit}>Save Changes</Button>}
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

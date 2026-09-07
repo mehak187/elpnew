@@ -73,13 +73,26 @@ const SECTIONS = [
     ],
   },
   { key: "cases", label: "Cases", icon: Briefcase, existingOnly: true },
-  { key: "documents", label: "Documents", icon: FileText, existingOnly: true },
-  { key: "management", label: "Client Team", icon: Users, existingOnly: true },
+  {
+    key: "documents",
+    label: "Documents",
+    icon: FileText,
+    existingOnly: true,
+    ownsHeader: true,
+  },
+  {
+    key: "management",
+    label: "Client Team",
+    icon: Users,
+    existingOnly: true,
+    ownsHeader: true,
+  },
   {
     key: "contracts",
     label: "Client Contracts",
     icon: FileSignature,
     existingOnly: true,
+    ownsHeader: true,
   },
   { key: "invoices", label: "Invoices", icon: Receipt, existingOnly: true },
 
@@ -438,6 +451,9 @@ export default function ClientDetails() {
           ) : (
             <Card>
               <CardContent className="p-4 sm:p-6">
+                {/* A section that carries an Add button draws its own
+                    heading, so the button can share the line with it. */}
+                {!current.ownsHeader && (
                 <div className="mb-6 flex items-center gap-4 border-b pb-3">
                   <h2 className="text-base font-semibold text-primary">
                     {current.label}
@@ -450,6 +466,7 @@ export default function ClientDetails() {
                     </span>
                   )}
                 </div>
+                )}
 
 
                 {activeSection === "documents" && (
