@@ -345,7 +345,8 @@ export default function ClientContractsSection() {
       </Card>
       )}
 
-      {!adding && (
+      {/* The list stays under the form rather than making way for it: a
+          new record is judged against the ones already there. */}
       <DataTable
         columns={columns}
         data={rows}
@@ -356,7 +357,6 @@ export default function ClientContractsSection() {
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
       />
-      )}
 
       {/* The serial number opens the contract for reading and editing */}
       <Dialog

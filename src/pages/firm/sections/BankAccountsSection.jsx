@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import BackButton from "@/components/shared/BackButton";
 import { Card, CardContent } from "@/components/ui/card";
 import SummaryStrip from "@/components/shared/SummaryStrip";
+import AiSearch from "@/components/shared/AiSearch";
 import TransactionsSection from "./TransactionsSection";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -579,28 +580,23 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
           {selectedBank === ALL_BANKS ? (
           <Card>
             <CardContent className="space-y-4 p-4 sm:p-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="font-semibold text-primary">
-                  All Bank Accounts
-                </p>
-                <div className="flex flex-1 flex-wrap items-center justify-end gap-3">
-                  <div className="relative w-full sm:w-72">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      value={query}
-                      onChange={(e) => {
-                        setQuery(e.target.value);
-                        setPage(1);
-                      }}
-                      placeholder="Search by bank name or account..."
-                      className="pl-9"
-                    />
-                  </div>
-                  <Button variant="outline" onClick={exportAccounts}>
-                    <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" />
-                    Export to Excel
-                  </Button>
-                </div>
+              <p className="font-semibold text-primary">All Bank Accounts</p>
+
+              {/* Search on the left, as on every other list */}
+              <div className="flex flex-wrap items-center gap-3">
+                <AiSearch
+                  value={query}
+                  onChange={(value) => {
+                    setQuery(value);
+                    setPage(1);
+                  }}
+                  placeholder="Ask about bank accounts..."
+                />
+                <div className="hidden flex-1 sm:block" />
+                <Button variant="outline" onClick={exportAccounts}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" />
+                  Export to Excel
+                </Button>
               </div>
 
               {listed.length === 0 ? (

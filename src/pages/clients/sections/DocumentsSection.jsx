@@ -420,11 +420,8 @@ export default function DocumentsSection({ formData, onChange }) {
         </Card>
       )}
 
-      {/* The list is hidden while the form is open: a page is one thing
-          at a time, either the documents on file or the form that adds
-          to them. */}
-      {!adding && (
-        <>
+      {/* The list stays under the form rather than making way for it: a
+          new record is judged against the ones already there. */}
       <p className="flex items-start gap-2 rounded-md border-l-4 border-l-blue-500 bg-blue-50 px-3 py-2 text-xs text-blue-900">
         <Info className="mt-0.5 h-4 w-4 shrink-0" />
         <span>
@@ -512,8 +509,6 @@ export default function DocumentsSection({ formData, onChange }) {
           document, not the upload date.
         </span>
       </p>
-        </>
-      )}
     </div>
   );
 }

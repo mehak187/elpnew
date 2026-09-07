@@ -238,8 +238,8 @@ export default function DocumentsSection({ canEdit }) {
         </Card>
       )}
 
-      {/* What is on file */}
-      {!adding && (
+      {/* The list stays under the form rather than making way for it: a
+          new record is judged against the ones already there. */}
       <Card>
         <CardContent className="overflow-x-auto p-0">
           {documents.length === 0 ? (
@@ -333,7 +333,6 @@ export default function DocumentsSection({ canEdit }) {
           )}
         </CardContent>
       </Card>
-      )}
 
       {/* The document reference opens its details for reading and editing */}
       <Dialog

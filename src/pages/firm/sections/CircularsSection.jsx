@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import BackButton from "@/components/shared/BackButton";
+import AiSearch from "@/components/shared/AiSearch";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -212,8 +213,8 @@ export default function CircularsSection({ canEdit }) {
 
   /* ------------------------------------------------- issuing or correcting */
 
-  // Rendered in place of the list: a page is one thing at a time, either
-  // the circulars on file or the form that issues one.
+  // Rendered above the list rather than in place of it: a new circular is
+  // numbered after the ones already issued, so they stay in view.
   const form =
     open && canEdit ? (
       <Card>
@@ -397,18 +398,14 @@ export default function CircularsSection({ canEdit }) {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="relative w-full sm:w-72">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setPage(1);
-            }}
-            placeholder="Search..."
-            className="pl-9"
-          />
-        </div>
+        <AiSearch
+          value={query}
+          onChange={(value) => {
+            setQuery(value);
+            setPage(1);
+          }}
+          placeholder="Ask about circulars..."
+        />
         <div className="flex flex-wrap items-center gap-3">
           <Button variant="outline" onClick={exportCirculars}>
             <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" />
@@ -425,8 +422,6 @@ export default function CircularsSection({ canEdit }) {
 
       {form}
 
-      {!open && (
-        <>
       <div>
         <p className="mb-2 text-lg font-bold text-primary">Issued Circulars</p>
         <Card>
@@ -651,8 +646,6 @@ export default function CircularsSection({ canEdit }) {
           </Card>
         )}
       </div>
-        </>
-      )}
 
       {detailsFor && (
         <CircularDetails

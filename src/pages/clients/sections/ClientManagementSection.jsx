@@ -237,11 +237,7 @@ export default function ClientManagementSection() {
 
       {/* Every branch that has a team, one row each. The branch name opens
           that team above, which is the only way to change it.
-
-          Hidden while a new team is being added: nothing on the form needs
-          the list, and a blank form is easier to read on its own. Editing
-          keeps it, because the row being changed is in it. */}
-      {mode !== "add" && (
+ */}
       <Card>
         <CardContent className="p-0">
           {staffed.length === 0 ? (
@@ -297,7 +293,6 @@ export default function ClientManagementSection() {
           )}
         </CardContent>
       </Card>
-      )}
     </div>
   );
 }

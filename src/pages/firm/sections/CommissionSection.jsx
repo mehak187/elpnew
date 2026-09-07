@@ -507,10 +507,9 @@ export default function CommissionSection() {
         </Card>
       )}
 
-      {/* Hidden while the form is open: a page is one thing at a time,
-          either the records or the form that adds to them. */}
-      {!adding && (
-        <DataTable
+      {/* The list stays under the form rather than making way for it: a
+          new record is judged against the ones already there. */}
+      <DataTable
           columns={columns}
           data={records}
           searchPlaceholder="Search commissions..."
@@ -518,10 +517,9 @@ export default function CommissionSection() {
           enableColumnSearch={false}
           currentPage={currentPage}
           pageSize={pageSize}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={setPageSize}
-        />
-      )}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
+      />
     </div>
   );
 }
