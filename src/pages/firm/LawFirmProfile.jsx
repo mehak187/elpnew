@@ -55,6 +55,7 @@ const SECTIONS = [
     note: "Core legal and registration information",
   },
   {
+    ownsHeader: true,
     key: "branches",
     label: "Branches",
     icon: Network,
@@ -67,12 +68,14 @@ const SECTIONS = [
     note: "Manage all bank accounts and view account balances",
   },
   {
+    ownsHeader: true,
     key: "documents",
     label: "Documents",
     icon: FileText,
     note: "Licences, certificates and reports on file",
   },
   {
+    ownsHeader: true,
     key: "circulars",
     label: "Circulars",
     icon: Megaphone,
@@ -97,6 +100,7 @@ const SECTIONS = [
   {
     // Commission is worked out across clients rather than inside any one
     // of them, which is why it belongs to the company and not to a client.
+    ownsHeader: true,
     key: "commission",
     label: "Commission",
     icon: Percent,
@@ -198,14 +202,16 @@ export default function LawFirmProfile() {
         <div className="w-full min-w-0 flex-1">
           <Card>
             <CardContent className="p-4 sm:p-6">
-              {/* The name of the section, and nothing else. The line that
-                  used to sit under it only said again what the section
-                  plainly is. */}
-              <div className="mb-6 border-b pb-3">
-                <h2 className="text-base font-semibold text-primary">
-                  {current.label}
-                </h2>
-              </div>
+              {/* The name of the section, and nothing else. A section that
+                  carries an Add button draws its own heading instead, so the
+                  button can share the line with it. */}
+              {!current.ownsHeader && (
+                <div className="mb-6 border-b pb-3">
+                  <h2 className="text-base font-semibold text-primary">
+                    {current.label}
+                  </h2>
+                </div>
+              )}
 
               {activeSection === "overview" && (
                 <OverviewSection onNavigateSection={goToSection} />

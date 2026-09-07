@@ -397,15 +397,10 @@ export default function CircularsSection({ canEdit }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <AiSearch
-          value={query}
-          onChange={(value) => {
-            setQuery(value);
-            setPage(1);
-          }}
-          placeholder="Ask about circulars..."
-        />
+      {/* The section's own heading, so the way to add to it sits on the
+          same line rather than costing a row of its own. */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+        <h2 className="text-base font-semibold text-primary">Circulars</h2>
         <div className="flex flex-wrap items-center gap-3">
           <Button variant="outline" onClick={exportCirculars}>
             <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" />
@@ -418,6 +413,17 @@ export default function CircularsSection({ canEdit }) {
             </Button>
           )}
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <AiSearch
+          value={query}
+          onChange={(value) => {
+            setQuery(value);
+            setPage(1);
+          }}
+          placeholder="Ask about circulars..."
+        />
       </div>
 
       {form}

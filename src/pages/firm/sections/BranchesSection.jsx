@@ -197,12 +197,17 @@ export default function BranchesSection({ canEdit }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          {branches.length} {branches.length === 1 ? "branch" : "branches"}
-        </p>
+      {/* The section's own heading, so the way to add to it sits on the
+          same line rather than costing a row of its own. */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+        <h2 className="text-base font-semibold text-primary">
+          Branches
+          <span className="ml-2 text-sm font-normal text-muted-foreground">
+            {branches.length} {branches.length === 1 ? "branch" : "branches"}
+          </span>
+        </h2>
         {canEdit && (
-          <Button size="sm" onClick={() => setAdding((open) => !open)}>
+          <Button onClick={() => setAdding((open) => !open)}>
             <Plus className="mr-1.5 h-4 w-4" />
             Add Branch
           </Button>

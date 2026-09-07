@@ -140,8 +140,11 @@ export default function DocumentsSection({ canEdit }) {
 
   return (
     <div className="space-y-6">
-      {canEdit && (
-        <div className="flex justify-end">
+      {/* The section's own heading, so the way to add to it sits on the
+          same line rather than costing a row of its own. */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+        <h2 className="text-base font-semibold text-primary">Documents</h2>
+        {canEdit && (
           <Button
             type="button"
             onClick={() => setAdding(true)}
@@ -150,8 +153,8 @@ export default function DocumentsSection({ canEdit }) {
             <Plus className="mr-1.5 h-4 w-4" />
             Add Document
           </Button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* The form takes the place of the list while it is being filled in:
           a page is one thing at a time, either the documents on file or the
