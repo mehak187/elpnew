@@ -17,7 +17,6 @@ import {
   FileCheck,
   Trash2,
   Plus,
-  Info,
   AlertTriangle,
   X,
 } from "lucide-react";
@@ -110,17 +109,17 @@ function ExpiryLine({ date }) {
         <span
           className={cn(
             "inline-flex items-center gap-1.5 font-medium",
-            state === "valid" && "text-green-600",
-            state === "soon" && "text-amber-600",
-            state === "expired" && "text-red-600"
+            state === "valid" ? "text-green-600" : "text-red-600"
           )}
         >
           <span
             aria-hidden="true"
             className={cn(
               "h-2 w-2 shrink-0 rounded-full",
+              // Hollow while the date is only approaching, solid once it
+              // has passed - the same two marks the rest of the system uses.
               state === "valid" && "bg-green-500",
-              state === "soon" && "bg-amber-500",
+              state === "soon" && "border-2 border-red-500",
               state === "expired" && "bg-red-500"
             )}
           />
@@ -422,14 +421,6 @@ export default function DocumentsSection({ formData, onChange }) {
 
       {/* The list stays under the form rather than making way for it: a
           new record is judged against the ones already there. */}
-      <p className="flex items-start gap-2 rounded-md border-l-4 border-l-blue-500 bg-blue-50 px-3 py-2 text-xs text-blue-900">
-        <Info className="mt-0.5 h-4 w-4 shrink-0" />
-        <span>
-          <span className="font-semibold">Note:</span> Click on the Serial No.
-          to view the document details in the section above the table. In the
-          document details, you will find the option to delete the document.
-        </span>
-      </p>
 
       {/* The opened document, above the table it was opened from. */}
       {opened && (

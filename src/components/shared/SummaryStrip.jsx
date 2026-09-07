@@ -37,9 +37,10 @@ export default function SummaryStrip({ items, className }) {
     <Card className={className}>
       <CardContent
         className={cn(
-          // Dashed rules: they separate readings of one set of records,
-          // which is a lighter job than dividing one thing from another.
-          "grid grid-cols-1 divide-y divide-dashed p-0 sm:divide-x lg:divide-y-0",
+          // Stacked on a narrow screen, so the rule between cells lies
+          // across; side by side above that, where each cell draws its own
+          // short rule (see below) instead.
+          "grid grid-cols-1 divide-y divide-dashed p-0 sm:divide-y-0",
           columns
         )}
       >
@@ -53,6 +54,10 @@ export default function SummaryStrip({ items, className }) {
               onClick={item.onClick}
               className={cn(
                 "relative px-4 py-3 text-left",
+                // A half-height dashed rule, centred: enough to separate
+                // the cells without ruling the strip into boxes. The first
+                // cell has nothing to its left to be separated from.
+                "sm:before:absolute sm:before:left-0 sm:before:top-1/2 sm:before:h-1/2 sm:before:-translate-y-1/2 sm:before:border-l sm:before:border-dashed sm:before:border-border sm:before:content-[''] sm:first:before:hidden",
                 item.onClick &&
                   // focus-visible, not focus: a mouse click should not
                   // leave a ring drawn round the cell, but a keyboard
