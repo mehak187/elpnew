@@ -198,13 +198,9 @@ export default function BranchesSection({ canEdit }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
-        {/* The count belongs to the list, so it goes when the list does */}
-        {!adding && (
-          <p className="text-sm text-muted-foreground">
-            {branches.length} {branches.length === 1 ? "branch" : "branches"}
-          </p>
-        )}
-        {adding && <span />}
+        <p className="text-sm text-muted-foreground">
+          {branches.length} {branches.length === 1 ? "branch" : "branches"}
+        </p>
         {canEdit && (
           <Button size="sm" onClick={() => setAdding((open) => !open)}>
             <Plus className="mr-1.5 h-4 w-4" />
@@ -249,10 +245,9 @@ export default function BranchesSection({ canEdit }) {
         </Card>
       )}
 
-      {/* Adding replaces the list rather than sitting above it - the branches
-          were already read on the way in, and showing them twice says nothing
-          the first showing did not. */}
-      {!adding && (
+      {/* The form opens at the top and the branches stay under it: a new
+          branch is numbered after the ones already there, so the list is
+          worth having in view while it is being filled in. */}
       <Card>
         <CardContent className="overflow-x-auto p-0">
           <table className="w-full min-w-[720px] text-sm">
@@ -309,7 +304,6 @@ export default function BranchesSection({ canEdit }) {
           </table>
         </CardContent>
       </Card>
-      )}
 
       {/* The branch number opens its details for reading and editing */}
       <Dialog
