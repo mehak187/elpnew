@@ -299,7 +299,7 @@ export default function DocumentsSection({ canEdit }) {
                   <th className="p-3 font-semibold">Document</th>
                   <th className="p-3 font-semibold">Expiry Date</th>
                   <th className="p-3 font-semibold">Notes</th>
-                  <th className="p-3 font-semibold">Delete</th>
+
                 </tr>
               </thead>
               <tbody>
@@ -340,21 +340,7 @@ export default function DocumentsSection({ canEdit }) {
                       <td className="p-3 text-muted-foreground">
                         {document.notes || "-"}
                       </td>
-                      <td className="p-3">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-red-500 hover:text-red-600"
-                          title="Delete document"
-                          disabled={!canEdit}
-                          onClick={() => removeDocument(document.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">
-                            Delete {document.docId}
-                          </span>
-                        </Button>
-                      </td>
+
                     </tr>
                   );
                 })}
@@ -466,11 +452,32 @@ export default function DocumentsSection({ canEdit }) {
             </div>
           )}
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditing(null)}>
-              Close
-            </Button>
-            {canEdit && <Button onClick={saveEdit}>Save Changes</Button>}
+          {/* Deleting is deliberately not a button in every row. A document
+              is opened first, read, and only then thrown away - so a licence
+              cannot go on a stray click down a column of identical bins. */}
+          <DialogFooter className="sm:justify-between">
+            {canEdit ? (
+              <Button
+                variant="outline"
+                className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
+                onClick={() => {
+                  removeDocument(editing.id);
+                  setEditing(null);
+                }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Document
+              </Button>
+            ) : (
+              <span />
+            )}
+
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setEditing(null)}>
+                Close
+              </Button>
+              {canEdit && <Button onClick={saveEdit}>Save Changes</Button>}
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
