@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,15 +22,59 @@ import {
 import { EmptyState } from "@/components/shared/panels";
 import BackButton from "@/components/shared/BackButton";
 import { Upload, FileCheck, FileText, Trash2, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { expiryState, EXPIRY_LABEL } from "@/lib/expiry";
 import { useFirm } from "@/lib/firm/context";
 import {
   DOCUMENT_TYPES,
   GENERAL_BRANCH,
-  DOCUMENT_STATUS_VARIANT,
   branchLabel,
-  documentStatus,
   formatDate,
 } from "../firmData";
+
+/**
+ * An expiry date and what it means.
+ *
+ * The same three states, the same two marks and the same words the client
+ * papers use: hollow while the date is only approaching, solid once it has
+ * passed. A document that expires is the same problem wherever it is filed,
+ * so it is shown the same way.
+ */
+function ExpiryDate({ date }) {
+  const state = expiryState(date);
+
+  if (state === "none") {
+    return <span className="text-muted-foreground">No expiry</span>;
+  }
+
+  return (
+    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <span
+        className={cn(
+          state === "expired" && "font-semibold text-red-600"
+        )}
+      >
+        {formatDate(date)}
+      </span>
+      <span
+        className={cn(
+          "inline-flex items-center gap-1.5 text-xs font-medium",
+          state === "valid" ? "text-green-600" : "text-red-600"
+        )}
+      >
+        <span
+          aria-hidden="true"
+          className={cn(
+            "h-2 w-2 shrink-0 rounded-full",
+            state === "expired" ? "bg-red-500" : "border-2 border-red-500",
+            state === "valid" && "border-0 bg-green-500"
+          )}
+        />
+        {EXPIRY_LABEL[state]}
+      </span>
+    </span>
+  );
+}
 
 const emptyDraft = {
   branch: GENERAL_BRANCH,
@@ -261,7 +304,7 @@ export default function DocumentsSection({ canEdit }) {
               </thead>
               <tbody>
                 {documents.map((document) => {
-                  const status = documentStatus(document);
+
                   return (
                     <tr
                       key={document.id}
@@ -292,20 +335,7 @@ export default function DocumentsSection({ canEdit }) {
                         </button>
                       </td>
                       <td className="p-3">
-                        {document.expiryDate ? (
-                          <span className="flex flex-col gap-1">
-                            {formatDate(document.expiryDate)}
-                            {status !== "Active" && (
-                              <Badge variant={DOCUMENT_STATUS_VARIANT[status]}>
-                                {status}
-                              </Badge>
-                            )}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">
-                            No expiry
-                          </span>
-                        )}
+                        <ExpiryDate date={document.expiryDate} />
                       </td>
                       <td className="p-3 text-muted-foreground">
                         {document.notes || "-"}
