@@ -745,6 +745,76 @@ export default function EmployeeForm() {
                   </div>
                 </SectionCard>
 
+                <SectionCard title="Contact &amp; Address Information">
+                  <div className="space-y-6">
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
+                      <PhoneField
+                        id="phone"
+                        label="Phone Number *"
+                        placeholder="Enter phone number"
+                        dialCode={formData.dialCode}
+                        onDialCode={(value) => set("dialCode", value)}
+                        value={formData.phone}
+                        onChange={(e) => set("phone", e.target.value)}
+                      />
+
+                      <IconField
+                        icon={Mail}
+                        id="email"
+                        name="email"
+                        type="email"
+                        label="Email Address *"
+                        placeholder="Enter email address"
+                        value={formData.email}
+                        onChange={onChange}
+                      />
+
+                      <IconField
+                        icon={MapPin}
+                        id="address"
+                        name="address"
+                        label="Address *"
+                        placeholder="Enter full address"
+                        value={formData.address}
+                        onChange={onChange}
+                      />
+
+                      {/* Who to call, and on what number, if something happens */}
+                      <IconField
+                        icon={User}
+                        id="emergencyName"
+                        name="emergencyName"
+                        label="Emergency Contact Name *"
+                        placeholder="Enter emergency contact name"
+                        value={formData.emergencyName}
+                        onChange={onChange}
+                      />
+
+                      <PhoneField
+                        id="emergencyPhone"
+                        label="Emergency Contact Phone Number *"
+                        placeholder="Enter emergency contact phone number"
+                        dialCode={formData.emergencyDialCode}
+                        onDialCode={(value) => set("emergencyDialCode", value)}
+                        value={formData.emergencyPhone}
+                        onChange={(e) => set("emergencyPhone", e.target.value)}
+                      />
+                    </div>
+
+                    <p className="flex items-start gap-2 rounded-lg border border-primary/30 bg-secondary p-4 text-sm text-primary">
+                      <Info className="mt-0.5 h-4 w-4 shrink-0" />
+                      <span>
+                        <span className="font-semibold">Note: </span>
+                        Please provide accurate contact details to ensure
+                        effective communication in case of emergencies.
+                      </span>
+                    </p>
+                  </div>
+                </SectionCard>
+                  </>
+                )}
+
                 {activeSection === "documents" && (
                   <div className="space-y-6">
                     {/* Add a document */}
@@ -952,76 +1022,6 @@ export default function EmployeeForm() {
                 )}
 
                 {activeSection === "performance" && <PerformanceSection />}
-
-                <SectionCard title="Contact &amp; Address Information">
-                  <div className="space-y-6">
-
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
-                      <PhoneField
-                        id="phone"
-                        label="Phone Number *"
-                        placeholder="Enter phone number"
-                        dialCode={formData.dialCode}
-                        onDialCode={(value) => set("dialCode", value)}
-                        value={formData.phone}
-                        onChange={(e) => set("phone", e.target.value)}
-                      />
-
-                      <IconField
-                        icon={Mail}
-                        id="email"
-                        name="email"
-                        type="email"
-                        label="Email Address *"
-                        placeholder="Enter email address"
-                        value={formData.email}
-                        onChange={onChange}
-                      />
-
-                      <IconField
-                        icon={MapPin}
-                        id="address"
-                        name="address"
-                        label="Address *"
-                        placeholder="Enter full address"
-                        value={formData.address}
-                        onChange={onChange}
-                      />
-
-                      {/* Who to call, and on what number, if something happens */}
-                      <IconField
-                        icon={User}
-                        id="emergencyName"
-                        name="emergencyName"
-                        label="Emergency Contact Name *"
-                        placeholder="Enter emergency contact name"
-                        value={formData.emergencyName}
-                        onChange={onChange}
-                      />
-
-                      <PhoneField
-                        id="emergencyPhone"
-                        label="Emergency Contact Phone Number *"
-                        placeholder="Enter emergency contact phone number"
-                        dialCode={formData.emergencyDialCode}
-                        onDialCode={(value) => set("emergencyDialCode", value)}
-                        value={formData.emergencyPhone}
-                        onChange={(e) => set("emergencyPhone", e.target.value)}
-                      />
-                    </div>
-
-                    <p className="flex items-start gap-2 rounded-lg border border-primary/30 bg-secondary p-4 text-sm text-primary">
-                      <Info className="mt-0.5 h-4 w-4 shrink-0" />
-                      <span>
-                        <span className="font-semibold">Note: </span>
-                        Please provide accurate contact details to ensure
-                        effective communication in case of emergencies.
-                      </span>
-                    </p>
-                  </div>
-                </SectionCard>
-                  </>
-                )}
 
                 {/* Not yet specified, so nothing is invented for them */}
                 {["permissions"].includes(

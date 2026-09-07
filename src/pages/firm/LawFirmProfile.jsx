@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import BackButton from "@/components/shared/BackButton";
-import SummaryStrip from "@/components/shared/SummaryStrip";
+
 import {
   Select,
   SelectContent,
@@ -13,8 +13,7 @@ import {
 import {
   Building2,
   ArrowLeft,
-  Briefcase,
-  Users,
+
   Wallet,
   FileText,
   Network,
@@ -30,8 +29,7 @@ import {
   canEditFirmSettings,
   canManageDocuments,
 } from "@/lib/permissions";
-import { useFirm } from "@/lib/firm/context";
-import { overviewFigures, documentStatus, money } from "./firmData";
+
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 
 import OverviewSection from "./sections/OverviewSection";
@@ -108,14 +106,6 @@ const SECTIONS = [
 
 
 export default function LawFirmProfile() {
-  const firm = useFirm();
-
-  // The same figures the overview section reads, so the two cannot disagree.
-  const figures = overviewFigures(firm);
-  const expiringDocuments = firm.documents.filter(
-    (document) => documentStatus(document) === "Expiring Soon"
-  ).length;
-
   const [activeSection, setActiveSection] = useState("information");
   // Carries context when one section links into another, such as opening the
   // transaction history on a particular account.
@@ -170,31 +160,6 @@ export default function LawFirmProfile() {
         </div>
       </div>
 
-      {/* What the company amounts to, before any one section of it */}
-      <SummaryStrip
-        items={[
-          {
-            label: "Total Cases",
-            value: figures.cases.total,
-            note: figures.cases.active + " Active",
-          },
-          {
-            label: "Total Clients",
-            value: figures.clients.total,
-            note: figures.clients.withOpenCases + " With Open Cases",
-          },
-          {
-            label: "Total Bank Balance",
-            value: money(figures.bank.total),
-            note: "Across " + firm.bankAccounts.length + " Accounts",
-          },
-          {
-            label: "Documents",
-            value: firm.documents.length,
-            note: expiringDocuments + " Expiring Soon",
-          },
-        ]}
-      />
 
       <div className="flex flex-col items-start gap-4 sm:gap-6 lg:flex-row">
         {/* Section navigation */}

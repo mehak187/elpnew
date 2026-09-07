@@ -1,3 +1,6 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Save } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -14,18 +17,32 @@ import { daysUntil, EXPIRY_WARNING_DAYS } from "../firmData";
 /**
  * What the company is, on paper.
  *
- * Every change is written straight to the shared firm record rather than held
- * here and saved later, so the name in the page header updates as it is typed -
- * the company is stored once and read everywhere.
+ * Edited as a draft and written to the shared record on Save. The company
+ * is read all over the system - its name is in the page header and on every
+ * document - so a half-typed name has no business reaching any of that
+ * until someone says it is right.
  */
 export default function FirmInformationSection({ canEdit }) {
   const { firmInfo, updateFirmInfo, branches } = useFirm();
 
-  const set = (field) => (e) => updateFirmInfo({ [field]: e.target.value });
+  const [draft, setDraft] = useState(firmInfo);
+  // Reload if the saved record changes underneath this form.
+  const [loaded, setLoaded] = useState(firmInfo);
+  if (firmInfo !== loaded) {
+    setLoaded(firmInfo);
+    setDraft(firmInfo);
+  }
 
-  const crDays = firmInfo.crExpiryDate ? daysUntil(firmInfo.crExpiryDate) : null;
+  const set = (field) => (e) =>
+    setDraft((prev) => ({ ...prev, [field]: e.target.value }));
+
+  const dirty = JSON.stringify(draft) !== JSON.stringify(firmInfo);
+  const save = () => updateFirmInfo(draft);
+
+  const crDays = draft.crExpiryDate ? daysUntil(draft.crExpiryDate) : null;
 
   return (
+    <div className="space-y-6">
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
       <div className="space-y-2">
         <Label htmlFor="firmNameEn">Law Firm Name &ndash; English *</Label>
@@ -123,9 +140,9 @@ export default function FirmInformationSection({ canEdit }) {
       <div className="space-y-2">
         <Label htmlFor="primaryBranch">Primary Branch</Label>
         <Select
-          value={String(firmInfo.primaryBranchId || "")}
+          value={String(draft.primaryBranchId || "")}
           onValueChange={(value) =>
-            updateFirmInfo({ primaryBranchId: Number(value) })
+            setDraft((prev) => ({ ...prev, primaryBranchId: Number(value) }))
           }
           disabled={!canEdit}
         >
@@ -141,6 +158,16 @@ export default function FirmInformationSection({ canEdit }) {
           </SelectContent>
         </Select>
       </div>
+    </div>
+
+    {canEdit && (
+      <div className="flex justify-end">
+        <Button type="button" onClick={save} disabled={!dirty}>
+          <Save className="mr-2 h-4 w-4" />
+          Save Changes
+        </Button>
+      </div>
+    )}
     </div>
   );
 }
