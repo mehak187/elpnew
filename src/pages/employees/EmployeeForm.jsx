@@ -24,6 +24,7 @@ import {
   CalendarClock,
   Megaphone,
   Gauge,
+  CalendarCheck,
   ShieldCheck,
   MapPin,
   Phone,
@@ -53,6 +54,7 @@ import FinancialBenefitsSection from "./sections/FinancialBenefitsSection";
 import DailyActivitiesSection from "./sections/DailyActivitiesSection";
 import PerformanceSection from "./sections/PerformanceSection";
 import EmployeeCircularsSection from "./sections/CircularsSection";
+import LeavesSection from "./sections/LeavesSection";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 import {
   employeeRecords,
@@ -94,6 +96,7 @@ const SECTIONS = [
     key: "benefits",
     label: "Financial Benefits",
     icon: Wallet,
+    noSave: true,
     note: "Salaries, loans, assistance and commission",
   },
   {
@@ -114,6 +117,14 @@ const SECTIONS = [
     label: "Performance Evaluation",
     icon: Gauge,
     note: "Statistics collected by the system from recorded activity",
+  },
+  {
+    key: "leaves",
+    label: "Leaves",
+    icon: CalendarCheck,
+    noSave: true,
+    note: "Leave requests and what was decided about them",
+    ownsHeader: true,
   },
   {
     // What one employee may see and change. Set for someone by whoever
@@ -402,9 +413,9 @@ export default function EmployeeForm({ self }) {
             <p className="text-xs text-primary/75 sm:text-sm">{current.note}</p>
           </div>
         </div>
-        {/* Financial Benefits carries its own Add buttons, one per tab, so
-            the page header has nothing to offer there. */}
-        {activeSection !== "benefits" && (
+        {/* A section with its own buttons has nothing for the page header
+            to offer: there is no draft up here to save. */}
+        {!current.noSave && (
           <Button type="submit" form="employee-form">
             <Save className="mr-2 h-4 w-4" />
             {current.save ||
@@ -1072,6 +1083,10 @@ export default function EmployeeForm({ self }) {
                 )}
 
                 {activeSection === "performance" && <PerformanceSection />}
+
+                {activeSection === "leaves" && (
+                  <LeavesSection employee={formData} />
+                )}
 
                 {/* Not yet specified, so nothing is invented for it */}
                 {activeSection === "permissions" && (

@@ -1,26 +1,22 @@
 import { useState } from "react";
-import DataTable from "@/components/shared/DataTable";
-import SummaryStrip from "@/components/shared/SummaryStrip";
-import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import DataTable from "@/components/shared/DataTable";
+import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { withRial } from "@/lib/money";
 import { useExpenses } from "@/lib/expenses/context";
-import {
-  invoiceTotal,
-  amountPaid,
-  settlement,
-  STATUS,
-  STATUS_VARIANT,
-} from "@/pages/expenses/expenseData";
+import { useSuppliers } from "@/lib/suppliers/context";
+import { expenseRecords } from "@/pages/expenses/expenseData";
+import { expenseColumns } from "@/pages/expenses/expenseColumns";
 
-const money = (amount) =>
-  withRial(
-    Number(amount || 0).toLocaleString("en-GB", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })
-  );
+/** Amounts here are read against invoices, so they carry the currency and fils. */
+const omr = (amount) =>
+  "OMR " +
+  Number(amount || 0).toLocaleString("en-GB", {
+    minimumFractionDigits: 3,
+    maximumFractionDigits: 3,
+  });
 
 /** One fact about the supplier, as it reads above their payments. */
 function Detail({ label, children }) {
@@ -35,121 +31,57 @@ function Detail({ label, children }) {
 }
 
 /**
- * What this supplier has been billed and what has been paid against it.
+ * Everything the firm has spent with one supplier.
  *
- * Read off the expense records rather than held here: a payment is recorded
- * once, where it happens, and this page is one more way of looking at the same
- * ledger. Nothing on it can therefore disagree with the Expenses page.
+ * The rows are the same expense records the Expenses page shows, read through
+ * the same columns - narrowed to this supplier and without the Supplier column,
+ * which would repeat the page's own subject on every row. Nothing is held here,
+ * so a supplier's ledger cannot drift from the firm's.
  */
 export default function SupplierPaymentsSection({ supplier }) {
-  const { invoices } = useExpenses();
+  const navigate = useNavigate();
+  const { expenses, invoices } = useExpenses();
+  const { suppliers } = useSuppliers();
+
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Every invoice raised against this supplier, wherever it has got to.
-  // A bill still working its way through approval is money the firm owes
-  // and the supplier is waiting for, so leaving it out would understate
-  // both sides.
-  const rows = invoices
-    .filter((invoice) => invoice.supplier === supplier.name)
-    .map((invoice) => ({
-      id: invoice.id,
-      reference: invoice.reference,
-      invoiceNumber: invoice.invoiceNumber,
-      date: invoice.invoiceDate,
-      lines: invoice.lines,
-      status: invoice.status,
-      total: invoiceTotal(invoice),
-      paid: amountPaid(invoice),
-    }))
-    .sort((a, b) => b.date.localeCompare(a.date));
+  const accountFor = (name) => suppliers.find((s) => s.name === name) || null;
 
-  const billed = rows.reduce((sum, row) => sum + row.total, 0);
-  const paid = rows.reduce((sum, row) => sum + row.paid, 0);
+  const rows = expenseRecords(expenses, invoices)
+    .filter((record) => record.supplier === supplier.name)
+    // Newest first to read, though the numbers were given oldest first.
+    .slice()
+    .reverse();
 
-  const columns = [
-    {
-      key: "reference",
-      header: "Reference",
-      width: "16%",
-      cellClassName: "font-medium",
-      render: (value, row) => (
-        <div>
-          <p>{value || "-"}</p>
-          <p className="text-xs text-muted-foreground">
-            {row.invoiceNumber || "No invoice number"}
-          </p>
-        </div>
-      ),
-    },
-    { key: "date", header: "Date", width: "13%" },
-    {
-      key: "lines",
-      header: "What it was for",
-      width: "27%",
-      exportValue: (row) =>
-        row.lines.map((line) => line.description).filter(Boolean).join(" | "),
-      render: (_, row) => (
-        <div className="space-y-0.5">
-          {row.lines.map((line) => (
-            <p key={row.id + "-" + line.id} className="text-xs">
-              <span className="font-medium">{line.path.join(" - ")}</span>
-              {line.description && (
-                <span className="text-muted-foreground">
-                  {" "}
-                  &bull; {line.description}
-                </span>
-              )}
-            </p>
-          ))}
-        </div>
-      ),
-    },
-    {
-      // Billed, settled, and what is left - the last one worked out here so it
-      // can never contradict the two it comes from.
-      key: "total",
-      header: "Amount",
-      width: "22%",
-      exportValue: (row) =>
-        row.total + " billed, " + row.paid + " paid",
-      render: (value, row) => (
-        <div className="space-y-0.5">
-          <p className="font-medium">{money(value)}</p>
-          <p className="text-xs text-green-700">{money(row.paid)} paid</p>
-          {row.total - row.paid > 0 && (
-            <p className="text-xs text-red-600">
-              {money(row.total - row.paid)} outstanding
-            </p>
-          )}
-        </div>
-      ),
-    },
-    {
-      // Where the request stands, and beneath it how much of it is
-      // settled - two different questions, both worth answering.
-      key: "status",
-      header: "Status",
-      width: "22%",
-      exportValue: (row) =>
-        STATUS[row.status] + " - " + settlement(row.paid, row.total).label,
-      render: (value, row) => {
-        const state = settlement(row.paid, row.total);
-        return (
-          <div className="space-y-1">
-            <Badge variant={STATUS_VARIANT[value]}>{STATUS[value]}</Badge>
-            <p className="text-xs text-muted-foreground">{state.label}</p>
-          </div>
-        );
-      },
-    },
-  ];
+  const total = rows.reduce((sum, row) => sum + row.total, 0);
+
+  const columns = expenseColumns({ accountFor, includeSupplier: false });
 
   return (
     <div className="space-y-6">
-      {/* Who is being paid, before what they have been paid. Read only:
-          the supplier is edited on Supplier Information, and one record
-          edited in two places is two records waiting to disagree. */}
+      {/* The count and the total sit with the title: a total on its own cannot
+          tell one large expense from twenty small ones. */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+        <div className="flex flex-wrap items-baseline gap-3">
+          <h2 className="text-base font-semibold text-primary">
+            Supplier Payments
+          </h2>
+          <span className="text-sm text-muted-foreground">
+            {rows.length} {rows.length === 1 ? "expense" : "expenses"}
+          </span>
+          <span className="text-sm font-bold text-primary">{omr(total)}</span>
+        </div>
+
+        <Button type="button" onClick={() => navigate("/expenses/create")}>
+          <Plus className="mr-1.5 h-4 w-4" />
+          Add Expense
+        </Button>
+      </div>
+
+      {/* Who is being paid, before what they have been paid. Read only: the
+          supplier is edited on Supplier Information, and one record edited in
+          two places is two records waiting to disagree. */}
       <Card>
         <CardContent className="p-4 sm:p-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
@@ -187,29 +119,21 @@ export default function SupplierPaymentsSection({ supplier }) {
         </CardContent>
       </Card>
 
-      <SummaryStrip
-        items={[
-          { label: "Billed", count: rows.length, value: money(billed) },
-          { label: "Paid", tone: "text-green-600", value: money(paid) },
-          {
-            label: "Outstanding",
-            tone: "text-red-600",
-            value: money(billed - paid),
-          },
-        ]}
-      />
-
-      <DataTable
-        columns={columns}
-        data={rows}
-        searchPlaceholder="Ask about this supplier's payments..."
-        exportFileName="supplier-payments.csv"
-        enableColumnSearch={false}
-        currentPage={currentPage}
-        pageSize={pageSize}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={setPageSize}
-      />
+      <Card>
+        <CardContent className="p-4 sm:p-6">
+          <DataTable
+            columns={columns}
+            data={rows}
+            searchPlaceholder="Ask about this supplier's expenses..."
+            exportFileName="supplier-expenses.csv"
+            enableColumnSearch={false}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }
