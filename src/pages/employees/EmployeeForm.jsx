@@ -24,8 +24,9 @@ import {
   CalendarClock,
   Megaphone,
   Gauge,
-  MapPin,
+  CalendarCheck,
   ShieldCheck,
+  MapPin,
   Phone,
   Mail,
   UploadCloud,
@@ -53,6 +54,8 @@ import FinancialBenefitsSection from "./sections/FinancialBenefitsSection";
 import DailyActivitiesSection from "./sections/DailyActivitiesSection";
 import PerformanceSection from "./sections/PerformanceSection";
 import EmployeeCircularsSection from "./sections/CircularsSection";
+import LeavesSection from "./sections/LeavesSection";
+import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 import {
   employeeRecords,
   nextEmployeeNo,
@@ -82,8 +85,9 @@ const SECTIONS = [
     key: "documents",
     label: "Documents",
     icon: FileText,
+    ownsHeader: true,
+    noSave: true,
     note: "Manage employee documents and attachments",
-    save: "Save Changes",
   },
   {
     // Salary, loans, assistance and commission were four entries in this
@@ -92,6 +96,7 @@ const SECTIONS = [
     key: "benefits",
     label: "Financial Benefits",
     icon: Wallet,
+    noSave: true,
     note: "Salaries, loans, assistance and commission",
   },
   {
@@ -102,22 +107,37 @@ const SECTIONS = [
     save: "Save Daily Activity",
   },
   {
+    noSave: true,
     key: "circulars",
     label: "Circulars",
     icon: Megaphone,
     note: "Notices addressed to this employee",
   },
   {
+    noSave: true,
     key: "performance",
     label: "Performance Evaluation",
     icon: Gauge,
     note: "Statistics collected by the system from recorded activity",
   },
   {
+    key: "leaves",
+    label: "Leaves",
+    icon: CalendarCheck,
+    noSave: true,
+    note: "Leave requests and what was decided about them",
+    ownsHeader: true,
+  },
+  {
+    // What one employee may see and change. Set for someone by whoever
+    // administers the firm, so it is not on the page a person opens on
+    // themselves - nobody grants themselves permissions.
+    noSave: true,
     key: "permissions",
     label: "System Permissions",
     icon: ShieldCheck,
     note: "What this employee may see and change",
+    notOnOwnProfile: true,
   },
 ];
 
@@ -279,14 +299,25 @@ const toRecord = (formData) => ({
   nameAr: formData.arabicName,
 });
 
-export default function EmployeeForm() {
+/**
+ * One employee, however they were reached.
+ *
+ * `self` opens the record of whoever is signed in, so My Profile is this
+ * page rather than a second one built beside it: the same sections, the
+ * same sidebar, the same code - only the record differs.
+ */
+export default function EmployeeForm({ self }) {
   const navigate = useNavigate();
   const { id } = useParams();
-  const isEditMode = Boolean(id);
 
-  const record = isEditMode
-    ? employeeRecords.find((e) => e.id === Number(id)) || null
-    : null;
+  const record = self
+    ? employeeRecords.find((e) => e.name === CURRENT_USER.name) || null
+    : id
+      ? employeeRecords.find((e) => e.id === Number(id)) || null
+      : null;
+
+  // A record on screen is one being edited; only Add starts an empty one.
+  const isEditMode = Boolean(record);
 
   const [activeSection, setActiveSection] = useState("information");
   // The section whose add form is open, if any. Held here because the button
@@ -305,6 +336,8 @@ export default function EmployeeForm() {
   const [documents, setDocuments] = useState(employeeDocuments);
   const [docDraft, setDocDraft] = useState({ type: "", notes: "" });
   const [docFile, setDocFile] = useState(null);
+  // The page is the list of documents until someone asks to add to it.
+  const [addingDoc, setAddingDoc] = useState(false);
 
   const addDocument = () => {
     if (!docDraft.type || !docFile) return;
@@ -330,6 +363,11 @@ export default function EmployeeForm() {
       },
       ...prev,
     ]);
+    closeDocForm();
+  };
+
+  const closeDocForm = () => {
+    setAddingDoc(false);
     setDocDraft({ type: "", notes: "" });
     setDocFile(null);
   };
@@ -344,7 +382,9 @@ export default function EmployeeForm() {
   // A new employee has one side to it: the basic information. Everything
   // else - documents, salary, loans - is filed against an employee, and there
   // is no employee to file it against until this form is saved.
-  const sections = isEditMode ? SECTIONS : SECTIONS.slice(0, 1);
+  const sections = (isEditMode ? SECTIONS : SECTIONS.slice(0, 1)).filter(
+    (section) => !(self && section.notOnOwnProfile)
+  );
 
   const current = SECTIONS.find((s) => s.key === activeSection) || SECTIONS[0];
   const isInfo = activeSection === "information";
@@ -376,9 +416,9 @@ export default function EmployeeForm() {
             <p className="text-xs text-primary/75 sm:text-sm">{current.note}</p>
           </div>
         </div>
-        {/* Financial Benefits carries its own Add buttons, one per tab, so
-            the page header has nothing to offer there. */}
-        {activeSection !== "benefits" && (
+        {/* A section with its own buttons has nothing for the page header
+            to offer: there is no draft up here to save. */}
+        {!current.noSave && (
           <Button type="submit" form="employee-form">
             <Save className="mr-2 h-4 w-4" />
             {current.save ||
@@ -434,7 +474,7 @@ export default function EmployeeForm() {
                 isInfo && "space-y-4 p-0 sm:space-y-6 sm:p-0"
               )}
             >
-              {!isInfo && (
+              {!isInfo && !current.ownsHeader && (
                 <div className="mb-6 flex items-center gap-3 border-b pb-3">
                   <h2 className="text-base font-semibold text-primary">
                     {current.label}
@@ -817,11 +857,31 @@ export default function EmployeeForm() {
 
                 {activeSection === "documents" && (
                   <div className="space-y-6">
-                    {/* Add a document */}
-                    <div className="rounded-lg border p-4">
-                      <p className="mb-4 font-semibold text-primary">
+                    {/* Nothing is asked for until it is asked for: the page
+                        is the documents on file, and the form is opened over
+                        them when there is one to add. */}
+                    <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+                      <h2 className="text-base font-semibold text-primary">
+                        Documents
+                      </h2>
+                      <Button
+                        type="button"
+                        onClick={() => setAddingDoc(true)}
+                        disabled={addingDoc}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
                         Add Document
-                      </p>
+                      </Button>
+                    </div>
+
+                    {addingDoc && (
+                    <div className="rounded-lg border p-4">
+                      <div className="mb-4 flex items-center gap-3">
+                        <BackButton onBack={closeDocForm} />
+                        <p className="font-semibold text-primary">
+                          Add Document
+                        </p>
+                      </div>
 
                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
                         <div className="space-y-2">
@@ -915,16 +975,20 @@ export default function EmployeeForm() {
                         </div>
                       </div>
 
-                      <div className="mt-4 flex justify-end">
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+                        <Button variant="outline" onClick={closeDocForm}>
+                          Cancel
+                        </Button>
                         <Button
                           type="button"
                           onClick={addDocument}
                           disabled={!docDraft.type || !docFile}
                         >
-                          Add Document
+                          Save Document
                         </Button>
                       </div>
                     </div>
+                    )}
 
                     {/* What is already on file */}
                     <div className="rounded-lg border">
@@ -1023,10 +1087,16 @@ export default function EmployeeForm() {
 
                 {activeSection === "performance" && <PerformanceSection />}
 
-                {/* Not yet specified, so nothing is invented for them */}
-                {["permissions"].includes(
-                  activeSection
-                ) && <EmptyState>{current.label} is not set up yet.</EmptyState>}
+                {activeSection === "leaves" && (
+                  <LeavesSection employee={formData} />
+                )}
+
+                {/* Not yet specified, so nothing is invented for it */}
+                {activeSection === "permissions" && (
+                  <EmptyState>{current.label} is not set up yet.</EmptyState>
+                )}
+
+
               </form>
             </CardContent>
           </Card>

@@ -131,6 +131,8 @@ function App() {
               <Route path="employees/create" element={<EmployeeForm />} />
               {/* Adding and editing are the same page; only the data differs. */}
               <Route path="employees/:id" element={<EmployeeForm />} />
+              {/* The same page again, opened on whoever is signed in. */}
+              <Route path="my-profile" element={<EmployeeForm self />} />
 
               {/* Finance Module */}
               <Route path="finance" element={<InvoicesList />} />

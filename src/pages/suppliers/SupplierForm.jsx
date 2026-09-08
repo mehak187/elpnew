@@ -13,7 +13,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Truck, ArrowLeft, Save } from "lucide-react";
+import {
+  Truck,
+  ArrowLeft,
+  Save,
+  FileText,
+  FolderOpen,
+  Wallet,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import SupplierPaymentsSection from "./SupplierPaymentsSection";
+import SupplierDocumentsSection from "./SupplierDocumentsSection";
 import {
   COUNTRY_DIAL_CODES,
   DEFAULT_DIAL_CODE,
@@ -21,6 +31,28 @@ import {
 } from "@/lib/constants";
 import { useSuppliers } from "@/lib/suppliers/context";
 import { SUPPLIER_CATEGORIES, SUPPLIER_STATUSES } from "./supplierData";
+
+/**
+ * The sections of a supplier record.
+ *
+ * `existingOnly` keeps payments behind a saved supplier: a supplier that
+ * has not been created yet has nothing to have been billed for.
+ */
+const SECTIONS = [
+  { key: "information", label: "Supplier Information", icon: FileText },
+  {
+    key: "documents",
+    label: "Supplier Documents",
+    icon: FolderOpen,
+    existingOnly: true,
+  },
+  {
+    key: "payments",
+    label: "Supplier Payments",
+    icon: Wallet,
+    existingOnly: true,
+  },
+];
 
 const emptySupplier = {
   name: "",
@@ -61,18 +93,24 @@ export default function SupplierForm() {
   const [draft, setDraft] = useState(() => draftFrom(existing));
   const [loadedId, setLoadedId] = useState(id);
   const [error, setError] = useState("");
+  const [activeSection, setActiveSection] = useState("information");
 
   // Moving straight from one supplier to another reloads the form.
   if (id !== loadedId) {
     setLoadedId(id);
     setDraft(draftFrom(existing));
     setError("");
+    setActiveSection("information");
   }
 
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
   const onChange = (e) => set(e.target.name, e.target.value);
 
   const canSave = draft.name.trim() && draft.category;
+
+  // A supplier that has not been saved has no payments to show.
+  const sections = SECTIONS.filter((section) => isEdit || !section.existingOnly);
+  const isInformation = activeSection === "information";
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -125,12 +163,54 @@ export default function SupplierForm() {
             </p>
           </div>
         </div>
-        <Button type="submit" form="supplier-form" disabled={!canSave}>
-          <Save className="mr-2 h-4 w-4" />
-          {isEdit ? "Save Changes" : "Save Supplier"}
-        </Button>
+        {/* Payments are a record of what happened, so there is nothing to
+            save while they are on screen. */}
+        {isInformation && (
+          <Button type="submit" form="supplier-form" disabled={!canSave}>
+            <Save className="mr-2 h-4 w-4" />
+            {isEdit ? "Save Changes" : "Save Supplier"}
+          </Button>
+        )}
       </div>
 
+      <div className="flex flex-col items-start gap-4 sm:gap-6 lg:flex-row">
+        {/* Section navigation */}
+        <Card className="w-full lg:sticky lg:top-20 lg:w-60 lg:shrink-0">
+          <CardContent className="p-3">
+            <p className="mb-2 border-b px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Supplier Details
+            </p>
+            <nav className="flex flex-row gap-1 overflow-x-auto lg:flex-col">
+              {sections.map((section) => {
+                const Icon = section.icon;
+                return (
+                  <button
+                    key={section.key}
+                    type="button"
+                    onClick={() => setActiveSection(section.key)}
+                    className={cn(
+                      "flex items-center gap-2.5 text-nowrap rounded-md px-3 py-2 text-left text-sm font-medium transition-colors",
+                      activeSection === section.key
+                        ? "bg-primary text-primary-foreground"
+                        : "text-primary hover:bg-secondary"
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {section.label}
+                  </button>
+                );
+              })}
+            </nav>
+          </CardContent>
+        </Card>
+
+        {/* min-w-0 or a wide table in here would stretch the whole page */}
+        <div className="w-full min-w-0 flex-1">
+          {activeSection === "documents" ? (
+            <SupplierDocumentsSection supplier={existing} />
+          ) : activeSection === "payments" ? (
+            <SupplierPaymentsSection supplier={existing} />
+          ) : (
       <Card>
         <CardContent className="p-4 sm:p-6">
           <form id="supplier-form" onSubmit={handleSubmit} className="space-y-6">
@@ -295,6 +375,9 @@ export default function SupplierForm() {
           </form>
         </CardContent>
       </Card>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
