@@ -37,6 +37,7 @@ const emptyDraft = () => ({
   to: "",
   year: thisYear(),
   reason: "",
+  replacement: "",
 });
 
 /**
@@ -202,7 +203,16 @@ export default function LeavesSection({ employee }) {
                       <td className="p-3 font-medium">
                         {days} {days === 1 ? "Day" : "Days"}
                       </td>
-                      <td className="p-3">{leave.reason || "-"}</td>
+                      <td className="p-3">
+                        <p>{leave.reason || "-"}</p>
+                        {/* Who is covering, with the request it belongs
+                            to rather than in a column of its own. */}
+                        {leave.replacement && (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Covered by {leave.replacement}
+                          </p>
+                        )}
+                      </td>
 
                       <td className="p-3">
                         <span

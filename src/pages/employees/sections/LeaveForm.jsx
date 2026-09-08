@@ -1,4 +1,4 @@
-import { CalendarPlus, Database } from "lucide-react";
+import { CalendarPlus, Database, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import BackButton from "@/components/shared/BackButton";
 import { cn } from "@/lib/utils";
+import { employeeRecords } from "../employeeData";
 import {
   ABSENCE_CATEGORIES,
   typesIn,
@@ -20,6 +21,9 @@ import {
   leaveDays,
   remainingBalance,
 } from "../leaveData";
+
+/** A reason has to fit on the request, so the form says how much room. */
+const NOTES_LIMIT = 500;
 
 /** How each category is coloured wherever its types are listed. */
 const CATEGORY_TONE = {
@@ -333,10 +337,55 @@ export default function LeaveForm({
             <Textarea
               id="leaveReason"
               rows={3}
+              maxLength={NOTES_LIMIT}
               value={draft.reason}
               onChange={(e) => onChange("reason", e.target.value)}
               placeholder="Enter the reason for your leave request..."
             />
+            <p className="-mt-1 text-right text-xs text-muted-foreground">
+              {draft.reason.length} / {NOTES_LIMIT}
+            </p>
+          </div>
+
+          {/* Who covers the work. Optional, because plenty of leave
+              needs no cover - but naming someone is what lets the firm
+              approve it without stopping to ask. */}
+          <div className="-mt-2 space-y-2 sm:col-span-2 sm:-mt-4">
+            <Label htmlFor="leaveReplacement">
+              Replacement Employee
+              <span className="ml-1 font-normal text-muted-foreground">
+                (Optional)
+              </span>
+              <Info
+                className="ml-1 inline h-3.5 w-3.5 align-text-top text-muted-foreground"
+                aria-hidden="true"
+              />
+            </Label>
+            <Select
+              value={draft.replacement}
+              onValueChange={(value) => onChange("replacement", value)}
+            >
+              <SelectTrigger
+                id="leaveReplacement"
+                title="Who covers the work while they are away"
+              >
+                <SelectValue placeholder="Select Employee" />
+              </SelectTrigger>
+              <SelectContent className="max-h-72">
+                {/* Nobody covers for themselves. */}
+                {employeeRecords
+                  .filter((person) => person.name !== employee.name)
+                  .map((person) => (
+                    <SelectItem key={person.id} value={person.name}>
+                      {person.name}
+                      <span className="opacity-70">
+                        {" "}
+                        &mdash; {person.designation}
+                      </span>
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
