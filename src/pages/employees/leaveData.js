@@ -1,9 +1,9 @@
 /**
  * Leave taken and asked for.
  *
- * A request is the employee's half - category, type, dates and reason. The
- * decision is management's half, and stays empty until one is made, so a
- * request can never look decided before it is.
+ * A request is the employee's half - type, dates and reason. The decision is
+ * management's half, and stays empty until one is made, so a request can never
+ * look decided before it is.
  */
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -11,16 +11,56 @@ const dayOffset = (days) =>
   new Date(Date.now() + days * DAY).toISOString().slice(0, 10);
 
 /**
- * The kinds of absence, and what each one covers.
+ * The kinds of absence, and what each one is worth.
  *
- * Category first, then type: the category is what the leave is charged
- * against, the type is what it is for.
+ * The entitlement travels with the type rather than being written on a form
+ * somewhere: it is the rule for that leave, and it is the same rule wherever
+ * the leave is asked for. Several are a range because the law gives different
+ * lengths for different circumstances - a bereavement depends on who died, and
+ * widowhood on the woman's faith - so the exact figure is settled when the
+ * request is decided, not when it is typed.
  */
-export const ABSENCE_CATEGORIES = {
-  "Regular Leave": ["Annual Leave", "Sick Leave", "Emergency Leave"],
-  "Family Leave": ["Maternity Leave", "Paternity Leave", "Bereavement Leave"],
-  "Unpaid Leave": ["Unpaid Leave", "Study Leave"],
-};
+export const ABSENCE_CATEGORIES = [
+  {
+    name: "Regular Leave",
+    types: [
+      { name: "Annual Leave", entitlement: "30 Days" },
+      { name: "Sick Leave", entitlement: "Up to 182 Days" },
+      { name: "Unpaid Leave", entitlement: "As Approved" },
+    ],
+  },
+  {
+    name: "Family Leave",
+    types: [
+      { name: "Paternity Leave", entitlement: "7 Days" },
+      { name: "Maternity Leave", entitlement: "98 Days" },
+      { name: "Marriage Leave", entitlement: "3 Days" },
+      { name: "Bereavement Leave", entitlement: "2 / 3 / 10 Days" },
+      { name: "Widowhood Leave", entitlement: "130 / 14 Days" },
+    ],
+  },
+  {
+    name: "Special Leave",
+    types: [
+      { name: "Hajj Leave", entitlement: "15 Days" },
+      { name: "Study / Examination Leave", entitlement: "Up to 15 Days" },
+      { name: "Patient Escort Leave", entitlement: "15 Days" },
+    ],
+  },
+];
+
+/** The types one category offers. */
+export const typesIn = (category) =>
+  ABSENCE_CATEGORIES.find((c) => c.name === category)?.types || [];
+
+/** What a leave type is worth, wherever it is named. */
+export function entitlementOf(type) {
+  for (const category of ABSENCE_CATEGORIES) {
+    const found = category.types.find((t) => t.name === type);
+    if (found) return found.entitlement;
+  }
+  return "";
+}
 
 export const LEAVE_STATUSES = ["Pending", "Approved", "Rejected"];
 
@@ -45,7 +85,7 @@ export function leaveDays(from, to) {
 }
 
 /** The year a leave is charged against: the year it starts in. */
-export const leaveYear = (from) => (from ? Number(from.slice(0, 4)) : "");
+export const leaveYear = (from) => (from ? from.slice(0, 4) : "");
 
 export const initialLeaves = [
   {
@@ -86,6 +126,18 @@ export const initialLeaves = [
   },
   {
     id: 4,
+    employee: "Mohammed Al Yahyaei",
+    category: "Special Leave",
+    type: "Hajj Leave",
+    from: dayOffset(-400),
+    to: dayOffset(-386),
+    reason: "Pilgrimage",
+    status: "Approved",
+    decidedAt: dayOffset(-420),
+    comments: "Taken in full.",
+  },
+  {
+    id: 5,
     employee: "Fatima Al Rashdi",
     category: "Regular Leave",
     type: "Annual Leave",
@@ -103,3 +155,8 @@ export const leavesFor = (leaves, name) =>
   leaves
     .filter((leave) => leave.employee === name)
     .sort((a, b) => a.from.localeCompare(b.from));
+
+/** The years a person has leave in, newest first, for the year picker. */
+export const leaveYearsFor = (leaves, name) => [
+  ...new Set(leavesFor(leaves, name).map((leave) => leaveYear(leave.from))),
+].sort((a, b) => b.localeCompare(a));

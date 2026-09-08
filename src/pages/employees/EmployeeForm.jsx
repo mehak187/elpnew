@@ -86,8 +86,8 @@ const SECTIONS = [
     label: "Documents",
     icon: FileText,
     ownsHeader: true,
+    noSave: true,
     note: "Manage employee documents and attachments",
-    save: "Save Changes",
   },
   {
     // Salary, loans, assistance and commission were four entries in this
@@ -107,12 +107,14 @@ const SECTIONS = [
     save: "Save Daily Activity",
   },
   {
+    noSave: true,
     key: "circulars",
     label: "Circulars",
     icon: Megaphone,
     note: "Notices addressed to this employee",
   },
   {
+    noSave: true,
     key: "performance",
     label: "Performance Evaluation",
     icon: Gauge,
@@ -130,6 +132,7 @@ const SECTIONS = [
     // What one employee may see and change. Set for someone by whoever
     // administers the firm, so it is not on the page a person opens on
     // themselves - nobody grants themselves permissions.
+    noSave: true,
     key: "permissions",
     label: "System Permissions",
     icon: ShieldCheck,
