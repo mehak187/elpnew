@@ -103,10 +103,19 @@ const navSections = [
         description: "Company information and administration",
       },
       {
+        // The same page as an employee record, opened on the person
+        // reading it - so no list to walk through first.
+        name: "My Profile",
+        path: "/my-profile",
+        key: "my-profile",
+        icon: UserCircle,
+        description: "Your own record, opened directly",
+      },
+      {
         name: "Employees",
         path: "/employees",
         key: "employees",
-        icon: UserCircle,
+        icon: Users,
         description: "Staff records, branches and roles",
       },
     ],
