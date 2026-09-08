@@ -83,3 +83,34 @@ export const initialSuppliers = [
   s(13, "Nizwa Print House", "Marketing", "1701133", "TIN-8842200", "OM1701133", "Ahli Bank", "OM32 21851848", "+968 2541 1300", "Inactive"),
   s(14, "Falcon IT Solutions", "IT & Software", "1802244", "TIN-8842311", "OM1802244", "Bank Nizwa", "OM33 22839502", "+968 2456 1400", "Active"),
 ];
+
+/** The papers a supplier is asked for. */
+export const SUPPLIER_DOCUMENT_TYPES = [
+  "Commercial Registration",
+  "VAT Certificate",
+  "Tax Card",
+  "Bank Letter",
+  "Contract",
+  "Quotation",
+  "Other",
+];
+
+const DAY = 24 * 60 * 60 * 1000;
+const dayOffset = (days) =>
+  new Date(Date.now() + days * DAY).toISOString().slice(0, 10);
+
+/**
+ * Papers filed against a supplier.
+ *
+ * `documentDate` is the date on the paper itself rather than the day it was
+ * uploaded, and status is never stored - it is read off the expiry date every
+ * render, the same way it is everywhere else. Expiries are generated around
+ * today so the demo always shows all three states.
+ */
+export const initialSupplierDocuments = [
+  { id: 1, supplierId: 1, serial: 1, type: "Commercial Registration", fileName: "cr-al-maha.pdf", fileUrl: "/documents/sample-reference.pdf", documentDate: dayOffset(-700), expiryDate: dayOffset(320), notes: "Renewed in 2024." },
+  { id: 2, supplierId: 1, serial: 2, type: "VAT Certificate", fileName: "vat-al-maha.pdf", fileUrl: "/documents/sample-reference.pdf", documentDate: dayOffset(-690), expiryDate: "", notes: "" },
+  { id: 3, supplierId: 1, serial: 3, type: "Contract", fileName: "lease-agreement.pdf", fileUrl: "/documents/sample-poa.pdf", documentDate: dayOffset(-400), expiryDate: dayOffset(20), notes: "Office lease, up for renewal." },
+  { id: 4, supplierId: 2, serial: 1, type: "Commercial Registration", fileName: "cr-blue-ocean.pdf", fileUrl: "/documents/sample-reference.pdf", documentDate: dayOffset(-520), expiryDate: dayOffset(-30), notes: "Chased twice." },
+  { id: 5, supplierId: 3, serial: 1, type: "Bank Letter", fileName: "bank-letter.pdf", fileUrl: "/documents/sample-reference.pdf", documentDate: dayOffset(-260), expiryDate: "", notes: "" },
+];
