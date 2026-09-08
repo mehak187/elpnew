@@ -1,9 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -11,17 +8,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import BackButton from "@/components/shared/BackButton";
 import { EmptyState } from "@/components/shared/panels";
 import { Plus, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/pages/firm/firmData";
+import LeaveForm from "./LeaveForm";
 import {
-  ABSENCE_CATEGORIES,
   LEAVE_STATUS_TONE,
   initialLeaves,
-  typesIn,
-  entitlementOf,
   leaveDays,
   leaveYear,
   leavesFor,
@@ -34,13 +28,16 @@ const STATUS_ICON = {
   Rejected: XCircle,
 };
 
-const emptyDraft = {
+const thisYear = () => String(new Date().getFullYear());
+
+const emptyDraft = () => ({
   category: "",
   type: "",
   from: "",
   to: "",
+  year: thisYear(),
   reason: "",
-};
+});
 
 /**
  * Leave asked for, and what was decided about it.
@@ -55,35 +52,38 @@ export default function LeavesSection({ employee }) {
   const [draft, setDraft] = useState(emptyDraft);
 
   const mine = leavesFor(leaves, employee.name);
-  const years = leaveYearsFor(leaves, employee.name);
+  const years = [
+    ...new Set([thisYear(), ...leaveYearsFor(leaves, employee.name)]),
+  ].sort((a, b) => b.localeCompare(a));
 
   // Leave is granted a year at a time, so the list is read a year at a time.
-  const [year, setYear] = useState(
-    () => years[0] || String(new Date().getFullYear())
-  );
+  const [year, setYear] = useState(thisYear);
 
   const rows = mine.filter((leave) => leaveYear(leave.from) === year);
-
-  const setField = (name, value) =>
-    setDraft((prev) => ({ ...prev, [name]: value }));
 
   /** A type belongs to one category, so changing the category clears it. */
   const chooseCategory = (value) =>
     setDraft((prev) => ({ ...prev, category: value, type: "" }));
 
+  /**
+   * The year follows the start date on its own.
+   *
+   * Leave is charged to the year it begins in, so leaving both to be typed
+   * would be asking the same question twice - and letting the two disagree.
+   */
+  const setField = (name, value) =>
+    setDraft((prev) => ({
+      ...prev,
+      [name]: value,
+      ...(name === "from" && value ? { year: leaveYear(value) } : {}),
+    }));
+
   const close = () => {
     setAdding(false);
-    setDraft(emptyDraft);
+    setDraft(emptyDraft());
   };
 
-  const days = leaveDays(draft.from, draft.to);
-  const entitlement = entitlementOf(draft.type);
-
-  const canSave =
-    draft.category && draft.type && draft.from && draft.to && days > 0;
-
   const save = () => {
-    if (!canSave) return;
     setLeaves((prev) => [
       ...prev,
       {
@@ -96,7 +96,7 @@ export default function LeavesSection({ employee }) {
         comments: "",
       },
     ]);
-    setYear(leaveYear(draft.from));
+    setYear(draft.year);
     close();
   };
 
@@ -113,7 +113,7 @@ export default function LeavesSection({ employee }) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {(years.includes(year) ? years : [year, ...years]).map((option) => (
+              {years.map((option) => (
                 <SelectItem key={option} value={option}>
                   {option}
                 </SelectItem>
@@ -129,130 +129,16 @@ export default function LeavesSection({ employee }) {
       </div>
 
       {adding && (
-        <Card>
-          <CardContent className="space-y-4 p-4 sm:p-6">
-            <div className="flex items-center gap-3">
-              <BackButton onBack={close} />
-              <p className="font-semibold text-primary">Add New Leave</p>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="absenceCategory">
-                  Absence Category<span className="text-destructive"> *</span>
-                </Label>
-                <Select value={draft.category} onValueChange={chooseCategory}>
-                  <SelectTrigger id="absenceCategory">
-                    <SelectValue placeholder="Please Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ABSENCE_CATEGORIES.map((category) => (
-                      <SelectItem key={category.name} value={category.name}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="leaveType">
-                  Leave Type<span className="text-destructive"> *</span>
-                </Label>
-                <Select
-                  value={draft.type}
-                  onValueChange={(value) => setField("type", value)}
-                  disabled={!draft.category}
-                >
-                  <SelectTrigger id="leaveType">
-                    <SelectValue
-                      placeholder={
-                        draft.category
-                          ? "Please Select"
-                          : "Select a category first"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {typesIn(draft.category).map((type) => (
-                      <SelectItem key={type.name} value={type.name}>
-                        {type.name}
-                        {/* Opacity rather than a colour, so it stays readable
-                            against the highlighted row. */}
-                        <span className="opacity-70">
-                          {" "}
-                          &mdash; {type.entitlement}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {entitlement && (
-                  <p className="text-xs text-muted-foreground">
-                    Entitlement: {entitlement}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="leaveFrom">
-                  From Date<span className="text-destructive"> *</span>
-                </Label>
-                <Input
-                  id="leaveFrom"
-                  type="date"
-                  value={draft.from}
-                  max={draft.to || undefined}
-                  onChange={(e) => setField("from", e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="leaveTo">
-                  To Date<span className="text-destructive"> *</span>
-                </Label>
-                <Input
-                  id="leaveTo"
-                  type="date"
-                  value={draft.to}
-                  min={draft.from || undefined}
-                  onChange={(e) => setField("to", e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2 sm:col-span-2 lg:col-span-4">
-                <Label htmlFor="leaveReason">Reason</Label>
-                <Textarea
-                  id="leaveReason"
-                  rows={2}
-                  value={draft.reason}
-                  onChange={(e) => setField("reason", e.target.value)}
-                  placeholder="Why the leave is being asked for"
-                />
-              </div>
-            </div>
-
-            {/* Counted from the dates, never typed: leaving on the 1st and
-                returning on the 5th is five days away, not four. */}
-            <p className="rounded-lg border border-primary/30 bg-secondary p-4 text-sm text-primary">
-              {days > 0
-                ? days +
-                  (days === 1 ? " day" : " days") +
-                  " of leave requested." +
-                  (entitlement ? " Entitlement: " + entitlement + "." : "")
-                : "Choose a From and To date to see how many days this is."}
-            </p>
-
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <Button variant="outline" onClick={close}>
-                Cancel
-              </Button>
-              <Button type="button" onClick={save} disabled={!canSave}>
-                Submit Request
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <LeaveForm
+          employee={employee}
+          leaves={leaves}
+          draft={draft}
+          years={years}
+          onChange={setField}
+          onCategory={chooseCategory}
+          onSubmit={save}
+          onCancel={close}
+        />
       )}
 
       <Card>

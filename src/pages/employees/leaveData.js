@@ -160,3 +160,40 @@ export const leavesFor = (leaves, name) =>
 export const leaveYearsFor = (leaves, name) => [
   ...new Set(leavesFor(leaves, name).map((leave) => leaveYear(leave.from))),
 ].sort((a, b) => b.localeCompare(a));
+
+/**
+ * The number of days an entitlement is worth, when it is a plain number.
+ *
+ * "30 Days" is a balance that can be counted down; "Up to 182 Days",
+ * "As Approved" and "2 / 3 / 10 Days" are not - they depend on the case, and
+ * are settled when the request is decided. Those return null rather than a
+ * number nobody could stand behind.
+ */
+export function allowanceDays(type) {
+  const match = /^(\d+) Days?$/.exec(entitlementOf(type));
+  return match ? Number(match[1]) : null;
+}
+
+/**
+ * What is left of one leave type this year.
+ *
+ * Counted off the approved requests every time rather than stored: a balance
+ * held as a number is a second copy of the leave already taken, and the two
+ * drift apart the moment a request is corrected.
+ */
+export function remainingBalance(leaves, name, type, year) {
+  const allowance = allowanceDays(type);
+  if (allowance === null) return null;
+
+  const used = leaves
+    .filter(
+      (leave) =>
+        leave.employee === name &&
+        leave.type === type &&
+        leaveYear(leave.from) === String(year) &&
+        leave.status === "Approved"
+    )
+    .reduce((sum, leave) => sum + leaveDays(leave.from, leave.to), 0);
+
+  return { allowance, used, remaining: Math.max(allowance - used, 0) };
+}
