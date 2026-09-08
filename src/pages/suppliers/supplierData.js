@@ -84,16 +84,8 @@ export const initialSuppliers = [
   s(14, "Falcon IT Solutions", "IT & Software", "1802244", "TIN-8842311", "OM1802244", "Bank Nizwa", "OM33 22839502", "+968 2456 1400", "Active"),
 ];
 
-/** The papers a supplier is asked for. */
-export const SUPPLIER_DOCUMENT_TYPES = [
-  "Commercial Registration",
-  "VAT Certificate",
-  "Tax Card",
-  "Bank Letter",
-  "Contract",
-  "Quotation",
-  "Other",
-];
+/** The three papers a supplier is asked for, and no others. */
+export const SUPPLIER_DOCUMENT_TYPES = ["C.R", "Contract", "Tax Certificates"];
 
 const DAY = 24 * 60 * 60 * 1000;
 const dayOffset = (days) =>
@@ -108,9 +100,9 @@ const dayOffset = (days) =>
  * today so the demo always shows all three states.
  */
 export const initialSupplierDocuments = [
-  { id: 1, supplierId: 1, serial: 1, type: "Commercial Registration", fileName: "cr-al-maha.pdf", fileUrl: "/documents/sample-reference.pdf", documentDate: dayOffset(-700), expiryDate: dayOffset(320), notes: "Renewed in 2024." },
-  { id: 2, supplierId: 1, serial: 2, type: "VAT Certificate", fileName: "vat-al-maha.pdf", fileUrl: "/documents/sample-reference.pdf", documentDate: dayOffset(-690), expiryDate: "", notes: "" },
+  { id: 1, supplierId: 1, serial: 1, type: "C.R", fileName: "cr-al-maha.pdf", fileUrl: "/documents/sample-reference.pdf", documentDate: dayOffset(-700), expiryDate: dayOffset(320), notes: "Renewed in 2024." },
+  { id: 2, supplierId: 1, serial: 2, type: "Tax Certificates", fileName: "vat-al-maha.pdf", fileUrl: "/documents/sample-reference.pdf", documentDate: dayOffset(-690), expiryDate: "", notes: "" },
   { id: 3, supplierId: 1, serial: 3, type: "Contract", fileName: "lease-agreement.pdf", fileUrl: "/documents/sample-poa.pdf", documentDate: dayOffset(-400), expiryDate: dayOffset(20), notes: "Office lease, up for renewal." },
-  { id: 4, supplierId: 2, serial: 1, type: "Commercial Registration", fileName: "cr-blue-ocean.pdf", fileUrl: "/documents/sample-reference.pdf", documentDate: dayOffset(-520), expiryDate: dayOffset(-30), notes: "Chased twice." },
-  { id: 5, supplierId: 3, serial: 1, type: "Bank Letter", fileName: "bank-letter.pdf", fileUrl: "/documents/sample-reference.pdf", documentDate: dayOffset(-260), expiryDate: "", notes: "" },
+  { id: 4, supplierId: 2, serial: 1, type: "C.R", fileName: "cr-blue-ocean.pdf", fileUrl: "/documents/sample-reference.pdf", documentDate: dayOffset(-520), expiryDate: dayOffset(-30), notes: "Chased twice." },
+  { id: 5, supplierId: 3, serial: 1, type: "Contract", fileName: "service-agreement.pdf", fileUrl: "/documents/sample-reference.pdf", documentDate: dayOffset(-260), expiryDate: "", notes: "" },
 ];
