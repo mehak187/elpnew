@@ -103,15 +103,6 @@ const navSections = [
         description: "Company information and administration",
       },
       {
-        // The same page as an employee record, opened on the person
-        // reading it - so no list to walk through first.
-        name: "My Profile",
-        path: "/my-profile",
-        key: "my-profile",
-        icon: UserCircle,
-        description: "Your own record, opened directly",
-      },
-      {
         name: "Employees",
         path: "/employees",
         key: "employees",
@@ -157,6 +148,14 @@ const navSections = [
   // { name: "Corporate Matters", path: "/corporate", icon: Briefcase, key: "corporate" },
   // { name: "Invoices", path: "/finance", icon: Wallet, key: "finance" },
   // { name: "Archive", path: "/archive", icon: Archive, key: "archive" },
+  {
+    // A page about the person reading it, so it sits in the header rather
+    // than inside a menu of the firm's records.
+    name: "My Profile",
+    path: "/my-profile",
+    key: "my-profile",
+    icon: UserCircle,
+  },
 ];
 
 export default function Header({ onNavClick, activeNav }) {

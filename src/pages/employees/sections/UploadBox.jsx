@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
+import UploadIcon from "@/components/shared/UploadIcon";
 import { Input } from "@/components/ui/input";
-import { Upload, FileCheck } from "lucide-react";
+import { FileCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -35,7 +36,7 @@ export default function UploadBox({ file, onSelect, accept = ".pdf,.jpg,.jpeg,.p
         "transition-colors hover:bg-secondary"
       )}
     >
-      <Upload className="h-4 w-4" />
+      <UploadIcon className="h-4 w-4" />
       Upload Document
       <Input
         type="file"

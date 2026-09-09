@@ -1,4 +1,5 @@
 import { useState } from "react";
+import UploadIcon from "@/components/shared/UploadIcon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/shared/panels";
 import BackButton from "@/components/shared/BackButton";
-import { Upload, FileCheck, FileText, Trash2, Plus } from "lucide-react";
+import { FileCheck, FileText, Trash2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { expiryState, EXPIRY_LABEL } from "@/lib/expiry";
 import { useFirm } from "@/lib/firm/context";
@@ -236,7 +237,7 @@ export default function DocumentsSection({ canEdit }) {
                       asChild
                     >
                       <label className="cursor-pointer">
-                        <Upload className="h-4 w-4" />
+                        <UploadIcon className="h-4 w-4" />
                         <span className="sr-only">Upload document</span>
                         <Input
                           type="file"

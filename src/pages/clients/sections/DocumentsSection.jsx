@@ -1,4 +1,5 @@
 import { useState } from "react";
+import UploadIcon from "@/components/shared/UploadIcon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,6 @@ import {
 } from "@/components/ui/select";
 import DataTable from "@/components/shared/DataTable";
 import {
-  Upload,
   FileText,
   FileCheck,
   Trash2,
@@ -343,7 +343,7 @@ export default function DocumentsSection({ formData, onChange }) {
                       asChild
                     >
                       <label className="cursor-pointer">
-                        <Upload className="h-4 w-4" />
+                        <UploadIcon className="h-4 w-4" />
                         <span className="sr-only">Upload file</span>
                         <Input
                           type="file"

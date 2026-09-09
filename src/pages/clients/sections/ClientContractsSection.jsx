@@ -1,4 +1,5 @@
 import { useState } from "react";
+import UploadIcon from "@/components/shared/UploadIcon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,7 +23,7 @@ import {
 import DataTable from "@/components/shared/DataTable";
 import SearchableSelect from "@/components/shared/SearchableSelect";
 import BackButton from "@/components/shared/BackButton";
-import { Upload, FileText, FileCheck, Plus } from "lucide-react";
+import { FileText, FileCheck, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CONTRACT_TYPES } from "@/lib/constants";
 import { formatDate, dayOffset } from "@/pages/firm/firmData";
@@ -262,7 +263,7 @@ export default function ClientContractsSection() {
                     asChild
                   >
                     <label className="cursor-pointer">
-                      <Upload className="h-4 w-4" />
+                      <UploadIcon className="h-4 w-4" />
                       <span className="sr-only">Upload contract</span>
                       <Input
                         type="file"

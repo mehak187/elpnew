@@ -1,4 +1,5 @@
 import { useState } from "react";
+import UploadIcon from "@/components/shared/UploadIcon";
 import { useNavigate, useParams } from "react-router-dom";
 import { useGoBack } from "@/lib/useGoBack";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/panels";
-import { Save, Landmark, Upload, FileCheck } from "lucide-react";
+import { Save, Landmark, FileCheck } from "lucide-react";
 import { RECEIVING_BANKS, BANK_BRANCHES, ACCOUNT_TYPES } from "@/lib/constants";
 import { useFirm } from "@/lib/firm/context";
 import { accountBalance, invoices, money } from "./firmData";
@@ -200,7 +201,7 @@ export default function BankEdit() {
                       asChild
                     >
                       <label className="cursor-pointer">
-                        <Upload className="h-4 w-4" />
+                        <UploadIcon className="h-4 w-4" />
                         <span className="sr-only">Upload bank logo</span>
                         <Input
                           type="file"

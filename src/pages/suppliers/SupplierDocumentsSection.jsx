@@ -1,4 +1,5 @@
 import { useState } from "react";
+import UploadIcon from "@/components/shared/UploadIcon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import BackButton from "@/components/shared/BackButton";
 import DataTable from "@/components/shared/DataTable";
-import { Upload, FileCheck, FileText, Trash2, Plus, X } from "lucide-react";
+import { FileCheck, FileText, Trash2, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { expiryState, EXPIRY_LABEL } from "@/lib/expiry";
 import {
@@ -285,7 +286,7 @@ export default function SupplierDocumentsSection({ supplier }) {
                       {file ? (
                         <FileCheck className="h-4 w-4" />
                       ) : (
-                        <Upload className="h-4 w-4" />
+                        <UploadIcon className="h-4 w-4" />
                       )}
                       <span className="sr-only">Upload the document</span>
                     </label>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import UploadIcon from "@/components/shared/UploadIcon";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import BackButton from "@/components/shared/BackButton";
@@ -21,9 +22,7 @@ import {
   Plus,
   Search,
   Landmark,
-  FileSpreadsheet,
-  Upload,
-  Info,
+  FileSpreadsheet,  Info,
 } from "lucide-react";
 import { EmptyState } from "@/components/shared/panels";
 import { cn } from "@/lib/utils";
@@ -177,7 +176,7 @@ function BankFields({ draft, set }) {
               asChild
             >
               <label className="cursor-pointer">
-                <Upload className="h-4 w-4" />
+                <UploadIcon className="h-4 w-4" />
                 <span className="sr-only">Upload bank logo</span>
                 <Input
                   type="file"
@@ -912,7 +911,7 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                           asChild
                         >
                           <label className="cursor-pointer">
-                            <Upload className="h-4 w-4" />
+                            <UploadIcon className="h-4 w-4" />
                             <span className="sr-only">
                               Upload transfer receipt
                             </span>

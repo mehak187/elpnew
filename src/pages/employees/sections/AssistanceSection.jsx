@@ -1,4 +1,5 @@
 import { useState } from "react";
+import UploadIcon from "@/components/shared/UploadIcon";
 import { Button } from "@/components/ui/button";
 import BackButton from "@/components/shared/BackButton";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/panels";
 import { Rial } from "@/components/shared/Rial";
-import { FileText, FileImage, Users, HandHeart, Upload, FileCheck } from "lucide-react";
+import { FileText, FileImage, Users, HandHeart, FileCheck } from "lucide-react";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
 import { useFirm } from "@/lib/firm/context";
 import { maskAccountNumber } from "@/pages/firm/firmData";
@@ -352,7 +353,7 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
                   asChild
                 >
                   <label className="cursor-pointer">
-                    <Upload className="h-4 w-4" />
+                    <UploadIcon className="h-4 w-4" />
                     <span className="sr-only">Upload transfer proof</span>
                     <Input
                       type="file"

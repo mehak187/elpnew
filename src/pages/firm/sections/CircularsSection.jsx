@@ -1,4 +1,5 @@
 import { useState } from "react";
+import UploadIcon from "@/components/shared/UploadIcon";
 import { Button } from "@/components/ui/button";
 import BackButton from "@/components/shared/BackButton";
 import AiSearch from "@/components/shared/AiSearch";
@@ -20,7 +21,6 @@ import {
   Search,
   FileSpreadsheet,
   Ban,
-  Upload,
   FileCheck,
   FileText,
 } from "lucide-react";
@@ -279,7 +279,7 @@ export default function CircularsSection({ canEdit }) {
                     {attachedName ? (
                       <FileCheck className="h-4 w-4" />
                     ) : (
-                      <Upload className="h-4 w-4" />
+                      <UploadIcon className="h-4 w-4" />
                     )}
                     <span className="sr-only">
                       {attachedName

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import UploadIcon from "@/components/shared/UploadIcon";
 import { Button } from "@/components/ui/button";
 import BackButton from "@/components/shared/BackButton";
 import { Input } from "@/components/ui/input";
@@ -13,7 +14,7 @@ import {
 import { EmptyState } from "@/components/shared/panels";
 import { Rial } from "@/components/shared/Rial";
 import { cn } from "@/lib/utils";
-import { Save, Users, ChevronsRight, Upload, FileCheck } from "lucide-react";
+import { Save, Users, ChevronsRight, FileCheck } from "lucide-react";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
 import {
   ALLOWANCES,
@@ -530,7 +531,7 @@ export default function SalariesSection({ employee, adding, onCloseAdd, onSave }
               asChild
             >
               <label className="cursor-pointer">
-                <Upload className="h-4 w-4" />
+                <UploadIcon className="h-4 w-4" />
                 <span className="sr-only">Upload payment receipt</span>
                 <Input
                   type="file"
