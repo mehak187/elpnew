@@ -1,4 +1,5 @@
 import { useState } from "react";
+import UploadIcon from "@/components/shared/UploadIcon";
 import { useNavigate, useParams } from "react-router-dom";
 import { useGoBack } from "@/lib/useGoBack";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileCheck, ArrowLeft, Save, Upload } from "lucide-react";
+import { FileCheck, ArrowLeft, Save } from "lucide-react";
 import { Rial } from "@/components/shared/Rial";
 
 export default function PostJudgement() {
@@ -194,7 +195,7 @@ export default function PostJudgement() {
             <div className="border-t pt-6">
               <h3 className="font-semibold text-primary mb-4">Judgement Documents</h3>
               <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                <UploadIcon className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                 <p className="text-sm text-muted-foreground">
                   Drag and drop judgement documents here, or click to browse
                 </p>

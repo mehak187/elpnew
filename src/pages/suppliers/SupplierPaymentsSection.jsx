@@ -64,7 +64,7 @@ export default function SupplierPaymentsSection({ supplier }) {
           tell one large expense from twenty small ones. */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
         <div className="flex flex-wrap items-baseline gap-3">
-          <h2 className="text-base font-semibold text-primary">
+          <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
             Supplier Payments
           </h2>
           <span className="text-sm text-muted-foreground">

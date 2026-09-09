@@ -28,9 +28,25 @@ const money = (amount) =>
  * Company Profile, and only read from this side.
  */
 const TABS = [
-  { key: "salaries", label: "Salaries / Allowances", add: "Add Salary / Bonus" },
-  { key: "loans", label: "Loans", add: "Add Loan" },
-  { key: "assistance", label: "Assistance", add: "Add Assistance" },
+  {
+    key: "salaries",
+    label: "Salaries / Allowances",
+    // The employee asks for an advance here; the firm records the salary
+    // run itself, which is what the history below shows.
+    add: "Request Salary Advance",
+  },
+  {
+    key: "loans",
+    label: "Loans",
+    note: "View your loans and repayment details",
+    add: "Add Loan",
+  },
+  {
+    key: "assistance",
+    label: "Assistance",
+    note: "View your financial assistance requests and payments",
+    add: "Add Assistance",
+  },
   { key: "commission", label: "Commission" },
 ];
 
@@ -153,7 +169,12 @@ export default function FinancialBenefitsSection({ employee, onSaveSalary }) {
       {/* The heading of the category, and the way to add to it, at the start
           of that category rather than at the top of the page. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="font-semibold text-primary">{current.label}</p>
+        <div>
+          <p className="text-lg font-bold text-primary">{current.label}</p>
+          {current.note && (
+            <p className="text-sm text-muted-foreground">{current.note}</p>
+          )}
+        </div>
         {current.add && (
           <Button
             type="button"

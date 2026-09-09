@@ -117,7 +117,7 @@ function SectionCard({ title, aside, children }) {
     <Card>
       <CardContent className="p-4 sm:p-6">
         <div className="mb-6 flex items-center gap-4 border-b pb-3">
-          <h2 className="text-base font-semibold text-primary">{title}</h2>
+          <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">{title}</h2>
           {aside}
         </div>
         {children}
@@ -455,7 +455,7 @@ export default function ClientDetails() {
                     heading, so the button can share the line with it. */}
                 {!current.ownsHeader && (
                 <div className="mb-6 flex items-center gap-4 border-b pb-3">
-                  <h2 className="text-base font-semibold text-primary">
+                  <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
                     {current.label}
                   </h2>
                   {/* Live cases still open, which is what File Status is

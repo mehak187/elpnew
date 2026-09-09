@@ -1,4 +1,5 @@
 import { useState } from "react";
+import UploadIcon from "@/components/shared/UploadIcon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,9 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import BackButton from "@/components/shared/BackButton";
+import FormHeading from "@/components/shared/FormHeading";
 import DataTable from "@/components/shared/DataTable";
-import { Upload, FileCheck, FileText, Trash2, Plus, X } from "lucide-react";
+import { FileCheck, FileText, Trash2, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { expiryState, EXPIRY_LABEL } from "@/lib/expiry";
 import {
@@ -227,7 +228,7 @@ export default function SupplierDocumentsSection({ supplier }) {
       {/* The section's own heading, so the way to add to it sits on the same
           line rather than costing a row of its own. */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-        <h2 className="text-base font-semibold text-primary">
+        <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
           Supplier Documents
         </h2>
         <Button type="button" onClick={() => setAdding(true)} disabled={adding}>
@@ -239,10 +240,7 @@ export default function SupplierDocumentsSection({ supplier }) {
       {adding && (
         <Card>
           <CardContent className="space-y-4 p-4 sm:p-6">
-            <div className="flex items-center gap-3">
-              <BackButton onBack={closeForm} />
-              <p className="font-semibold text-primary">Add Document</p>
-            </div>
+            <FormHeading title="Add Document" />
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
               <div className="space-y-2">
@@ -285,7 +283,7 @@ export default function SupplierDocumentsSection({ supplier }) {
                       {file ? (
                         <FileCheck className="h-4 w-4" />
                       ) : (
-                        <Upload className="h-4 w-4" />
+                        <UploadIcon className="h-4 w-4" />
                       )}
                       <span className="sr-only">Upload the document</span>
                     </label>

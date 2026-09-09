@@ -1,4 +1,5 @@
 import { useState } from "react";
+import UploadIcon from "@/components/shared/UploadIcon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,6 @@ import {
 } from "@/components/ui/select";
 import DataTable from "@/components/shared/DataTable";
 import {
-  Upload,
   FileText,
   FileCheck,
   Trash2,
@@ -285,7 +285,7 @@ export default function DocumentsSection({ formData, onChange }) {
       {/* The section's own heading, so the way to add to it sits on the
           same line rather than costing a row of its own. */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-        <h2 className="text-base font-semibold text-primary">Documents</h2>
+        <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">Documents</h2>
         <Button type="button" onClick={() => setAdding(true)} disabled={adding}>
           <Plus className="mr-1.5 h-4 w-4" />
           Add Document
@@ -343,7 +343,7 @@ export default function DocumentsSection({ formData, onChange }) {
                       asChild
                     >
                       <label className="cursor-pointer">
-                        <Upload className="h-4 w-4" />
+                        <UploadIcon className="h-4 w-4" />
                         <span className="sr-only">Upload file</span>
                         <Input
                           type="file"

@@ -1,8 +1,10 @@
 import { useState } from "react";
+import UploadIcon from "@/components/shared/UploadIcon";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import BackButton from "@/components/shared/BackButton";
+import FormHeading from "@/components/shared/FormHeading";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -24,12 +26,12 @@ import {
   CalendarClock,
   Megaphone,
   Gauge,
+  Lock,
   CalendarCheck,
   ShieldCheck,
   MapPin,
   Phone,
   Mail,
-  UploadCloud,
   FileCheck,
   FileImage,
 } from "lucide-react";
@@ -227,7 +229,7 @@ function SectionCard({ title, aside, children }) {
     <Card>
       <CardContent className="p-4 sm:p-6">
         <div className="mb-6 flex items-center gap-3 border-b pb-3">
-          <h2 className="text-base font-semibold text-primary">{title}</h2>
+          <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">{title}</h2>
           {aside}
         </div>
         {children}
@@ -388,6 +390,15 @@ export default function EmployeeForm({ self }) {
 
   const current = SECTIONS.find((s) => s.key === activeSection) || SECTIONS[0];
   const isInfo = activeSection === "information";
+
+  /**
+   * Whether the record can be changed on this page.
+   *
+   * A person reads their own record here; the firm changes it on the
+   * Employees page. Two places to edit one record is two records waiting
+   * to disagree - and nobody amends their own job title or joining date.
+   */
+  const readOnly = Boolean(self) && isInfo;
   const employeeNo = record?.empNo || nextEmployeeNo(employeeRecords);
   const hasLeft = HAS_LEFT.includes(formData.status);
 
@@ -418,7 +429,7 @@ export default function EmployeeForm({ self }) {
         </div>
         {/* A section with its own buttons has nothing for the page header
             to offer: there is no draft up here to save. */}
-        {!current.noSave && (
+        {!current.noSave && !readOnly && (
           <Button type="submit" form="employee-form">
             <Save className="mr-2 h-4 w-4" />
             {current.save ||
@@ -476,7 +487,7 @@ export default function EmployeeForm({ self }) {
             >
               {!isInfo && !current.ownsHeader && (
                 <div className="mb-6 flex items-center gap-3 border-b pb-3">
-                  <h2 className="text-base font-semibold text-primary">
+                  <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
                     {current.label}
                   </h2>
                   {/* Standing travels with the record, whichever side is
@@ -502,7 +513,20 @@ export default function EmployeeForm({ self }) {
                 className={cn(isInfo && "space-y-4 sm:space-y-6")}
               >
                 {isInfo && (
-                  <>
+                  <fieldset
+                    disabled={readOnly}
+                    className="space-y-4 border-0 p-0 sm:space-y-6"
+                  >
+                    {readOnly && (
+                      <p className="flex items-start gap-2 rounded-lg border border-primary/30 bg-secondary p-4 text-sm text-primary">
+                        <Lock className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span>
+                          This is your own record, so it is shown here and
+                          not edited. Changes are made by the administration
+                          on the Employees page.
+                        </span>
+                      </p>
+                    )}
                 {/* Standing travels with the record - but only once there
                     is one. A new employee has not been created yet, so
                     there is nothing to be Active. */}
@@ -852,7 +876,7 @@ export default function EmployeeForm({ self }) {
                     </p>
                   </div>
                 </SectionCard>
-                  </>
+                  </fieldset>
                 )}
 
                 {activeSection === "documents" && (
@@ -861,7 +885,7 @@ export default function EmployeeForm({ self }) {
                         is the documents on file, and the form is opened over
                         them when there is one to add. */}
                     <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-                      <h2 className="text-base font-semibold text-primary">
+                      <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
                         Documents
                       </h2>
                       <Button
@@ -876,11 +900,10 @@ export default function EmployeeForm({ self }) {
 
                     {addingDoc && (
                     <div className="rounded-lg border p-4">
-                      <div className="mb-4 flex items-center gap-3">
-                        <BackButton onBack={closeDocForm} />
-                        <p className="font-semibold text-primary">
-                          Add Document
-                        </p>
+                      <div className="mb-4">
+                        <FormHeading
+                          title="Add Document"
+                        />
                       </div>
 
                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
@@ -934,7 +957,7 @@ export default function EmployeeForm({ self }) {
                                 asChild
                               >
                                 <label className="cursor-pointer">
-                                  <UploadCloud className="h-4 w-4" />
+                                  <UploadIcon className="h-4 w-4" />
                                   <span className="sr-only">
                                     Upload document
                                   </span>

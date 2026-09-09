@@ -207,7 +207,7 @@ export default function LawFirmProfile() {
                   button can share the line with it. */}
               {!current.ownsHeader && (
                 <div className="mb-6 border-b pb-3">
-                  <h2 className="text-base font-semibold text-primary">
+                  <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
                     {current.label}
                   </h2>
                 </div>

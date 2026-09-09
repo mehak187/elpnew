@@ -96,6 +96,95 @@ export function endDate(start, months) {
   );
 }
 
+/** What a row of the schedule is waiting for, or no longer is. */
+export const INSTALLMENT_STATUS_TONE = {
+  Paid: "bg-green-100 text-green-800",
+  "Partially Paid": "bg-blue-100 text-blue-800",
+  Deferred: "bg-amber-100 text-amber-800",
+  Pending: "bg-muted text-muted-foreground",
+};
+
+/** What the loan is repaying: its own amount plus anything merged into it. */
+export const loanTotal = (record) =>
+  Number(record.loanAmount || 0) + Number(record.merged || 0);
+
+/** The year a loan belongs to, which is the year it was drawn. */
+export const loanYear = (record) =>
+  String(record.disbursementDate || record.firstDue || "").slice(0, 4);
+
+/**
+ * Every instalment of a loan, and what has been paid against it.
+ *
+ * The schedule is not stored: it follows from the amount, the monthly
+ * instalment and the day the first one falls due, so it cannot drift out of
+ * step with them. Only the payments are recorded - a row's status and the
+ * balance left after it are read off those, which is why no figure here can
+ * disagree with the one above it.
+ */
+export function scheduleRows(total, monthly, first, payments = []) {
+  const plan = schedule(Number(total), Number(monthly));
+  if (!plan.months || !first) return [];
+
+  let paidSoFar = 0;
+
+  return Array.from({ length: plan.months }, (_, index) => {
+    const due = dueDate(first, index);
+    const installment =
+      index === plan.months - 1 ? plan.last : plan.installment;
+    const payment = payments.find((entry) => entry.due === due);
+    const paid = payment ? Number(payment.amount || 0) : 0;
+    paidSoFar += paid;
+
+    return {
+      no: index + 1,
+      of: plan.months,
+      due,
+      installment,
+      paid,
+      remaining: Number((Number(total) - paidSoFar).toFixed(3)),
+      status:
+        payment && payment.deferred
+          ? "Deferred"
+          : paid >= installment
+            ? "Paid"
+            : paid > 0
+              ? "Partially Paid"
+              : "Pending",
+      paymentDate: payment ? payment.date || "" : "",
+    };
+  });
+}
+
+const lastDayOf = (year, month) => new Date(year, month + 1, 0).getDate();
+
+/**
+ * The day instalment `index` falls due, counted from the first one.
+ *
+ * A schedule that starts on the last day of a month stays on the last day of
+ * every month after it - 30 September is followed by 31 October, not by the
+ * 30th. Any other start keeps its own day, and shortens only where the month
+ * is too short to hold it.
+ */
+export function dueDate(first, index) {
+  if (!first) return "";
+  const [year, month, day] = String(first).split("-").map(Number);
+  const onMonthEnd = day === lastDayOf(year, month - 1);
+
+  const target = new Date(year, month - 1 + index, 1);
+  const targetYear = target.getFullYear();
+  const targetMonth = target.getMonth();
+  const last = lastDayOf(targetYear, targetMonth);
+
+  const pad = (n) => String(n).padStart(2, "0");
+  return (
+    targetYear +
+    "-" +
+    pad(targetMonth + 1) +
+    "-" +
+    pad(onMonthEnd ? last : Math.min(day, last))
+  );
+}
+
 /** How the banks are written in the list, where the column is narrow. */
 export const SOURCE_SHORT = {
   "Bank Muscat": "Bank Muscat",
@@ -111,13 +200,58 @@ export const SOURCE_SHORT = {
 /**
  * Loans already drawn.
  *
- * `outstanding` is what was still owed on earlier borrowing when this one was
- * taken, so the total on each row is the firm's whole debt at that moment and
- * not just the new draw.
+ * `merged` is what was still owed on an earlier loan when this one absorbed
+ * it, so the balance the schedule works down is the whole debt rather than
+ * just the new draw. `payments` is the only record of repayment - everything
+ * the list shows about an instalment is worked out from it.
  */
 export const loanRecords = [
-  { id: 1, paymentDate: "2026-08-26", expenseType: "Employee Expenses", category: "Loan", subcategory: NEW_LOAN, method: "Bank Transfer", bank: "Bank Muscat", outstanding: 2000, newAmount: 5000, monthly: 700, proof: "loan_proof_260826.pdf", notes: "Business expansion loan" },
-  { id: 2, paymentDate: "2026-07-10", expenseType: "Employee Expenses", category: "Loan", subcategory: NEW_LOAN, method: "Bank Transfer", bank: "National Bank of Oman", outstanding: 0, newAmount: 10000, monthly: 1000, proof: "loan_proof_100726.pdf", notes: "Working capital loan" },
-  { id: 3, paymentDate: "2026-05-18", expenseType: "Employee Expenses", category: "Loan", subcategory: ADDITIONAL_LOAN, method: "Bank Transfer", bank: "Bank Dhofar", outstanding: 0, newAmount: 8500, monthly: 750, proof: "loan_proof_180526.pdf", notes: "Two office vehicles" },
-  { id: 4, paymentDate: "2026-02-04", expenseType: "Employee Expenses", category: "Loan", subcategory: NEW_LOAN, method: "Cheque", bank: "Bank Muscat", outstanding: 0, newAmount: 3200, monthly: 400, proof: "loan_proof_040226.pdf", notes: "Server and network equipment" },
+  {
+    id: 1,
+    kind: NEW_LOAN,
+    loanAmount: 7000,
+    merged: 0,
+    disbursementDate: "2026-08-26",
+    bankName: "Bank Muscat",
+    accountNumber: "012345678901",
+    monthly: 700,
+    firstDue: "2026-09-30",
+    payments: [
+      { due: "2026-09-30", amount: 700, date: "2026-09-30" },
+      { due: "2026-10-31", amount: 700, date: "2026-10-31" },
+      { due: "2026-11-30", amount: 0, date: "", deferred: true },
+      { due: "2026-12-31", amount: 350, date: "2026-12-31" },
+    ],
+  },
+  {
+    id: 2,
+    kind: NEW_LOAN,
+    loanAmount: 5000,
+    merged: 2000,
+    disbursementDate: "2026-07-10",
+    bankName: "NBO",
+    accountNumber: "098765432109",
+    monthly: 1000,
+    firstDue: "2026-08-31",
+    payments: [
+      { due: "2026-08-31", amount: 1000, date: "2026-08-31" },
+      { due: "2026-09-30", amount: 500, date: "2026-09-30" },
+    ],
+  },
+  {
+    id: 3,
+    kind: NEW_LOAN,
+    loanAmount: 8500,
+    merged: 0,
+    disbursementDate: "2026-05-18",
+    bankName: "Bank Dhofar",
+    accountNumber: "045678901234",
+    monthly: 850,
+    firstDue: "2026-06-30",
+    payments: [
+      { due: "2026-06-30", amount: 850, date: "2026-06-30" },
+      { due: "2026-07-31", amount: 850, date: "2026-07-31" },
+      { due: "2026-08-31", amount: 850, date: "2026-08-31" },
+    ],
+  },
 ];

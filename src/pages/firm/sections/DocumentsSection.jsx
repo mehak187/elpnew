@@ -1,4 +1,5 @@
 import { useState } from "react";
+import UploadIcon from "@/components/shared/UploadIcon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,8 +21,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/shared/panels";
-import BackButton from "@/components/shared/BackButton";
-import { Upload, FileCheck, FileText, Trash2, Plus } from "lucide-react";
+import FormHeading from "@/components/shared/FormHeading";
+import { FileCheck, FileText, Trash2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { expiryState, EXPIRY_LABEL } from "@/lib/expiry";
 import { useFirm } from "@/lib/firm/context";
@@ -143,7 +144,7 @@ export default function DocumentsSection({ canEdit }) {
       {/* The section's own heading, so the way to add to it sits on the
           same line rather than costing a row of its own. */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-        <h2 className="text-base font-semibold text-primary">Documents</h2>
+        <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">Documents</h2>
         {canEdit && (
           <Button
             type="button"
@@ -162,12 +163,9 @@ export default function DocumentsSection({ canEdit }) {
       {canEdit && adding && (
         <Card>
           <CardContent className="space-y-4 p-4">
-            <div className="flex items-center gap-3">
-              <BackButton onBack={closeForm} />
-              <p className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
-                Add Document
-              </p>
-            </div>
+            <FormHeading
+              title="Add Document"
+            />
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-2">
@@ -236,7 +234,7 @@ export default function DocumentsSection({ canEdit }) {
                       asChild
                     >
                       <label className="cursor-pointer">
-                        <Upload className="h-4 w-4" />
+                        <UploadIcon className="h-4 w-4" />
                         <span className="sr-only">Upload document</span>
                         <Input
                           type="file"

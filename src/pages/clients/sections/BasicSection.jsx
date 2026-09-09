@@ -1,4 +1,5 @@
 import { Input } from "@/components/ui/input";
+import UploadIcon from "@/components/shared/UploadIcon";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -7,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Upload, Paperclip, X } from "lucide-react";
+import { Paperclip, X } from "lucide-react";
 import { CLIENT_TYPES } from "@/lib/constants";
 import { MANUAL_CLIENT_STATUSES } from "@/lib/clientStatus";
 
@@ -53,7 +54,7 @@ function NumberWithCopy({
           title={file ? "Replace copy" : "Upload copy"}
           className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md border text-muted-foreground hover:bg-muted/50"
         >
-          <Upload className="h-4 w-4" />
+          <UploadIcon className="h-4 w-4" />
           <span className="sr-only">Upload copy</span>
           <Input
             type="file"
