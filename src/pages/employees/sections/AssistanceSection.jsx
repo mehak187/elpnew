@@ -1,7 +1,7 @@
 import { useState } from "react";
 import UploadIcon from "@/components/shared/UploadIcon";
 import { Button } from "@/components/ui/button";
-import BackButton from "@/components/shared/BackButton";
+import FormHeading from "@/components/shared/FormHeading";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -136,12 +136,10 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
       <div className="space-y-6 rounded-lg border p-4 sm:p-6">
         {/* The way back out of the form, in the same place and with the
             same mark as on every page that opens over another. */}
-        <div className="flex items-center gap-3">
-          <BackButton onBack={onCloseAdd} />
-          <p className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
-            "Add Assistance"
-          </p>
-        </div>
+        <FormHeading
+          title="Add Assistance"
+          onBack={onCloseAdd}
+        />
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
           <div className="space-y-2">

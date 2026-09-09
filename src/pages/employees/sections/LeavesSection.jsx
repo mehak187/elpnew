@@ -105,7 +105,7 @@ export default function LeavesSection({ employee }) {
     <div className="space-y-6">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
         <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-base font-semibold text-primary">Leaves</h2>
+          <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">Leaves</h2>
 
           {/* Leave is granted a year at a time, so the year is a choice rather
               than a column repeated down every row. */}

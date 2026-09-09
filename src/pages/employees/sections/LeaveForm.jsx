@@ -1,4 +1,4 @@
-import { CalendarPlus, Database, Info } from "lucide-react";
+import { Database, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import BackButton from "@/components/shared/BackButton";
+import FormHeading from "@/components/shared/FormHeading";
 import { cn } from "@/lib/utils";
 import { employeeRecords } from "../employeeData";
 import {
@@ -162,17 +162,11 @@ export default function LeaveForm({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3 border-b pb-3">
-        <BackButton onBack={onCancel} />
-        <span className="rounded-lg bg-secondary p-2 text-primary">
-          <CalendarPlus className="h-5 w-5" />
-        </span>
-        <div>
-          <p className="text-lg font-bold text-primary">Add New Leave</p>
-          <p className="text-xs text-muted-foreground">
-            Submit a new leave request
-          </p>
-        </div>
+      <div className="border-b pb-3">
+        <FormHeading
+          title="Add New Leave"
+          note="Submit a new leave request"
+        />
       </div>
 
       <Step

@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import DataTable from "@/components/shared/DataTable";
 import SearchableSelect from "@/components/shared/SearchableSelect";
-import BackButton from "@/components/shared/BackButton";
+import FormHeading from "@/components/shared/FormHeading";
 import { FileText, FileCheck, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CONTRACT_TYPES } from "@/lib/constants";
@@ -197,7 +197,7 @@ export default function ClientContractsSection() {
       {/* The section's own heading, so the way to add to it sits on the
           same line rather than costing a row of its own. */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-        <h2 className="text-base font-semibold text-primary">Client Contracts</h2>
+        <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">Client Contracts</h2>
         <Button type="button" onClick={() => setAdding(true)} disabled={adding}>
           <Plus className="mr-1.5 h-4 w-4" />
           Add Contract
@@ -210,12 +210,9 @@ export default function ClientContractsSection() {
       {adding && (
       <Card>
         <CardContent className="space-y-4 p-4">
-          <div className="flex items-center gap-3">
-            <BackButton onBack={closeForm} />
-            <p className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
-              Add Contract
-            </p>
-          </div>
+          <FormHeading
+            title="Add Contract"
+          />
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-2">

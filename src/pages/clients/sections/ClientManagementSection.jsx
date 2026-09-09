@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import BackButton from "@/components/shared/BackButton";
+import FormHeading from "@/components/shared/FormHeading";
 import { EmptyState } from "@/components/shared/panels";
 import { Plus, Save, AlertTriangle } from "lucide-react";
 import { useFirm } from "@/lib/firm/context";
@@ -128,7 +128,7 @@ export default function ClientManagementSection() {
       {/* The section's own heading, so the way to add to it sits on the
           same line rather than costing a row of its own. */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-        <h2 className="text-base font-semibold text-primary">Client Team</h2>
+        <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">Client Team</h2>
         <Button type="button" onClick={openAdd} disabled={mode === "add"}>
           <Plus className="mr-1.5 h-4 w-4" />
           Add Client Team
@@ -140,15 +140,12 @@ export default function ClientManagementSection() {
       {mode && (
         <Card>
           <CardContent className="space-y-6 p-4 sm:p-6">
-            <div className="flex items-center gap-3">
-              <BackButton onBack={close} />
-              <p className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
-                {mode === "add"
+            <FormHeading
+              title={mode === "add"
                   ? "Add Client Team"
                   : "Client Team - " +
                     (editingBranch ? branchName(editingBranch) : "")}
-              </p>
-            </div>
+            />
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 sm:gap-6">
               <div className="space-y-2">

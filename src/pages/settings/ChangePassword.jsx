@@ -114,7 +114,7 @@ export default function ChangePassword() {
               <ShieldCheck className="h-9 w-9 text-green-600" />
             </div>
             <div className="space-y-1">
-              <h2 className="text-lg font-bold text-primary">Password updated</h2>
+              <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">Password updated</h2>
               <p className="text-sm text-muted-foreground">
                 Use your new password the next time you sign in.
               </p>

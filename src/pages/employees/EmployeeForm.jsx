@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import BackButton from "@/components/shared/BackButton";
+import FormHeading from "@/components/shared/FormHeading";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -228,7 +229,7 @@ function SectionCard({ title, aside, children }) {
     <Card>
       <CardContent className="p-4 sm:p-6">
         <div className="mb-6 flex items-center gap-3 border-b pb-3">
-          <h2 className="text-base font-semibold text-primary">{title}</h2>
+          <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">{title}</h2>
           {aside}
         </div>
         {children}
@@ -486,7 +487,7 @@ export default function EmployeeForm({ self }) {
             >
               {!isInfo && !current.ownsHeader && (
                 <div className="mb-6 flex items-center gap-3 border-b pb-3">
-                  <h2 className="text-base font-semibold text-primary">
+                  <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
                     {current.label}
                   </h2>
                   {/* Standing travels with the record, whichever side is
@@ -884,7 +885,7 @@ export default function EmployeeForm({ self }) {
                         is the documents on file, and the form is opened over
                         them when there is one to add. */}
                     <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-                      <h2 className="text-base font-semibold text-primary">
+                      <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
                         Documents
                       </h2>
                       <Button
@@ -899,11 +900,10 @@ export default function EmployeeForm({ self }) {
 
                     {addingDoc && (
                     <div className="rounded-lg border p-4">
-                      <div className="mb-4 flex items-center gap-3">
-                        <BackButton onBack={closeDocForm} />
-                        <p className="font-semibold text-primary">
-                          Add Document
-                        </p>
+                      <div className="mb-4">
+                        <FormHeading
+                          title="Add Document"
+                        />
                       </div>
 
                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">

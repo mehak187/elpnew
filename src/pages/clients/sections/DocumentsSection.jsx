@@ -285,7 +285,7 @@ export default function DocumentsSection({ formData, onChange }) {
       {/* The section's own heading, so the way to add to it sits on the
           same line rather than costing a row of its own. */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-        <h2 className="text-base font-semibold text-primary">Documents</h2>
+        <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">Documents</h2>
         <Button type="button" onClick={() => setAdding(true)} disabled={adding}>
           <Plus className="mr-1.5 h-4 w-4" />
           Add Document

@@ -2,7 +2,7 @@ import { useState } from "react";
 import UploadIcon from "@/components/shared/UploadIcon";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import BackButton from "@/components/shared/BackButton";
+import FormHeading from "@/components/shared/FormHeading";
 import { Card, CardContent } from "@/components/ui/card";
 import SummaryStrip from "@/components/shared/SummaryStrip";
 import AiSearch from "@/components/shared/AiSearch";
@@ -486,12 +486,10 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
         <CardContent className="space-y-5 p-4 sm:p-6">
           {/* The rule beside the heading marks where the form starts, and
               the arrow is the way back out of it. */}
-          <div className="flex items-center gap-3">
-            <BackButton onBack={closeAddBank} />
-            <p className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
-              Add New Bank
-            </p>
-          </div>
+          <FormHeading
+            title="Add New Bank"
+            onBack={closeAddBank}
+          />
 
           <BankFields draft={draft} set={set} />
 

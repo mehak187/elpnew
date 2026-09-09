@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import BackButton from "@/components/shared/BackButton";
+import FormHeading from "@/components/shared/FormHeading";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -284,12 +284,10 @@ export default function LoansSection({ adding, onCloseAdd }) {
       <div className="space-y-6 rounded-lg border p-4 sm:p-6">
         {/* The way back out of the form, in the same place and with the
             same mark as on every page that opens over another. */}
-        <div className="flex items-center gap-3">
-          <BackButton onBack={closeAdd} />
-          <p className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
-            "Add Loan"
-          </p>
-        </div>
+        <FormHeading
+          title="Add Loan"
+          onBack={closeAdd}
+        />
 
         {/* Where the loan lands in the accounts. The subcategory is chosen
             first because it decides which questions the form asks. */}

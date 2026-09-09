@@ -261,7 +261,7 @@ export default function CommissionSection() {
         <div className="flex items-center gap-3">
           {/* The form opened above the list, so back means close it. */}
           {adding && <BackButton onBack={closeForm} />}
-          <h2 className="text-base font-semibold text-primary">
+          <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
             {adding ? "Add Commission" : "Commission Records"}
           </h2>
         </div>

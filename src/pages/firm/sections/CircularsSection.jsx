@@ -1,7 +1,7 @@
 import { useState } from "react";
 import UploadIcon from "@/components/shared/UploadIcon";
 import { Button } from "@/components/ui/button";
-import BackButton from "@/components/shared/BackButton";
+import FormHeading from "@/components/shared/FormHeading";
 import AiSearch from "@/components/shared/AiSearch";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -221,12 +221,9 @@ export default function CircularsSection({ canEdit }) {
         <CardContent className="space-y-5 p-4 sm:p-6">
           {/* The way back out of the form, in the same place and with the
               same mark as on every page that opens over another. */}
-          <div className="flex items-center gap-3">
-            <BackButton onBack={close} />
-            <p className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
-              {editing ? "Correct Circular" : "New Circular"}
-            </p>
-          </div>
+          <FormHeading
+            title={editing ? "Correct Circular" : "New Circular"}
+          />
 
           {editing && (
             <p className="rounded-lg border border-primary/30 bg-secondary p-4 text-sm text-primary">
@@ -400,7 +397,7 @@ export default function CircularsSection({ canEdit }) {
       {/* The section's own heading, so the way to add to it sits on the
           same line rather than costing a row of its own. */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-        <h2 className="text-base font-semibold text-primary">Circulars</h2>
+        <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">Circulars</h2>
         <div className="flex flex-wrap items-center gap-3">
           <Button variant="outline" onClick={exportCirculars}>
             <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" />
