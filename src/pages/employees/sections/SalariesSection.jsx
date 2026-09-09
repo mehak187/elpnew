@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import SalaryHistory from "./SalaryHistory";
 import { EmptyState } from "@/components/shared/panels";
 import { Rial } from "@/components/shared/Rial";
 import { cn } from "@/lib/utils";
@@ -35,13 +36,8 @@ import {
   totalEarnings,
   totalDeductions,
   netSalary,
-  netAmount,
   amount,
-  period,
-  formatDate,
 } from "../payrollData";
-
-const PAGE_SIZE = 5;
 
 const PAYSLIP_KEYS = [
   "special",
@@ -199,13 +195,14 @@ function Choice({ id, label, value, onChange, placeholder, options }) {
  * cannot disagree.
  */
 export default function SalariesSection({ employee, adding, onCloseAdd, onSave }) {
-  const [records, setRecords] = useState(salaryRecords);
   // Opened on what the employee is already paid, so the page shows the salary
   // in force rather than a blank form somebody has to fill in from memory.
+  // What has been recorded through this form. The monthly history beside it
+  // is the payroll run; this is the list of payments entered here.
+  const [, setRecords] = useState(salaryRecords);
   const [payslip, setPayslip] = useState(() => fromEmployee(employee));
   const [payment, setPayment] = useState(emptyPayment);
   const [receipt, setReceipt] = useState(null);
-  const [page, setPage] = useState(1);
 
   const set = (name, value) =>
     setPayslip((prev) => ({ ...prev, [name]: value }));
@@ -283,7 +280,6 @@ export default function SalariesSection({ employee, adding, onCloseAdd, onSave }
       },
       ...prev,
     ]);
-    setPage(1);
     closeAdd();
   };
 
@@ -555,10 +551,6 @@ export default function SalariesSection({ employee, adding, onCloseAdd, onSave }
 
   /* --------------------------------------------------------- the salary itself */
 
-  const totalPages = Math.max(1, Math.ceil(records.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const start = (currentPage - 1) * PAGE_SIZE;
-  const shown = records.slice(start, start + PAGE_SIZE);
 
   return (
     <div className="space-y-6">
@@ -647,131 +639,8 @@ export default function SalariesSection({ employee, adding, onCloseAdd, onSave }
         </div>
       </div>
 
-      {/* What has been paid */}
-      <div className="rounded-lg border">
-        <p className="border-b p-4 text-lg font-bold text-primary">
-          Salaries / Allowances History
-        </p>
-
-        {records.length === 0 ? (
-          <div className="p-6">
-            <EmptyState>No payments recorded yet.</EmptyState>
-          </div>
-        ) : (
-          <>
-            <div className="overflow-x-auto p-4">
-              <table className="w-full min-w-[860px] border text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
-                    <th className="p-3 font-semibold">No.</th>
-                    <th className="p-3 font-semibold">Payment Date</th>
-                    <th className="p-3 font-semibold">Month / Year</th>
-                    <th className="p-3 font-semibold">
-                      Payment Details (<Rial />)
-                    </th>
-                    <th className="p-3 font-semibold">Payment Method</th>
-                    <th className="p-3 font-semibold">Notes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {shown.map((record, index) => (
-                    <tr
-                      key={record.id}
-                      className="border-b transition-colors last:border-0 hover:bg-primary/10"
-                    >
-                      <td className="p-3 align-top font-medium text-primary">
-                        {start + index + 1}
-                      </td>
-                      <td className="whitespace-nowrap p-3 align-top">
-                        {formatDate(record.paymentDate)}
-                      </td>
-                      <td className="whitespace-nowrap p-3 align-top">
-                        {period(record)}
-                      </td>
-                      <td className="p-3 align-top">
-                        {/* One figure per line. Colour is carried by the
-                            number alone: the labels stay black so the eye
-                            reads down the words and across to the money. */}
-                        {record.amount == null ? (
-                          <>
-                            <PayLine label="Basic Salary:">
-                              {amount(record.basic)}
-                            </PayLine>
-                            <PayLine label="Allowances:">
-                              {amount(record.allowances)}
-                            </PayLine>
-                            <PayLine label="Deductions:" tone="text-red-600">
-                              {amount(record.deductions)}
-                            </PayLine>
-                          </>
-                        ) : (
-                          record.periodFrom && (
-                            <PayLine label="Period:">
-                              {formatDate(record.periodFrom)} -{" "}
-                              {formatDate(record.periodTo)}
-                            </PayLine>
-                          )
-                        )}
-                        {/* The one figure that actually left the account */}
-                        <PayLine
-                          label="Net Amount:"
-                          tone="text-green-700"
-                          className="mt-1"
-                        >
-                          {amount(netAmount(record))}
-                        </PayLine>
-                      </td>
-                      <td className="p-3 align-top">
-                        <span className="block">{record.method}</span>
-                        {record.source && (
-                          <span className="block text-muted-foreground">
-                            ({SOURCE_SHORT[record.source] || record.source})
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-3 align-top text-muted-foreground">
-                        {record.notes || "-"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t p-4 text-sm text-muted-foreground">
-              <span>
-                Showing {start + 1} to{" "}
-                {Math.min(start + PAGE_SIZE, records.length)} of {records.length}{" "}
-                entries
-              </span>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-                  <Button
-                    key={n}
-                    type="button"
-                    variant={n === currentPage ? "default" : "ghost"}
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setPage(n)}
-                  >
-                    {n}
-                  </Button>
-                ))}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setPage(currentPage + 1)}
-                >
-                  ›<span className="sr-only">Next page</span>
-                </Button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+      {/* What has been paid, month by month */}
+      <SalaryHistory />
     </div>
   );
 }

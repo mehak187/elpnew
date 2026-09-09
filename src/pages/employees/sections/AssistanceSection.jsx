@@ -12,19 +12,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/panels";
+import Panel from "@/components/shared/Panel";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { Rial } from "@/components/shared/Rial";
 import { FileText, FileImage, Users, HandHeart, FileCheck } from "lucide-react";
-import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
-import { useFirm } from "@/lib/firm/context";
-import { maskAccountNumber } from "@/pages/firm/firmData";
 import { amount, formatDate } from "../loanData";
 import {
   ASSISTANCE_BOOKING,
   DEFAULT_ASSISTANCE_BOOKING,
-  categoriesOf,
   subcategoriesOf,
   assistanceRecords,
-  CASH_ACCOUNT,
 } from "../assistanceData";
 
 const NOTES_LIMIT = 300;
@@ -53,11 +51,6 @@ const IMAGE_TYPES = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
 const isImage = (name) =>
   IMAGE_TYPES.some((ext) => String(name).toLowerCase().endsWith(ext));
 
-/** "Bank Muscat - Shatti Al Qurum (6789)" */
-const accountLabel = (account) =>
-  `${account.bankName} - ${account.bankBranch} (${maskAccountNumber(
-    account.accountNumber
-  ).slice(-4)})`;
 
 /**
  * Money the firm gives away, and the form that adds to it.
@@ -66,8 +59,6 @@ const accountLabel = (account) =>
  * rather than leaving a bank picker open over a payment that never touched one.
  */
 export default function AssistanceSection({ adding, onCloseAdd }) {
-  const { bankAccounts } = useFirm();
-
   const [records, setRecords] = useState(assistanceRecords);
   const [draft, setDraft] = useState(emptyDraft);
   const [proof, setProof] = useState(null);
@@ -75,39 +66,25 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
 
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
 
-  const paidInCash = draft.method === "Cash";
-  const setMethod = (value) =>
-    setDraft((prev) => ({
-      ...prev,
-      method: value,
-      account: value === "Cash" ? CASH_ACCOUNT : "",
-    }));
-
+  // What a request needs: what it is for, how much, and why. How it will
+  // be paid is the office's business once the request is granted.
   const canSave =
-    draft.expenseType &&
-    draft.category &&
-    draft.subcategory &&
-    Number(draft.amount) > 0 &&
-    draft.method &&
-    draft.account &&
-    draft.paymentDate &&
-    draft.notes.trim() &&
-    proof;
+    draft.subcategory && Number(draft.amount) > 0 && draft.notes.trim();
 
-  const save = () => {
+  const saveRecord = () => {
     if (!canSave) return;
     setRecords((prev) => [
       {
         id: prev.reduce((max, r) => Math.max(max, r.id), 0) + 1,
-        paymentDate: draft.paymentDate,
+        paymentDate: "",
         expenseType: draft.expenseType,
         category: draft.category,
         subcategory: draft.subcategory,
         amount: Number(draft.amount),
-        method: draft.method,
-        account: draft.account,
-        proof: proof.name,
-        proofUrl: URL.createObjectURL(proof),
+        method: "",
+        account: "",
+        proof: proof ? proof.name : "",
+        proofUrl: proof ? URL.createObjectURL(proof) : "",
         notes: draft.notes,
       },
       ...prev,
@@ -130,253 +107,152 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
   const shown = records.slice(start, start + PAGE_SIZE);
 
   // Adding takes over the section: the list describes assistance already
-  // given, and none of it helps while a new payment is being entered.
+  // given, and none of it helps while a new request is being written.
   if (adding) {
     return (
-      <div className="space-y-6 rounded-lg border p-4 sm:p-6">
-        {/* The way back out of the form, in the same place and with the
-            same mark as on every page that opens over another. */}
+      <div className="space-y-6">
         <FormHeading
-          title="Add Assistance"
+          title="Add Assistance Request"
+          note="Submit a request for financial assistance. Your request will be reviewed and processed by the office."
           onBack={onCloseAdd}
         />
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
-          <div className="space-y-2">
-            <FieldLabel htmlFor="assistance-expense-type" required>
-              Expense Type
-            </FieldLabel>
-            <Select
-              value={draft.expenseType}
-              onValueChange={(value) =>
-                setDraft((prev) => ({
-                  ...prev,
-                  expenseType: value,
-                  category: "",
-                  subcategory: "",
-                }))
-              }
-            >
-              <SelectTrigger id="assistance-expense-type">
-                {/* Laid out inline: the trigger clamps every span child to one
-                    line with display:-webkit-box, which beats a flex utility. */}
-                <span
-                  style={{ display: "flex" }}
-                  className="min-w-0 items-center gap-2"
-                >
-                  <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <SelectValue placeholder="Select expense type" />
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                {ASSISTANCE_BOOKING.map((type) => (
-                  <SelectItem key={type.name} value={type.name}>
-                    {type.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <FieldLabel htmlFor="assistance-category" required>
-              Category
-            </FieldLabel>
-            <Select
-              value={draft.category}
-              onValueChange={(value) =>
-                setDraft((prev) => ({ ...prev, category: value, subcategory: "" }))
-              }
-              disabled={!draft.expenseType}
-            >
-              <SelectTrigger id="assistance-category">
-                <span
-                  style={{ display: "flex" }}
-                  className="min-w-0 items-center gap-2"
-                >
-                  <HandHeart className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <SelectValue placeholder="Select category" />
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                {categoriesOf(draft.expenseType).map((category) => (
-                  <SelectItem key={category.name} value={category.name}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <FieldLabel htmlFor="assistance-subcategory" required>
-              Subcategory
-            </FieldLabel>
-            <Select
-              value={draft.subcategory}
-              onValueChange={(value) => set("subcategory", value)}
-              disabled={!draft.category}
-            >
-              <SelectTrigger id="assistance-subcategory">
-                <SelectValue placeholder="Select Subcategory" />
-              </SelectTrigger>
-              <SelectContent>
-                {subcategoriesOf(draft.expenseType, draft.category).map((sub) => (
-                  <SelectItem key={sub} value={sub}>
-                    {sub}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
-          <div className="space-y-2">
-            <FieldLabel htmlFor="assistance-method" required>
-              Payment Method
-            </FieldLabel>
-            <Select value={draft.method} onValueChange={setMethod}>
-              <SelectTrigger id="assistance-method">
-                <SelectValue placeholder="Select method" />
-              </SelectTrigger>
-              <SelectContent>
-                {PAYMENT_METHODS.map((method) => (
-                  <SelectItem key={method} value={method}>
-                    {method}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <FieldLabel htmlFor="assistance-account" required>
-              Bank / Account
-            </FieldLabel>
-            {/* Cash has no account to choose, so choosing it settles the field
-                rather than leaving a bank picker open over a payment that never
-                touched one. */}
-            <Select
-              value={draft.account}
-              onValueChange={(value) => set("account", value)}
-              disabled={paidInCash}
-            >
-              <SelectTrigger id="assistance-account">
-                <SelectValue placeholder="Select bank account" />
-              </SelectTrigger>
-              <SelectContent>
-                {paidInCash ? (
-                  <SelectItem value={CASH_ACCOUNT}>{CASH_ACCOUNT}</SelectItem>
-                ) : (
-                  bankAccounts.map((option) => (
-                    <SelectItem key={option.id} value={accountLabel(option)}>
-                      {accountLabel(option)}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <FieldLabel htmlFor="assistance-date" required>
-              Payment Date
-            </FieldLabel>
-            <Input
-              id="assistance-date"
-              type="date"
-              value={draft.paymentDate}
-              onChange={(e) => set("paymentDate", e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
-          <div className="space-y-2">
-            <FieldLabel htmlFor="assistance-amount" required>
-              Amount
-            </FieldLabel>
-            <div className="relative">
+        <Panel title="Assistance Information">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+            {/* Where the money comes from is not a choice: assistance is
+                booked to Employee Expenses under Assistance, always. It is
+                shown so the request says what it will be charged to. */}
+            <div className="space-y-2">
+              <FieldLabel htmlFor="assistance-expense-type">
+                Expense Type
+              </FieldLabel>
               <Input
-                id="assistance-amount"
-                type="number"
-                min="0"
-                step="0.001"
-                placeholder="0.000"
-                className="pr-12"
-                value={draft.amount}
-                onChange={(e) => set("amount", e.target.value)}
+                id="assistance-expense-type"
+                value={draft.expenseType}
+                readOnly
+                tabIndex={-1}
+                className="cursor-default bg-muted text-muted-foreground"
               />
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                <Rial />
-              </span>
             </div>
-          </div>
 
-          <div className="space-y-2 lg:col-span-2">
-            <FieldLabel htmlFor="assistance-notes" required>
-              Payment Reference / Notes
-            </FieldLabel>
-            <div className="flex gap-2">
+            <div className="space-y-2">
+              <FieldLabel htmlFor="assistance-category">Category</FieldLabel>
               <Input
-                id="assistance-notes"
-                maxLength={NOTES_LIMIT}
-                placeholder="Enter reference or notes"
-                className="flex-1"
-                value={draft.notes}
-                onChange={(e) => set("notes", e.target.value)}
+                id="assistance-category"
+                value={draft.category}
+                readOnly
+                tabIndex={-1}
+                className="cursor-default bg-muted text-muted-foreground"
               />
-              {/* The file name lives in the tooltip, so the control stays
-                  icon-sized either way. */}
-              {proof ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="shrink-0 border-green-600 text-green-600 hover:text-destructive"
-                  title={proof.name + " - click to remove"}
-                  onClick={() => setProof(null)}
+            </div>
+
+            <div className="space-y-2">
+              <FieldLabel htmlFor="assistance-subcategory" required>
+                Subcategory
+              </FieldLabel>
+              <div className="flex gap-2">
+                <Select
+                  value={draft.subcategory}
+                  onValueChange={(value) => set("subcategory", value)}
                 >
-                  <FileCheck className="h-4 w-4" />
-                  <span className="sr-only">{proof.name} attached. Remove it.</span>
-                </Button>
-              ) : (
+                  <SelectTrigger id="assistance-subcategory" className="flex-1">
+                    <SelectValue placeholder="Select Subcategory" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subcategoriesOf(draft.expenseType, draft.category).map(
+                      (sub) => (
+                        <SelectItem key={sub} value={sub}>
+                          {sub}
+                        </SelectItem>
+                      )
+                    )}
+                  </SelectContent>
+                </Select>
+
+                {/* Whatever backs the request - a bill, a letter, a report.
+                    The file name lives in the tooltip, so the control stays
+                    the size of a button either way. */}
                 <Button
-                  type="button"
                   variant="outline"
                   size="icon"
-                  className="shrink-0"
-                  title="Upload transfer proof"
                   asChild
+                  title={
+                    proof ? proof.name + " attached" : "Attach supporting document"
+                  }
+                  className={cn(
+                    "shrink-0",
+                    proof && "border-green-600 text-green-600"
+                  )}
                 >
-                  <label className="cursor-pointer">
-                    <UploadIcon className="h-4 w-4" />
-                    <span className="sr-only">Upload transfer proof</span>
-                    <Input
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      className="hidden"
-                      onChange={(e) => e.target.files[0] && setProof(e.target.files[0])}
-                    />
+                  <label htmlFor="assistance-proof" className="cursor-pointer">
+                    {proof ? (
+                      <FileCheck className="h-4 w-4" />
+                    ) : (
+                      <UploadIcon className="h-4 w-4" />
+                    )}
+                    <span className="sr-only">Attach supporting document</span>
                   </label>
                 </Button>
+                <Input
+                  id="assistance-proof"
+                  type="file"
+                  className="hidden"
+                  onChange={(e) =>
+                    e.target.files[0] && setProof(e.target.files[0])
+                  }
+                />
+              </div>
+              {proof && (
+                <p className="truncate text-xs text-green-700">{proof.name}</p>
               )}
             </div>
+
+            <div className="space-y-2">
+              <FieldLabel htmlFor="assistance-amount" required>
+                Requested Amount (<Rial />)
+              </FieldLabel>
+              <Input
+                id="assistance-amount"
+                inputMode="decimal"
+                value={draft.amount}
+                onChange={(e) =>
+                  set("amount", e.target.value.replace(/[^\d.]/g, ""))
+                }
+                placeholder="0.000"
+              />
+            </div>
           </div>
-        </div>
+        </Panel>
+
+        <Panel title="Request Details">
+          <div className="space-y-2">
+            <FieldLabel htmlFor="assistance-notes" required>
+              Request Details / Notes
+            </FieldLabel>
+            <Textarea
+              id="assistance-notes"
+              rows={4}
+              maxLength={NOTES_LIMIT}
+              value={draft.notes}
+              onChange={(e) => set("notes", e.target.value)}
+              placeholder="Please explain the reason for your request..."
+            />
+            <p className="text-right text-xs text-muted-foreground">
+              {draft.notes.length} / {NOTES_LIMIT}
+            </p>
+          </div>
+        </Panel>
 
         <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-4">
           <Button variant="outline" onClick={onCloseAdd}>
             Cancel
           </Button>
-          <Button onClick={save} disabled={!canSave}>
-            Save Assistance Request
+          <Button type="button" onClick={saveRecord} disabled={!canSave}>
+            Submit Assistance Request
           </Button>
         </div>
       </div>
     );
-
   }
 
   return (

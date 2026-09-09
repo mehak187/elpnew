@@ -28,7 +28,13 @@ const money = (amount) =>
  * Company Profile, and only read from this side.
  */
 const TABS = [
-  { key: "salaries", label: "Salaries / Allowances", add: "Add Salary / Bonus" },
+  {
+    key: "salaries",
+    label: "Salaries / Allowances",
+    // The employee asks for an advance here; the firm records the salary
+    // run itself, which is what the history below shows.
+    add: "Request Salary Advance",
+  },
   { key: "loans", label: "Loans", add: "Add Loan" },
   { key: "assistance", label: "Assistance", add: "Add Assistance" },
   { key: "commission", label: "Commission" },

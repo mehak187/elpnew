@@ -218,3 +218,80 @@ export const DEFAULT_BOOKING = {
   category: "Salaries & Bonuses",
   subcategory: "Salary",
 };
+
+/* ------------------------------------------------- the salary history */
+
+/**
+ * The loan the monthly deductions are running against.
+ *
+ * One loan, described once: how much was borrowed, what comes off each month,
+ * and over how many months. Everything the history shows about it - which
+ * installment a month is, what is left, how many are still to come - is worked
+ * out from this and from what was actually deducted, so no row can claim a
+ * balance the deductions do not support.
+ */
+export const SALARY_LOAN = { principal: 7560, installment: 120, count: 63 };
+
+/**
+ * What was paid each month, oldest first.
+ *
+ * Only what actually happened is recorded: the pay, the allowances, what came
+ * off for the loan and what came off administratively. The net is not here -
+ * it is those four numbers, and a stored fifth could disagree with them.
+ */
+export const salaryHistory = [
+  { id: 1, month: 4, year: 2026, basic: 2500, allowances: 580, loanDeducted: 0, administrative: 175, paymentDate: "2026-04-30" },
+  { id: 2, month: 5, year: 2026, basic: 2500, allowances: 580, loanDeducted: 80, administrative: 175, paymentDate: "2026-05-31" },
+  { id: 3, month: 6, year: 2026, basic: 2500, allowances: 580, loanDeducted: 120, administrative: 175, paymentDate: "2026-06-30" },
+  { id: 4, month: 7, year: 2026, basic: 2500, allowances: 580, loanDeducted: 120, administrative: 175, paymentDate: "2026-07-30" },
+  { id: 5, month: 8, year: 2026, basic: 2500, allowances: 580, loanDeducted: 120, administrative: 175, paymentDate: "2026-08-31" },
+  { id: 6, month: 9, year: 2026, basic: 2500, allowances: 580, loanDeducted: 120, administrative: 175, paymentDate: "2026-09-28" },
+];
+
+/**
+ * The history with everything that can be worked out, worked out.
+ *
+ * Read in order, oldest first, because each month's remaining loan depends on
+ * every month before it. A month with nothing deducted is not an installment
+ * at all, so it does not consume one.
+ */
+export function salaryHistoryRows(history = salaryHistory, loan = SALARY_LOAN) {
+  let paid = 0;
+  let taken = 0;
+
+  const rows = [...history]
+    .sort((a, b) => a.year - b.year || a.month - b.month)
+    .map((record) => {
+      const due = record.loanDeducted > 0 ? loan.installment : 0;
+      if (record.loanDeducted > 0) {
+        paid += record.loanDeducted;
+        taken += 1;
+      }
+
+      return {
+        ...record,
+        gross: record.basic + record.allowances,
+        net: record.basic + record.allowances - record.loanDeducted - record.administrative,
+        loan: {
+          due,
+          deducted: record.loanDeducted,
+          // Full, part, or no installment at all - read off the two figures
+          // rather than stamped on the record.
+          state:
+            record.loanDeducted === 0
+              ? "none"
+              : record.loanDeducted >= due
+                ? "full"
+                : "partial",
+          shortfall: Math.max(due - record.loanDeducted, 0),
+          number: taken,
+          count: loan.count,
+          remaining: Math.max(loan.principal - paid, 0),
+          remainingInstallments: Math.max(loan.count - taken, 0),
+        },
+      };
+    });
+
+  // Newest first to read, though the sums were run oldest first.
+  return rows.reverse();
+}
