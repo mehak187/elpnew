@@ -19,14 +19,15 @@ import { Rial } from "@/components/shared/Rial";
 import { FileText, FileImage, Users, HandHeart, FileCheck } from "lucide-react";
 import { amount, formatDate } from "../loanData";
 import {
-  ASSISTANCE_BOOKING,
   DEFAULT_ASSISTANCE_BOOKING,
   subcategoriesOf,
   assistanceRecords,
+  statusOf,
+  STATUS_TONE,
 } from "../assistanceData";
 
 const NOTES_LIMIT = 300;
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 10;
 
 const emptyDraft = {
   ...DEFAULT_ASSISTANCE_BOOKING,
@@ -76,10 +77,13 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
     setRecords((prev) => [
       {
         id: prev.reduce((max, r) => Math.max(max, r.id), 0) + 1,
+        requestDate: new Date().toISOString().slice(0, 10),
+        decision: "Pending",
         paymentDate: "",
         expenseType: draft.expenseType,
         category: draft.category,
         subcategory: draft.subcategory,
+        purpose: draft.notes.trim(),
         amount: Number(draft.amount),
         method: "",
         account: "",
@@ -256,143 +260,176 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
   }
 
   return (
-    <div className="space-y-6">
-      {/* What has been given */}
-      <div className="rounded-lg border">
-        <p className="border-b p-4 font-semibold text-primary">Assistance List</p>
+    <div className="rounded-lg border">
+      {records.length === 0 ? (
+        <div className="p-6">
+          <EmptyState>No assistance has been requested yet.</EmptyState>
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[960px] text-sm">
+              <thead>
+                <tr className="border-b bg-secondary/60 text-left text-primary">
+                  {/* Widths are set here rather than left to the browser, so
+                      the two columns that carry sentences get the room and
+                      the dates and figures stay on one line. */}
+                  <th className="p-3 font-semibold" style={{ width: "6%" }}>
+                    No.
+                  </th>
+                  <th
+                    className="whitespace-nowrap p-3 font-semibold"
+                    style={{ width: "12%" }}
+                  >
+                    Request Date
+                  </th>
+                  <th className="p-3 font-semibold" style={{ width: "24%" }}>
+                    Assistance Details
+                  </th>
+                  <th
+                    className="whitespace-nowrap p-3 text-right font-semibold"
+                    style={{ width: "13%" }}
+                  >
+                    Amount (<Rial />)
+                  </th>
+                  <th className="p-3 font-semibold" style={{ width: "25%" }}>
+                    Payment Details
+                  </th>
+                  <th className="p-3 font-semibold" style={{ width: "20%" }}>
+                    Notes
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {shown.map((record, index) => {
+                  const status = statusOf(record);
 
-        {records.length === 0 ? (
-          <div className="p-6">
-            <EmptyState>No assistance recorded yet.</EmptyState>
-          </div>
-        ) : (
-          <>
-            <div className="overflow-x-auto p-4">
-              <table className="w-full min-w-[900px] border text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
-                    {/* Widths are set here rather than left to the browser,
-                        and the proof sits with the payment it evidences: six
-                        columns fit, seven do not. */}
-                    <th className="p-3 font-semibold" style={{ width: "5%" }}>
-                      No.
-                    </th>
-                    <th className="whitespace-nowrap p-3 font-semibold" style={{ width: "11%" }}>
-                      Payment Date
-                    </th>
-                    <th className="p-3 font-semibold" style={{ width: "24%" }}>
-                      Expense Type
-                      <span className="block font-normal">
-                        Category / Subcategory
-                      </span>
-                    </th>
-                    <th className="whitespace-nowrap p-3 font-semibold" style={{ width: "10%" }}>
-                      Amount (<Rial />)
-                    </th>
-                    <th className="p-3 font-semibold" style={{ width: "30%" }}>
-                      Payment Method
-                      <span className="block font-normal">Bank / Account</span>
-                    </th>
-                    <th className="p-3 font-semibold" style={{ width: "20%" }}>
-                      Notes
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {shown.map((record, index) => (
+                  return (
                     <tr
                       key={record.id}
-                      className="border-b transition-colors last:border-0 hover:bg-primary/10"
+                      className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"
                     >
-                      {/* The row number opens the proof it stands for */}
-                      <td className="p-3 align-top">
-                        <button
-                          type="button"
-                          onClick={() => openProof(record)}
-                          className="rounded font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
-                        >
-                          {start + index + 1}
-                        </button>
-                      </td>
-                      <td className="whitespace-nowrap p-3 align-top">
-                        {formatDate(record.paymentDate)}
-                      </td>
-                      <td className="p-3 align-top">
-                        <span className="block font-semibold">
-                          {record.expenseType}
-                        </span>
-                        <span className="block text-muted-foreground">
-                          {record.category} / {record.subcategory}
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap p-3 align-top">
-                        {amount(record.amount)}
-                      </td>
-                      <td className="p-3 align-top">
-                        <span className="block font-semibold">
-                          {record.method}
-                        </span>
-                        <span className="block text-muted-foreground">
-                          {record.account}
-                        </span>
-                        {record.proof && (
+                      {/* The row number opens the document the request was
+                          made with, when one was attached. */}
+                      <td className="p-3 font-medium text-primary">
+                        {record.proof ? (
                           <button
                             type="button"
                             onClick={() => openProof(record)}
-                            className="mt-1 inline-flex items-center gap-1.5 rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                            title={record.proof}
+                            className="inline-flex items-center gap-1.5 rounded underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
                           >
+                            {start + index + 1}
                             {isImage(record.proof) ? (
                               <FileImage className="h-4 w-4 shrink-0 text-green-600" />
                             ) : (
                               <FileText className="h-4 w-4 shrink-0 text-red-600" />
                             )}
-                            {record.proof}
                           </button>
+                        ) : (
+                          start + index + 1
                         )}
                       </td>
-                      <td className="p-3 align-top text-muted-foreground">
+
+                      <td className="whitespace-nowrap p-3">
+                        {formatDate(record.requestDate)}
+                      </td>
+
+                      {/* What was asked for, why, and where it has got to */}
+                      <td className="p-3">
+                        <span className="block font-semibold text-primary">
+                          {record.subcategory}
+                        </span>
+                        <span className="block text-muted-foreground">
+                          {record.purpose}
+                        </span>
+                        <span
+                          className={cn(
+                            "block font-semibold",
+                            STATUS_TONE[status]
+                          )}
+                        >
+                          {status}
+                        </span>
+                      </td>
+
+                      <td className="whitespace-nowrap p-3 text-right font-semibold">
+                        {amount(record.amount)}
+                      </td>
+
+                      {/* Nothing is shown here until money has actually
+                          moved: an unpaid request has no payment to describe. */}
+                      <td className="p-3">
+                        {record.paymentDate ? (
+                          <>
+                            <span className="block font-semibold text-primary">
+                              {record.method}
+                            </span>
+                            <span className="block text-muted-foreground">
+                              {record.account}
+                            </span>
+                            <span className="block text-muted-foreground">
+                              {formatDate(record.paymentDate)}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </td>
+
+                      <td className="p-3 text-muted-foreground">
                         {record.notes || "-"}
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t p-4 text-sm text-muted-foreground">
-              <span>
-                Showing {start + 1} to{" "}
-                {Math.min(start + PAGE_SIZE, records.length)} of {records.length}{" "}
-                entries
-              </span>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-                  <Button
-                    key={n}
-                    type="button"
-                    variant={n === currentPage ? "default" : "ghost"}
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setPage(n)}
-                  >
-                    {n}
-                  </Button>
-                ))}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t p-4 text-sm text-muted-foreground">
+            <span>
+              Showing {start + 1} to{" "}
+              {Math.min(start + PAGE_SIZE, records.length)} of {records.length}{" "}
+              entries
+            </span>
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                disabled={currentPage <= 1}
+                onClick={() => setPage(currentPage - 1)}
+              >
+                ‹<span className="sr-only">Previous page</span>
+              </Button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
                 <Button
+                  key={n}
                   type="button"
-                  variant="ghost"
+                  variant={n === currentPage ? "default" : "ghost"}
                   size="icon"
                   className="h-8 w-8"
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setPage(currentPage + 1)}
+                  onClick={() => setPage(n)}
                 >
-                  ›<span className="sr-only">Next page</span>
+                  {n}
                 </Button>
-              </div>
+              ))}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                disabled={currentPage >= totalPages}
+                onClick={() => setPage(currentPage + 1)}
+              >
+                ›<span className="sr-only">Next page</span>
+              </Button>
             </div>
-          </>
-        )}
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

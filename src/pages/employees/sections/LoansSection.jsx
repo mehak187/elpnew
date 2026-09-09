@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Button } from "@/components/ui/button";
 import FormHeading from "@/components/shared/FormHeading";
 import { Input } from "@/components/ui/input";
@@ -13,11 +13,14 @@ import {
 import { EmptyState } from "@/components/shared/panels";
 import { cn } from "@/lib/utils";
 import { Rial } from "@/components/shared/Rial";
-import { FileText, Users, HandCoins, Info } from "lucide-react";
-import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
-import { useFirm } from "@/lib/firm/context";
-import { maskAccountNumber } from "@/pages/firm/firmData";
-import UploadBox from "./UploadBox";
+import Panel from "@/components/shared/Panel";
+import {
+  Users,
+  HandCoins,
+  Info,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import {
   LOAN_BOOKING,
   DEFAULT_LOAN_BOOKING,
@@ -25,29 +28,27 @@ import {
   categoriesOf,
   subcategoriesOf,
   loanRecords,
+  loanTotal,
+  loanYear,
   schedule,
-  endDate,
+  scheduleRows,
+  dueDate,
+  INSTALLMENT_STATUS_TONE,
   amount,
   formatDate,
-  SOURCE_SHORT,
 } from "../loanData";
 
 const NOTES_LIMIT = 300;
-const PAGE_SIZE = 5;
 
+// Three figures are asked for and everything else is counted from them:
+// how much is wanted, what comes off each month, and when the first one
+// falls due.
 const emptyDraft = {
   ...DEFAULT_LOAN_BOOKING,
   requested: "",
-  first: "",
-  last: "",
-  months: "",
   extraRequested: "",
-  instFirst: "",
-  instLast: "",
-  instCount: "",
-  method: "",
-  accountId: "",
-  paymentDate: "",
+  monthly: "",
+  firstDate: "",
 };
 
 /** A label with its required mark, so the asterisk is coloured everywhere. */
@@ -69,22 +70,34 @@ function Step({ number, title }) {
   );
 }
 
+/** One of the figures the schedule is summed up by, label over number. */
+function Total({ label, tone, children }) {
+  return (
+    <div className="text-center">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={cn("text-base font-bold text-primary", tone)}>
+        {children}
+      </p>
+    </div>
+  );
+}
+
 /** The note under a field that says where its figure came from. */
 function Hint({ children }) {
   return <p className="text-xs text-muted-foreground">{children}</p>;
 }
 
 /**
- * One figure on the loans list, kept whole.
+ * One labelled line of a loan's summary.
  *
- * The label and its number never separate; the bar that follows sits inside
- * the same unbreakable piece, so a line break lands between figures.
+ * The labels are given a fixed width so the colons line up down the cell,
+ * which is what makes four different facts read as one block.
  */
-function Money({ label, children, last }) {
+function Detail({ label, children }) {
   return (
-    <span className="inline-block whitespace-nowrap">
-      <span className="font-semibold">{label}</span> {children}
-      {!last && <span className="px-2 text-muted-foreground">|</span>}
+    <span className="block text-xs">
+      <span className="inline-block w-32 text-muted-foreground">{label}</span>
+      <span className="font-semibold text-primary">: {children}</span>
     </span>
   );
 }
@@ -182,11 +195,6 @@ function Derived({ id, label, value, hint }) {
   );
 }
 
-/** "Bank Muscat - Shatti Al Qurum (6789)" */
-const accountLabel = (account) =>
-  `${account.bankName} - ${account.bankBranch} (${maskAccountNumber(
-    account.accountNumber
-  ).slice(-4)})`;
 
 /**
  * What the firm has borrowed, and the form that adds to it.
@@ -196,12 +204,13 @@ const accountLabel = (account) =>
  * that disagrees with the loans already on the list.
  */
 export default function LoansSection({ adding, onCloseAdd }) {
-  const { bankAccounts } = useFirm();
-
   const [records, setRecords] = useState(loanRecords);
   const [draft, setDraft] = useState(emptyDraft);
-  const [proof, setProof] = useState(null);
-  const [page, setPage] = useState(1);
+
+  // Which loans have been folded away. Absent means open: a loan says very
+  // little without the schedule that repays it.
+  const [collapsed, setCollapsed] = useState({});
+  const [year, setYear] = useState("");
 
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
 
@@ -210,51 +219,47 @@ export default function LoansSection({ adding, onCloseAdd }) {
   const isAdditional = draft.subcategory === ADDITIONAL_LOAN;
 
   // What was owed before this one. The list is newest first, so it is the
-  // total the last loan left behind - repayments are not tracked yet, and this
-  // becomes their running balance the moment they are.
+  // total the last loan left behind - an additional loan is repaid on the
+  // whole debt, not just on the part being added now.
   const latest = records[0];
   const outstanding = latest ? latest.outstanding + latest.newAmount : 0;
-  const totalAfter = outstanding + num(draft.extraRequested);
+  const requested = num(isAdditional ? draft.extraRequested : draft.requested);
+  const totalLoan = isAdditional ? outstanding + requested : requested;
 
-  // Both end dates are counted forward from the day the money goes out, so
-  // neither can be typed to say something the instalment count does not.
-  const loanEnds = endDate(draft.paymentDate, draft.months);
-  const instalmentEnds = endDate(draft.paymentDate, draft.instCount);
+  // The number of months, the size of the final instalment and the day it
+  // falls due all follow from the three figures above. None of them is typed,
+  // so none of them can contradict the loan it describes.
+  const plan = schedule(totalLoan, num(draft.monthly));
+  const lastDue = plan.months ? dueDate(draft.firstDate, plan.months - 1) : "";
 
-  const account = bankAccounts.find((a) => String(a.id) === draft.accountId);
+  // A request has no repayments against it yet, so the schedule below is what
+  // the loan will look like rather than what it has done.
+  const rows = scheduleRows(totalLoan, num(draft.monthly), draft.firstDate);
+  const totalPaid = rows.reduce((sum, row) => sum + row.paid, 0);
 
   const canSave =
     draft.expenseType &&
     draft.category &&
     draft.subcategory &&
-    num(isAdditional ? draft.extraRequested : draft.requested) > 0 &&
-    num(draft.instFirst) > 0 &&
-    num(draft.instCount) > 0 &&
-    draft.method &&
-    draft.accountId &&
-    draft.paymentDate &&
-    proof;
+    requested > 0 &&
+    num(draft.monthly) > 0 &&
+    draft.firstDate;
 
   const save = () => {
     if (!canSave) return;
     setRecords((prev) => [
       {
         id: prev.reduce((max, r) => Math.max(max, r.id), 0) + 1,
-        paymentDate: draft.paymentDate,
-        expenseType: draft.expenseType,
-        category: draft.category,
-        subcategory: draft.subcategory,
-        method: draft.method,
-        bank: account?.bankName || "",
-        outstanding: isAdditional ? outstanding : 0,
-        newAmount: num(isAdditional ? draft.extraRequested : draft.requested),
-        monthly: num(draft.instFirst),
-        last: num(draft.instLast),
-        months: num(draft.instCount),
-        endsOn: instalmentEnds,
-        proof: proof.name,
-        proofUrl: URL.createObjectURL(proof),
-        notes: draft.subcategory,
+        kind: draft.subcategory,
+        loanAmount: requested,
+        merged: isAdditional ? outstanding : 0,
+        // The office fills these in when it actually pays the loan out.
+        disbursementDate: "",
+        bankName: "",
+        accountNumber: "",
+        monthly: num(draft.monthly),
+        firstDue: draft.firstDate,
+        payments: [],
       },
       ...prev,
     ]);
@@ -263,240 +268,66 @@ export default function LoansSection({ adding, onCloseAdd }) {
 
   const closeAdd = () => {
     setDraft(emptyDraft);
-    setProof(null);
-    setPage(1);
     onCloseAdd();
   };
 
-  const openProof = (record) => {
-    if (record.proofUrl) {
-      window.open(record.proofUrl, "_blank", "noopener,noreferrer");
-    }
-  };
+  const toggle = (id) =>
+    setCollapsed((prev) => ({ ...prev, [id]: !prev[id] }));
 
-  const totalPages = Math.max(1, Math.ceil(records.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const start = (currentPage - 1) * PAGE_SIZE;
-  const shown = records.slice(start, start + PAGE_SIZE);
+  // The years that have loans in them, newest first, read off the loans
+  // themselves - a year with nothing in it is not worth offering.
+  const years = [...new Set(records.map(loanYear))]
+    .filter(Boolean)
+    .sort((a, b) => b.localeCompare(a));
+  const shownYear = year || years[0];
+  const shown = records.filter((record) => loanYear(record) === shownYear);
 
+  // Adding takes over the section: the list describes loans already running,
+  // and none of it helps while a new one is being asked for.
   if (adding) {
     return (
-      <div className="space-y-6 rounded-lg border p-4 sm:p-6">
-        {/* The way back out of the form, in the same place and with the
-            same mark as on every page that opens over another. */}
+      <div className="space-y-6">
         <FormHeading
-          title="Add Loan"
+          title="Add Loan Request"
+          note="Ask for a loan and see exactly how it will be repaid."
           onBack={closeAdd}
         />
 
         {/* Where the loan lands in the accounts. The subcategory is chosen
             first because it decides which questions the form asks. */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
-          <div className="space-y-2">
-            <FieldLabel htmlFor="loan-type" required>
-              Expense Type
-            </FieldLabel>
-            <Select
-              value={draft.expenseType}
-              onValueChange={(value) =>
-                setDraft((prev) => ({
-                  ...prev,
-                  expenseType: value,
-                  category: "",
-                  subcategory: "",
-                }))
-              }
-            >
-              <SelectTrigger id="loan-type">
-                {/* Laid out inline: the trigger clamps every span child to one
-                    line with display:-webkit-box, which beats a flex utility. */}
-                <span
-                  style={{ display: "flex" }}
-                  className="min-w-0 items-center gap-2"
-                >
-                  <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <SelectValue placeholder="Select expense type" />
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                {LOAN_BOOKING.map((type) => (
-                  <SelectItem key={type.name} value={type.name}>
-                    {type.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <FieldLabel htmlFor="loan-category" required>
-              Category
-            </FieldLabel>
-            <Select
-              value={draft.category}
-              onValueChange={(value) =>
-                setDraft((prev) => ({ ...prev, category: value, subcategory: "" }))
-              }
-              disabled={!draft.expenseType}
-            >
-              <SelectTrigger id="loan-category">
-                <span
-                  style={{ display: "flex" }}
-                  className="min-w-0 items-center gap-2"
-                >
-                  <HandCoins className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <SelectValue placeholder="Select category" />
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                {categoriesOf(draft.expenseType).map((category) => (
-                  <SelectItem key={category.name} value={category.name}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <FieldLabel htmlFor="loan-subcategory" required>
-              Subcategory
-            </FieldLabel>
-            <Select
-              value={draft.subcategory}
-              onValueChange={(value) => set("subcategory", value)}
-              disabled={!draft.category}
-            >
-              <SelectTrigger id="loan-subcategory">
-                <SelectValue placeholder="Select subcategory" />
-              </SelectTrigger>
-              <SelectContent>
-                {subcategoriesOf(draft.expenseType, draft.category).map((sub) => (
-                  <SelectItem key={sub} value={sub}>
-                    {sub}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* The first block is the loan being asked for, and what it asks
-            depends on which kind it is: a new loan states its own amount,
-            an additional one states what is being added to a balance that
-            is already there. Only one of the two can be true, so only one
-            is shown. */}
-        {isAdditional ? (
-          <Block title="Additional Loan Amount">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
-              <AmountField
-                id="loan-extra"
-                label="Requested Amount"
-                required
-                value={draft.extraRequested}
-                onChange={(e) => set("extraRequested", e.target.value)}
-              />
-              <AmountField
-                id="loan-outstanding"
-                label="Current Outstanding Balance"
-                hint="What is still owed on earlier borrowing"
-                value={amount(outstanding)}
-                readOnly
-              />
-              <AmountField
-                id="loan-after"
-                label="Total Loan Amount After Addition"
-                value={amount(totalAfter)}
-                readOnly
-              />
-            </div>
-          </Block>
-        ) : (
-          <Block title="Loan Amount">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 sm:gap-6">
-              <AmountField
-                id="loan-requested"
-                label="Requested Amount"
-                required
-                value={draft.requested}
-                onChange={(e) => set("requested", e.target.value)}
-              />
-              <AmountField
-                id="loan-first"
-                label="First Installment"
-                required
-                value={draft.first}
-                onChange={(e) => set("first", e.target.value)}
-              />
-              <AmountField
-                id="loan-last"
-                label="Last Installment"
-                hint="The last instalment settles whatever the whole ones leave"
-                value={draft.last}
-                onChange={(e) => set("last", e.target.value)}
-              />
-              <Count
-                id="loan-count"
-                label="Number of Months"
-                required
-                unit="Months"
-                value={draft.months}
-                onChange={(e) => set("months", e.target.value)}
-              />
-              <Ends id="loan-end" label="Loan End Date" value={loanEnds} />
-            </div>
-          </Block>
-        )}
-
-        <Block title="Installments">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-            <AmountField
-              id="loan-inst-first"
-              label="First Installment"
-              required
-              value={draft.instFirst}
-              onChange={(e) => set("instFirst", e.target.value)}
-            />
-            <AmountField
-              id="loan-inst-last"
-              label="Last Installment"
-              hint="The last instalment settles whatever the whole ones leave"
-              value={draft.instLast}
-              onChange={(e) => set("instLast", e.target.value)}
-            />
-            <Count
-              id="loan-inst-count"
-              label="Number of Installments"
-              required
-              unit="Installments"
-              value={draft.instCount}
-              onChange={(e) => set("instCount", e.target.value)}
-            />
-            <Ends
-              id="loan-inst-end"
-              label="Installment End Date"
-              value={instalmentEnds}
-            />
-          </div>
-        </Block>
-
-        <Block title="Payment Details">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+        <Panel title="Request Details">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
             <div className="space-y-2">
-              <FieldLabel htmlFor="loan-method" required>
-                Payment Method
+              <FieldLabel htmlFor="loan-type" required>
+                Expense Type
               </FieldLabel>
               <Select
-                value={draft.method}
-                onValueChange={(value) => set("method", value)}
+                value={draft.expenseType}
+                onValueChange={(value) =>
+                  setDraft((prev) => ({
+                    ...prev,
+                    expenseType: value,
+                    category: "",
+                    subcategory: "",
+                  }))
+                }
               >
-                <SelectTrigger id="loan-method">
-                  <SelectValue placeholder="Select method" />
+                <SelectTrigger id="loan-type">
+                  {/* Laid out inline: the trigger clamps every span child to
+                      one line with display:-webkit-box, which beats a flex
+                      utility. */}
+                  <span
+                    style={{ display: "flex" }}
+                    className="min-w-0 items-center gap-2"
+                  >
+                    <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <SelectValue placeholder="Select expense type" />
+                  </span>
                 </SelectTrigger>
                 <SelectContent>
-                  {PAYMENT_METHODS.map((method) => (
-                    <SelectItem key={method} value={method}>
-                      {method}
+                  {LOAN_BOOKING.map((type) => (
+                    <SelectItem key={type.name} value={type.name}>
+                      {type.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -504,20 +335,29 @@ export default function LoansSection({ adding, onCloseAdd }) {
             </div>
 
             <div className="space-y-2">
-              <FieldLabel htmlFor="loan-account" required>
-                Bank / Account
+              <FieldLabel htmlFor="loan-category" required>
+                Category
               </FieldLabel>
               <Select
-                value={draft.accountId}
-                onValueChange={(value) => set("accountId", value)}
+                value={draft.category}
+                onValueChange={(value) =>
+                  setDraft((prev) => ({ ...prev, category: value, subcategory: "" }))
+                }
+                disabled={!draft.expenseType}
               >
-                <SelectTrigger id="loan-account">
-                  <SelectValue placeholder="Select bank account" />
+                <SelectTrigger id="loan-category">
+                  <span
+                    style={{ display: "flex" }}
+                    className="min-w-0 items-center gap-2"
+                  >
+                    <HandCoins className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <SelectValue placeholder="Select category" />
+                  </span>
                 </SelectTrigger>
                 <SelectContent>
-                  {bankAccounts.map((option) => (
-                    <SelectItem key={option.id} value={String(option.id)}>
-                      {accountLabel(option)}
+                  {categoriesOf(draft.expenseType).map((category) => (
+                    <SelectItem key={category.name} value={category.name}>
+                      {category.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -525,32 +365,202 @@ export default function LoansSection({ adding, onCloseAdd }) {
             </div>
 
             <div className="space-y-2">
-              <FieldLabel htmlFor="loan-date" required>
-                Payment Date
+              <FieldLabel htmlFor="loan-subcategory" required>
+                Subcategory
+              </FieldLabel>
+              <Select
+                value={draft.subcategory}
+                onValueChange={(value) => set("subcategory", value)}
+                disabled={!draft.category}
+              >
+                <SelectTrigger id="loan-subcategory">
+                  <SelectValue placeholder="Select subcategory" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subcategoriesOf(draft.expenseType, draft.category).map(
+                    (sub) => (
+                      <SelectItem key={sub} value={sub}>
+                        {sub}
+                      </SelectItem>
+                    )
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </Panel>
+
+        {/* Three figures are asked for; the three under them are counted. */}
+        <Panel title="Loan Information">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+            <AmountField
+              id="loan-requested"
+              label="Requested Amount"
+              required
+              value={isAdditional ? draft.extraRequested : draft.requested}
+              onChange={(e) =>
+                set(
+                  isAdditional ? "extraRequested" : "requested",
+                  e.target.value
+                )
+              }
+            />
+
+            {/* An additional loan is repaid on the whole debt, so what was
+                already owed has to be on the form that adds to it. */}
+            {isAdditional && (
+              <>
+                <AmountField
+                  id="loan-outstanding"
+                  label="Current Outstanding Balance"
+                  hint="What is still owed on earlier borrowing"
+                  value={amount(outstanding)}
+                  readOnly
+                />
+                <AmountField
+                  id="loan-after"
+                  label="Total Loan Amount After Addition"
+                  value={amount(totalLoan)}
+                  readOnly
+                />
+              </>
+            )}
+
+            <AmountField
+              id="loan-monthly"
+              label="Monthly Installment"
+              required
+              value={draft.monthly}
+              onChange={(e) => set("monthly", e.target.value)}
+            />
+
+            <div className="space-y-2">
+              <FieldLabel htmlFor="loan-first-date" required>
+                First Installment Date
               </FieldLabel>
               <Input
-                id="loan-date"
+                id="loan-first-date"
                 type="date"
-                value={draft.paymentDate}
-                onChange={(e) => set("paymentDate", e.target.value)}
+                value={draft.firstDate}
+                onChange={(e) => set("firstDate", e.target.value)}
               />
             </div>
 
-            <div className="space-y-2">
-              <FieldLabel required>Transfer Proof</FieldLabel>
-              <UploadBox file={proof} onSelect={setProof} />
-              <Hint>PDF, JPG, PNG (Max 5MB)</Hint>
-            </div>
+            <Derived
+              id="loan-months"
+              label="Number of Months"
+              value={plan.months || ""}
+              hint="Calculated automatically"
+            />
+
+            <Derived
+              id="loan-last-date"
+              label="Last Installment Date"
+              value={lastDue ? formatDate(lastDue) : ""}
+              hint="Calculated automatically"
+            />
+
+            <Derived
+              id="loan-last-amount"
+              label={<>Last Installment Amount (<Rial />)</>}
+              value={plan.months ? amount(plan.last) : ""}
+              hint="Calculated automatically"
+            />
           </div>
-        </Block>
+        </Panel>
 
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Button variant="outline" onClick={closeAdd}>
             Cancel
           </Button>
           <Button onClick={save} disabled={!canSave}>
-            Save Loan Request
+            Save
           </Button>
+        </div>
+
+        {/* The repayment plan, worked out as the figures above are typed, so
+            the request is signed off against the schedule it creates. */}
+        <div className="overflow-hidden rounded-lg border">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b bg-secondary/60 px-4 py-3">
+            <p className="text-base font-bold text-primary">
+              Installment Schedule
+            </p>
+            <div className="flex flex-wrap items-center gap-6">
+              <Total label={<>Total Loan Amount (<Rial />)</>}>
+                {amount(totalLoan)}
+              </Total>
+              <Total label={<>Total Paid (<Rial />)</>} tone="text-green-700">
+                {amount(totalPaid)}
+              </Total>
+              <Total label={<>Remaining Amount (<Rial />)</>}>
+                {amount(totalLoan - totalPaid)}
+              </Total>
+            </div>
+          </div>
+
+          {rows.length === 0 ? (
+            <div className="p-6">
+              <EmptyState>
+                Enter the amount, the monthly instalment and the first due date
+                to see the schedule.
+              </EmptyState>
+            </div>
+          ) : (
+            <div className="max-h-96 overflow-auto">
+              <table className="w-full min-w-[880px] text-center text-sm">
+                <thead className="sticky top-0 z-10 bg-secondary/60 text-primary">
+                  <tr className="border-b">
+                    <th className="p-3 font-semibold">No.</th>
+                    <th className="whitespace-nowrap p-3 font-semibold">
+                      Due Date
+                    </th>
+                    <th className="whitespace-nowrap p-3 font-semibold">
+                      Installment Amount (<Rial />)
+                    </th>
+                    <th className="whitespace-nowrap p-3 font-semibold">
+                      Paid Amount (<Rial />)
+                    </th>
+                    <th className="whitespace-nowrap p-3 font-semibold">
+                      Balance (<Rial />)
+                    </th>
+                    <th className="p-3 font-semibold">Status</th>
+                    <th className="whitespace-nowrap p-3 font-semibold">
+                      Payment Date
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr
+                      key={row.no}
+                      className="border-b transition-colors last:border-0 hover:bg-primary/5"
+                    >
+                      <td className="p-3 font-medium text-primary">{row.no}</td>
+                      <td className="whitespace-nowrap p-3">
+                        {formatDate(row.due)}
+                      </td>
+                      <td className="p-3">{amount(row.installment)}</td>
+                      <td className="p-3">{amount(row.paid)}</td>
+                      <td className="p-3">{amount(row.balance)}</td>
+                      <td className="p-3">
+                        <span
+                          className={cn(
+                            "inline-block rounded-full px-3 py-0.5 text-xs font-medium",
+                            INSTALLMENT_STATUS_TONE[row.status]
+                          )}
+                        >
+                          {row.status}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap p-3">
+                        {row.paymentDate ? formatDate(row.paymentDate) : "-"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -558,157 +568,187 @@ export default function LoansSection({ adding, onCloseAdd }) {
 
   return (
     <div className="space-y-6">
-      {/* What has been borrowed */}
-      <div className="rounded-lg border">
-        <p className="border-b p-4 font-semibold text-primary">Loans List</p>
+      {/* Which year is being looked at, and what the page is for. */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-2">
+          <FieldLabel htmlFor="loan-year">Loan Year</FieldLabel>
+          <Select value={shownYear} onValueChange={setYear}>
+            <SelectTrigger id="loan-year" className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {years.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-        {records.length === 0 ? (
+        <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary">
+          <Info className="h-5 w-5 shrink-0" aria-hidden="true" />
+          This page shows your loan details and installment payments.
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-lg border">
+        {shown.length === 0 ? (
           <div className="p-6">
-            <EmptyState>No loans recorded yet.</EmptyState>
+            <EmptyState>No loans were drawn in {shownYear}.</EmptyState>
           </div>
         ) : (
-          <>
-            <div className="overflow-x-auto p-4">
-              {/* Wide on purpose: the financial column carries six figures and
-                  the columns beside it collapse if the table is allowed to
-                  squeeze. It scrolls sideways instead. */}
-              <table className="w-full min-w-[1280px] border text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
-                    {/* Six columns, because eight will not fit: the date
-                        already carries the month and year, and the proof
-                        belongs with the payment it evidences. */}
-                    <th className="p-3 font-semibold" style={{ width: "5%" }}>
-                      No.
-                    </th>
-                    <th className="whitespace-nowrap p-3 font-semibold" style={{ width: "11%" }}>
-                      Payment Date
-                    </th>
-                    <th className="p-3 font-semibold" style={{ width: "18%" }}>
-                      Expense Type
-                      <span className="block font-normal">
-                        Category / Subcategory
-                      </span>
-                    </th>
-                    <th className="p-3 font-semibold" style={{ width: "30%" }}>
-                      Financial Details (<Rial />)
-                    </th>
-                    <th className="p-3 font-semibold" style={{ width: "20%" }}>
-                      Payment Method
-                    </th>
-                    <th className="p-3 font-semibold" style={{ width: "16%" }}>
-                      Notes
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {shown.map((record, index) => {
-                    const loanTotal = record.outstanding + record.newAmount;
-                    const plan = schedule(loanTotal, record.monthly);
-                    return (
-                      <tr
-                        key={record.id}
-                        className="border-b transition-colors last:border-0 hover:bg-primary/10"
-                      >
-                        <td className="p-3 align-top font-medium text-primary">
-                          {start + index + 1}
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1140px] text-sm">
+              <thead>
+                <tr className="border-b bg-secondary/60 text-primary">
+                  <th className="p-3 font-semibold" style={{ width: "5%" }}>
+                    No.
+                  </th>
+                  <th className="p-3 text-left font-semibold" style={{ width: "27%" }}>
+                    Loan / Installment Details
+                  </th>
+                  <th className="whitespace-nowrap p-3 font-semibold" style={{ width: "11%" }}>
+                    Due Date
+                  </th>
+                  <th className="p-3 font-semibold" style={{ width: "13%" }}>
+                    Installment Amount
+                    <span className="block font-normal">(<Rial />)</span>
+                  </th>
+                  <th className="p-3 font-semibold" style={{ width: "12%" }}>
+                    Paid Amount
+                    <span className="block font-normal">(<Rial />)</span>
+                  </th>
+                  <th className="p-3 font-semibold" style={{ width: "14%" }}>
+                    Installment Status
+                  </th>
+                  <th className="p-3 font-semibold" style={{ width: "13%" }}>
+                    Remaining Balance
+                    <span className="block font-normal">(<Rial />)</span>
+                  </th>
+                  <th className="p-3" style={{ width: "5%" }}>
+                    <span className="sr-only">Show instalments</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {shown.map((record, index) => {
+                  const total = loanTotal(record);
+                  const rows = scheduleRows(
+                    total,
+                    record.monthly,
+                    record.firstDue,
+                    record.payments
+                  );
+                  const open = !collapsed[record.id];
+
+                  return (
+                    <Fragment key={record.id}>
+                      {/* The loan itself. Nothing in the instalment columns
+                          belongs to it, so nothing is put there. */}
+                      <tr className="border-b bg-green-50/70">
+                        <td className="p-3 text-center font-bold text-primary">
+                          {index + 1}
                         </td>
-                        <td className="whitespace-nowrap p-3 align-top">
-                          {formatDate(record.paymentDate)}
+                        <td className="p-3">
+                          <span className="block font-bold text-primary">
+                            {record.kind}
+                            {record.merged > 0 && (
+                              <span className="text-destructive">
+                                {" "}
+                                (Merged with Previous Loan)
+                              </span>
+                            )}
+                          </span>
+                          <Detail label="Loan Amount">
+                            {amount(record.loanAmount)}
+                          </Detail>
+                          <Detail label="Disbursement Date">
+                            {record.disbursementDate
+                              ? formatDate(record.disbursementDate)
+                              : "Not paid out yet"}
+                          </Detail>
+                          <Detail label="Bank / Account">
+                            {record.bankName
+                              ? record.bankName + " - " + record.accountNumber + " (IBAN)"
+                              : "-"}
+                          </Detail>
+                          {record.merged > 0 && (
+                            <Detail label="Note">
+                              Previous loan of {amount(record.merged)} merged
+                              into this loan.
+                            </Detail>
+                          )}
                         </td>
-                        <td className="p-3 align-top">
-                          <span className="block font-semibold">
-                            {record.expenseType}
-                          </span>
-                          <span className="block text-muted-foreground">
-                            {record.category} / {record.subcategory}
-                          </span>
-                        </td>
-                        <td className="p-3 align-top">
-                          {/* Each figure is one unbreakable piece, so a narrow
-                              column wraps between them rather than stranding a
-                              number on its own line. */}
-                          <span className="block">
-                            <Money label="Outstanding:">
-                              {amount(record.outstanding)}
-                            </Money>
-                            <Money label="New Amount:">
-                              {amount(record.newAmount)}
-                            </Money>
-                            <Money label="Total Loan:" last>
-                              {amount(loanTotal)}
-                            </Money>
-                          </span>
-                          <span className="mt-1 block text-muted-foreground">
-                            <Money label="Monthly:">
-                              {amount(plan.installment)}
-                            </Money>
-                            <Money label="Last:">{amount(plan.last)}</Money>
-                            <Money label="Months:" last>{plan.months}</Money>
-                          </span>
-                        </td>
-                        <td className="p-3 align-top">
-                          <span className="block whitespace-nowrap">
-                            {record.method}
-                          </span>
-                          {record.bank && (
-                            <span className="block whitespace-nowrap text-muted-foreground">
-                              ({SOURCE_SHORT[record.bank] || record.bank})
+                        <td className="p-3 text-center text-muted-foreground">-</td>
+                        <td className="p-3 text-center text-muted-foreground">-</td>
+                        <td className="p-3 text-center text-muted-foreground">-</td>
+                        <td className="p-3 text-center text-muted-foreground">-</td>
+                        <td className="p-3 text-center text-muted-foreground">-</td>
+                        <td className="p-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => toggle(record.id)}
+                            aria-expanded={open}
+                            className="rounded p-1 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-ring"
+                          >
+                            {open ? (
+                              <ChevronUp className="h-5 w-5" />
+                            ) : (
+                              <ChevronDown className="h-5 w-5" />
+                            )}
+                            <span className="sr-only">
+                              {open
+                                ? "Hide instalments"
+                                : "Show instalments"}
                             </span>
-                          )}
-                          {record.proof && (
-                            <button
-                              type="button"
-                              onClick={() => openProof(record)}
-                              className="mt-1 inline-flex items-center gap-1.5 rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
-                            >
-                              <FileText className="h-4 w-4 shrink-0 text-red-600" />
-                              <span className="truncate">{record.proof}</span>
-                            </button>
-                          )}
-                        </td>
-                        <td className="p-3 align-top text-muted-foreground">
-                          {record.notes || "-"}
+                          </button>
                         </td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t p-4 text-sm text-muted-foreground">
-              <span>
-                Showing {start + 1} to{" "}
-                {Math.min(start + PAGE_SIZE, records.length)} of {records.length}{" "}
-                entries
-              </span>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-                  <Button
-                    key={n}
-                    type="button"
-                    variant={n === currentPage ? "default" : "ghost"}
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setPage(n)}
-                  >
-                    {n}
-                  </Button>
-                ))}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setPage(currentPage + 1)}
-                >
-                  ›<span className="sr-only">Next page</span>
-                </Button>
-              </div>
-            </div>
-          </>
+                      {open &&
+                        rows.map((row) => (
+                          <tr
+                            key={record.id + "-" + row.no}
+                            className="border-b transition-colors hover:bg-primary/5"
+                          >
+                            <td className="p-3 text-center text-muted-foreground">
+                              {index + 1}.{row.no}
+                            </td>
+                            <td className="p-3 font-medium text-primary">
+                              Installment {row.no} of {row.of}
+                            </td>
+                            <td className="whitespace-nowrap p-3 text-center">
+                              {formatDate(row.due)}
+                            </td>
+                            <td className="p-3 text-center">
+                              {amount(row.installment)}
+                            </td>
+                            <td className="p-3 text-center">
+                              {amount(row.paid)}
+                            </td>
+                            <td className="p-3 text-center">
+                              <span
+                                className={cn(
+                                  "inline-block rounded-md px-3 py-1 text-xs font-semibold",
+                                  INSTALLMENT_STATUS_TONE[row.status]
+                                )}
+                              >
+                                {row.status}
+                              </span>
+                            </td>
+                            <td className="p-3 text-center font-medium">
+                              {amount(row.remaining)}
+                            </td>
+                            <td className="p-3" />
+                          </tr>
+                        ))}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
