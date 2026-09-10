@@ -56,7 +56,15 @@ const emptyLine = () => ({
 const lineTotalOf = (line) =>
   (Number(line.amountBeforeTax) || 0) + (Number(line.taxAmount) || 0);
 
-export default function InvoiceForm({ onCancel, onSubmit }) {
+/**
+ * The form behind a payment request.
+ *
+ * `forSupplier` is passed when the form is opened from a supplier's own
+ * page: the supplier is then already known, so the two fields that identify
+ * them are settled rather than asked. Asking again would let someone raise a
+ * request against one supplier from another's page.
+ */
+export default function InvoiceForm({ onCancel, onSubmit, forSupplier }) {
   // Only suppliers still in use can be billed against.
   const { suppliers } = useSuppliers();
   const activeSuppliers = suppliers.filter((s) => s.status === "Active");
@@ -64,8 +72,8 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
   const [invoiceNumber, setInvoiceNumber] = useState("");
   // The category narrows the supplier list rather than being stored - the
   // supplier record already carries its own category.
-  const [category, setCategory] = useState("");
-  const [supplier, setSupplier] = useState("");
+  const [category, setCategory] = useState(forSupplier?.category || "");
+  const [supplier, setSupplier] = useState(forSupplier?.name || "");
   const [invoiceFile, setInvoiceFile] = useState("");
   // Whether a copy of the supplier invoice is coming, decided here rather than
   // deferred: a request with no invoice behind it has to say so up front.
@@ -75,6 +83,9 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
   const [error, setError] = useState("");
 
   const noInvoice = invoiceCopy === "none";
+
+  // Whose invoice it is was settled before the form opened.
+  const supplierKnown = Boolean(forSupplier);
 
   const suppliersInCategory = category
     ? activeSuppliers.filter((s) => s.category === category)
@@ -146,7 +157,12 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
     <div className="space-y-4 sm:space-y-6">
       {/* ------------------------------------------------------ Invoice Data */}
       <FormSection icon={ReceiptText} title="Invoice Data">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+        <div
+          className={cn(
+            "grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6",
+            supplierKnown ? "lg:grid-cols-2" : "lg:grid-cols-4"
+          )}
+        >
           <div className="space-y-2">
             <Label htmlFor="invoiceDate">Invoice Date *</Label>
             <Input
@@ -170,7 +186,7 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
                 // An invoice number is never typed twice, so the browser's
                 // remembered list is only ever in the way.
                 autoComplete="off"
-                className="min-w-0 flex-1"
+                className="min-w-32 flex-1"
               />
               <label
                 title="Upload Invoice Copy"
@@ -228,7 +244,9 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
             )}
           </div>
 
-          <div className="space-y-2">
+          {/* Not asked for on a supplier's own page: the page is the
+              answer, and a second answer could contradict it. */}
+          <div className={cn("space-y-2", supplierKnown && "hidden")}>
             <Label htmlFor="supplierCategory">Category *</Label>
             <SearchableSelect
               id="supplierCategory"
@@ -242,7 +260,7 @@ export default function InvoiceForm({ onCancel, onSubmit }) {
             />
           </div>
 
-          <div className="space-y-2">
+          <div className={cn("space-y-2", supplierKnown && "hidden")}>
             <Label htmlFor="supplier">Supplier *</Label>
             <div className="flex gap-2">
               <SearchableSelect

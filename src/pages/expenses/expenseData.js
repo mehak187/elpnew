@@ -91,6 +91,36 @@ export const CREATOR_ROLES = [
 export const firstReviewFor = (creatorRole) =>
   CREATOR_ROLES.find((r) => r.key === creatorRole)?.firstReview || "accountant";
 
+/**
+ * A filled-in form, turned into the request that goes for approval.
+ *
+ * The route it takes is decided by the raiser's own role rather than asked
+ * for on the form - an admin-raised request skips the accountant entirely.
+ * Two pages raise these now, the requests page and a supplier's own, so the
+ * rule lives here instead of being written out on each of them.
+ */
+export function submittedRequest(invoice, user) {
+  const creatorRole = user.role === "admin" ? "admin" : "employee";
+  return {
+    ...invoice,
+    creatorRole,
+    createdBy: user.name,
+    status: firstReviewFor(creatorRole),
+    payments: [],
+    history: [
+      {
+        at: dayOffset(0),
+        by: user.name,
+        action:
+          creatorRole === "admin"
+            ? "Submitted by Admin - accountant step skipped"
+            : "Submitted",
+        reason: "",
+      },
+    ],
+  };
+}
+
 /* ------------------------------------------------------ accountant review */
 
 /**
@@ -479,12 +509,16 @@ export const initialInvoices = [
     invoiceFile: "rent-august.pdf",
     createdBy: "Aisha Al Saadi",
     creatorRole: "employee",
-    status: "finance",
+    status: "paid",
     history: [
       { at: dayOffset(-5), by: "Aisha Al Saadi", action: "Submitted", reason: "" },
       { at: dayOffset(-4), by: "Accountant", action: "Approved", reason: "" },
+      { at: dayOffset(-4), by: "Finance Manager", action: "Approved for Payment", reason: "" },
+      { at: dayOffset(-3), by: "Finance", action: "Payment recorded", reason: "" },
     ],
-    payments: [],
+    payments: [
+      { id: 1, date: dayOffset(-3), amount: 2520, method: "Bank Transfer", reference: "TRF-88420" },
+    ],
     lines: [
       { id: 1, typeKey: "office", path: ["Rent", "Office Rent"], description: "Muscat office - August", amountBeforeTax: 2400, taxAmount: 120 },
     ],
@@ -521,7 +555,7 @@ export const initialInvoices = [
     invoiceFile: "bank-statement.pdf",
     createdBy: "Mohammed Al Yahyaei",
     creatorRole: "admin",
-    status: "finance",
+    status: "paid",
     history: [
       {
         at: dayOffset(-1),
@@ -529,8 +563,12 @@ export const initialInvoices = [
         action: "Submitted by Admin - accountant step skipped",
         reason: "",
       },
+      { at: dayOffset(-1), by: "Finance Manager", action: "Approved for Payment", reason: "" },
+      { at: dayOffset(-1), by: "Finance", action: "Payment recorded", reason: "" },
     ],
-    payments: [],
+    payments: [
+      { id: 1, date: dayOffset(-1), amount: 45, method: "Bank Transfer", reference: "TRF-77213" },
+    ],
     lines: [
       { id: 1, typeKey: "admin-financial", path: ["Bank Charges", "Bank Transfer Fees"], description: "International transfer fees", amountBeforeTax: 45, taxAmount: 0 },
     ],
@@ -597,7 +635,7 @@ export const initialInvoices = [
     invoiceFile: "",
     createdBy: "Mohammed Al Yahyaei",
     creatorRole: "admin",
-    status: "finance",
+    status: "approved",
     history: [
       {
         at: dayOffset(0),
@@ -605,6 +643,7 @@ export const initialInvoices = [
         action: "Submitted by Admin - accountant step skipped",
         reason: "",
       },
+      { at: dayOffset(0), by: "Finance Manager", action: "Approved for Payment", reason: "" },
     ],
     payments: [],
     lines: [
