@@ -9,12 +9,12 @@ import {
   ArrowLeft,
   ArrowRight,
   User,
+  LayoutDashboard,
   Briefcase,
   FileText,
   Users,
   FileSignature,
   Receipt,
-  BarChart3,
   GitMerge,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -72,6 +72,14 @@ const SECTIONS = [
       "emailNotification",
     ],
   },
+  {
+    // Everything the firm's own dashboard says, about one client: the
+    // same panels, bars and tiles, so neither has to be learnt twice.
+    key: "analytics",
+    label: "Client Dashboard",
+    icon: LayoutDashboard,
+    existingOnly: true,
+  },
   { key: "cases", label: "Cases", icon: Briefcase, existingOnly: true },
   {
     key: "documents",
@@ -96,12 +104,6 @@ const SECTIONS = [
   },
   { key: "invoices", label: "Invoices", icon: Receipt, existingOnly: true },
 
-  {
-    key: "analytics",
-    label: "File Status",
-    icon: BarChart3,
-    existingOnly: true,
-  },
   { key: "merge", label: "Merge Clients", icon: GitMerge, existingOnly: true },
 ];
 
