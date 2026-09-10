@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import DataTable from "@/components/shared/DataTable";
@@ -7,8 +7,13 @@ import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useExpenses } from "@/lib/expenses/context";
 import { useSuppliers } from "@/lib/suppliers/context";
-import { expenseRecords } from "@/pages/expenses/expenseData";
+import {
+  expenseRecords,
+  submittedRequest,
+} from "@/pages/expenses/expenseData";
 import { expenseColumns } from "@/pages/expenses/expenseColumns";
+import InvoiceForm from "@/pages/expenses/InvoiceForm";
+import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 
 /** Amounts here are read against invoices, so they carry the currency and fils. */
 const omr = (amount) =>
@@ -39,12 +44,21 @@ function Detail({ label, children }) {
  * so a supplier's ledger cannot drift from the firm's.
  */
 export default function SupplierPaymentsSection({ supplier }) {
-  const navigate = useNavigate();
-  const { expenses, invoices } = useExpenses();
+  const { expenses, invoices, addInvoice } = useExpenses();
   const { suppliers } = useSuppliers();
 
+  // The expense is raised here rather than on the Expenses page: the
+  // expenses are read and managed here, so sending someone away to add one
+  // loses both the supplier and the place they were reading.
+  const [adding, setAdding] = useState(false);
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+
+  const submit = (invoice) => {
+    addInvoice(submittedRequest(invoice, CURRENT_USER));
+    setAdding(false);
+    setCurrentPage(1);
+  };
 
   const accountFor = (name) => suppliers.find((s) => s.name === name) || null;
 
@@ -73,7 +87,11 @@ export default function SupplierPaymentsSection({ supplier }) {
           <span className="text-sm font-bold text-primary">{omr(total)}</span>
         </div>
 
-        <Button type="button" onClick={() => navigate("/expenses/create")}>
+        <Button
+          type="button"
+          onClick={() => setAdding(true)}
+          disabled={adding}
+        >
           <Plus className="mr-1.5 h-4 w-4" />
           Add Expense
         </Button>
@@ -118,6 +136,17 @@ export default function SupplierPaymentsSection({ supplier }) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Raised above the list rather than on a page of its own: the list is
+          what the request is judged against, and the supplier is already
+          named by the page, so the form does not ask for them again. */}
+      {adding && (
+        <InvoiceForm
+          forSupplier={supplier}
+          onCancel={() => setAdding(false)}
+          onSubmit={submit}
+        />
+      )}
 
       <Card>
         <CardContent className="p-4 sm:p-6">

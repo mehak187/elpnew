@@ -1,4 +1,5 @@
-import { useState } from "react";
+import {
+  useState } from "react";
 import UploadIcon from "@/components/shared/UploadIcon";
 import { Button } from "@/components/ui/button";
 import FormHeading from "@/components/shared/FormHeading";
@@ -10,12 +11,17 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+  } from "@/components/ui/select";
 import SalaryHistory from "./SalaryHistory";
 import { EmptyState } from "@/components/shared/panels";
 import { Rial } from "@/components/shared/Rial";
 import { cn } from "@/lib/utils";
-import { Save, Users, ChevronsRight, FileCheck } from "lucide-react";
+import { Save,
+  Users,
+  ChevronsRight,
+  FileCheck,
+  Wallet,
+} from "lucide-react";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
 import {
   ALLOWANCES,
@@ -95,7 +101,7 @@ function Amount({ id, label, required, value, onChange, readOnly, highlight }) {
     <div className="space-y-2">
       <Label htmlFor={id}>
         {label}
-        {required && <span className="text-destructive"> *</span>}
+        {required && <span className="whitespace-nowrap text-destructive">&nbsp;*</span>}
       </Label>
       <div className="relative">
         <Input
@@ -219,12 +225,13 @@ export default function SalariesSection({ employee, adding, onCloseAdd, onSave }
   // own figure; everything else is a month of the salary above.
   const entersOwnAmount = entersAmount(payment.subcategory);
   const showsPeriod = hasPeriod(payment.subcategory);
-  // The button names what is being saved. A bonus is not a salary, and saying
-  // so is the last chance to notice the wrong subcategory before it is booked.
-  const saveLabel =
+  // What is being asked for, so the heading of the form still names it -
+  // a bonus is not a salary, and saying so is the last chance to notice the
+  // wrong subcategory before it is sent.
+  const requestLabel =
     entersOwnAmount && !showsPeriod
-      ? "Save " + payment.subcategory
-      : "Save Salary / Bonus";
+      ? payment.subcategory
+      : "Salary / Bonus";
 
   const savePayslip = () => {
     if (!(Number(payslip.basic) > 0)) return;
@@ -291,7 +298,8 @@ export default function SalariesSection({ employee, adding, onCloseAdd, onSave }
         {/* The way back out of the form, in the same place and with the
             same mark as on every page that opens over another. */}
         <FormHeading
-          title={saveLabel.replace("Save ", "Add ")}
+          icon={Wallet}
+          title={"Add " + requestLabel}
           onBack={closeAdd}
         />
 
@@ -542,7 +550,7 @@ export default function SalariesSection({ employee, adding, onCloseAdd, onSave }
             Cancel
           </Button>
           <Button onClick={savePayment} disabled={!canPay}>
-            {saveLabel}
+            Submit Request
           </Button>
         </div>
       </div>
@@ -634,7 +642,7 @@ export default function SalariesSection({ employee, adding, onCloseAdd, onSave }
             disabled={!(Number(payslip.basic) > 0)}
           >
             <Save className="mr-2 h-4 w-4" />
-            Save Salary
+            Submit Request
           </Button>
         </div>
       </div>

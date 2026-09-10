@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Layers, Scale, Briefcase, TrendingUp, Inbox } from "lucide-react";
 import BarTrendChart from "@/components/shared/BarTrendChart";
 import SummaryStrip from "@/components/shared/SummaryStrip";
+import CountBars from "@/components/shared/CountBars";
+import { SectionCard, Tile } from "@/components/shared/panels";
 import {
   clientCases,
   liveCases,
@@ -19,7 +21,6 @@ import {
   receivedPeriods,
 } from "../clientCases";
 import { withRial } from "@/lib/money";
-import { cn } from "@/lib/utils";
 
 const formatDate = (date) =>
   date ? new Date(date).toLocaleDateString("en-GB") : "-";
@@ -33,46 +34,9 @@ const MONTH_LABEL = (month) => {
 const money = (amount) =>
   withRial(Number(amount || 0).toLocaleString("en-GB"));
 
-/**
- * A figure, and underneath it what those files claim between them.
- *
- * A count on its own says how busy the client is; the claim total says how much
- * is riding on it, which is the figure anyone reading this page is after.
- */
-function Metric({ label, value, amount }) {
-  return (
-    <Card className="h-full">
-      <CardContent className="flex h-full flex-col justify-between p-4">
-        <p className="text-xs leading-snug text-muted-foreground">{label}</p>
-        <div className="mt-2">
-          <p className="text-lg font-bold text-primary">{value}</p>
-          {amount !== undefined && (
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {money(amount)}
-            </p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-/** A row of counts, one per key, laid out as small tiles. */
-function Breakdown({ title, counts, wide }) {
-  return (
-    <div>
-      <p className="mb-2 text-xs font-semibold text-foreground">{title}</p>
-      <div className={cn("grid grid-cols-2 gap-3 sm:grid-cols-3", wide ? "lg:grid-cols-5" : "lg:grid-cols-4")}>
-        {Object.entries(counts).map(([key, count]) => (
-          <div key={key} className="rounded-lg border p-3">
-            <p className="text-xs leading-snug text-muted-foreground">{key}</p>
-            <p className="mt-1 text-lg font-bold text-primary">{count}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+/** `countBy` answers with an object; the bars want rows. */
+const toRows = (counts) =>
+  Object.entries(counts).map(([label, count]) => ({ label, count }));
 
 const EARLIEST = clientCases.reduce(
   (min, k) => (k.receivedAt < min ? k.receivedAt : min),
@@ -83,6 +47,17 @@ const LATEST = liveCases.reduce(
   liveCases[0].receivedAt
 );
 
+/**
+ * One client's dashboard.
+ *
+ * This and the firm's dashboard were the same idea told twice, so they are told
+ * the same way now: the panels, the bars and the tiles are the components the
+ * firm's dashboard uses, pointed at one client instead of all of them. Someone
+ * who can read one can read the other without learning it again.
+ *
+ * Every breakdown is a bar against the busiest row rather than a grid of boxes.
+ * Boxes make you read each number to find the big one; bars show it.
+ */
 export default function AnalyticsSection() {
   const [fromDate, setFromDate] = useState(EARLIEST);
   const [toDate, setToDate] = useState(LATEST);
@@ -90,9 +65,7 @@ export default function AnalyticsSection() {
   /* Lifetime, counted from the live cases only */
   const open = liveCases.filter(isOpen);
   const closed = liveCases.filter((k) => !isOpen(k));
-  const totalReceived = liveCases.length;
-  const inProgress = liveCases.filter(isInProgress).length;
-  const lastReceived = LATEST;
+  const inProgress = liveCases.filter(isInProgress);
 
   const typeCounts = countBy(liveCases, CASE_TYPES, (k) => k.type);
   // Counted across every live case, not just the open ones - a closed file
@@ -125,7 +98,7 @@ export default function AnalyticsSection() {
     .map((month) => ({ label: MONTH_LABEL(month), value: months[month] }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <p className="text-sm text-muted-foreground">
         Based on cases and transactions only. Invoices and payment status are
         deliberately excluded.
@@ -138,7 +111,7 @@ export default function AnalyticsSection() {
         items={[
           {
             label: "Total Cases Received",
-            count: totalReceived,
+            count: liveCases.length,
             value: money(claimTotal(liveCases)),
           },
           {
@@ -153,8 +126,8 @@ export default function AnalyticsSection() {
           },
           {
             label: "Cases in Progress",
-            count: inProgress,
-            value: money(claimTotal(liveCases.filter(isInProgress))),
+            count: inProgress.length,
+            value: money(claimTotal(inProgress)),
           },
           {
             // Struck off, so counted apart from everything above
@@ -166,15 +139,62 @@ export default function AnalyticsSection() {
         ]}
       />
 
-      <Card>
-        <CardContent className="p-4 sm:p-6">
-          <Breakdown title="Cases by Type" counts={typeCounts} />
-        </CardContent>
-      </Card>
+      {/* Where the files stand: how far through, and before which court. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 sm:gap-6">
+        <SectionCard
+          title="Cases by Stage"
+          icon={Layers}
+          action={
+            <span className="text-xs text-muted-foreground">
+              {liveCases.length} cases
+            </span>
+          }
+        >
+          <CountBars rows={toRows(stageCounts)} />
+        </SectionCard>
 
-      {/* Period filter */}
-      <Card>
-        <CardContent className="space-y-5 p-4 sm:p-6">
+        <SectionCard
+          title="Case Level"
+          icon={Scale}
+          action={
+            <span className="text-xs text-muted-foreground">
+              {open.length} open
+            </span>
+          }
+        >
+          <CountBars rows={toRows(levelCounts)} />
+        </SectionCard>
+      </div>
+
+      <SectionCard
+        title="Cases by Type"
+        icon={Briefcase}
+        action={
+          <span className="text-xs text-muted-foreground">
+            {liveCases.length} cases
+          </span>
+        }
+      >
+        <CountBars rows={toRows(typeCounts)} />
+      </SectionCard>
+
+      {/* What has come in and gone out, over a period the reader chooses.
+          The dates, the counts they produce and the shape of them belong in
+          one panel: three separate cards made you scroll to see the effect
+          of moving a date. */}
+      <SectionCard
+        title="Case Flow"
+        icon={TrendingUp}
+        action={
+          <span className="text-xs text-muted-foreground">
+            Last case received{" "}
+            <span className="font-semibold text-primary">
+              {formatDate(LATEST)}
+            </span>
+          </span>
+        }
+      >
+        <div className="space-y-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="space-y-2">
               <Label htmlFor="activityFrom">From</Label>
@@ -198,93 +218,58 @@ export default function AnalyticsSection() {
                 className="w-full sm:w-44"
               />
             </div>
+          </div>
 
-            {/* The answer to the two dates, beside the dates that ask it */}
-            <div className="rounded-lg border bg-muted/40 px-4 py-2 sm:ml-auto">
-              <p className="text-xs text-muted-foreground">
-                Cases Received in Period
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Tile label="Received in Period" value={inPeriod.length} />
+            <Tile label="Closed in Period" value={closedInPeriod} />
+            <Tile label="Open Cases" value={open.length} />
+            <Tile
+              label="Claimed in Period"
+              value={money(claimTotal(inPeriod))}
+            />
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs font-semibold text-foreground">
+              Cases by Type in Period
+            </p>
+            <CountBars rows={toRows(periodTypeCounts)} />
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs font-semibold text-foreground">
+              Cases Received Over Time
+            </p>
+            <BarTrendChart rows={trend} unit="case" />
+          </div>
+        </div>
+      </SectionCard>
+
+      {/* The standing periods, so the common questions need no dates typed */}
+      <SectionCard title="Cases Received" icon={Inbox}>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {periods.map((period) => (
+            <button
+              key={period.label}
+              type="button"
+              onClick={() => {
+                setFromDate(period.from);
+                setToDate(period.to);
+              }}
+              className="rounded-lg border p-3 text-left transition-colors hover:bg-muted/60 focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <p className="text-sm font-medium">{period.label}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {formatDate(period.from)} &ndash; {formatDate(period.to)}
               </p>
-              <div className="flex items-baseline gap-3">
-                <p className="text-2xl font-bold text-primary">
-                  {inPeriod.length}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {money(claimTotal(inPeriod))}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-            <Metric label="Cases Closed in Period" value={closedInPeriod} />
-            <Metric
-              label="Open Cases"
-              value={open.length}
-              amount={claimTotal(open)}
-            />
-            <Metric
-              label="Total Cases in Period"
-              value={inPeriod.length + closedInPeriod}
-            />
-          </div>
-
-          <Breakdown title="Cases by Type in Period" counts={periodTypeCounts} />
-        </CardContent>
-      </Card>
-
-      {/* Which court the open cases stand before, and where within it */}
-      <Card>
-        <CardContent className="p-4 sm:p-6">
-          <Breakdown title="Case Level" counts={levelCounts} wide />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="p-4 sm:p-6">
-          <Breakdown title="Case Stage" counts={stageCounts} />
-        </CardContent>
-      </Card>
-
-      {/* Cases received, period by period - with the latest one alongside,
-          since the two are read together */}
-      <Card>
-        <CardContent className="p-4 sm:p-6">
-          <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-            <p className="text-xs font-semibold text-foreground">
-              Cases Received
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Last case received{" "}
-              <span className="font-semibold text-primary">
-                {formatDate(lastReceived)}
-              </span>
-            </p>
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {periods.map((period) => (
-              <div key={period.label} className="rounded-lg border p-3">
-                <p className="text-sm font-medium">{period.label}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {formatDate(period.from)} &ndash; {formatDate(period.to)}
-                </p>
-                <p className="mt-2 text-2xl font-bold text-primary">
-                  {period.count}
-                </p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Trend */}
-      <Card>
-        <CardContent className="p-4 sm:p-6">
-          <h3 className="text-sm font-semibold text-primary">
-            Cases Received Over Time
-          </h3>
-          <BarTrendChart rows={trend} unit="case" />
-        </CardContent>
-      </Card>
+              <p className="mt-2 text-2xl font-bold text-primary">
+                {period.count}
+              </p>
+            </button>
+          ))}
+        </div>
+      </SectionCard>
     </div>
   );
 }

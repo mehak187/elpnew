@@ -1,4 +1,6 @@
-import { Fragment, useState } from "react";
+import {
+  Fragment,
+  useState } from "react";
 import { Button } from "@/components/ui/button";
 import FormHeading from "@/components/shared/FormHeading";
 import { Input } from "@/components/ui/input";
@@ -9,7 +11,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+  } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/panels";
 import { cn } from "@/lib/utils";
 import { Rial } from "@/components/shared/Rial";
@@ -20,6 +22,7 @@ import {
   Info,
   ChevronDown,
   ChevronUp,
+  ClipboardList,
 } from "lucide-react";
 import {
   LOAN_BOOKING,
@@ -56,7 +59,7 @@ function FieldLabel({ htmlFor, required, children }) {
   return (
     <Label htmlFor={htmlFor}>
       {children}
-      {required && <span className="text-destructive"> *</span>}
+      {required && <span className="whitespace-nowrap text-destructive">&nbsp;*</span>}
     </Label>
   );
 }
@@ -288,6 +291,7 @@ export default function LoansSection({ adding, onCloseAdd }) {
     return (
       <div className="space-y-6">
         <FormHeading
+          icon={HandCoins}
           title="Add Loan Request"
           note="Ask for a loan and see exactly how it will be repaid."
           onBack={closeAdd}
@@ -295,7 +299,7 @@ export default function LoansSection({ adding, onCloseAdd }) {
 
         {/* Where the loan lands in the accounts. The subcategory is chosen
             first because it decides which questions the form asks. */}
-        <Panel title="Request Details">
+        <Panel title="Request Details" icon={ClipboardList}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
             <div className="space-y-2">
               <FieldLabel htmlFor="loan-type" required>
@@ -391,7 +395,7 @@ export default function LoansSection({ adding, onCloseAdd }) {
         </Panel>
 
         {/* Three figures are asked for; the three under them are counted. */}
-        <Panel title="Loan Information">
+        <Panel title="Loan Information" icon={HandCoins}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
             <AmountField
               id="loan-requested"
@@ -474,7 +478,7 @@ export default function LoansSection({ adding, onCloseAdd }) {
             Cancel
           </Button>
           <Button onClick={save} disabled={!canSave}>
-            Save
+            Submit Request
           </Button>
         </div>
 

@@ -14,10 +14,25 @@ import SummaryStrip from "@/components/shared/SummaryStrip";
 import { INVOICE_STATUS_DOT } from "@/lib/constants";
 import { withRial } from "@/lib/money";
 import { formatDate } from "@/pages/firm/firmData";
-import { clientInvoices } from "../clientMockData";
+import {
+  clientInvoices,
+  caseByFileNo,
+  currentCaseNo,
+} from "../clientMockData";
 
 const money = (amount) =>
   withRial(amount.toLocaleString("en-GB", { minimumFractionDigits: 0 }));
+
+/**
+ * "15/02/2024" - the way dates are written inside a table here.
+ *
+ * The strip above the table spells the month out instead, because one date
+ * standing on its own is read rather than scanned. Inside a row, where dates
+ * are compared down a column, the short form lines up and the long one does
+ * not.
+ */
+const shortDate = (value) =>
+  value ? new Date(value).toLocaleDateString("en-GB") : "-";
 
 /** Anything with money still owed against it. */
 const isOwed = (invoice) =>
@@ -80,6 +95,21 @@ const VIEWS = [
   },
 ];
 
+/**
+ * One labelled line inside a merged cell.
+ *
+ * Four facts in one column only read as four facts if each says what it is;
+ * the label is the quiet half of the pair, so the value carries the weight.
+ */
+function Line({ label, children }) {
+  return (
+    <p className="leading-snug">
+      <span className="text-muted-foreground">{label}: </span>
+      <span className="font-medium">{children}</span>
+    </p>
+  );
+}
+
 /** One fact about an invoice. */
 function Fact({ label, children }) {
   return (
@@ -120,7 +150,7 @@ export default function InvoicesSection() {
       // standing with it rather than in a column of its own.
       key: "invoiceNo",
       header: "Invoice No.",
-      width: "18%",
+      width: "14%",
       exportValue: (row) => row.invoiceNo + " (" + row.status + ")",
       render: (value, row) => (
         <div>
@@ -137,13 +167,69 @@ export default function InvoicesSection() {
         </div>
       ),
     },
-    { key: "date", header: "Invoice Date", width: "14%" },
-    { key: "dueDate", header: "Due Date", width: "13%" },
-    { key: "details", header: "Details", width: "24%" },
+    {
+      // Two dates that are only ever read against each other, so they are
+      // one column: issued then due, one under the other.
+      key: "date",
+      header: "Issue & Due Date",
+      width: "13%",
+      exportValue: (row) => "Issued " + row.date + ", due " + row.dueDate,
+      render: (value, row) => (
+        <div className="text-xs">
+          <Line label="Issue">{shortDate(value)}</Line>
+          <Line label="Due">{shortDate(row.dueDate)}</Line>
+        </div>
+      ),
+    },
+    {
+      // The file the fee was earned on. Everything but the file number is
+      // read off the case itself, so an invoice cannot describe a case
+      // differently from the Cases tab.
+      key: "caseFileNo",
+      header: "Case Details",
+      width: "22%",
+      exportValue: (row) => {
+        const file = caseByFileNo(row.caseFileNo);
+        if (!file) return "-";
+        return [
+          "File " + file.fileNo,
+          file.opponent,
+          file.litigationLevel,
+          currentCaseNo(file),
+        ].join(" - ");
+      },
+      render: (value) => {
+        const file = caseByFileNo(value);
+        if (!file) return <span className="text-muted-foreground">-</span>;
+        return (
+          <div className="text-xs">
+            <Line label="File No.">{file.fileNo}</Line>
+            <Line label="Opponent">{file.opponent}</Line>
+            <Line label="Level">{file.litigationLevel}</Line>
+            <Line label="Case No.">{currentCaseNo(file)}</Line>
+          </div>
+        );
+      },
+    },
+    {
+      // What was charged, and why it was charged - the second answers the
+      // first, so they belong in one column rather than two.
+      key: "details",
+      header: "Invoice Details",
+      width: "22%",
+      exportValue: (row) =>
+        row.details + (row.reason ? " - " + row.reason : ""),
+      render: (value, row) => (
+        <div className="text-xs">
+          <p className="font-medium leading-snug">{value}</p>
+          {row.reason && <Line label="Reason">{row.reason}</Line>}
+        </div>
+      ),
+    },
     {
       key: "amount",
       header: "Invoice Amount",
-      width: "15%",
+      width: "14%",
       render: (value, row) => (
         <div>
           <p className="font-medium">{money(value)}</p>
@@ -158,7 +244,7 @@ export default function InvoicesSection() {
     {
       key: "notes",
       header: "Notes",
-      width: "16%",
+      width: "15%",
       render: (value) =>
         value || <span className="text-muted-foreground">-</span>,
     },
@@ -234,13 +320,14 @@ export default function InvoicesSection() {
             <DialogTitle>{openInvoice?.invoiceNo}</DialogTitle>
             <DialogDescription>
               {openInvoice?.details}
+              {openInvoice?.reason && " - " + openInvoice.reason}
             </DialogDescription>
           </DialogHeader>
 
           {openInvoice && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <Fact label="Invoice Date">{openInvoice.date}</Fact>
-              <Fact label="Due Date">{openInvoice.dueDate}</Fact>
+              <Fact label="Invoice Date">{shortDate(openInvoice.date)}</Fact>
+              <Fact label="Due Date">{shortDate(openInvoice.dueDate)}</Fact>
               <Fact label="Status">
                 <StatusDot status={openInvoice.status} />
               </Fact>
@@ -255,7 +342,7 @@ export default function InvoicesSection() {
 
               <Fact label="Paid">{money(openInvoice.paidAmount)}</Fact>
               <Fact label="Paid On">
-                {openInvoice.paidDate || "-"}
+                {shortDate(openInvoice.paidDate)}
               </Fact>
               {/* Never stored: what is left is the invoice less what has
                   been paid, worked out here. */}

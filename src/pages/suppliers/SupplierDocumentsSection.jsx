@@ -240,7 +240,10 @@ export default function SupplierDocumentsSection({ supplier }) {
       {adding && (
         <Card>
           <CardContent className="space-y-4 p-4 sm:p-6">
-            <FormHeading title="Add Document" />
+            <FormHeading
+              icon={FileText}
+              title="Add Document"
+            />
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
               <div className="space-y-2">

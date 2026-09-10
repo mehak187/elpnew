@@ -1,4 +1,8 @@
-import { Database, Info } from "lucide-react";
+import {
+  Database,
+  Info,
+  CalendarCheck,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -164,6 +168,7 @@ export default function LeaveForm({
     <div className="space-y-6">
       <div className="border-b pb-3">
         <FormHeading
+          icon={CalendarCheck}
           title="Add New Leave"
           note="Submit a new leave request"
         />
@@ -177,7 +182,7 @@ export default function LeaveForm({
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 sm:gap-6">
           <div className="space-y-2">
             <Label htmlFor="leaveCategory">
-              Leave Category<span className="text-destructive"> *</span>
+              Leave Category<span className="whitespace-nowrap text-destructive">&nbsp;*</span>
             </Label>
             <Select value={draft.category} onValueChange={onCategory}>
               <SelectTrigger id="leaveCategory">
@@ -195,7 +200,7 @@ export default function LeaveForm({
 
           <div className="space-y-2">
             <Label htmlFor="leaveType">
-              Leave Type<span className="text-destructive"> *</span>
+              Leave Type<span className="whitespace-nowrap text-destructive">&nbsp;*</span>
             </Label>
             <Select
               value={draft.type}
@@ -265,7 +270,7 @@ export default function LeaveForm({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
           <div className="space-y-2">
             <Label htmlFor="leaveFrom">
-              From Date<span className="text-destructive"> *</span>
+              From Date<span className="whitespace-nowrap text-destructive">&nbsp;*</span>
             </Label>
             <Input
               id="leaveFrom"
@@ -278,7 +283,7 @@ export default function LeaveForm({
 
           <div className="space-y-2">
             <Label htmlFor="leaveTo">
-              To Date<span className="text-destructive"> *</span>
+              To Date<span className="whitespace-nowrap text-destructive">&nbsp;*</span>
             </Label>
             <Input
               id="leaveTo"
@@ -305,7 +310,7 @@ export default function LeaveForm({
 
           <div className="space-y-2">
             <Label htmlFor="leaveYearField">
-              Year<span className="text-destructive"> *</span>
+              Year<span className="whitespace-nowrap text-destructive">&nbsp;*</span>
             </Label>
             <Select
               value={draft.year}
@@ -326,7 +331,7 @@ export default function LeaveForm({
 
           <div className="space-y-2 sm:col-span-2 lg:col-span-4">
             <Label htmlFor="leaveReason">
-              Reason / Notes<span className="text-destructive"> *</span>
+              Reason / Notes<span className="whitespace-nowrap text-destructive">&nbsp;*</span>
             </Label>
             <Textarea
               id="leaveReason"

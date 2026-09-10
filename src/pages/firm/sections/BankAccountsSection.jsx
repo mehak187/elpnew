@@ -68,7 +68,7 @@ function FieldLabel({ htmlFor, children }) {
   return (
     <Label htmlFor={htmlFor}>
       {children}
-      <span className="text-destructive"> *</span>
+      <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
     </Label>
   );
 }
@@ -487,6 +487,7 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
           {/* The rule beside the heading marks where the form starts, and
               the arrow is the way back out of it. */}
           <FormHeading
+            icon={Landmark}
             title="Add New Bank"
             onBack={closeAddBank}
           />

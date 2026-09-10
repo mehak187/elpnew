@@ -25,7 +25,7 @@ function FieldLabel({ htmlFor, optional, children }) {
   return (
     <Label htmlFor={htmlFor}>
       {children}
-      {!optional && <span className="text-destructive"> *</span>}
+      {!optional && <span className="whitespace-nowrap text-destructive">&nbsp;*</span>}
     </Label>
   );
 }

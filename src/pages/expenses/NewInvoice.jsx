@@ -6,7 +6,7 @@ import { ReceiptText, ArrowLeft } from "lucide-react";
 import { useExpenses } from "@/lib/expenses/context";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 import InvoiceForm from "./InvoiceForm";
-import { firstReviewFor, dayOffset } from "./expenseData";
+import { submittedRequest } from "./expenseData";
 
 export default function NewInvoice() {
   const navigate = useNavigate();
@@ -14,29 +14,7 @@ export default function NewInvoice() {
   const { addInvoice } = useExpenses();
 
   const handleSubmit = (invoice) => {
-    // The route is decided by the raiser's own role, taken from their profile
-    // rather than asked for on the form. An admin-raised invoice skips the
-    // accountant entirely.
-    const creatorRole = CURRENT_USER.role === "admin" ? "admin" : "employee";
-
-    addInvoice({
-      ...invoice,
-      creatorRole,
-      createdBy: CURRENT_USER.name,
-      status: firstReviewFor(creatorRole),
-      payments: [],
-      history: [
-        {
-          at: dayOffset(0),
-          by: CURRENT_USER.name,
-          action:
-            creatorRole === "admin"
-              ? "Submitted by Admin - accountant step skipped"
-              : "Submitted",
-          reason: "",
-        },
-      ],
-    });
+    addInvoice(submittedRequest(invoice, CURRENT_USER));
     navigate("/expense-requests");
   };
 
