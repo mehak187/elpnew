@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import BackButton from "@/components/shared/BackButton";
 import FormHeading from "@/components/shared/FormHeading";
+import TabBar from "@/components/shared/TabBar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -51,6 +52,7 @@ import {
   EMPLOYEE_DOCUMENT_TYPES,
 } from "@/lib/constants";
 import FinancialBenefitsSection from "./sections/FinancialBenefitsSection";
+import { BENEFIT_TABS } from "./sections/benefitTabs";
 
 
 import DailyActivitiesSection from "./sections/DailyActivitiesSection";
@@ -322,6 +324,9 @@ export default function EmployeeForm({ self }) {
   const isEditMode = Boolean(record);
 
   const [activeSection, setActiveSection] = useState("information");
+  // Which side of Financial Benefits is open. Held here because the tabs
+  // that choose it sit in the section's heading, which this page draws.
+  const [benefitsTab, setBenefitsTab] = useState("salaries");
   // The section whose add form is open, if any. Held here because the button
   // that opens it lives in the page header, above the section itself.
   const [formData, setFormData] = useState(() => toFormData(record));
@@ -486,7 +491,8 @@ export default function EmployeeForm({ self }) {
               )}
             >
               {!isInfo && !current.ownsHeader && (
-                <div className="mb-6 flex items-center gap-3 border-b pb-3">
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+                  <div className="flex items-center gap-3">
                   <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
                     {current.label}
                   </h2>
@@ -503,6 +509,19 @@ export default function EmployeeForm({ self }) {
                         )}
                       />
                     </span>
+                  )}
+                  </div>
+
+                  {/* A section's tabs belong in the corner of its own
+                      heading: the heading names the section and the tabs
+                      say which side of it is open, which is one statement
+                      rather than two headings in a row. */}
+                  {activeSection === "benefits" && (
+                    <TabBar
+                      options={BENEFIT_TABS}
+                      value={benefitsTab}
+                      onChange={setBenefitsTab}
+                    />
                   )}
                 </div>
               )}
@@ -903,6 +922,7 @@ export default function EmployeeForm({ self }) {
                       <div className="mb-4">
                         <FormHeading
                           title="Add Document"
+                          icon={FileText}
                         />
                       </div>
 
@@ -1096,6 +1116,7 @@ export default function EmployeeForm({ self }) {
                 {activeSection === "benefits" && (
                   <FinancialBenefitsSection
                     employee={formData}
+                    tab={benefitsTab}
                     onSaveSalary={(payslip) =>
                       setFormData((prev) => ({ ...prev, ...payslip }))
                     }

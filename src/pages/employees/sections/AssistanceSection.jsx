@@ -1,4 +1,5 @@
-import { useState } from "react";
+import {
+  useState } from "react";
 import UploadIcon from "@/components/shared/UploadIcon";
 import { Button } from "@/components/ui/button";
 import FormHeading from "@/components/shared/FormHeading";
@@ -10,13 +11,19 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+  } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/panels";
 import Panel from "@/components/shared/Panel";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { Rial } from "@/components/shared/Rial";
-import { FileText, FileImage, Users, HandHeart, FileCheck } from "lucide-react";
+import { FileText,
+  FileImage,
+  Users,
+  HandHeart,
+  FileCheck,
+  ClipboardList,
+} from "lucide-react";
 import { amount, formatDate } from "../loanData";
 import {
   DEFAULT_ASSISTANCE_BOOKING,
@@ -116,12 +123,13 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
     return (
       <div className="space-y-6">
         <FormHeading
+          icon={HandHeart}
           title="Add Assistance Request"
           note="Submit a request for financial assistance. Your request will be reviewed and processed by the office."
           onBack={onCloseAdd}
         />
 
-        <Panel title="Assistance Information">
+        <Panel title="Assistance Information" icon={HandHeart}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
             {/* Where the money comes from is not a choice: assistance is
                 booked to Employee Expenses under Assistance, always. It is
@@ -228,7 +236,7 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
           </div>
         </Panel>
 
-        <Panel title="Request Details">
+        <Panel title="Request Details" icon={ClipboardList}>
           <div className="space-y-2">
             <FieldLabel htmlFor="assistance-notes" required>
               Request Details / Notes

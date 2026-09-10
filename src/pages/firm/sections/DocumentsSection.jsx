@@ -164,6 +164,7 @@ export default function DocumentsSection({ canEdit }) {
         <Card>
           <CardContent className="space-y-4 p-4">
             <FormHeading
+              icon={FileText}
               title="Add Document"
             />
 

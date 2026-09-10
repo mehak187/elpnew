@@ -1,4 +1,8 @@
-import { Database, Info } from "lucide-react";
+import {
+  Database,
+  Info,
+  CalendarCheck,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -164,6 +168,7 @@ export default function LeaveForm({
     <div className="space-y-6">
       <div className="border-b pb-3">
         <FormHeading
+          icon={CalendarCheck}
           title="Add New Leave"
           note="Submit a new leave request"
         />

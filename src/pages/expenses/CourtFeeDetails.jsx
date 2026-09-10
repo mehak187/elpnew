@@ -1,11 +1,21 @@
-import { useParams } from "react-router-dom";
+import {
+  useParams } from "react-router-dom";
 import { useGoBack } from "@/lib/useGoBack";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card,
+  CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import BackButton from "@/components/shared/BackButton";
 import { EmptyState } from "@/components/shared/panels";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, FileText, Briefcase } from "lucide-react";
+import { ArrowLeft,
+  FileText,
+  Briefcase,
+  Users,
+  Scale,
+  Receipt,
+  CreditCard,
+  Activity,
+} from "lucide-react";
 import { useExpenses } from "@/lib/expenses/context";
 import { formatDate, money } from "./expenseData";
 
@@ -109,14 +119,14 @@ export default function CourtFeeDetails() {
       <Card>
         <CardContent className="space-y-4 p-4 sm:p-6">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <Panel title="Case Parties">
+            <Panel title="Case Parties" icon={Users}>
               <div className="grid grid-cols-2 gap-4">
                 <Fact label="Client">{expense.client}</Fact>
                 <Fact label="Opponent">{expense.opponent}</Fact>
               </div>
             </Panel>
 
-            <Panel title="Case Details">
+            <Panel title="Case Details" icon={Scale}>
               <div className="grid grid-cols-2 gap-4">
                 <Fact label="Court">{expense.court}</Fact>
                 <Fact label="Level">{expense.level}</Fact>
@@ -125,7 +135,7 @@ export default function CourtFeeDetails() {
               </div>
             </Panel>
 
-            <Panel title="Expense Details">
+            <Panel title="Expense Details" icon={Receipt}>
               <div className="grid grid-cols-2 gap-4">
                 <Fact label="Court Expense Type">{expense.expenseType}</Fact>
                 <Fact label="Category">{expense.category}</Fact>
@@ -141,7 +151,7 @@ export default function CourtFeeDetails() {
               </div>
             </Panel>
 
-            <Panel title="Payment Details">
+            <Panel title="Payment Details" icon={CreditCard}>
               <p className="mb-3 text-2xl font-bold text-primary">
                 {money(expense.amount)}
               </p>
@@ -158,7 +168,7 @@ export default function CourtFeeDetails() {
             </Panel>
           </div>
 
-          <Panel title="Transaction Tracking">
+          <Panel title="Transaction Tracking" icon={Activity}>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Stamp
                 label="Submitted By:"

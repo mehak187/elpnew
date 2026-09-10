@@ -1,6 +1,8 @@
-import { useState } from "react";
+import {
+  useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card,
+  CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -8,10 +10,14 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+  } from "@/components/ui/select";
 import FormHeading from "@/components/shared/FormHeading";
 import { EmptyState } from "@/components/shared/panels";
-import { Plus, Save, AlertTriangle } from "lucide-react";
+import { Plus,
+  Save,
+  AlertTriangle,
+  UserCog,
+} from "lucide-react";
 import { useFirm } from "@/lib/firm/context";
 import { useLanguage, inLanguage } from "@/lib/language/context";
 import { BRANCH_ROLES, staffFor } from "@/pages/firm/firmData";
@@ -141,6 +147,7 @@ export default function ClientManagementSection() {
         <Card>
           <CardContent className="space-y-6 p-4 sm:p-6">
             <FormHeading
+              icon={UserCog}
               title={mode === "add"
                   ? "Add Client Team"
                   : "Client Team - " +

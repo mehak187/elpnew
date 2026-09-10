@@ -1,9 +1,11 @@
-import { useState } from "react";
+import {
+  useState } from "react";
 import UploadIcon from "@/components/shared/UploadIcon";
 import { Button } from "@/components/ui/button";
 import FormHeading from "@/components/shared/FormHeading";
 import AiSearch from "@/components/shared/AiSearch";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card,
+  CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,7 +15,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+  } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/panels";
 import {
   Plus,
@@ -23,6 +25,7 @@ import {
   Ban,
   FileCheck,
   FileText,
+  Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toCsv, downloadCsv } from "@/lib/csv";
@@ -222,6 +225,7 @@ export default function CircularsSection({ canEdit }) {
           {/* The way back out of the form, in the same place and with the
               same mark as on every page that opens over another. */}
           <FormHeading
+            icon={Megaphone}
             title={editing ? "Correct Circular" : "New Circular"}
           />
 

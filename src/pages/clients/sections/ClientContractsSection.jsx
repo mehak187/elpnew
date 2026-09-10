@@ -1,7 +1,9 @@
-import { useState } from "react";
+import {
+  useState } from "react";
 import UploadIcon from "@/components/shared/UploadIcon";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card,
+  CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +13,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+  } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -19,11 +21,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+  } from "@/components/ui/dialog";
 import DataTable from "@/components/shared/DataTable";
 import SearchableSelect from "@/components/shared/SearchableSelect";
 import FormHeading from "@/components/shared/FormHeading";
-import { FileText, FileCheck, Plus } from "lucide-react";
+import { FileText,
+  FileCheck,
+  Plus,
+  FileSignature,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CONTRACT_TYPES } from "@/lib/constants";
 import { formatDate, dayOffset } from "@/pages/firm/firmData";
@@ -211,6 +217,7 @@ export default function ClientContractsSection() {
       <Card>
         <CardContent className="space-y-4 p-4">
           <FormHeading
+            icon={FileSignature}
             title="Add Contract"
           />
 

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import {
+  useState } from "react";
 import UploadIcon from "@/components/shared/UploadIcon";
 import { Button } from "@/components/ui/button";
 import FormHeading from "@/components/shared/FormHeading";
@@ -10,12 +11,17 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+  } from "@/components/ui/select";
 import SalaryHistory from "./SalaryHistory";
 import { EmptyState } from "@/components/shared/panels";
 import { Rial } from "@/components/shared/Rial";
 import { cn } from "@/lib/utils";
-import { Save, Users, ChevronsRight, FileCheck } from "lucide-react";
+import { Save,
+  Users,
+  ChevronsRight,
+  FileCheck,
+  Wallet,
+} from "lucide-react";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
 import {
   ALLOWANCES,
@@ -291,6 +297,7 @@ export default function SalariesSection({ employee, adding, onCloseAdd, onSave }
         {/* The way back out of the form, in the same place and with the
             same mark as on every page that opens over another. */}
         <FormHeading
+          icon={Wallet}
           title={saveLabel.replace("Save ", "Add ")}
           onBack={closeAdd}
         />

@@ -2,14 +2,15 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/panels";
+import FormHeading from "@/components/shared/FormHeading";
 import { Plus } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { withRial } from "@/lib/money";
 import { commissionsFor, feesFor, commissionOn } from "@/pages/firm/commissionData";
 
 import SalariesSection from "./SalariesSection";
 import LoansSection from "./LoansSection";
 import AssistanceSection from "./AssistanceSection";
+import { BENEFIT_TABS } from "./benefitTabs";
 
 const money = (amount) =>
   withRial(
@@ -18,37 +19,6 @@ const money = (amount) =>
       maximumFractionDigits: 2,
     })
   );
-
-/**
- * The four kinds of money an employee is owed, in the order they are asked
- * about.
- *
- * `add` is the wording of the button that opens that category's form; a
- * category without one has nothing to add here - commission is agreed on the
- * Company Profile, and only read from this side.
- */
-const TABS = [
-  {
-    key: "salaries",
-    label: "Salaries / Allowances",
-    // The employee asks for an advance here; the firm records the salary
-    // run itself, which is what the history below shows.
-    add: "Request Salary Advance",
-  },
-  {
-    key: "loans",
-    label: "Loans",
-    note: "View your loans and repayment details",
-    add: "Add Loan",
-  },
-  {
-    key: "assistance",
-    label: "Assistance",
-    note: "View your financial assistance requests and payments",
-    add: "Add Assistance",
-  },
-  { key: "commission", label: "Commission" },
-];
 
 /** The commission agreed with this employee, read from the firm's records. */
 function CommissionTab({ employee }) {
@@ -129,52 +99,34 @@ function CommissionTab({ employee }) {
  *
  * Salary, loans, assistance and commission were four entries in the menu, all
  * answering the same question - what this person is owed and why. They are one
- * page with four tabs instead, and each tab's Add button opens its form at the
- * top of that tab rather than at the top of the page: the form belongs to the
- * records underneath it, not to the whole employee.
+ * page with four tabs instead. The tabs themselves sit in the corner of the
+ * section's heading, which is where the choice of tab belongs; this page shows
+ * whichever one is open. Each tab's Add button opens its form at the top of
+ * that tab rather than at the top of the page: the form belongs to the records
+ * underneath it, not to the whole employee.
  */
-export default function FinancialBenefitsSection({ employee, onSaveSalary }) {
-  const [tab, setTab] = useState("salaries");
-  // Which tab's form is open, if any. Changing tab closes it: a half-filled
-  // loan form has no business staying open over the assistance records.
+export default function FinancialBenefitsSection({
+  employee,
+  onSaveSalary,
+  tab,
+}) {
+  // Which tab's form is open, if any.
   const [adding, setAdding] = useState(null);
 
-  const current = TABS.find((option) => option.key === tab) || TABS[0];
-
-  const choose = (key) => {
-    setTab(key);
-    setAdding(null);
-  };
+  const current =
+    BENEFIT_TABS.find((option) => option.key === tab) || BENEFIT_TABS[0];
 
   return (
     <div className="space-y-6">
-      <div className="flex w-fit max-w-full flex-wrap gap-1 rounded-lg border p-1">
-        {TABS.map((option) => (
-          <button
-            key={option.key}
-            type="button"
-            onClick={() => choose(option.key)}
-            className={cn(
-              "rounded-md px-3 py-2 text-sm font-medium transition-colors",
-              tab === option.key
-                ? "bg-secondary text-secondary-foreground"
-                : "text-muted-foreground hover:bg-muted/50"
-            )}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-
       {/* The heading of the category, and the way to add to it, at the start
-          of that category rather than at the top of the page. */}
+          of that category rather than at the top of the page. The icon is
+          what says this names the tab and not the section above it. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-lg font-bold text-primary">{current.label}</p>
-          {current.note && (
-            <p className="text-sm text-muted-foreground">{current.note}</p>
-          )}
-        </div>
+        <FormHeading
+          title={current.label}
+          note={current.note}
+          icon={current.icon}
+        />
         {current.add && (
           <Button
             type="button"
