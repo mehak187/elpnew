@@ -101,7 +101,7 @@ function Amount({ id, label, required, value, onChange, readOnly, highlight }) {
     <div className="space-y-2">
       <Label htmlFor={id}>
         {label}
-        {required && <span className="text-destructive"> *</span>}
+        {required && <span className="whitespace-nowrap text-destructive">&nbsp;*</span>}
       </Label>
       <div className="relative">
         <Input
@@ -225,12 +225,13 @@ export default function SalariesSection({ employee, adding, onCloseAdd, onSave }
   // own figure; everything else is a month of the salary above.
   const entersOwnAmount = entersAmount(payment.subcategory);
   const showsPeriod = hasPeriod(payment.subcategory);
-  // The button names what is being saved. A bonus is not a salary, and saying
-  // so is the last chance to notice the wrong subcategory before it is booked.
-  const saveLabel =
+  // What is being asked for, so the heading of the form still names it -
+  // a bonus is not a salary, and saying so is the last chance to notice the
+  // wrong subcategory before it is sent.
+  const requestLabel =
     entersOwnAmount && !showsPeriod
-      ? "Save " + payment.subcategory
-      : "Save Salary / Bonus";
+      ? payment.subcategory
+      : "Salary / Bonus";
 
   const savePayslip = () => {
     if (!(Number(payslip.basic) > 0)) return;
@@ -298,7 +299,7 @@ export default function SalariesSection({ employee, adding, onCloseAdd, onSave }
             same mark as on every page that opens over another. */}
         <FormHeading
           icon={Wallet}
-          title={saveLabel.replace("Save ", "Add ")}
+          title={"Add " + requestLabel}
           onBack={closeAdd}
         />
 
@@ -549,7 +550,7 @@ export default function SalariesSection({ employee, adding, onCloseAdd, onSave }
             Cancel
           </Button>
           <Button onClick={savePayment} disabled={!canPay}>
-            {saveLabel}
+            Submit Request
           </Button>
         </div>
       </div>
@@ -641,7 +642,7 @@ export default function SalariesSection({ employee, adding, onCloseAdd, onSave }
             disabled={!(Number(payslip.basic) > 0)}
           >
             <Save className="mr-2 h-4 w-4" />
-            Save Salary
+            Submit Request
           </Button>
         </div>
       </div>

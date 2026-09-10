@@ -1,35 +1,18 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import DataTable from "@/components/shared/DataTable";
-import BackButton from "@/components/shared/BackButton";
-import {
-  Plus,
-  Info,
-  Users,
-  UserCog,
-  Scale,
-  UserRound,
-  Calculator,
-} from "lucide-react";
+import FormHeading from "@/components/shared/FormHeading";
+import { Plus, Percent } from "lucide-react";
 import { withRial } from "@/lib/money";
-import { useClients } from "@/lib/clients/context";
-import { clientLinkedCases } from "@/pages/clients/clientMockData";
 import {
   commissionRecords,
   feesFor,
   commissionOn,
+  monthAndYear,
+  recurrenceOf,
+  nextCommissionNo,
 } from "../commissionData";
-import { employeeRecords } from "@/pages/employees/employeeData";
+import CommissionForm from "./CommissionForm";
 
 const moneyValue = (amount) =>
   Number(amount || 0).toLocaleString("en-GB", {
@@ -38,73 +21,6 @@ const moneyValue = (amount) =>
   });
 
 const money = (amount) => withRial(moneyValue(amount));
-
-/**
- * Who a commission can be paid to, and which staff each group holds.
- *
- * The group is asked for first so the person list is a handful of names rather
- * than the whole firm - `role` is the field on the employee record that decides
- * who belongs to it.
- */
-const CLASSIFICATIONS = [
-  { key: "Partners", role: "Partner", icon: Users },
-  { key: "Consultants", role: "Advisor", icon: UserCog },
-  { key: "Lawyers", role: "Lawyer", icon: Scale },
-  { key: "Administrators", role: "Administrative", icon: UserRound },
-  { key: "Accountants", role: "Accountant", icon: Calculator },
-];
-
-const peopleIn = (classification) => {
-  const group = CLASSIFICATIONS.find((c) => c.key === classification);
-  if (!group) return [];
-  return employeeRecords.filter((e) => e.role === group.role);
-};
-
-/**
- * A general commission runs on everything the client pays; a specific one is
- * agreed for a single case file, so that file has to be named.
- */
-const COMMISSION_TYPES = ["General", "Specific"];
-
-/**
- * Whether the arrangement stands until it is ended, or applies once.
- */
-const RECURRENCES = ["Recurring", "One-time"];
-
-/** The next number in the year's run: COM-2026-004. */
-function nextCommissionNo(records) {
-  const year = new Date().getFullYear();
-  const prefix = "COM-" + year + "-";
-  const highest = records
-    .filter((r) => r.commissionNo.startsWith(prefix))
-    .reduce(
-      (max, r) => Math.max(max, Number(r.commissionNo.slice(prefix.length))),
-      0
-    );
-  return prefix + String(highest + 1).padStart(3, "0");
-}
-
-const emptyDraft = {
-  classification: "",
-  paidTo: "",
-  clientNo: "",
-  type: "General",
-  rate: "",
-  recurrence: "Recurring",
-  caseFileNo: "",
-  effectiveFrom: "",
-  effectiveTo: "",
-};
-
-/** A note the form makes about itself. */
-function Notice({ children }) {
-  return (
-    <p className="flex items-start gap-2 text-xs text-primary">
-      <Info className="mt-0.5 h-4 w-4 shrink-0" />
-      <span>{children}</span>
-    </p>
-  );
-}
 
 /**
  * Commission on referred work.
@@ -116,56 +32,21 @@ function Notice({ children }) {
  * arrived.
  */
 export default function CommissionSection() {
-  const { clients } = useClients();
-
   const [records, setRecords] = useState(commissionRecords);
   const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState(emptyDraft);
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const setField = (name, value) =>
-    setDraft((prev) => ({ ...prev, [name]: value }));
+  const closeForm = () => setAdding(false);
 
-  /** Changing the group empties the person, who may not be in the new one. */
-  const chooseClassification = (value) =>
-    setDraft((prev) => ({ ...prev, classification: value, paidTo: "" }));
-
-  /** A case file only belongs to a specific arrangement. */
-  const chooseType = (value) =>
-    setDraft((prev) => ({
-      ...prev,
-      type: value,
-      caseFileNo: value === "Specific" ? prev.caseFileNo : "",
-    }));
-
-  const isSpecific = draft.type === "Specific";
-
-  const canSave =
-    draft.classification &&
-    draft.paidTo &&
-    draft.clientNo &&
-    draft.type &&
-    Number(draft.rate) > 0 &&
-    draft.recurrence &&
-    draft.effectiveFrom &&
-    (!isSpecific || draft.caseFileNo);
-
-  const closeForm = () => {
-    setAdding(false);
-    setDraft(emptyDraft);
-  };
-
-  const save = () => {
-    const client = clients.find((c) => c.clientNo === draft.clientNo);
+  /** The form settles what was agreed; the list gives it its number. */
+  const save = (record) => {
     setRecords((prev) => [
       ...prev,
       {
-        ...draft,
+        ...record,
         id: prev.reduce((max, r) => Math.max(max, r.id), 0) + 1,
         commissionNo: nextCommissionNo(prev),
-        clientName: client?.clientName || "",
-        rate: Number(draft.rate),
       },
     ]);
     closeForm();
@@ -181,7 +62,7 @@ export default function CommissionSection() {
     { key: "clientName", header: "Client", width: "17%" },
     {
       key: "paidTo",
-      header: "Paid To",
+      header: "Beneficiary",
       width: "16%",
       exportValue: (row) => row.paidTo + " (" + row.classification + ")",
       render: (value, row) => (
@@ -192,6 +73,14 @@ export default function CommissionSection() {
       ),
     },
     {
+      // The month it started, read off the date it takes effect.
+      key: "monthYear",
+      header: "Month & Year",
+      width: "10%",
+      exportValue: monthAndYear,
+      render: (value, row) => monthAndYear(row),
+    },
+    {
       key: "type",
       header: "Type & Recurrence",
       width: "15%",
@@ -199,7 +88,7 @@ export default function CommissionSection() {
         [
           row.type,
           row.caseFileNo ? "Case file " + row.caseFileNo : "",
-          row.recurrence,
+          recurrenceOf(row),
         ]
           .filter(Boolean)
           .join(" - "),
@@ -209,7 +98,9 @@ export default function CommissionSection() {
             {value}
             {row.caseFileNo && " · Case file " + row.caseFileNo}
           </p>
-          <p className="text-xs text-muted-foreground">{row.recurrence}</p>
+          <p className="text-xs text-muted-foreground">
+            {recurrenceOf(row)}
+          </p>
         </div>
       ),
     },
@@ -237,16 +128,16 @@ export default function CommissionSection() {
       ),
     },
     {
-      key: "effectiveFrom",
-      header: "Effective",
+      key: "periodFrom",
+      header: "Period",
       width: "17%",
       exportValue: (row) =>
-        row.effectiveFrom + (row.effectiveTo ? " to " + row.effectiveTo : ""),
+        row.periodFrom + (row.periodTo ? " to " + row.periodTo : ""),
       render: (value, row) => (
         <div>
           <p>{value}</p>
           <p className="text-xs text-muted-foreground">
-            {row.effectiveTo ? "to " + row.effectiveTo : "Open ended"}
+            {row.periodTo ? "to " + row.periodTo : "Open ended"}
           </p>
         </div>
       ),
@@ -258,13 +149,12 @@ export default function CommissionSection() {
       {/* The section's own heading, so the way to add to it sits on the
           same line rather than costing a row of its own. */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-        <div className="flex items-center gap-3">
-          {/* The form opened above the list, so back means close it. */}
-          {adding && <BackButton onBack={closeForm} />}
-          <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
-            {adding ? "Add Commission" : "Commission Records"}
-          </h2>
-        </div>
+        {/* The form opened above the list, so back means close it. */}
+        <FormHeading
+          title={adding ? "Add Commission" : "Commission Records"}
+          icon={Percent}
+          onBack={adding ? closeForm : undefined}
+        />
         <Button type="button" onClick={() => setAdding(true)} disabled={adding}>
           <Plus className="mr-1.5 h-4 w-4" />
           Add Commission
@@ -272,235 +162,7 @@ export default function CommissionSection() {
       </div>
 
       {adding && (
-        <Card>
-          <CardContent className="space-y-6 p-4 sm:p-6">
-            {/* Four to a row rather than six: at six the two long labels wrap
-                on to a second line and the fields stop lining up. */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-              {/* The group is asked for first, so the person list below it is
-                  a handful of names rather than the whole firm. */}
-              <div className="space-y-2">
-                <Label htmlFor="classification">
-                  Classification of Paid To
-                  <span className="text-destructive"> *</span>
-                </Label>
-                <Select
-                  value={draft.classification}
-                  onValueChange={chooseClassification}
-                >
-                  <SelectTrigger id="classification">
-                    <SelectValue placeholder="Select Classification" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CLASSIFICATIONS.map((group) => {
-                      const Icon = group.icon;
-                      return (
-                        <SelectItem key={group.key} value={group.key}>
-                          <span className="inline-flex items-center gap-2">
-                            <Icon className="h-4 w-4 opacity-70" />
-                            {group.key}
-                          </span>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="paidTo">
-                  Paid To<span className="text-destructive"> *</span>
-                </Label>
-                <Select
-                  value={draft.paidTo}
-                  onValueChange={(value) => setField("paidTo", value)}
-                  disabled={!draft.classification}
-                >
-                  <SelectTrigger id="paidTo">
-                    <SelectValue
-                      placeholder={
-                        draft.classification
-                          ? "Select Person"
-                          : "Select a classification first"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {peopleIn(draft.classification).map((person) => (
-                      <SelectItem key={person.id} value={person.name}>
-                        {person.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="commissionClient">
-                  Client<span className="text-destructive"> *</span>
-                </Label>
-                <Select
-                  value={draft.clientNo}
-                  onValueChange={(value) => setField("clientNo", value)}
-                >
-                  <SelectTrigger id="commissionClient">
-                    <SelectValue placeholder="Select Client" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.map((client) => (
-                      <SelectItem key={client.clientNo} value={client.clientNo}>
-                        {client.clientName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="commissionType">
-                  Commission Type<span className="text-destructive"> *</span>
-                </Label>
-                <Select value={draft.type} onValueChange={chooseType}>
-                  <SelectTrigger id="commissionType">
-                    <SelectValue placeholder="Select Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {COMMISSION_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="commissionRate">
-                  Commission Percentage
-                  <span className="text-destructive"> *</span>
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="commissionRate"
-                    inputMode="decimal"
-                    value={draft.rate}
-                    onChange={(e) =>
-                      setField("rate", e.target.value.replace(/[^\d.]/g, ""))
-                    }
-                    placeholder="0"
-                    className="pr-8"
-                  />
-                  <span
-                    aria-hidden="true"
-                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 select-none text-sm text-muted-foreground"
-                  >
-                    %
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="recurrence">
-                  Recurrence<span className="text-destructive"> *</span>
-                </Label>
-                <Select
-                  value={draft.recurrence}
-                  onValueChange={(value) => setField("recurrence", value)}
-                >
-                  <SelectTrigger id="recurrence">
-                    <SelectValue placeholder="Select Recurrence" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {RECURRENCES.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* What the arrangement runs on, and for how long */}
-            <div className="grid grid-cols-1 gap-4 rounded-lg border sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-l-lg bg-secondary/50 p-4">
-                <Notice>
-                  If you select &ldquo;Specific&rdquo; commission type, please
-                  choose the case file.
-                </Notice>
-              </div>
-
-              <div className="space-y-2 p-4">
-                <Label htmlFor="caseFileNo">Case File Number</Label>
-                <Select
-                  value={draft.caseFileNo}
-                  onValueChange={(value) => setField("caseFileNo", value)}
-                  disabled={!isSpecific}
-                >
-                  <SelectTrigger id="caseFileNo">
-                    <SelectValue placeholder="Select Case File" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clientLinkedCases.map((legalCase) => (
-                      <SelectItem key={legalCase.id} value={legalCase.fileNo}>
-                        {legalCase.fileNo} &middot; {legalCase.opponent}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2 p-4">
-                <Label htmlFor="effectiveFrom">
-                  Effective From<span className="text-destructive"> *</span>
-                </Label>
-                <Input
-                  id="effectiveFrom"
-                  type="date"
-                  value={draft.effectiveFrom}
-                  max={draft.effectiveTo || undefined}
-                  onChange={(e) => setField("effectiveFrom", e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2 p-4">
-                <Label htmlFor="effectiveTo">Effective To</Label>
-                <Input
-                  id="effectiveTo"
-                  type="date"
-                  value={draft.effectiveTo}
-                  min={draft.effectiveFrom || undefined}
-                  onChange={(e) => setField("effectiveTo", e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Leave empty for an open-ended arrangement
-                </p>
-              </div>
-            </div>
-
-            <div className="rounded-lg bg-secondary/50 p-4">
-              <Notice>
-                Commission will be calculated automatically when legal fees are
-                collected:
-                {/* The formula on its own line: it is the thing being said,
-                    not an aside to the sentence above it. */}
-                <span className="mt-1 block font-semibold">
-                  Legal Fees (Before VAT) &times; Commission Percentage =
-                  Commission Amount
-                </span>
-              </Notice>
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={closeForm}>
-                Cancel
-              </Button>
-              <Button type="button" onClick={save} disabled={!canSave}>
-                Save Commission
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <CommissionForm onCancel={closeForm} onSave={save} />
       )}
 
       {/* The list stays under the form rather than making way for it: a

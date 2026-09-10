@@ -41,5 +41,6 @@ export const BENEFIT_TABS = [
     label: "Commission",
     icon: Percent,
     note: "Commission agreed with you on collected legal fees",
+    add: "Add Commission",
   },
 ];

@@ -5,7 +5,16 @@ import { EmptyState } from "@/components/shared/panels";
 import FormHeading from "@/components/shared/FormHeading";
 import { Plus } from "lucide-react";
 import { withRial } from "@/lib/money";
-import { commissionsFor, feesFor, commissionOn } from "@/pages/firm/commissionData";
+import {
+  commissionRecords,
+  commissionsFor,
+  feesFor,
+  commissionOn,
+  monthAndYear,
+  recurrenceOf,
+  nextCommissionNo,
+} from "@/pages/firm/commissionData";
+import CommissionForm from "@/pages/firm/sections/CommissionForm";
 
 import SalariesSection from "./SalariesSection";
 import LoansSection from "./LoansSection";
@@ -20,77 +29,117 @@ const money = (amount) =>
     })
   );
 
-/** The commission agreed with this employee, read from the firm's records. */
-function CommissionTab({ employee }) {
-  const records = commissionsFor(employee.name);
+/**
+ * The commission agreed with this employee, read from the firm's records.
+ *
+ * The same form the firm's own commission page uses opens above the list -
+ * with one difference: the person it is paid to is this employee, so the two
+ * questions about who it is for are answered before it opens.
+ */
+function CommissionTab({ employee, adding, onCloseAdd }) {
+  const [records, setRecords] = useState(() => commissionsFor(employee.name));
 
-  if (records.length === 0) {
-    return (
-      <EmptyState>
-        No commission has been agreed with this employee.
-      </EmptyState>
-    );
-  }
+  /** The form settles what was agreed; the list gives it its number. */
+  const save = (record) => {
+    setRecords((prev) => [
+      ...prev,
+      {
+        ...record,
+        id: prev.reduce((max, r) => Math.max(max, r.id), 0) + 1,
+        commissionNo: nextCommissionNo(commissionRecords.concat(prev)),
+      },
+    ]);
+    onCloseAdd();
+  };
 
   return (
-    <Card>
-      <CardContent className="overflow-x-auto p-0">
-        <table className="w-full min-w-[880px] text-sm">
-          <thead>
-            <tr className="border-b bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <th className="p-3 font-semibold">Commission No.</th>
-              <th className="p-3 font-semibold">Client</th>
-              <th className="p-3 font-semibold">Type &amp; Recurrence</th>
-              <th className="p-3 font-semibold">
-                Legal Fees (Before VAT) &amp; Commission
-              </th>
-              <th className="p-3 font-semibold">Effective</th>
-            </tr>
-          </thead>
-          <tbody>
-            {records.map((record) => (
-              <tr
-                key={record.id}
-                className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"
-              >
-                <td className="whitespace-nowrap p-3 font-medium">
-                  {record.commissionNo}
-                </td>
-                <td className="p-3">{record.clientName}</td>
-                <td className="p-3">
-                  <span className="block">
-                    {record.type}
-                    {record.caseFileNo && " · Case file " + record.caseFileNo}
-                  </span>
-                  <span className="block text-xs text-muted-foreground">
-                    {record.recurrence}
-                  </span>
-                </td>
-                <td className="p-3">
-                  <span className="block font-medium">
-                    {money(feesFor(record))}
-                  </span>
-                  <span className="block text-xs text-muted-foreground">
-                    {record.rate}%
-                  </span>
-                  <span className="block text-xs font-medium text-green-700">
-                    Commission: {money(commissionOn(record))}
-                  </span>
-                </td>
-                <td className="p-3">
-                  <span className="block">{record.effectiveFrom}</span>
-                  <span className="block text-xs text-muted-foreground">
-                    {record.effectiveTo
-                      ? "to " + record.effectiveTo
-                      : "Open ended"}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      {adding && (
+        <CommissionForm
+          employee={employee}
+          onCancel={onCloseAdd}
+          onSave={save}
+        />
+      )}
+
+      {records.length === 0 ? (
+        <EmptyState>
+          No commission has been agreed with this employee.
+        </EmptyState>
+      ) : (
+        <Card>
+          <CardContent className="overflow-x-auto p-0">
+            <table className="w-full min-w-[1080px] text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                  <th className="p-3 font-semibold">Commission No.</th>
+                  <th className="p-3 font-semibold">Client</th>
+                  <th className="p-3 font-semibold">Beneficiary</th>
+                  <th className="whitespace-nowrap p-3 font-semibold">
+                    Month &amp; Year
+                  </th>
+                  <th className="p-3 font-semibold">Type &amp; Recurrence</th>
+                  <th className="p-3 font-semibold">
+                    Legal Fees (Before VAT) &amp; Commission
+                  </th>
+                  <th className="p-3 font-semibold">Period</th>
+                </tr>
+              </thead>
+              <tbody>
+                {records.map((record) => (
+                  <tr
+                    key={record.id}
+                    className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"
+                  >
+                    <td className="whitespace-nowrap p-3 font-medium">
+                      {record.commissionNo}
+                    </td>
+                    <td className="p-3">{record.clientName}</td>
+                    <td className="p-3">
+                      <span className="block">{record.paidTo}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {record.classification}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap p-3">
+                      {monthAndYear(record)}
+                    </td>
+                    <td className="p-3">
+                      <span className="block">
+                        {record.type}
+                        {record.caseFileNo && " · Case file " + record.caseFileNo}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        {recurrenceOf(record)}
+                      </span>
+                    </td>
+                    <td className="p-3">
+                      <span className="block font-medium">
+                        {money(feesFor(record))}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        {record.rate}%
+                      </span>
+                      <span className="block text-xs font-medium text-green-700">
+                        Commission: {money(commissionOn(record))}
+                      </span>
+                    </td>
+                    <td className="p-3">
+                      <span className="block">{record.periodFrom}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {record.periodTo
+                          ? "to " + record.periodTo
+                          : "Open ended"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }
 
@@ -162,7 +211,13 @@ export default function FinancialBenefitsSection({
         />
       )}
 
-      {tab === "commission" && <CommissionTab employee={employee} />}
+      {tab === "commission" && (
+        <CommissionTab
+          employee={employee}
+          adding={adding === "commission"}
+          onCloseAdd={() => setAdding(null)}
+        />
+      )}
     </div>
   );
 }

@@ -59,7 +59,7 @@ function FieldLabel({ htmlFor, required, children }) {
   return (
     <Label htmlFor={htmlFor}>
       {children}
-      {required && <span className="text-destructive"> *</span>}
+      {required && <span className="whitespace-nowrap text-destructive">&nbsp;*</span>}
     </Label>
   );
 }
@@ -478,7 +478,7 @@ export default function LoansSection({ adding, onCloseAdd }) {
             Cancel
           </Button>
           <Button onClick={save} disabled={!canSave}>
-            Save
+            Submit Request
           </Button>
         </div>
 

@@ -76,7 +76,7 @@ function FieldLabel({ htmlFor, children }) {
   return (
     <Label htmlFor={htmlFor}>
       {children}
-      <span className="text-destructive"> *</span>
+      <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
     </Label>
   );
 }

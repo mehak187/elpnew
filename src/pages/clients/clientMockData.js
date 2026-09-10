@@ -112,10 +112,10 @@ export const clientLinkedCases = [
 
 export const clientInvoices = [
   { id: 1, clientNo: "1", date: "2024-02-15", invoiceNo: "INV-2024-011", dueDate: "2024-03-16", details: "Retainer - Q1 2024", legalFees: 4500, vat: 225, amount: 4725, paidAmount: 4725, paidDate: "2024-03-10", status: "Paid", notes: "" },
-  { id: 2, clientNo: "1", date: "2024-05-02", invoiceNo: "INV-2024-042", dueDate: "2024-06-01", details: "Court fees - file 21", legalFees: 1200, vat: 60, amount: 1260, paidAmount: 600, paidDate: "", status: "Partially Paid", notes: "Balance agreed for June." },
+  { id: 2, clientNo: "1", date: "2024-05-02", invoiceNo: "INV-2024-042", dueDate: "2024-06-01", details: "Court fees - file 21", caseFileNo: "21", legalFees: 1200, vat: 60, amount: 1260, paidAmount: 600, paidDate: "", status: "Partially Paid", notes: "Balance agreed for June." },
   { id: 3, clientNo: "1", date: "2024-07-08", invoiceNo: "INV-2024-071", dueDate: "2024-08-07", details: "Advisory retainer - Q2", legalFees: 2000, vat: 100, amount: 2100, paidAmount: 2100, paidDate: "2024-07-29", status: "Paid", notes: "" },
   { id: 4, clientNo: "1", date: "2024-08-19", invoiceNo: "INV-2024-088", dueDate: "2024-09-18", details: "Retainer - Q3 2024", legalFees: 4500, vat: 225, amount: 4725, paidAmount: 0, paidDate: "", status: "Unpaid", notes: "" },
-  { id: 5, clientNo: "1", date: "2024-10-01", invoiceNo: "INV-2024-102", dueDate: "2024-10-31", details: "Appeal filing - file 34", legalFees: 2750, vat: 137.5, amount: 2887.5, paidAmount: 0, paidDate: "", status: "Overdue", notes: "Reminder sent twice." },
+  { id: 5, clientNo: "1", date: "2024-10-01", invoiceNo: "INV-2024-102", dueDate: "2024-10-31", details: "Appeal filing - file 34", caseFileNo: "34", legalFees: 2750, vat: 137.5, amount: 2887.5, paidAmount: 0, paidDate: "", status: "Overdue", notes: "Reminder sent twice." },
   { id: 6, clientNo: "1", date: "2024-11-11", invoiceNo: "INV-2024-119", dueDate: "2024-12-11", details: "Duplicate issue", legalFees: 800, vat: 40, amount: 840, paidAmount: 0, paidDate: "", status: "Cancelled", notes: "Raised in error." },
 ];
 

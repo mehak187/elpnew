@@ -157,7 +157,7 @@ export default function ClientManagementSection() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 sm:gap-6">
               <div className="space-y-2">
                 <Label htmlFor="managementBranch">
-                  Branch Name<span className="text-destructive"> *</span>
+                  Branch Name<span className="whitespace-nowrap text-destructive">&nbsp;*</span>
                 </Label>
                 <Select
                   value={branchId}
@@ -188,7 +188,7 @@ export default function ClientManagementSection() {
                   <div key={role} className="space-y-2">
                     <Label htmlFor={fieldId}>
                       {role}
-                      <span className="text-destructive"> *</span>
+                      <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
                     </Label>
                     <Select
                       value={draft[role] || ""}

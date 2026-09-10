@@ -50,7 +50,7 @@ function FieldLabel({ htmlFor, required, children }) {
   return (
     <Label htmlFor={htmlFor}>
       {children}
-      {required && <span className="text-destructive"> *</span>}
+      {required && <span className="whitespace-nowrap text-destructive">&nbsp;*</span>}
     </Label>
   );
 }
@@ -260,7 +260,7 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
             Cancel
           </Button>
           <Button type="button" onClick={saveRecord} disabled={!canSave}>
-            Submit Assistance Request
+            Submit Request
           </Button>
         </div>
       </div>
