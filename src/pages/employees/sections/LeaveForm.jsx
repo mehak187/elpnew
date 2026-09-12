@@ -1,8 +1,4 @@
-import {
-  Database,
-  Info,
-  CalendarCheck,
-} from "lucide-react";
+import { Info, CalendarCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -179,12 +175,42 @@ export default function LeaveForm({
         title="Leave Category and Type"
         note="Select the leave category and type to see your remaining balance"
       >
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 sm:gap-6">
+        {/* The year first: a balance belongs to a year, so it is chosen
+            before the leave it will be counted against. */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="leaveYearField">
+              Year<span className="whitespace-nowrap text-destructive">&nbsp;*</span>
+            </Label>
+            <Select
+              value={draft.year}
+              onValueChange={(value) => onChange("year", value)}
+            >
+              <SelectTrigger id="leaveYearField">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {years.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="leaveCategory">
               Leave Category<span className="whitespace-nowrap text-destructive">&nbsp;*</span>
             </Label>
-            <Select value={draft.category} onValueChange={onCategory}>
+            {/* Empty values are ignored: inside the employee's form Radix keeps a
+                hidden native select, which reports "" whenever the list it was
+                built from changes - and would wipe a choice just made. Nobody
+                can pick "nothing" from the list itself. */}
+            <Select
+              value={draft.category}
+              onValueChange={(value) => value && onCategory(value)}
+            >
               <SelectTrigger id="leaveCategory">
                 <SelectValue placeholder="Select Leave Category" />
               </SelectTrigger>
@@ -204,7 +230,7 @@ export default function LeaveForm({
             </Label>
             <Select
               value={draft.type}
-              onValueChange={(value) => onChange("type", value)}
+              onValueChange={(value) => value && onChange("type", value)}
               disabled={!draft.category}
             >
               <SelectTrigger id="leaveType">
@@ -229,27 +255,41 @@ export default function LeaveForm({
             </Select>
           </div>
 
-          {/* Counted off the approved requests, never stored: a balance held
-              as a number is a second copy of the leave already taken. */}
-          <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-secondary p-4">
-            <span className="shrink-0 rounded-lg bg-white p-2 text-primary">
-              <Database className="h-5 w-5" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">Remaining Balance</p>
-              <p className="text-2xl font-bold text-primary">
-                {!draft.type
-                  ? "-"
+          {/* What is left of the chosen type this year: the entitlement less
+              the approved days already taken - 30 less 16 taken is 14. Counted
+              off the approved requests every time, never stored: a balance
+              held as a number is a second copy of the leave already taken.
+              A type whose length depends on the case (Sick, Bereavement,
+              Widowhood) has no count to take away from, so its entitlement is
+              shown as it stands. */}
+          <div className="space-y-2">
+            <Label htmlFor="leaveBalance">Remaining Leave Balance</Label>
+            <Input
+              id="leaveBalance"
+              readOnly
+              tabIndex={-1}
+              className="cursor-default bg-muted font-semibold text-primary"
+              placeholder="Auto calculated"
+              value={
+                !draft.type
+                  ? ""
                   : balance
-                    ? balance.remaining + " Days"
-                    : entitlement}
+                    ? balance.remaining +
+                      (balance.remaining === 1 ? " Day" : " Days")
+                    : entitlement
+              }
+            />
+            {draft.type && (
+              <p className="text-xs text-muted-foreground">
+                {balance
+                  ? balance.allowance +
+                    " days entitlement - " +
+                    balance.used +
+                    " taken in " +
+                    draft.year
+                  : "Settled when the request is decided"}
               </p>
-              <p className="truncate text-xs text-muted-foreground">
-                {draft.type
-                  ? "(" + draft.type + " - " + draft.year + ")"
-                  : "Choose a leave type"}
-              </p>
-            </div>
+            )}
           </div>
         </div>
 
@@ -267,7 +307,7 @@ export default function LeaveForm({
         title="Leave Period and Details"
         note="Specify the leave period and provide additional details"
       >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
           <div className="space-y-2">
             <Label htmlFor="leaveFrom">
               From Date<span className="whitespace-nowrap text-destructive">&nbsp;*</span>
@@ -308,28 +348,7 @@ export default function LeaveForm({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="leaveYearField">
-              Year<span className="whitespace-nowrap text-destructive">&nbsp;*</span>
-            </Label>
-            <Select
-              value={draft.year}
-              onValueChange={(value) => onChange("year", value)}
-            >
-              <SelectTrigger id="leaveYearField">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {years.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2 sm:col-span-2 lg:col-span-4">
+          <div className="space-y-2 sm:col-span-3">
             <Label htmlFor="leaveReason">
               Reason / Notes<span className="whitespace-nowrap text-destructive">&nbsp;*</span>
             </Label>
@@ -397,7 +416,9 @@ export default function LeaveForm({
         )}
 
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <Button variant="outline" onClick={onCancel}>
+          {/* type="button": the leave form sits inside the employee record's
+              own form, and a plain button there would submit the whole record. */}
+          <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
           <Button type="button" onClick={onSubmit} disabled={!canSave}>

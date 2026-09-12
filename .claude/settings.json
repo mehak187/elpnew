@@ -7,7 +7,11 @@
       "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-firm-docs.cjs\")",
       "PowerShell(npx eslint src/pages/firm/sections/CircularsSection.jsx)",
       "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-circ-comm.cjs\")",
-      "PowerShell(try { \"dev server: \" + \\(Invoke-WebRequest -Uri \"http://localhost:5173/\" -UseBasicParsing -TimeoutSec 5\\).StatusCode } catch { \"dev server DOWN: \" + $_.Exception.Message }; git -C \"D:\\\\Other P\\\\ELP New\" status --short src/pages/employees/EmployeeForm.jsx; git -C \"D:\\\\Other P\\\\ELP New\" branch --show-current)"
+      "PowerShell(try { \"dev server: \" + \\(Invoke-WebRequest -Uri \"http://localhost:5173/\" -UseBasicParsing -TimeoutSec 5\\).StatusCode } catch { \"dev server DOWN: \" + $_.Exception.Message }; git -C \"D:\\\\Other P\\\\ELP New\" status --short src/pages/employees/EmployeeForm.jsx; git -C \"D:\\\\Other P\\\\ELP New\" branch --show-current)",
+      "PowerShell(npx eslint src/pages/employees/sections/CircularsSection.jsx)",
+      "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-my-circulars.cjs\")",
+      "PowerShell(npx eslint src/pages/employees/sections/LeaveForm.jsx)",
+      "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-leave-balance.cjs\")"
     ]
   }
 }
