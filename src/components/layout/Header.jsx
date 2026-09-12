@@ -18,6 +18,7 @@ import {
   UserCircle,
   Archive,
   Menu,
+  Home,
 } from "lucide-react";
 import {
   NavigationMenu,
@@ -94,6 +95,13 @@ const navSections = [
         key: "suppliers",
         icon: Truck,
         description: "Supplier directory and tax numbers",
+      },
+      {
+        name: "Leases",
+        path: "/leases",
+        key: "leases",
+        icon: Home,
+        description: "Office and property lease contracts",
       },
       {
         name: "Company Profile",

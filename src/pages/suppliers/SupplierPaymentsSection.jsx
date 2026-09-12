@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import DataTable from "@/components/shared/DataTable";
 import { Plus } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useExpenses } from "@/lib/expenses/context";
 import { useSuppliers } from "@/lib/suppliers/context";
 import {
@@ -22,18 +21,6 @@ const omr = (amount) =>
     minimumFractionDigits: 3,
     maximumFractionDigits: 3,
   });
-
-/** One fact about the supplier, as it reads above their payments. */
-function Detail({ label, children }) {
-  return (
-    <div className="space-y-1">
-      <p className="text-xs uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
-      <p className="text-sm font-medium">{children || "-"}</p>
-    </div>
-  );
-}
 
 /**
  * Everything the firm has spent with one supplier.
@@ -93,49 +80,14 @@ export default function SupplierPaymentsSection({ supplier }) {
           disabled={adding}
         >
           <Plus className="mr-1.5 h-4 w-4" />
-          Add Expense
+          Add Expense Request
         </Button>
       </div>
 
-      {/* Who is being paid, before what they have been paid. Read only: the
-          supplier is edited on Supplier Information, and one record edited in
-          two places is two records waiting to disagree. */}
-      <Card>
-        <CardContent className="p-4 sm:p-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-            <Detail label="Supplier Name">{supplier.name}</Detail>
-            <Detail label="Category">{supplier.category}</Detail>
-            <Detail label="Commercial Registration (CR)">
-              {supplier.commercialRegistration}
-            </Detail>
-            <Detail label="Tax Identification Number (TIN)">
-              {supplier.taxIdentificationNumber}
-            </Detail>
-
-            <Detail label="VAT Number">{supplier.vatNumber}</Detail>
-            <Detail label="Supplier's Bank">{supplier.bank}</Detail>
-            <Detail label="Supplier's Account Number">
-              {supplier.accountNumber}
-            </Detail>
-            <Detail label="Phone Number">{supplier.phone}</Detail>
-
-            <Detail label="Status">
-              <span className="inline-flex items-center gap-1.5">
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    "h-2 w-2 shrink-0 rounded-full",
-                    supplier.status === "Active"
-                      ? "bg-green-500"
-                      : "bg-gray-400"
-                  )}
-                />
-                {supplier.status}
-              </span>
-            </Detail>
-          </div>
-        </CardContent>
-      </Card>
+      {/* No card of the supplier's details here: they are on Supplier
+          Information, one click away, and repeating them only pushed the
+          payments down the page. What is shown is the payments and the way to
+          add one. */}
 
       {/* Raised above the list rather than on a page of its own: the list is
           what the request is judged against, and the supplier is already

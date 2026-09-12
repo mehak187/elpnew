@@ -40,6 +40,9 @@ import NewInvoice from "@/pages/expenses/NewInvoice";
 import SuppliersPage from "@/pages/suppliers/SuppliersPage";
 import SupplierForm from "@/pages/suppliers/SupplierForm";
 
+// Leases
+import LeasesPage from "@/pages/leases/LeasesPage";
+
 // Corporate Module
 import CorporateList from "@/pages/corporate/CorporateList";
 
@@ -84,6 +87,9 @@ function App() {
               <Route path="suppliers" element={<SuppliersPage />} />
               <Route path="suppliers/create" element={<SupplierForm />} />
               <Route path="suppliers/:id" element={<SupplierForm />} />
+
+              {/* Leases */}
+              <Route path="leases" element={<LeasesPage />} />
               <Route path="expenses" element={<ExpensesPage />} />
               <Route path="expenses/create" element={<ExpenseForm />} />
               <Route path="expense-requests" element={<GeneralInvoices />} />
