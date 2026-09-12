@@ -27,7 +27,6 @@ import {
   Landmark,
   Building2,
   Coins,
-  CalendarDays,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -412,22 +411,6 @@ function PaymentScheduleTable({ rows, lease, bankAccounts, openNo, onOpen }) {
   );
 }
 
-/** One of the installment's own facts, in the row along the top of its details. */
-function InstallmentFact({ label, htmlFor, children }) {
-  return (
-    <div className="flex flex-col gap-1.5 lg:border-l lg:px-5 lg:first:border-l-0 lg:first:pl-0">
-      {htmlFor ? (
-        <Label htmlFor={htmlFor} className="font-normal text-muted-foreground">
-          {label}
-        </Label>
-      ) : (
-        <p className="text-sm leading-none text-muted-foreground">{label}</p>
-      )}
-      <div className="flex min-h-9 items-center gap-2 text-sm">{children}</div>
-    </div>
-  );
-}
-
 /** A titled box of label - value lines. */
 function DetailCard({ icon, title, children }) {
   const Icon = icon;
@@ -519,46 +502,49 @@ function InstallmentPanel({ row, lease, branchName, bankAccounts, count, onSave 
         </span>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:flex lg:flex-wrap lg:gap-y-4">
-        <InstallmentFact label="Installment No.">
-          <span className="text-base font-semibold text-primary">Installment {row.no}</span>
-        </InstallmentFact>
-        <InstallmentFact label="Due Date">
-          <CalendarDays className="h-4 w-4 text-muted-foreground" />
-          {shortDate(row.due)}
-        </InstallmentFact>
-        {lease.method === CHEQUE && (
-          <InstallmentFact label="Cheque No.">
-            <FileText className="h-4 w-4 text-muted-foreground" />
-            {row.chequeNo || "-"}
-          </InstallmentFact>
+      <div
+        className={cn(
+          "grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6",
+          // Transaction No. shares its row with the upload button, so it gets a little more room.
+          lease.method === CHEQUE
+            ? "lg:grid-cols-[repeat(4,minmax(0,1fr))_minmax(0,1.4fr)]"
+            : "lg:grid-cols-[repeat(3,minmax(0,1fr))_minmax(0,1.4fr)]"
         )}
-        <InstallmentFact label="Payment Date" htmlFor="installmentPaidOn">
+      >
+        <Worked id="installmentNoField" label="Installment No." value={"Installment " + row.no} />
+        <Worked id="installmentDue" label="Due Date" value={shortDate(row.due)} />
+        {lease.method === CHEQUE && (
+          <Worked id="installmentChequeNo" label="Cheque No." value={row.chequeNo || "-"} />
+        )}
+        <Field>
+          <FieldLabel htmlFor="installmentPaidOn">Payment Date</FieldLabel>
           <Input
             id="installmentPaidOn"
             type="date"
             value={entry.paidOn}
             max={todayIso()}
             onChange={(e) => set("paidOn", e.target.value)}
-            className="w-full lg:w-44"
           />
-        </InstallmentFact>
-        <InstallmentFact label="Transaction No." htmlFor="installmentTransactionNo">
-          <Input
-            id="installmentTransactionNo"
-            value={entry.transactionNo}
-            onChange={(e) => set("transactionNo", e.target.value)}
-            placeholder="Enter transaction number"
-            autoComplete="off"
-            className="min-w-0 flex-1 lg:w-56 lg:flex-none"
-          />
-          <Attach
-            id="installmentReceipt"
-            file={entry.receiptFile}
-            onFile={(name) => set("receiptFile", name)}
-            what="payment receipt"
-          />
-        </InstallmentFact>
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="installmentTransactionNo">Transaction No.</FieldLabel>
+          <div className="flex gap-2">
+            <Input
+              id="installmentTransactionNo"
+              value={entry.transactionNo}
+              onChange={(e) => set("transactionNo", e.target.value)}
+              placeholder="Enter transaction number"
+              autoComplete="off"
+              className="min-w-0 flex-1"
+            />
+            <Attach
+              id="installmentReceipt"
+              file={entry.receiptFile}
+              onFile={(name) => set("receiptFile", name)}
+              what="payment receipt"
+            />
+          </div>
+        </Field>
       </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
