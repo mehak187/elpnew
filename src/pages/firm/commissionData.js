@@ -131,16 +131,6 @@ export const DEFAULT_COMMISSION_BOOKING = {
   subcategory: "",
 };
 
-/**
- * Whether the arrangement stands or was agreed once.
- *
- * Not stored: a fixed commission runs for the whole period and a specific one
- * is agreed for a single piece of work, so the subcategory already says it. A
- * field of its own could only ever repeat it or contradict it.
- */
-export const recurrenceOf = (record) =>
-  record.type === SPECIFIC_COMMISSION ? "One-time" : "Recurring";
-
 /* ------------------------------------------------------------ the arrangements */
 
 /**

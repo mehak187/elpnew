@@ -6,7 +6,7 @@ import {
   feesFor,
   commissionOn,
   monthAndYear,
-  recurrenceOf,
+  SPECIFIC_COMMISSION,
 } from "../commissionData";
 
 const moneyValue = (amount) =>
@@ -60,32 +60,33 @@ export default function CommissionSection() {
     },
     {
       key: "type",
-      header: "Type & Recurrence",
+      header: "Commission Type",
       width: "15%",
       exportValue: (row) =>
         [
           row.type,
-          row.caseFileNo ? "Case file " + row.caseFileNo : "",
-          row.invoiceNo ? "Invoice " + row.invoiceNo : "",
-          recurrenceOf(row),
+          row.caseFileNo ? "File No. " + row.caseFileNo : "",
+          row.invoiceNo ? "Invoice No. " + row.invoiceNo : "",
         ]
           .filter(Boolean)
           .join(" - "),
+      // A specific commission is worked out from one invoice on one file, so
+      // both are named under it and the figure can be traced. A fixed one runs
+      // over a period - which the Period column already shows - and has no file
+      // or invoice to name.
       render: (value, row) => (
         <div>
-          <p>
-            {value}
-            {row.caseFileNo && " · Case file " + row.caseFileNo}
-          </p>
-          {/* The invoice it was calculated from, so the figure can be traced. */}
-          {row.invoiceNo && (
-            <p className="text-xs text-muted-foreground">
-              Invoice {row.invoiceNo}
-            </p>
+          <p>{value}</p>
+          {row.type === SPECIFIC_COMMISSION && (
+            <>
+              <p className="text-xs text-muted-foreground">
+                File No.: {row.caseFileNo || "-"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Invoice No.: {row.invoiceNo || "-"}
+              </p>
+            </>
           )}
-          <p className="text-xs text-muted-foreground">
-            {recurrenceOf(row)}
-          </p>
         </div>
       ),
     },

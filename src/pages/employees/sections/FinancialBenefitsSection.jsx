@@ -11,8 +11,8 @@ import {
   feesFor,
   commissionOn,
   monthAndYear,
-  recurrenceOf,
   nextCommissionNo,
+  SPECIFIC_COMMISSION,
 } from "@/pages/firm/commissionData";
 import CommissionForm from "@/pages/firm/sections/CommissionForm";
 import { useClients } from "@/lib/clients/context";
@@ -112,7 +112,7 @@ function CommissionTab({ employee, adding, onCloseAdd }) {
                   <th className="whitespace-nowrap p-3 font-semibold">
                     Month &amp; Year
                   </th>
-                  <th className="p-3 font-semibold">Type &amp; Recurrence</th>
+                  <th className="p-3 font-semibold">Commission Type</th>
                   <th className="p-3 font-semibold">
                     Legal Fees (Before VAT) &amp; Commission
                   </th>
@@ -139,19 +139,20 @@ function CommissionTab({ employee, adding, onCloseAdd }) {
                       {monthAndYear(record)}
                     </td>
                     <td className="p-3">
-                      <span className="block">
-                        {record.type}
-                        {record.caseFileNo && " · Case file " + record.caseFileNo}
-                      </span>
-                      {/* The invoice it was calculated from, so the figure can be traced. */}
-                      {record.invoiceNo && (
-                        <span className="block text-xs text-muted-foreground">
-                          Invoice {record.invoiceNo}
-                        </span>
+                      <span className="block">{record.type}</span>
+                      {/* A specific commission names the file and the invoice
+                          it was worked out from; a fixed one runs over the
+                          period in the last column and has neither. */}
+                      {record.type === SPECIFIC_COMMISSION && (
+                        <>
+                          <span className="block text-xs text-muted-foreground">
+                            File No.: {record.caseFileNo || "-"}
+                          </span>
+                          <span className="block text-xs text-muted-foreground">
+                            Invoice No.: {record.invoiceNo || "-"}
+                          </span>
+                        </>
                       )}
-                      <span className="block text-xs text-muted-foreground">
-                        {recurrenceOf(record)}
-                      </span>
                     </td>
                     <td className="p-3">
                       <span className="block font-medium">
