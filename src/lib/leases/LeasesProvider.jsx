@@ -22,6 +22,9 @@ const EMPTY_CONTRACT = {
   cheques: {},
   nonRenewalDate: "",
   nonRenewalFile: "",
+  payments: {},
+  cancelled: [],
+  installmentNotes: {},
 };
 
 /**

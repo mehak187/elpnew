@@ -38,7 +38,11 @@ import {
   CASH,
   CHEQUE,
   OTHER_ACCOUNT,
-  SCHEDULE_STATE,
+  INSTALLMENT_STATUS,
+  RENT_EXPENSE_TYPE,
+  RENT_CATEGORY,
+  rentSubcategoryOf,
+  groupedAccountNumber,
   accountLabel,
   addressOf,
   leaseMonths,
@@ -201,7 +205,7 @@ function InstallmentTable({ rows, byCheque, onCheque, editable }) {
               key={row.no}
               className={cn(
                 "border-b transition-colors last:border-0 hover:bg-primary/5",
-                row.when === "next" && "bg-blue-50/60"
+                row.isNext && "bg-blue-50/60"
               )}
             >
               <td className="p-3">{row.no}</td>
@@ -227,16 +231,154 @@ function InstallmentTable({ rows, byCheque, onCheque, editable }) {
                 <span
                   className={cn(
                     "inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium",
-                    SCHEDULE_STATE[row.when].tone
+                    INSTALLMENT_STATUS[row.status].pill
                   )}
                 >
-                  {SCHEDULE_STATE[row.when].label}
+                  {INSTALLMENT_STATUS[row.status].label}
                 </span>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+/** A label and its value on one line, the value pushed to the right edge. */
+function AmountLine({ label, value, strong }) {
+  return (
+    <p className={cn("flex justify-between gap-4", strong && "font-semibold text-primary")}>
+      <span className={strong ? "" : "text-muted-foreground"}>{label}</span>
+      <span>{value}</span>
+    </p>
+  );
+}
+
+/**
+ * Every installment, as the finance team reads it.
+ *
+ * The dot beside each installment is its status. The date is the due date
+ * until the rent is paid, and then the day it was paid with the transaction
+ * that paid it - once paid, when it was due no longer matters. The amount is
+ * split into rent and VAT so the total can be checked line by line, and the
+ * method says exactly where the money goes: which account, or which cheque
+ * and how many are still to be cashed.
+ */
+function PaymentScheduleTable({ rows, lease, bankAccounts }) {
+  const account =
+    lease.bankAccountId && lease.bankAccountId !== OTHER_ACCOUNT
+      ? bankAccounts.find((option) => option.id === Number(lease.bankAccountId))
+      : null;
+  const chequeCount = rows.length;
+
+  const methodLines = (row) => {
+    if (lease.method === CHEQUE) {
+      return [
+        "Cheque No.: " + (row.chequeNo || "-"),
+        row.payment || row.status === "cancelled"
+          ? null
+          : "Remaining Cheques: " + row.remainingCheques + " of " + chequeCount,
+      ].filter(Boolean);
+    }
+    if (lease.method === CASH) return [];
+    if (lease.bankAccountId === OTHER_ACCOUNT) return ["Other account"];
+    return account
+      ? [account.bankName, groupedAccountNumber(account.accountNumber)]
+      : ["-"];
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="overflow-x-auto rounded-lg border">
+        <table className="w-full min-w-250 text-sm">
+          <thead>
+            <tr className="border-b bg-secondary/60 text-left text-primary">
+              <th className="p-3 font-semibold" style={{ width: "13%" }}>Installment No.</th>
+              <th className="p-3 font-semibold" style={{ width: "16%" }}>Due Date / Payment Date</th>
+              <th className="p-3 font-semibold" style={{ width: "15%" }}>Payment Details</th>
+              <th className="p-3 font-semibold" style={{ width: "20%" }}>Rental Amount (OMR)</th>
+              <th className="p-3 font-semibold" style={{ width: "20%" }}>Payment Method &amp; Details</th>
+              <th className="p-3 font-semibold" style={{ width: "16%" }}>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const status = INSTALLMENT_STATUS[row.status];
+              return (
+                <tr
+                  key={row.no}
+                  className="border-b align-top transition-colors last:border-0 hover:bg-primary/5"
+                >
+                  <td className="p-3">
+                    <span className="inline-flex items-center gap-2 whitespace-nowrap font-semibold text-primary">
+                      <span
+                        title={status.label}
+                        className={cn("h-3 w-3 shrink-0 rounded-full", status.dot)}
+                      />
+                      <span className="sr-only">{status.label}: </span>
+                      Installment {row.no}
+                    </span>
+                  </td>
+
+                  <td className="p-3">
+                    {row.payment ? (
+                      <>
+                        <p className="text-muted-foreground">Payment Date:</p>
+                        <p>{shortDate(row.payment.paidOn)}</p>
+                        <p className="text-muted-foreground">
+                          Transaction No.:{" "}
+                          <span className="text-foreground">{row.payment.transactionNo || "-"}</span>
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-muted-foreground">Due Date:</p>
+                        <p>{shortDate(row.due)}</p>
+                      </>
+                    )}
+                  </td>
+
+                  <td className="p-3">
+                    <p>{RENT_EXPENSE_TYPE}</p>
+                    <p>{RENT_CATEGORY}</p>
+                    <p>{rentSubcategoryOf(lease.propertyType)}</p>
+                  </td>
+
+                  <td className="p-3">
+                    <AmountLine label="Rental Amount" value={omr(row.rentPart)} />
+                    <AmountLine
+                      label={lease.vatApplied === false ? "VAT (exempt)" : "VAT (5%)"}
+                      value={omr(row.vat)}
+                    />
+                    <AmountLine label="Total Amount" value={omr(row.amount)} strong />
+                  </td>
+
+                  <td className="p-3">
+                    <p className="font-semibold text-primary">{lease.method || "-"}</p>
+                    {methodLines(row).map((line) => (
+                      <p key={line}>{line}</p>
+                    ))}
+                  </td>
+
+                  <td className="p-3 text-muted-foreground">{row.note || "-"}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* What the dots mean, once, under the table rather than on every row. */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
+        <span className="font-semibold text-primary">Status:</span>
+        {["paid", "soon", "unpaid", "cancelled", "upcoming"].map((key) => (
+          <span key={key} className="inline-flex items-center gap-1.5">
+            <span className={cn("h-2.5 w-2.5 rounded-full", INSTALLMENT_STATUS[key].dot)} />
+            {INSTALLMENT_STATUS[key].label}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -310,6 +452,9 @@ export default function LeaseDetails() {
     installments: Number(draft.installments || 0),
     paymentDay: Number(draft.paymentDay || 0),
     cheques: draft.cheques,
+    method: draft.method,
+    bankAccountId: draft.bankAccountId,
+    propertyType: draft.propertyType,
   };
   const months = leaseMonths(draft.start, draft.end);
   const installments = installmentsOf(preview);
@@ -707,7 +852,11 @@ export default function LeaseDetails() {
                     and the number of installments have been entered.
                   </EmptyState>
                 ) : (
-                  <InstallmentTable rows={installments} byCheque={byCheque} />
+                  <PaymentScheduleTable
+                    rows={installments}
+                    lease={preview}
+                    bankAccounts={bankAccounts}
+                  />
                 ))}
 
               {section === "nonRenewal" && (
