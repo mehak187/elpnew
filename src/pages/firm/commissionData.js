@@ -1,13 +1,46 @@
 import { clientInvoices } from "@/pages/clients/clientMockData";
 
+/* ------------------------------------------ what commission is counted on */
+
 /**
- * The legal fees a client settled in a period.
+ * The only kind of invoice commission is earned on.
  *
- * Commission is owed on fees, not on tax, so the VAT on each invoice is left
- * out - an invoice of 1,050 made of 1,000 fees and 50 VAT earns commission on
- * the 1,000. Only invoices actually paid count, and they count on the day the
- * money arrived rather than the day the invoice was raised, because that is
- * when the commission fell due.
+ * Court charges, execution fees, expenses and disbursements are money the firm
+ * collects and passes on, not fees it earns, so an invoice for any of them
+ * earns nobody a share.
+ */
+export const LEGAL_FEES = "Legal Fees";
+
+export const isLegalFeesInvoice = (invoice) => invoice.feeType === LEGAL_FEES;
+
+/**
+ * Settled in full, going by the money rather than the label.
+ *
+ * What was paid has to reach the whole invoice, VAT included, and there has to
+ * be a day it arrived. A part payment earns nothing until it is complete, and a
+ * cancelled invoice never does. The status is not trusted on its own: it is
+ * written separately, and a stored label can disagree with the amounts beside
+ * it.
+ */
+export const isFullyPaid = (invoice) =>
+  invoice.status !== "Cancelled" &&
+  Boolean(invoice.paidDate) &&
+  Number(invoice.paidAmount || 0) >= Number(invoice.amount || 0);
+
+/**
+ * What an invoice earns commission on: its legal fees before VAT.
+ *
+ * An invoice of OMR 105 made of 100 legal fees and 5 VAT earns commission on
+ * the 100. VAT is the government's money, collected on its behalf.
+ */
+const feesBeforeVat = (invoice) => Number(invoice.legalFees || 0);
+
+/**
+ * The legal fees a client paid in full within a period.
+ *
+ * Counted on the day the money arrived rather than the day the invoice was
+ * raised, because that is when the commission fell due - so an invoice raised
+ * in March and settled in May belongs to May. Both ends of the period count.
  */
 export function legalFeesCollected(clientNo, from, to) {
   if (!clientNo || !from) return 0;
@@ -15,19 +48,20 @@ export function legalFeesCollected(clientNo, from, to) {
     .filter(
       (invoice) =>
         invoice.clientNo === clientNo &&
-        invoice.status === "Paid" &&
+        isLegalFeesInvoice(invoice) &&
+        isFullyPaid(invoice) &&
         invoice.paidDate >= from &&
         (!to || invoice.paidDate <= to)
     )
-    .reduce((sum, invoice) => sum + Number(invoice.legalFees || 0), 0);
+    .reduce((sum, invoice) => sum + feesBeforeVat(invoice), 0);
 }
 
 /**
- * The legal fees a client settled on one case file.
+ * The legal fees a client paid in full on one case file.
  *
  * A commission agreed for a single case is owed on that case's fees and no
- * others, so the invoice has to say which file it was for. An invoice that
- * names no file belongs to no case, and is counted by period instead.
+ * others, so the invoice has to say which file it was for. The same rules as a
+ * period otherwise: legal fees only, before VAT, paid in full.
  */
 export function legalFeesOnCase(clientNo, caseFileNo) {
   if (!clientNo || !caseFileNo) return 0;
@@ -36,9 +70,10 @@ export function legalFeesOnCase(clientNo, caseFileNo) {
       (invoice) =>
         invoice.clientNo === clientNo &&
         invoice.caseFileNo === caseFileNo &&
-        invoice.status === "Paid"
+        isLegalFeesInvoice(invoice) &&
+        isFullyPaid(invoice)
     )
-    .reduce((sum, invoice) => sum + Number(invoice.legalFees || 0), 0);
+    .reduce((sum, invoice) => sum + feesBeforeVat(invoice), 0);
 }
 
 /* ------------------------------------------------- where it lands in the books */
