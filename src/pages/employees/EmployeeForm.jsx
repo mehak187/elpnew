@@ -30,6 +30,7 @@ import {
   Lock,
   CalendarCheck,
   ShieldCheck,
+  ClipboardList,
   MapPin,
   Phone,
   Mail,
@@ -59,6 +60,7 @@ import DailyActivitiesSection from "./sections/DailyActivitiesSection";
 import PerformanceSection from "./sections/PerformanceSection";
 import EmployeeCircularsSection from "./sections/CircularsSection";
 import LeavesSection from "./sections/LeavesSection";
+import GeneralRequestSection from "./sections/GeneralRequestSection";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 import {
   employeeRecords,
@@ -125,6 +127,16 @@ const SECTIONS = [
     noSave: true,
     note: "Leave requests and what was decided about them",
     ownsHeader: true,
+  },
+  {
+    // Anything asked of the administration that has no form of its own - a
+    // parking card, a laptop. Nothing to save on the page: each request is
+    // submitted on its own.
+    key: "generalRequest",
+    label: "General Request",
+    icon: ClipboardList,
+    noSave: true,
+    note: "Submit your request to the administration",
   },
   {
     // What one employee may see and change. Set for someone by whoever
@@ -1139,6 +1151,10 @@ export default function EmployeeForm({ self }) {
 
                 {activeSection === "leaves" && (
                   <LeavesSection employee={formData} />
+                )}
+
+                {activeSection === "generalRequest" && (
+                  <GeneralRequestSection employee={formData} />
                 )}
 
                 {/* Not yet specified, so nothing is invented for it */}
