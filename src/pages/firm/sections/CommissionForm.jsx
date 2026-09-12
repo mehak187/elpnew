@@ -18,6 +18,8 @@ import {
   Scale,
   UserRound,
   Calculator,
+  Building2,
+  Briefcase,
 } from "lucide-react";
 import { useClients } from "@/lib/clients/context";
 import { clientLinkedCases } from "@/pages/clients/clientMockData";
@@ -39,23 +41,48 @@ import {
  * than the whole firm - `role` is the field on the employee record that decides
  * who belongs to it.
  */
+const ALL_MEMBERS = "All Office Members";
+const OTHER_STAFF = "Other Staff";
+
+/**
+ * Commission is not a partners' matter: anyone in the office who brings in a
+ * client or a case can be owed a share of the fees. So the first choice is the
+ * whole office, and the last catches anyone whose role none of the named groups
+ * covers - nobody who can earn commission is left out of the list.
+ */
 export const CLASSIFICATIONS = [
+  { key: ALL_MEMBERS, role: null, icon: Building2 },
   { key: "Partners", role: "Partner", icon: Users },
   { key: "Consultants", role: "Advisor", icon: UserCog },
   { key: "Lawyers", role: "Lawyer", icon: Scale },
   { key: "Administrators", role: "Administrative", icon: UserRound },
   { key: "Accountants", role: "Accountant", icon: Calculator },
+  { key: OTHER_STAFF, role: null, icon: Briefcase },
 ];
 
+const NAMED_ROLES = CLASSIFICATIONS.map((group) => group.role).filter(Boolean);
+
 const peopleIn = (classification) => {
+  if (classification === ALL_MEMBERS) return employeeRecords;
+  if (classification === OTHER_STAFF)
+    return employeeRecords.filter((e) => !NAMED_ROLES.includes(e.role));
   const group = CLASSIFICATIONS.find((c) => c.key === classification);
   if (!group) return [];
   return employeeRecords.filter((e) => e.role === group.role);
 };
 
+/**
+ * The groups worth offering: the whole office always, and any other group
+ * only when somebody is in it - an empty group is a choice that leads nowhere.
+ */
+const offeredClassifications = () =>
+  CLASSIFICATIONS.filter(
+    (group) => group.key === ALL_MEMBERS || peopleIn(group.key).length > 0
+  );
+
 /** The group a person's job puts them in. */
 const classificationOf = (role) =>
-  CLASSIFICATIONS.find((group) => group.role === role)?.key || "";
+  CLASSIFICATIONS.find((group) => group.role === role)?.key || OTHER_STAFF;
 
 const emptyDraft = {
   ...DEFAULT_COMMISSION_BOOKING,
@@ -96,9 +123,10 @@ function FieldLabel({ htmlFor, required, children }) {
  * The arrangement being agreed: who, on whose fees, at what rate, over what
  * period.
  *
- * One form for both places it is asked for - the firm's own commission page,
- * where anyone can be named, and an employee's record, where the person is
- * already known and so is not asked for again.
+ * One form for every place it is asked for. Anyone in the office can be named
+ * as the beneficiary - not only partners - because commission is earned by
+ * whoever brought in the client or the case. On an employee's record that
+ * employee is simply the starting choice.
  *
  * The commission amount is on the form but is never typed: it is the legal fees
  * the client has actually paid in the period, times the percentage. A figure
@@ -114,15 +142,15 @@ export default function CommissionForm({
 }) {
   const { clients } = useClients();
 
-  // On an employee's own record the commission is theirs by definition, so
-  // the two questions about who it is for are answered before it opens.
+  // Opened from an employee's record, that employee is filled in to start
+  // with - but only to start with. Commission can go to any member of the
+  // office who brought in the client or the case, so both questions about who
+  // it is for stay open to change.
   const [draft, setDraft] = useState(() => ({
     ...emptyDraft,
     classification: employee ? classificationOf(employee.role) : "",
     paidTo: employee ? employee.name : "",
   }));
-
-  const ownsPerson = Boolean(employee);
 
   const setField = (name, value) =>
     setDraft((prev) => ({ ...prev, [name]: value }));
@@ -414,13 +442,12 @@ export default function CommissionForm({
             <Select
               value={draft.classification}
               onValueChange={chooseClassification}
-              disabled={ownsPerson}
             >
               <SelectTrigger id="classification">
                 <SelectValue placeholder="Select Classification" />
               </SelectTrigger>
               <SelectContent>
-                {CLASSIFICATIONS.map((group) => {
+                {offeredClassifications().map((group) => {
                   const Icon = group.icon;
                   return (
                     <SelectItem key={group.key} value={group.key}>
@@ -442,7 +469,7 @@ export default function CommissionForm({
             <Select
               value={draft.paidTo}
               onValueChange={(value) => setField("paidTo", value)}
-              disabled={ownsPerson || !draft.classification}
+              disabled={!draft.classification}
             >
               <SelectTrigger id="paidTo">
                 <SelectValue
