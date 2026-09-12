@@ -24,6 +24,7 @@ import {
   leaseMonths,
   leaseState,
   nextPaymentDate,
+  frequencyLabel,
   vatOf,
   totalOf,
   omr,
@@ -156,7 +157,7 @@ export default function LeasesPage() {
           <button
             type="button"
             onClick={() => navigate("/leases/" + row.id)}
-            title={"Open " + row.contractNo}
+            title={"Open " + (row.contractNo || "this lease")}
             className="rounded font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
           >
             {value}
@@ -205,7 +206,7 @@ export default function LeasesPage() {
       header: "Contract No.",
       width: "10%",
       render: (value) => (
-        <span className="whitespace-nowrap text-primary/80">{value}</span>
+        <span className="whitespace-nowrap text-primary/80">{value || "-"}</span>
       ),
     },
     {
@@ -240,16 +241,23 @@ export default function LeasesPage() {
       header: "Rental Value (OMR)",
       subHeader: "VAT (5%) · Total (OMR)",
       width: "12%",
+      // Monthly rent. A lease exempt from VAT (a flat, say) shows 0.000 VAT.
       exportValue: (row) =>
         Number(row.rent) > 0
-          ? omr(row.rent) + " + " + omr(vatOf(row.rent)) + " = " + omr(totalOf(row.rent))
+          ? omr(row.rent) +
+            " + " +
+            omr(vatOf(row.rent, row.vatApplied)) +
+            " = " +
+            omr(totalOf(row.rent, row.vatApplied))
           : "-",
-      render: (value) =>
+      render: (value, row) =>
         Number(value) > 0 ? (
           <div className="whitespace-nowrap">
             <p className="text-primary">{omr(value)}</p>
-            <p className="text-primary/80">{omr(vatOf(value))}</p>
-            <p className="font-semibold text-primary">{omr(totalOf(value))}</p>
+            <p className="text-primary/80">{omr(vatOf(value, row.vatApplied))}</p>
+            <p className="font-semibold text-primary">
+              {omr(totalOf(value, row.vatApplied))}
+            </p>
           </div>
         ) : (
           <Missing />
@@ -260,13 +268,15 @@ export default function LeasesPage() {
       header: "Payment Frequency",
       subHeader: "Payment Method",
       width: "12%",
+      // How often is read off the contract's months and its number of
+      // installments - twelve months in four installments is Quarterly.
       exportValue: (row) =>
-        row.frequency ? row.frequency + " - " + row.method : "-",
-      render: (value, row) =>
-        value ? (
+        frequencyLabel(row) ? frequencyLabel(row) + " - " + (row.method || "-") : "-",
+      render: (_, row) =>
+        frequencyLabel(row) ? (
           <div>
-            <p className="font-semibold text-primary">{value}</p>
-            <p className="text-primary/80">{row.method}</p>
+            <p className="font-semibold text-primary">{frequencyLabel(row)}</p>
+            <p className="text-primary/80">{row.method || "-"}</p>
           </div>
         ) : (
           <Missing />

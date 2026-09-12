@@ -1,17 +1,27 @@
 import { useMemo, useState } from "react";
 import { LeasesContext } from "./context";
-import { initialLeases, nextContractNo } from "@/pages/leases/leaseData";
+import { initialLeases } from "@/pages/leases/leaseData";
 
 /** What a lease holds before its contract has been entered. */
 const EMPTY_CONTRACT = {
+  contractStatus: "",
+  contractNo: "",
+  contractFile: "",
   building: "",
   unit: "",
   address: "",
   start: "",
   end: "",
   rent: 0,
-  frequency: "",
+  vatApplied: true,
   method: "",
+  paymentFile: "",
+  bankAccountId: "",
+  installments: "",
+  paymentDay: "",
+  cheques: {},
+  nonRenewalDate: "",
+  nonRenewalFile: "",
 };
 
 /**
@@ -30,8 +40,9 @@ export default function LeasesProvider({ children }) {
       findLease: (id) => leases.find((lease) => lease.id === Number(id)) || null,
 
       /**
-       * A new lease, given its number here so two can never share one. Newest
-       * first, so it is at the top of the table it was added from.
+       * A new lease, newest first so it is at the top of the table it was
+       * added from. Its contract - number included, which is the one on the
+       * signed paper - is entered later, on the lease's own page.
        */
       addLease: (record) =>
         setLeases((prev) => [
@@ -39,7 +50,6 @@ export default function LeasesProvider({ children }) {
             ...EMPTY_CONTRACT,
             ...record,
             id: prev.reduce((max, lease) => Math.max(max, lease.id), 0) + 1,
-            contractNo: nextContractNo(prev),
           },
           ...prev,
         ]),
