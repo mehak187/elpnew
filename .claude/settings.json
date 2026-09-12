@@ -22,7 +22,8 @@
       "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-commission-beneficiary.cjs\")",
       "PowerShell(npx eslint src/pages/firm/commissionData.js src/pages/clients/clientMockData.js src/pages/firm/sections/CommissionForm.jsx)",
       "PowerShell(npx eslint src/pages/firm/sections/CommissionSection.jsx src/pages/employees/sections/FinancialBenefitsSection.jsx src/pages/firm/commissionData.js)",
-      "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-commission-type-column.cjs\")"
+      "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-commission-type-column.cjs\")",
+      "PowerShell(npx eslint src/pages/employees/sections/SalariesSection.jsx src/pages/employees/sections/FinancialBenefitsSection.jsx)"
     ]
   }
 }

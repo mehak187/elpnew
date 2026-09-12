@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/panels";
 import FormHeading from "@/components/shared/FormHeading";
-import { Plus } from "lucide-react";
+import { Plus, Eye, EyeOff } from "lucide-react";
 import { withRial } from "@/lib/money";
 import {
   commissionRecords,
@@ -203,6 +203,13 @@ export default function FinancialBenefitsSection({
   // Which tab's form is open, if any.
   const [adding, setAdding] = useState(null);
 
+  // Whether the salary breakdown above the history is open. Closed to start:
+  // the history is what is looked at most, and the breakdown is a long form
+  // that would push it off the screen every time the tab is opened.
+  const [salaryDetailsOpen, setSalaryDetailsOpen] = useState(false);
+
+  const showsDetailsToggle = tab === "salaries" && adding !== "salaries";
+
   const current =
     BENEFIT_TABS.find((option) => option.key === tab) || BENEFIT_TABS[0];
 
@@ -212,11 +219,32 @@ export default function FinancialBenefitsSection({
           of that category rather than at the top of the page. The icon is
           what says this names the tab and not the section above it. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <FormHeading
-          title={current.label}
-          note={current.note}
-          icon={current.icon}
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <FormHeading
+            title={current.label}
+            note={current.note}
+            icon={current.icon}
+          />
+          {/* Beside the heading of what it opens and closes. The word says
+              what a click will do, not what is on screen now. */}
+          {showsDetailsToggle && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-expanded={salaryDetailsOpen}
+              aria-controls="salary-details"
+              onClick={() => setSalaryDetailsOpen((open) => !open)}
+            >
+              {salaryDetailsOpen ? (
+                <EyeOff className="mr-1.5 h-4 w-4" />
+              ) : (
+                <Eye className="mr-1.5 h-4 w-4" />
+              )}
+              {salaryDetailsOpen ? "Hide" : "Show"}
+            </Button>
+          )}
+        </div>
         {current.add && (
           <Button
             type="button"
@@ -235,6 +263,7 @@ export default function FinancialBenefitsSection({
           adding={adding === "salaries"}
           onCloseAdd={() => setAdding(null)}
           onSave={onSaveSalary}
+          detailsOpen={salaryDetailsOpen}
         />
       )}
 
