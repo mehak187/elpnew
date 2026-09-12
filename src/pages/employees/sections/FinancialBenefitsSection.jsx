@@ -143,6 +143,12 @@ function CommissionTab({ employee, adding, onCloseAdd }) {
                         {record.type}
                         {record.caseFileNo && " · Case file " + record.caseFileNo}
                       </span>
+                      {/* The invoice it was calculated from, so the figure can be traced. */}
+                      {record.invoiceNo && (
+                        <span className="block text-xs text-muted-foreground">
+                          Invoice {record.invoiceNo}
+                        </span>
+                      )}
                       <span className="block text-xs text-muted-foreground">
                         {recurrenceOf(record)}
                       </span>

@@ -57,23 +57,39 @@ export function legalFeesCollected(clientNo, from, to) {
 }
 
 /**
- * The legal fees a client paid in full on one case file.
+ * The legal-fees invoices raised to a client on one case file.
  *
- * A commission agreed for a single case is owed on that case's fees and no
- * others, so the invoice has to say which file it was for. The same rules as a
- * period otherwise: legal fees only, before VAT, paid in full.
+ * What a specific commission can be calculated from: the invoice has to belong
+ * to the file the commission was agreed for, and it has to be for legal fees -
+ * an invoice for court charges or execution fees earns nobody a share, so it is
+ * not offered at all.
  */
-export function legalFeesOnCase(clientNo, caseFileNo) {
-  if (!clientNo || !caseFileNo) return 0;
-  return clientInvoices
-    .filter(
-      (invoice) =>
-        invoice.clientNo === clientNo &&
-        invoice.caseFileNo === caseFileNo &&
-        isLegalFeesInvoice(invoice) &&
-        isFullyPaid(invoice)
-    )
-    .reduce((sum, invoice) => sum + feesBeforeVat(invoice), 0);
+export const legalFeesInvoicesOnFile = (clientNo, caseFileNo) =>
+  !clientNo || !caseFileNo
+    ? []
+    : clientInvoices.filter(
+        (invoice) =>
+          invoice.clientNo === clientNo &&
+          invoice.caseFileNo === caseFileNo &&
+          isLegalFeesInvoice(invoice)
+      );
+
+/**
+ * What one invoice earns commission on: its legal fees before VAT.
+ *
+ * An invoice of OMR 105 made of 100 legal fees and 5 VAT earns on the 100. Only
+ * once it is paid in full, by the same rule as a period - an invoice still
+ * owed has earned nothing yet.
+ */
+export function legalFeesOnInvoice(clientNo, invoiceNo) {
+  if (!clientNo || !invoiceNo) return 0;
+  const invoice = clientInvoices.find(
+    (candidate) =>
+      candidate.clientNo === clientNo && candidate.invoiceNo === invoiceNo
+  );
+  return invoice && isLegalFeesInvoice(invoice) && isFullyPaid(invoice)
+    ? feesBeforeVat(invoice)
+    : 0;
 }
 
 /* ------------------------------------------------- where it lands in the books */
@@ -140,7 +156,7 @@ export const recurrenceOf = (record) =>
  */
 export const commissionRecords = [
   { id: 1, commissionNo: "COM-2024-001", classification: "Partners", paidTo: "Mohammed Al Yahyaei", clientNo: "1", clientName: "ABC Holdings LLC", type: FIXED_COMMISSION, caseFileNo: "", rate: 10, periodFrom: "2024-01-01", periodTo: "", notes: "" },
-  { id: 2, commissionNo: "COM-2024-002", classification: "Lawyers", paidTo: "Fatima Al Rashdi", clientNo: "1", clientName: "ABC Holdings LLC", type: SPECIFIC_COMMISSION, caseFileNo: "21", rate: 5, periodFrom: "2024-05-01", periodTo: "2024-12-31", notes: "" },
+  { id: 2, commissionNo: "COM-2024-002", classification: "Lawyers", paidTo: "Fatima Al Rashdi", clientNo: "1", clientName: "ABC Holdings LLC", type: SPECIFIC_COMMISSION, caseFileNo: "21", invoiceNo: "INV-2024-011", rate: 5, periodFrom: "2024-05-01", periodTo: "2024-12-31", notes: "" },
   { id: 3, commissionNo: "COM-2024-003", classification: "Consultants", paidTo: "Amina Al Farsi", clientNo: "3", clientName: "Al Madina Trading", type: FIXED_COMMISSION, caseFileNo: "", rate: 7.5, periodFrom: "2024-07-01", periodTo: "", notes: "" },
 ];
 
@@ -177,12 +193,12 @@ export const monthAndYear = (record) => {
  * The fees an arrangement has run on so far.
  *
  * Which fees those are depends on what kind it is: a specific commission is
- * agreed for one case file and earns on that file alone, while a fixed one
- * stands over a period and earns on everything paid inside it.
+ * calculated from one invoice on one case file, while a fixed one stands over
+ * a period and earns on every legal fee paid inside it.
  */
 export const feesFor = (record) =>
   record.type === SPECIFIC_COMMISSION
-    ? legalFeesOnCase(record.clientNo, record.caseFileNo)
+    ? legalFeesOnInvoice(record.clientNo, record.invoiceNo)
     : legalFeesCollected(record.clientNo, record.periodFrom, record.periodTo);
 
 /** What it has earned: the fees times the rate, worked out on the spot. */

@@ -4,7 +4,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -31,7 +30,9 @@ import {
   categoriesOf,
   subcategoriesOf,
   legalFeesCollected,
-  legalFeesOnCase,
+  legalFeesInvoicesOnFile,
+  legalFeesOnInvoice,
+  isFullyPaid,
 } from "../commissionData";
 
 /**
@@ -89,6 +90,7 @@ const emptyDraft = {
   clientType: "",
   clientNo: "",
   caseFileNo: "",
+  invoiceNo: "",
   periodFrom: "",
   periodTo: "",
   classification: "",
@@ -129,8 +131,9 @@ function FieldLabel({ htmlFor, required, children }) {
  * employee is simply the starting choice.
  *
  * The commission amount is on the form but is never typed: it is the legal fees
- * the client has actually paid in the period, times the percentage. A figure
- * that could be typed could be typed wrong.
+ * before VAT the client has paid in full - on the chosen invoice, or within the
+ * period - times the percentage. A figure that could be typed could be typed
+ * wrong.
  */
 export default function CommissionForm({
   employee,
@@ -162,7 +165,12 @@ export default function CommissionForm({
   /** Changing the kind of client empties the client, for the same reason. */
   const chooseClientType = (value) => {
     if (!value) return;
-    setDraft((prev) => ({ ...prev, clientType: value, clientNo: "" }));
+    setDraft((prev) => ({
+      ...prev,
+      clientType: value,
+      clientNo: "",
+      invoiceNo: "",
+    }));
     onClientChange?.("");
   };
 
@@ -175,7 +183,8 @@ export default function CommissionForm({
    */
   const chooseClient = (value) => {
     if (!value) return;
-    setField("clientNo", value);
+    // Invoices belong to a client, so one chosen for the last client goes.
+    setDraft((prev) => ({ ...prev, clientNo: value, invoiceNo: "" }));
     onClientChange?.(value);
   };
 
@@ -194,11 +203,27 @@ export default function CommissionForm({
   // other and never for both.
   const isSpecific = draft.subcategory === SPECIFIC_COMMISSION;
 
-  // What the arrangement is worth so far: the fees it runs on, times the
-  // rate. Both sides come from elsewhere, so it moves on its own as the case
-  // file or the period and the percentage are set.
+  /** Another file has its own invoices, so the one chosen for the last goes. */
+  const chooseCaseFile = (value) => {
+    if (!value) return;
+    setDraft((prev) => ({ ...prev, caseFileNo: value, invoiceNo: "" }));
+  };
+
+  const chooseInvoice = (value) => {
+    if (!value) return;
+    setField("invoiceNo", value);
+  };
+
+  // What a specific commission can be calculated from: the legal-fees
+  // invoices this client was sent on this file, and no others.
+  const fileInvoices = legalFeesInvoicesOnFile(draft.clientNo, draft.caseFileNo);
+
+  // What the arrangement is worth so far: the legal fees before VAT it runs
+  // on, times the rate - one invoice for a specific commission, everything
+  // paid in the period for a fixed one. Both sides come from elsewhere, so it
+  // moves on its own as the invoice or the period and the percentage are set.
   const fees = isSpecific
-    ? legalFeesOnCase(draft.clientNo, draft.caseFileNo)
+    ? legalFeesOnInvoice(draft.clientNo, draft.invoiceNo)
     : legalFeesCollected(draft.clientNo, draft.periodFrom, draft.periodTo);
   const commission = (fees * Number(draft.rate || 0)) / 100;
 
@@ -209,7 +234,7 @@ export default function CommissionForm({
     draft.clientType &&
     draft.clientNo &&
     (isSpecific
-      ? draft.caseFileNo
+      ? draft.caseFileNo && draft.invoiceNo
       : draft.periodFrom && draft.periodTo) &&
     draft.classification &&
     draft.paidTo &&
@@ -226,6 +251,7 @@ export default function CommissionForm({
       // Only one of the two was asked for, so only one is kept: a period
       // on a case-file commission would be a figure nobody set.
       caseFileNo: isSpecific ? draft.caseFileNo : "",
+      invoiceNo: isSpecific ? draft.invoiceNo : "",
       periodFrom: isSpecific ? "" : draft.periodFrom,
       periodTo: isSpecific ? "" : draft.periodTo,
       clientName: client?.clientName || "",
@@ -327,12 +353,9 @@ export default function CommissionForm({
         {draft.subcategory && (
         <>
         {/* Whose fees it runs on, and what bounds them. */}
-        <div
-          className={cn(
-            "grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6",
-            isSpecific ? "lg:grid-cols-3" : "lg:grid-cols-4"
-          )}
-        >
+        {/* Four to a row either way: client type, client, and then a case
+            file and its invoice, or the two ends of a period. */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
           <div className="flex h-full flex-col justify-end gap-2">
             <FieldLabel htmlFor="commissionClientType" required>
               Client Type
@@ -382,14 +405,12 @@ export default function CommissionForm({
           {/* A case file, or a period - never both. Which one is asked
               for is the whole difference between the two subcategories. */}
           {isSpecific ? (
+            <>
             <div className="flex h-full flex-col justify-end gap-2">
               <FieldLabel htmlFor="caseFileNo" required>
                 Case File Number
               </FieldLabel>
-              <Select
-                value={draft.caseFileNo}
-                onValueChange={(value) => setField("caseFileNo", value)}
-              >
+              <Select value={draft.caseFileNo} onValueChange={chooseCaseFile}>
                 <SelectTrigger id="caseFileNo">
                   <SelectValue placeholder="Select Case File" />
                 </SelectTrigger>
@@ -402,6 +423,55 @@ export default function CommissionForm({
                 </SelectContent>
               </Select>
             </div>
+
+            {/* The invoice the commission is calculated from: only this
+                client's legal-fees invoices on this file are offered. One not
+                yet paid in full is shown - so it is clear it exists - but
+                cannot be chosen, because commission is earned only on fees the
+                client has actually paid. */}
+            <div className="flex h-full flex-col justify-end gap-2">
+              <FieldLabel htmlFor="commissionInvoice" required>
+                Invoice Number
+              </FieldLabel>
+              <Select
+                value={draft.invoiceNo}
+                onValueChange={chooseInvoice}
+                disabled={
+                  !draft.clientNo ||
+                  !draft.caseFileNo ||
+                  fileInvoices.length === 0
+                }
+              >
+                <SelectTrigger id="commissionInvoice">
+                  <SelectValue
+                    placeholder={
+                      !draft.clientNo || !draft.caseFileNo
+                        ? "Select a case file first"
+                        : fileInvoices.length === 0
+                          ? "No legal-fees invoice on this file"
+                          : "Select Invoice"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {fileInvoices.map((invoice) => {
+                    const paidInFull = isFullyPaid(invoice);
+                    return (
+                      <SelectItem
+                        key={invoice.invoiceNo}
+                        value={invoice.invoiceNo}
+                        disabled={!paidInFull}
+                      >
+                        {invoice.invoiceNo} &mdash; {money(invoice.legalFees)}{" "}
+                        before VAT
+                        {!paidInFull && " · " + invoice.status}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+            </>
           ) : (
             <>
               <div className="flex h-full flex-col justify-end gap-2">

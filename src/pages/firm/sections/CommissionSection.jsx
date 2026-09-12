@@ -66,6 +66,7 @@ export default function CommissionSection() {
         [
           row.type,
           row.caseFileNo ? "Case file " + row.caseFileNo : "",
+          row.invoiceNo ? "Invoice " + row.invoiceNo : "",
           recurrenceOf(row),
         ]
           .filter(Boolean)
@@ -76,6 +77,12 @@ export default function CommissionSection() {
             {value}
             {row.caseFileNo && " · Case file " + row.caseFileNo}
           </p>
+          {/* The invoice it was calculated from, so the figure can be traced. */}
+          {row.invoiceNo && (
+            <p className="text-xs text-muted-foreground">
+              Invoice {row.invoiceNo}
+            </p>
+          )}
           <p className="text-xs text-muted-foreground">
             {recurrenceOf(row)}
           </p>
