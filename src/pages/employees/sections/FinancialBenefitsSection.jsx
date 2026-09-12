@@ -15,6 +15,7 @@ import {
   nextCommissionNo,
 } from "@/pages/firm/commissionData";
 import CommissionForm from "@/pages/firm/sections/CommissionForm";
+import { useClients } from "@/lib/clients/context";
 
 import SalariesSection from "./SalariesSection";
 import LoansSection from "./LoansSection";
@@ -37,7 +38,27 @@ const money = (amount) =>
  * questions about who it is for are answered before it opens.
  */
 function CommissionTab({ employee, adding, onCloseAdd }) {
+  const { clients } = useClients();
   const [records, setRecords] = useState(() => commissionsFor(employee.name));
+
+  // The client chosen on the open form, if any. While a commission is being
+  // written for a client, the list shows only what is already agreed with that
+  // client - which is what the new one has to be judged against.
+  const [clientFilter, setClientFilter] = useState("");
+
+  const filtering = adding && Boolean(clientFilter);
+  const clientName =
+    clients.find((client) => client.clientNo === clientFilter)?.clientName ||
+    "";
+  const shown = filtering
+    ? records.filter((record) => record.clientNo === clientFilter)
+    : records;
+
+  /** Closing the form, by either button, puts the whole list back. */
+  const close = () => {
+    setClientFilter("");
+    onCloseAdd();
+  };
 
   /** The form settles what was agreed; the list gives it its number. */
   const save = (record) => {
@@ -49,7 +70,7 @@ function CommissionTab({ employee, adding, onCloseAdd }) {
         commissionNo: nextCommissionNo(commissionRecords.concat(prev)),
       },
     ]);
-    onCloseAdd();
+    close();
   };
 
   return (
@@ -57,14 +78,27 @@ function CommissionTab({ employee, adding, onCloseAdd }) {
       {adding && (
         <CommissionForm
           employee={employee}
-          onCancel={onCloseAdd}
+          onCancel={close}
           onSave={save}
+          onClientChange={setClientFilter}
         />
       )}
 
-      {records.length === 0 ? (
+      {filtering && (
+        <p className="text-sm text-muted-foreground">
+          Showing commissions for{" "}
+          <span className="font-semibold text-primary">{clientName}</span>{" "}
+          only
+        </p>
+      )}
+
+      {shown.length === 0 ? (
         <EmptyState>
-          No commission has been agreed with this employee.
+          {filtering
+            ? "No commission has been agreed with this employee on " +
+              clientName +
+              " yet."
+            : "No commission has been agreed with this employee."}
         </EmptyState>
       ) : (
         <Card>
@@ -86,7 +120,7 @@ function CommissionTab({ employee, adding, onCloseAdd }) {
                 </tr>
               </thead>
               <tbody>
-                {records.map((record) => (
+                {shown.map((record) => (
                   <tr
                     key={record.id}
                     className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"

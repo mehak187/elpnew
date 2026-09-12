@@ -72,10 +72,12 @@ export const categoriesOf = (type) =>
 export const subcategoriesOf = (type, category) =>
   categoriesOf(type).find((c) => c.name === category)?.subcategories || [];
 
+// The subcategory is left for the user to choose: it decides which questions
+// the form asks next, so it is never answered for them.
 export const DEFAULT_COMMISSION_BOOKING = {
   expenseType: "Employee Expenses",
   category: "Commission",
-  subcategory: FIXED_COMMISSION,
+  subcategory: "",
 };
 
 /**

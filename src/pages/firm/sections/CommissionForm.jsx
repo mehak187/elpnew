@@ -13,7 +13,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Info,
   Users,
   UserCog,
   Scale,
@@ -93,16 +92,6 @@ function FieldLabel({ htmlFor, required, children }) {
   );
 }
 
-/** A note the form makes about itself. */
-function Notice({ children }) {
-  return (
-    <p className="flex items-start gap-2 text-xs text-primary">
-      <Info className="mt-0.5 h-4 w-4 shrink-0" />
-      <span>{children}</span>
-    </p>
-  );
-}
-
 /**
  * The arrangement being agreed: who, on whose fees, at what rate, over what
  * period.
@@ -115,7 +104,14 @@ function Notice({ children }) {
  * the client has actually paid in the period, times the percentage. A figure
  * that could be typed could be typed wrong.
  */
-export default function CommissionForm({ employee, onCancel, onSave }) {
+export default function CommissionForm({
+  employee,
+  onCancel,
+  onSave,
+  // Told which client is chosen, so the list under the form can narrow to
+  // that client's commissions while one for them is being written.
+  onClientChange,
+}) {
   const { clients } = useClients();
 
   // On an employee's own record the commission is theirs by definition, so
@@ -136,8 +132,24 @@ export default function CommissionForm({ employee, onCancel, onSave }) {
     setDraft((prev) => ({ ...prev, classification: value, paidTo: "" }));
 
   /** Changing the kind of client empties the client, for the same reason. */
-  const chooseClientType = (value) =>
+  const chooseClientType = (value) => {
+    if (!value) return;
     setDraft((prev) => ({ ...prev, clientType: value, clientNo: "" }));
+    onClientChange?.("");
+  };
+
+  /**
+   * The client, passed on to whoever shows the list.
+   *
+   * An empty value is ignored: inside the employee's form Radix keeps a hidden
+   * native select that reports "" when its list is rebuilt, which would clear
+   * the choice - and the filter with it - on its own.
+   */
+  const chooseClient = (value) => {
+    if (!value) return;
+    setField("clientNo", value);
+    onClientChange?.(value);
+  };
 
   // The kinds of client the firm actually has, read off the directory rather
   // than listed here - a kind nobody is would only ever be an empty choice.
@@ -266,7 +278,7 @@ export default function CommissionForm({ employee, onCancel, onSave }) {
               disabled={!draft.category}
             >
               <SelectTrigger id="commissionSubcategory">
-                <SelectValue placeholder="Select Subcategory" />
+                <SelectValue placeholder="Please Select" />
               </SelectTrigger>
               <SelectContent>
                 {subcategoriesOf(draft.expenseType, draft.category).map(
@@ -281,6 +293,11 @@ export default function CommissionForm({ employee, onCancel, onSave }) {
           </div>
         </div>
 
+        {/* Nothing below the first row until a subcategory is chosen: a fixed
+            and a specific commission ask different questions, so there is
+            nothing sensible to show before the choice is made. */}
+        {draft.subcategory && (
+        <>
         {/* Whose fees it runs on, and what bounds them. */}
         <div
           className={cn(
@@ -312,7 +329,7 @@ export default function CommissionForm({ employee, onCancel, onSave }) {
             </FieldLabel>
             <Select
               value={draft.clientNo}
-              onValueChange={(value) => setField("clientNo", value)}
+              onValueChange={chooseClient}
               disabled={!draft.clientType}
             >
               <SelectTrigger id="commissionClient">
@@ -496,20 +513,13 @@ export default function CommissionForm({ employee, onCancel, onSave }) {
             placeholder="Enter any notes (optional)"
           />
         </div>
+        </>
+        )}
 
-        <div className="rounded-lg bg-secondary/50 p-4">
-          <Notice>
-            Commission will be calculated automatically when legal fees are
-            collected:
-            {/* The formula on its own line: it is the thing being said,
-                not an aside to the sentence above it. */}
-            <span className="mt-1 block font-semibold">
-              Legal Fees (Before VAT) &times; Commission Percentage = Commission
-              Amount
-            </span>
-          </Notice>
-        </div>
-
+        {/* The rule is not written on the form - it is what the Commission
+            Amount field above is worked out by:
+            Legal Fees (Before VAT) x Commission Percentage = Commission Amount,
+            counted only on fees the client has actually paid. */}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel

@@ -14,7 +14,10 @@
       "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-leave-balance.cjs\")",
       "PowerShell(npx eslint src/pages/employees/)",
       "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\diag-leave-click.cjs\")",
-      "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-general-request.cjs\")"
+      "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-general-request.cjs\")",
+      "PowerShell(npx eslint src/pages/firm/sections/CommissionForm.jsx)",
+      "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-commission-note.cjs\")",
+      "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-commission-steps.cjs\")"
     ]
   }
 }
