@@ -1,8 +1,5 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import DataTable from "@/components/shared/DataTable";
-import FormHeading from "@/components/shared/FormHeading";
-import { Plus, Percent } from "lucide-react";
 import { withRial } from "@/lib/money";
 import {
   commissionRecords,
@@ -10,9 +7,7 @@ import {
   commissionOn,
   monthAndYear,
   recurrenceOf,
-  nextCommissionNo,
 } from "../commissionData";
-import CommissionForm from "./CommissionForm";
 
 const moneyValue = (amount) =>
   Number(amount || 0).toLocaleString("en-GB", {
@@ -23,34 +18,17 @@ const moneyValue = (amount) =>
 const money = (amount) => withRial(moneyValue(amount));
 
 /**
- * Commission on referred work.
+ * Commission on referred work, as the company reads it.
  *
- * Someone the firm works with brings in work for a cut of the fees it earns.
- * What is agreed here is the arrangement - who, on whose fees, at what rate,
- * from when. The money follows on its own: nothing is worked out until the
- * client actually pays, so a commission can never be owed on money that never
- * arrived.
+ * Only the list, and nothing to add from here: a commission is agreed with a
+ * person, so it is raised on that person's record under Financial Benefits.
+ * This page is where the firm sees every arrangement together. The money
+ * follows on its own - nothing is worked out until the client actually pays,
+ * so a commission can never be owed on money that never arrived.
  */
 export default function CommissionSection() {
-  const [records, setRecords] = useState(commissionRecords);
-  const [adding, setAdding] = useState(false);
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
-
-  const closeForm = () => setAdding(false);
-
-  /** The form settles what was agreed; the list gives it its number. */
-  const save = (record) => {
-    setRecords((prev) => [
-      ...prev,
-      {
-        ...record,
-        id: prev.reduce((max, r) => Math.max(max, r.id), 0) + 1,
-        commissionNo: nextCommissionNo(prev),
-      },
-    ]);
-    closeForm();
-  };
 
   const columns = [
     {
@@ -145,39 +123,16 @@ export default function CommissionSection() {
   ];
 
   return (
-    <div className="space-y-6">
-      {/* The section's own heading, so the way to add to it sits on the
-          same line rather than costing a row of its own. */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-        {/* The form opened above the list, so back means close it. */}
-        <FormHeading
-          title={adding ? "Add Commission" : "Commission Records"}
-          icon={Percent}
-          onBack={adding ? closeForm : undefined}
-        />
-        <Button type="button" onClick={() => setAdding(true)} disabled={adding}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          Add Commission
-        </Button>
-      </div>
-
-      {adding && (
-        <CommissionForm onCancel={closeForm} onSave={save} />
-      )}
-
-      {/* The list stays under the form rather than making way for it: a
-          new record is judged against the ones already there. */}
-      <DataTable
-          columns={columns}
-          data={records}
-          searchPlaceholder="Search commissions..."
-          exportFileName="commission-records.csv"
-          enableColumnSearch={false}
-          currentPage={currentPage}
-          pageSize={pageSize}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={setPageSize}
-      />
-    </div>
+    <DataTable
+      columns={columns}
+      data={commissionRecords}
+      searchPlaceholder="Search commissions..."
+      exportFileName="commission-records.csv"
+      enableColumnSearch={false}
+      currentPage={currentPage}
+      pageSize={pageSize}
+      onPageChange={setCurrentPage}
+      onPageSizeChange={setPageSize}
+    />
   );
 }
