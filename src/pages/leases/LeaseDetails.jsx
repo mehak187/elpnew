@@ -24,6 +24,11 @@ import {
   Save,
   FileCheck,
   Percent,
+  Landmark,
+  Building2,
+  Coins,
+  CalendarDays,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFirm } from "@/lib/firm/context";
@@ -51,6 +56,7 @@ import {
   totalOf,
   omr,
   shortDate,
+  todayIso,
 } from "./leaseData";
 
 /**
@@ -245,6 +251,36 @@ function InstallmentTable({ rows, byCheque, onCheque, editable }) {
   );
 }
 
+/**
+ * What the payment method says about one installment: which cheque pays it and
+ * how many are still to be cashed, or which account the rent goes to. Cash says
+ * nothing beyond its name. `labelled` facts need their label to be understood.
+ */
+function paymentFacts(lease, row, bankAccounts, count) {
+  if (lease.method === CHEQUE) {
+    const facts = [{ label: "Cheque No.", value: row.chequeNo || "-", labelled: true }];
+    if (!row.payment && row.status !== "cancelled") {
+      facts.push({
+        label: "Remaining Cheques",
+        value: row.remainingCheques + " of " + count,
+        labelled: true,
+      });
+    }
+    return facts;
+  }
+  if (!lease.method || lease.method === CASH) return [];
+  if (lease.bankAccountId === OTHER_ACCOUNT) {
+    return [{ label: "Bank Account", value: "Other account" }];
+  }
+  const account = bankAccounts.find((option) => option.id === Number(lease.bankAccountId));
+  return account
+    ? [
+        { label: "Bank", value: account.bankName },
+        { label: "Account No.", value: groupedAccountNumber(account.accountNumber) },
+      ]
+    : [{ label: "Bank Account", value: "-" }];
+}
+
 /** A label and its value on one line, the value pushed to the right edge. */
 function AmountLine({ label, value, strong }) {
   return (
@@ -264,30 +300,11 @@ function AmountLine({ label, value, strong }) {
  * split into rent and VAT so the total can be checked line by line, and the
  * method says exactly where the money goes: which account, or which cheque
  * and how many are still to be cashed.
+ *
+ * An installment's number opens its details above the table, where its
+ * payment is recorded.
  */
-function PaymentScheduleTable({ rows, lease, bankAccounts }) {
-  const account =
-    lease.bankAccountId && lease.bankAccountId !== OTHER_ACCOUNT
-      ? bankAccounts.find((option) => option.id === Number(lease.bankAccountId))
-      : null;
-  const chequeCount = rows.length;
-
-  const methodLines = (row) => {
-    if (lease.method === CHEQUE) {
-      return [
-        "Cheque No.: " + (row.chequeNo || "-"),
-        row.payment || row.status === "cancelled"
-          ? null
-          : "Remaining Cheques: " + row.remainingCheques + " of " + chequeCount,
-      ].filter(Boolean);
-    }
-    if (lease.method === CASH) return [];
-    if (lease.bankAccountId === OTHER_ACCOUNT) return ["Other account"];
-    return account
-      ? [account.bankName, groupedAccountNumber(account.accountNumber)]
-      : ["-"];
-  };
-
+function PaymentScheduleTable({ rows, lease, bankAccounts, openNo, onOpen }) {
   return (
     <div className="space-y-4">
       <div className="overflow-x-auto rounded-lg border">
@@ -308,16 +325,26 @@ function PaymentScheduleTable({ rows, lease, bankAccounts }) {
               return (
                 <tr
                   key={row.no}
-                  className="border-b align-top transition-colors last:border-0 hover:bg-primary/5"
+                  className={cn(
+                    "border-b align-top transition-colors last:border-0 hover:bg-primary/5",
+                    openNo === row.no && "bg-primary/5"
+                  )}
                 >
                   <td className="p-3">
-                    <span className="inline-flex items-center gap-2 whitespace-nowrap font-semibold text-primary">
+                    <span className="inline-flex items-center gap-2 whitespace-nowrap">
                       <span
                         title={status.label}
                         className={cn("h-3 w-3 shrink-0 rounded-full", status.dot)}
                       />
-                      <span className="sr-only">{status.label}: </span>
-                      Installment {row.no}
+                      <button
+                        type="button"
+                        onClick={() => onOpen(row.no)}
+                        aria-expanded={openNo === row.no}
+                        className="font-semibold text-primary underline underline-offset-4 hover:text-primary/80"
+                      >
+                        <span className="sr-only">{status.label}: </span>
+                        Installment {row.no}
+                      </button>
                     </span>
                   </td>
 
@@ -356,8 +383,10 @@ function PaymentScheduleTable({ rows, lease, bankAccounts }) {
 
                   <td className="p-3">
                     <p className="font-semibold text-primary">{lease.method || "-"}</p>
-                    {methodLines(row).map((line) => (
-                      <p key={line}>{line}</p>
+                    {paymentFacts(lease, row, bankAccounts, rows.length).map((fact) => (
+                      <p key={fact.label}>
+                        {fact.labelled ? fact.label + ": " + fact.value : fact.value}
+                      </p>
                     ))}
                   </td>
 
@@ -383,6 +412,237 @@ function PaymentScheduleTable({ rows, lease, bankAccounts }) {
   );
 }
 
+/** One of the installment's own facts, in the row along the top of its details. */
+function InstallmentFact({ label, htmlFor, children }) {
+  return (
+    <div className="flex flex-col gap-1.5 lg:border-l lg:px-5 lg:first:border-l-0 lg:first:pl-0">
+      {htmlFor ? (
+        <Label htmlFor={htmlFor} className="font-normal text-muted-foreground">
+          {label}
+        </Label>
+      ) : (
+        <p className="text-sm leading-none text-muted-foreground">{label}</p>
+      )}
+      <div className="flex min-h-9 items-center gap-2 text-sm">{children}</div>
+    </div>
+  );
+}
+
+/** A titled box of label - value lines. */
+function DetailCard({ icon, title, children }) {
+  const Icon = icon;
+  return (
+    <div className="overflow-hidden rounded-lg border bg-card">
+      <p className="flex items-center gap-2 border-b bg-secondary/60 px-3 py-2 text-sm font-semibold text-primary">
+        <Icon className="h-4 w-4 shrink-0" />
+        {title}
+      </p>
+      <div className="space-y-1.5 p-3 text-sm">{children}</div>
+    </div>
+  );
+}
+
+/** Label - value lines whose values all start at the same edge. */
+function DetailLines({ lines }) {
+  return (
+    <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5">
+      {lines.map(([label, value]) => (
+        <div key={label} className="contents">
+          <dt className="whitespace-nowrap text-muted-foreground">{label}</dt>
+          <dd className="min-w-0 wrap-break-word">{value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+const NOTE_LIMIT = 500;
+const EMPTY_ENTRY = { paidOn: "", transactionNo: "", receiptFile: "", note: "" };
+
+/**
+ * One installment, opened from its number in the schedule: the property it is
+ * for, where it is booked, what it comes to and how it is paid - with its
+ * payment recorded underneath.
+ *
+ * The payment date is what marks the installment paid. Clear empties the
+ * entry, so saving after it takes a payment recorded by mistake back off.
+ */
+function InstallmentPanel({ row, lease, branchName, bankAccounts, count, onSave }) {
+  const [entry, setEntry] = useState(() => ({
+    paidOn: row.payment?.paidOn || "",
+    transactionNo: row.payment?.transactionNo || "",
+    receiptFile: row.payment?.receiptFile || "",
+    note: row.note,
+  }));
+  const [error, setError] = useState("");
+  const status = INSTALLMENT_STATUS[row.status];
+  const vatExempt = lease.vatApplied === false;
+
+  const set = (name, value) => setEntry((prev) => ({ ...prev, [name]: value }));
+
+  const clear = () => {
+    setEntry(EMPTY_ENTRY);
+    setError("");
+  };
+
+  const save = () => {
+    const transactionNo = entry.transactionNo.trim();
+    if (!entry.paidOn && (transactionNo || entry.receiptFile)) {
+      setError("Enter the payment date for this payment.");
+      return;
+    }
+    onSave({
+      payment: entry.paidOn
+        ? { paidOn: entry.paidOn, transactionNo, receiptFile: entry.receiptFile }
+        : null,
+      note: entry.note.trim(),
+    });
+  };
+
+  return (
+    <div
+      id="installment-details"
+      className="scroll-mt-24 space-y-4 rounded-xl border bg-secondary/30 p-4 sm:p-5"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+        <h3 className="text-lg font-semibold text-primary">
+          Installment {row.no} Details
+        </h3>
+        <span
+          className={cn(
+            "inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium",
+            status.pill
+          )}
+        >
+          <span className={cn("h-2.5 w-2.5 rounded-full", status.dot)} />
+          {status.label}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:flex lg:flex-wrap lg:gap-y-4">
+        <InstallmentFact label="Installment No.">
+          <span className="text-base font-semibold text-primary">Installment {row.no}</span>
+        </InstallmentFact>
+        <InstallmentFact label="Due Date">
+          <CalendarDays className="h-4 w-4 text-muted-foreground" />
+          {shortDate(row.due)}
+        </InstallmentFact>
+        {lease.method === CHEQUE && (
+          <InstallmentFact label="Cheque No.">
+            <FileText className="h-4 w-4 text-muted-foreground" />
+            {row.chequeNo || "-"}
+          </InstallmentFact>
+        )}
+        <InstallmentFact label="Payment Date" htmlFor="installmentPaidOn">
+          <Input
+            id="installmentPaidOn"
+            type="date"
+            value={entry.paidOn}
+            max={todayIso()}
+            onChange={(e) => set("paidOn", e.target.value)}
+            className="w-full lg:w-44"
+          />
+        </InstallmentFact>
+        <InstallmentFact label="Transaction No." htmlFor="installmentTransactionNo">
+          <Input
+            id="installmentTransactionNo"
+            value={entry.transactionNo}
+            onChange={(e) => set("transactionNo", e.target.value)}
+            placeholder="Enter transaction number"
+            autoComplete="off"
+            className="min-w-0 flex-1 lg:w-56 lg:flex-none"
+          />
+          <Attach
+            id="installmentReceipt"
+            file={entry.receiptFile}
+            onFile={(name) => set("receiptFile", name)}
+            what="payment receipt"
+          />
+        </InstallmentFact>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <DetailCard icon={Building2} title="Leased Property Details">
+          <DetailLines
+            lines={[
+              ["Property Type:", lease.propertyType || "-"],
+              ["Address:", addressOf(lease) || "-"],
+              ["Branch:", branchName],
+              ["Landlord:", lease.landlord || "-"],
+            ]}
+          />
+        </DetailCard>
+
+        <DetailCard icon={FileText} title="Payment Details">
+          <DetailLines
+            lines={[
+              ["Expense Type:", RENT_EXPENSE_TYPE],
+              ["Category:", RENT_CATEGORY],
+              ["Subcategory:", rentSubcategoryOf(lease.propertyType)],
+            ]}
+          />
+        </DetailCard>
+
+        <DetailCard icon={Coins} title="Amount Details">
+          <AmountLine label="Rental Amount (OMR):" value={omr(row.rentPart)} />
+          <AmountLine label={vatExempt ? "VAT (exempt):" : "VAT (5%):"} value={omr(row.vat)} />
+          <div className="border-t pt-2">
+            <AmountLine label="Total Amount (OMR):" value={omr(row.amount)} strong />
+          </div>
+        </DetailCard>
+
+        <DetailCard icon={Landmark} title="Payment Method & Details">
+          <DetailLines
+            lines={[
+              ["Payment Method:", lease.method || "-"],
+              ...paymentFacts(lease, row, bankAccounts, count).map((fact) => [
+                fact.label + ":",
+                fact.value,
+              ]),
+            ]}
+          />
+        </DetailCard>
+      </div>
+
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+        <Label
+          htmlFor="installmentNote"
+          className="flex shrink-0 items-center gap-2 text-primary"
+        >
+          <FileText className="h-5 w-5" />
+          Notes
+        </Label>
+        <div className="relative min-w-0 flex-1">
+          <Input
+            id="installmentNote"
+            value={entry.note}
+            maxLength={NOTE_LIMIT}
+            onChange={(e) => set("note", e.target.value)}
+            placeholder="Enter notes for this installment..."
+            autoComplete="off"
+            className="pr-20"
+          />
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+            {entry.note.length}/{NOTE_LIMIT}
+          </span>
+        </div>
+        <div className="flex gap-2">
+          <Button type="button" onClick={save}>
+            <Save className="mr-2 h-4 w-4" />
+            Save
+          </Button>
+          <Button type="button" variant="outline" onClick={clear}>
+            <X className="mr-2 h-4 w-4" />
+            Clear
+          </Button>
+        </div>
+      </div>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+    </div>
+  );
+}
+
 /**
  * One lease, section by section.
  *
@@ -403,6 +663,8 @@ export default function LeaseDetails() {
   const [loadedId, setLoadedId] = useState(id);
   const [section, setSection] = useState("property");
   const [error, setError] = useState("");
+  // The installment whose details are open above the schedule, if any.
+  const [installmentNo, setInstallmentNo] = useState(null);
 
   // Moving straight from one lease to another reloads the page.
   if (id !== loadedId) {
@@ -410,6 +672,7 @@ export default function LeaseDetails() {
     setDraft(draftFrom(lease));
     setSection("property");
     setError("");
+    setInstallmentNo(null);
   }
 
   if (!lease || !draft) {
@@ -442,6 +705,36 @@ export default function LeaseDetails() {
   const setCheque = (no, value) =>
     setDraft((prev) => ({ ...prev, cheques: { ...prev.cheques, [no]: value } }));
 
+  /** Opens an installment's details above the schedule - or closes them, if already open. */
+  const openInstallment = (no) => {
+    if (installmentNo === no) {
+      setInstallmentNo(null);
+      return;
+    }
+    setInstallmentNo(no);
+    requestAnimationFrame(() =>
+      document
+        .getElementById("installment-details")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" })
+    );
+  };
+
+  /**
+   * An installment's payment and note, saved straight onto the lease: a
+   * payment is a record of money that moved, not an edit waiting on the
+   * sections' Save Changes.
+   */
+  const recordInstallment = (no, { payment, note }) => {
+    const payments = { ...(lease.payments || {}) };
+    if (payment) payments[no] = payment;
+    else delete payments[no];
+    const installmentNotes = { ...(lease.installmentNotes || {}) };
+    if (note) installmentNotes[no] = note;
+    else delete installmentNotes[no];
+    updateLease(lease.id, { payments, installmentNotes });
+    setInstallmentNo(null);
+  };
+
   // The lease as it would stand if saved now, for everything worked out from it.
   const preview = {
     ...lease,
@@ -455,9 +748,13 @@ export default function LeaseDetails() {
     method: draft.method,
     bankAccountId: draft.bankAccountId,
     propertyType: draft.propertyType,
+    landlord: draft.landlord,
+    branchId: draft.branchId,
+    address: draft.address,
   };
   const months = leaseMonths(draft.start, draft.end);
   const installments = installmentsOf(preview);
+  const openRow = installments.find((row) => row.no === installmentNo) || null;
   const byCheque = draft.method === CHEQUE;
   const isCash = draft.method === CASH;
 
@@ -580,7 +877,10 @@ export default function LeaseDetails() {
                   <button
                     key={option.key}
                     type="button"
-                    onClick={() => setSection(option.key)}
+                    onClick={() => {
+                      setSection(option.key);
+                      setInstallmentNo(null);
+                    }}
                     className={cn(
                       "flex items-center gap-2.5 text-nowrap rounded-md px-3 py-2 text-left text-sm font-medium transition-colors",
                       section === option.key
@@ -852,11 +1152,28 @@ export default function LeaseDetails() {
                     and the number of installments have been entered.
                   </EmptyState>
                 ) : (
-                  <PaymentScheduleTable
-                    rows={installments}
-                    lease={preview}
-                    bankAccounts={bankAccounts}
-                  />
+                  <div className="space-y-6">
+                    {openRow && (
+                      <InstallmentPanel
+                        key={lease.id + "-" + openRow.no}
+                        row={openRow}
+                        lease={preview}
+                        branchName={
+                          branches.find((branch) => branch.id === Number(draft.branchId))?.name || "-"
+                        }
+                        bankAccounts={bankAccounts}
+                        count={installments.length}
+                        onSave={(entry) => recordInstallment(openRow.no, entry)}
+                      />
+                    )}
+                    <PaymentScheduleTable
+                      rows={installments}
+                      lease={preview}
+                      bankAccounts={bankAccounts}
+                      openNo={openRow?.no}
+                      onOpen={openInstallment}
+                    />
+                  </div>
                 ))}
 
               {section === "nonRenewal" && (

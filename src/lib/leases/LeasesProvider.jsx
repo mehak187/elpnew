@@ -36,6 +36,16 @@ const EMPTY_CONTRACT = {
 export default function LeasesProvider({ children }) {
   const [leases, setLeases] = useState(initialLeases);
 
+  // Editing the seed data while the app is open hot-reloads this provider
+  // with its old state kept: leases shaped the old way, which the pages can
+  // no longer read (an empty payment schedule, say). Start again from the new
+  // seed whenever it changes.
+  const [seed, setSeed] = useState(initialLeases);
+  if (seed !== initialLeases) {
+    setSeed(initialLeases);
+    setLeases(initialLeases);
+  }
+
   const value = useMemo(
     () => ({
       leases,
