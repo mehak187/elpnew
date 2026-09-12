@@ -15,10 +15,9 @@ import FormHeading from "@/components/shared/FormHeading";
 import { IdStatusDot } from "@/components/shared/panels";
 import { Home, Plus } from "lucide-react";
 import { useFirm } from "@/lib/firm/context";
-import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
+import { useSuppliers } from "@/lib/suppliers/context";
 import {
   PROPERTY_TYPES,
-  PAYMENT_FREQUENCIES,
   LEASE_STATE,
   initialLeases,
   leaseMonths,
@@ -32,54 +31,27 @@ import {
 } from "./leaseData";
 
 const emptyDraft = {
+  landlord: "",
   branchId: "",
   propertyType: "",
-  building: "",
-  unit: "",
-  landlord: "",
-  start: "",
-  end: "",
-  rent: "",
-  frequency: "",
-  method: "",
+  address: "",
 };
 
 /** A field's label, with its required mark glued to the last word. */
-function FieldLabel({ htmlFor, required, children }) {
+function FieldLabel({ htmlFor, children }) {
   return (
     <Label htmlFor={htmlFor}>
       {children}
-      {required && (
-        <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
-      )}
+      <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
     </Label>
   );
 }
 
-/** A figure worked out from the fields beside it - shown, never typed. */
-function Worked({ id, label, value, placeholder = "Auto calculated" }) {
+/** A required choice from a fixed list. */
+function Choice({ id, label, value, onChange, options, placeholder }) {
   return (
     <div className="flex h-full flex-col justify-end gap-2">
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <Input
-        id={id}
-        readOnly
-        tabIndex={-1}
-        className="cursor-default bg-muted text-muted-foreground"
-        value={value}
-        placeholder={placeholder}
-      />
-    </div>
-  );
-}
-
-/** A choice from a fixed list. */
-function Choice({ id, label, value, onChange, options, placeholder = "Please Select" }) {
-  return (
-    <div className="flex h-full flex-col justify-end gap-2">
-      <FieldLabel htmlFor={id} required>
-        {label}
-      </FieldLabel>
       <Select value={value} onValueChange={(next) => next && onChange(next)}>
         <SelectTrigger id={id}>
           <SelectValue placeholder={placeholder} />
@@ -96,17 +68,24 @@ function Choice({ id, label, value, onChange, options, placeholder = "Please Sel
   );
 }
 
+/** A dash for anything the contract has not been given yet. */
+const Missing = () => <span className="text-muted-foreground">-</span>;
+
 /**
  * Every lease the firm holds, in one list.
  *
- * The table reads the contracts as agreed; what follows from them - the
- * number of months, the VAT and total, the next payment and whether the lease
- * is running out - is worked out on the spot. A new lease is added above the
- * list rather than on a page of its own, so it is entered alongside the ones
- * it sits among.
+ * A new lease starts with the property: who it is rented from, which branch
+ * uses it, what kind of place it is and where. Saving puts it straight into the
+ * rental contracts table, where the contract's own figures - its dates, rent
+ * and payments - show as not yet recorded until they are.
+ *
+ * What follows from those figures (the months, the VAT and total, the next
+ * payment and whether the lease is running out) is worked out on the spot,
+ * never stored.
  */
 export default function LeasesPage() {
   const { branches } = useFirm();
+  const { suppliers } = useSuppliers();
 
   const [leases, setLeases] = useState(initialLeases);
   const [adding, setAdding] = useState(false);
@@ -116,27 +95,21 @@ export default function LeasesPage() {
 
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
 
+  // Landlords are chosen from the supplier directory, so a landlord is paid
+  // through the same record - bank, account, tax numbers - as anyone else the
+  // firm pays. Only suppliers still in use are offered.
+  const landlords = suppliers
+    .filter((supplier) => supplier.status === "Active")
+    .map((supplier) => ({ value: supplier.name, label: supplier.name }));
+
   const branchName = (branchId) =>
     branches.find((branch) => branch.id === Number(branchId))?.name || "-";
 
-  // What the lease being written will come to, as it is written.
-  const draftLease = { ...draft, rent: Number(draft.rent || 0) };
-  const draftMonths = leaseMonths(draft.start, draft.end);
-  const draftNext = nextPaymentDate(draftLease);
-  const contractNo = nextContractNo(leases);
-
   const canSave =
+    draft.landlord &&
     draft.branchId &&
     draft.propertyType &&
-    draft.building.trim() &&
-    draft.unit.trim() &&
-    draft.landlord.trim() &&
-    draft.start &&
-    draft.end &&
-    draft.end >= draft.start &&
-    Number(draft.rent) > 0 &&
-    draft.frequency &&
-    draft.method;
+    draft.address.trim();
 
   const close = () => {
     setAdding(false);
@@ -148,17 +121,19 @@ export default function LeasesPage() {
     setLeases((prev) => [
       {
         id: prev.reduce((max, lease) => Math.max(max, lease.id), 0) + 1,
+        contractNo: nextContractNo(prev),
+        landlord: draft.landlord,
         branchId: Number(draft.branchId),
         propertyType: draft.propertyType,
-        building: draft.building.trim(),
-        unit: draft.unit.trim(),
-        landlord: draft.landlord.trim(),
-        contractNo: nextContractNo(prev),
-        start: draft.start,
-        end: draft.end,
-        rent: Number(draft.rent),
-        frequency: draft.frequency,
-        method: draft.method,
+        address: draft.address.trim(),
+        // The contract itself has not been entered yet.
+        building: "",
+        unit: "",
+        start: "",
+        end: "",
+        rent: 0,
+        frequency: "",
+        method: "",
       },
       ...prev,
     ]);
@@ -174,6 +149,10 @@ export default function LeasesPage() {
     branchName: branchName(lease.branchId),
     state: leaseState(lease),
   }));
+
+  /** The property as it is described: its building and unit, or its address. */
+  const propertyLines = (row) =>
+    row.building ? [row.building, row.unit].filter(Boolean) : [row.address || "-"];
 
   const columns = [
     {
@@ -209,11 +188,12 @@ export default function LeasesPage() {
       key: "building",
       header: "Property Information",
       width: "15%",
-      exportValue: (row) => row.building + " - " + row.unit,
-      render: (value, row) => (
+      exportValue: (row) => propertyLines(row).join(" - "),
+      render: (_, row) => (
         <div className="text-primary/80">
-          <p>{value}</p>
-          <p>{row.unit}</p>
+          {propertyLines(row).map((line) => (
+            <p key={line}>{line}</p>
+          ))}
         </div>
       ),
     },
@@ -238,19 +218,24 @@ export default function LeasesPage() {
       subHeader: "Duration",
       width: "11%",
       exportValue: (row) =>
-        shortDate(row.start) +
-        " to " +
-        shortDate(row.end) +
-        " (" +
-        leaseMonths(row.start, row.end) +
-        " Months)",
-      render: (value, row) => (
-        <div className="whitespace-nowrap text-primary/80">
-          <p>{shortDate(value)}</p>
-          <p>{shortDate(row.end)}</p>
-          <p>{leaseMonths(value, row.end)} Months</p>
-        </div>
-      ),
+        row.start && row.end
+          ? shortDate(row.start) +
+            " to " +
+            shortDate(row.end) +
+            " (" +
+            leaseMonths(row.start, row.end) +
+            " Months)"
+          : "-",
+      render: (value, row) =>
+        value && row.end ? (
+          <div className="whitespace-nowrap text-primary/80">
+            <p>{shortDate(value)}</p>
+            <p>{shortDate(row.end)}</p>
+            <p>{leaseMonths(value, row.end)} Months</p>
+          </div>
+        ) : (
+          <Missing />
+        ),
     },
     {
       // The rent for one payment, its VAT and what the two come to.
@@ -259,27 +244,36 @@ export default function LeasesPage() {
       subHeader: "VAT (5%) · Total (OMR)",
       width: "12%",
       exportValue: (row) =>
-        omr(row.rent) + " + " + omr(vatOf(row.rent)) + " = " + omr(totalOf(row.rent)),
-      render: (value) => (
-        <div className="whitespace-nowrap">
-          <p className="text-primary">{omr(value)}</p>
-          <p className="text-primary/80">{omr(vatOf(value))}</p>
-          <p className="font-semibold text-primary">{omr(totalOf(value))}</p>
-        </div>
-      ),
+        Number(row.rent) > 0
+          ? omr(row.rent) + " + " + omr(vatOf(row.rent)) + " = " + omr(totalOf(row.rent))
+          : "-",
+      render: (value) =>
+        Number(value) > 0 ? (
+          <div className="whitespace-nowrap">
+            <p className="text-primary">{omr(value)}</p>
+            <p className="text-primary/80">{omr(vatOf(value))}</p>
+            <p className="font-semibold text-primary">{omr(totalOf(value))}</p>
+          </div>
+        ) : (
+          <Missing />
+        ),
     },
     {
       key: "frequency",
       header: "Payment Frequency",
       subHeader: "Payment Method",
       width: "12%",
-      exportValue: (row) => row.frequency + " - " + row.method,
-      render: (value, row) => (
-        <div>
-          <p className="font-semibold text-primary">{value}</p>
-          <p className="text-primary/80">{row.method}</p>
-        </div>
-      ),
+      exportValue: (row) =>
+        row.frequency ? row.frequency + " - " + row.method : "-",
+      render: (value, row) =>
+        value ? (
+          <div>
+            <p className="font-semibold text-primary">{value}</p>
+            <p className="text-primary/80">{row.method}</p>
+          </div>
+        ) : (
+          <Missing />
+        ),
     },
     {
       key: "nextPayment",
@@ -319,10 +313,21 @@ export default function LeasesPage() {
       {adding && (
         <Card>
           <CardContent className="space-y-6 p-4 sm:p-6">
-            <FormHeading title="Add New Lease" icon={Home} />
+            <FormHeading
+              title="Property Details"
+              note="Information about the leased property"
+              icon={Home}
+            />
 
-            {/* Where, and what */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+              <Choice
+                id="leaseLandlord"
+                label="Landlord"
+                value={draft.landlord}
+                onChange={(value) => set("landlord", value)}
+                options={landlords}
+                placeholder="Select landlord from suppliers"
+              />
               <Choice
                 id="leaseBranch"
                 label="Branch"
@@ -332,6 +337,7 @@ export default function LeasesPage() {
                   value: String(branch.id),
                   label: branch.name,
                 }))}
+                placeholder="Select Branch"
               />
               <Choice
                 id="leasePropertyType"
@@ -339,128 +345,17 @@ export default function LeasesPage() {
                 value={draft.propertyType}
                 onChange={(value) => set("propertyType", value)}
                 options={PROPERTY_TYPES.map((type) => ({ value: type, label: type }))}
+                placeholder="Select Property Type"
               />
               <div className="flex h-full flex-col justify-end gap-2">
-                <FieldLabel htmlFor="leaseBuilding" required>
-                  Building / Property
-                </FieldLabel>
+                <FieldLabel htmlFor="leaseAddress">Address</FieldLabel>
                 <Input
-                  id="leaseBuilding"
-                  value={draft.building}
-                  onChange={(e) => set("building", e.target.value)}
-                  placeholder="e.g. Al Khuwair Office Building"
+                  id="leaseAddress"
+                  value={draft.address}
+                  onChange={(e) => set("address", e.target.value)}
+                  placeholder="e.g. Al Khuwair, Muscat"
                 />
               </div>
-              <div className="flex h-full flex-col justify-end gap-2">
-                <FieldLabel htmlFor="leaseUnit" required>
-                  Unit
-                </FieldLabel>
-                <Input
-                  id="leaseUnit"
-                  value={draft.unit}
-                  onChange={(e) => set("unit", e.target.value)}
-                  placeholder="e.g. Office 101"
-                />
-              </div>
-            </div>
-
-            {/* From whom, and for how long */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-              <div className="flex h-full flex-col justify-end gap-2">
-                <FieldLabel htmlFor="leaseLandlord" required>
-                  Landlord
-                </FieldLabel>
-                <Input
-                  id="leaseLandlord"
-                  value={draft.landlord}
-                  onChange={(e) => set("landlord", e.target.value)}
-                  placeholder="Landlord name"
-                />
-              </div>
-              <Worked id="leaseContractNo" label="Contract No." value={contractNo} />
-              <div className="flex h-full flex-col justify-end gap-2">
-                <FieldLabel htmlFor="leaseStart" required>
-                  Contract Start
-                </FieldLabel>
-                <Input
-                  id="leaseStart"
-                  type="date"
-                  value={draft.start}
-                  max={draft.end || undefined}
-                  onChange={(e) => set("start", e.target.value)}
-                />
-              </div>
-              <div className="flex h-full flex-col justify-end gap-2">
-                <FieldLabel htmlFor="leaseEnd" required>
-                  Contract End
-                </FieldLabel>
-                <Input
-                  id="leaseEnd"
-                  type="date"
-                  value={draft.end}
-                  min={draft.start || undefined}
-                  onChange={(e) => set("end", e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* How much, and how often */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-              <Worked
-                id="leaseDuration"
-                label="Duration"
-                value={draftMonths ? draftMonths + " Months" : ""}
-              />
-              <div className="flex h-full flex-col justify-end gap-2">
-                <FieldLabel htmlFor="leaseRent" required>
-                  Rental Value (OMR)
-                </FieldLabel>
-                <Input
-                  id="leaseRent"
-                  inputMode="decimal"
-                  value={draft.rent}
-                  onChange={(e) => set("rent", e.target.value.replace(/[^\d.]/g, ""))}
-                  placeholder="0.000"
-                />
-              </div>
-              <Worked
-                id="leaseVat"
-                label="VAT (5%)"
-                value={Number(draft.rent) > 0 ? omr(vatOf(draft.rent)) : ""}
-              />
-              <Worked
-                id="leaseTotal"
-                label="Total (OMR)"
-                value={Number(draft.rent) > 0 ? omr(totalOf(draft.rent)) : ""}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-              <Choice
-                id="leaseFrequency"
-                label="Payment Frequency"
-                value={draft.frequency}
-                onChange={(value) => set("frequency", value)}
-                options={PAYMENT_FREQUENCIES.map((option) => ({
-                  value: option.key,
-                  label: option.key,
-                }))}
-              />
-              <Choice
-                id="leaseMethod"
-                label="Payment Method"
-                value={draft.method}
-                onChange={(value) => set("method", value)}
-                options={PAYMENT_METHODS.map((method) => ({
-                  value: method,
-                  label: method,
-                }))}
-              />
-              <Worked
-                id="leaseNextPayment"
-                label="Next Payment Date"
-                value={draftNext ? shortDate(draftNext) : ""}
-              />
             </div>
 
             <div className="flex justify-end gap-2">
@@ -468,7 +363,7 @@ export default function LeasesPage() {
                 Cancel
               </Button>
               <Button type="button" onClick={save} disabled={!canSave}>
-                Save Lease
+                Save
               </Button>
             </div>
           </CardContent>

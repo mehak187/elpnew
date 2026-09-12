@@ -26,7 +26,8 @@
       "PowerShell(npx eslint src/pages/employees/sections/SalariesSection.jsx src/pages/employees/sections/FinancialBenefitsSection.jsx)",
       "PowerShell(npx eslint src/pages/suppliers/SupplierPaymentsSection.jsx)",
       "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-supplier-payments-clean.cjs\")",
-      "PowerShell(npx eslint src/pages/leases/ src/App.jsx src/components/layout/Header.jsx)"
+      "PowerShell(npx eslint src/pages/leases/ src/App.jsx src/components/layout/Header.jsx)",
+      "PowerShell(npx eslint src/pages/leases/)"
     ]
   }
 }

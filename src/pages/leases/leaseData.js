@@ -106,16 +106,19 @@ export const totalOf = (rent) => Number(rent || 0) + vatOf(rent);
  * Where a lease stands, read off its end date.
  *
  * A lease that has not started yet is still one the firm is bound by, so it
- * counts as active rather than as something in between.
+ * counts as active rather than as something in between. One whose contract
+ * dates have not been entered yet cannot be anything but pending: calling it
+ * active would claim a contract nobody has recorded.
  */
 export function leaseState(lease, today = todayIso()) {
-  if (!lease.end) return "active";
+  if (!lease.start || !lease.end) return "pending";
   if (lease.end < today) return "expired";
   const daysLeft = Math.ceil((toDate(lease.end) - toDate(today)) / DAY);
   return daysLeft <= LEASE_WARNING_DAYS ? "soon" : "active";
 }
 
 export const LEASE_STATE = {
+  pending: { label: "Contract details pending", dot: "bg-gray-400" },
   active: { label: "Active", dot: "bg-green-500" },
   soon: { label: "Expiring Soon", dot: "bg-amber-400" },
   expired: { label: "Expired", dot: "bg-black" },
