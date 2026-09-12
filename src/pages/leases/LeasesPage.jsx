@@ -14,16 +14,16 @@ import DataTable from "@/components/shared/DataTable";
 import FormHeading from "@/components/shared/FormHeading";
 import { IdStatusDot } from "@/components/shared/panels";
 import { Home, Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useFirm } from "@/lib/firm/context";
 import { useSuppliers } from "@/lib/suppliers/context";
+import { useLeases } from "@/lib/leases/context";
 import {
   PROPERTY_TYPES,
   LEASE_STATE,
-  initialLeases,
   leaseMonths,
   leaseState,
   nextPaymentDate,
-  nextContractNo,
   vatOf,
   totalOf,
   omr,
@@ -84,10 +84,11 @@ const Missing = () => <span className="text-muted-foreground">-</span>;
  * never stored.
  */
 export default function LeasesPage() {
+  const navigate = useNavigate();
   const { branches } = useFirm();
   const { suppliers } = useSuppliers();
-
-  const [leases, setLeases] = useState(initialLeases);
+  // Shared with each lease's own page, so a change made there shows here.
+  const { leases, addLease } = useLeases();
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState(emptyDraft);
   const [pageSize, setPageSize] = useState(10);
@@ -118,25 +119,13 @@ export default function LeasesPage() {
 
   const save = () => {
     if (!canSave) return;
-    setLeases((prev) => [
-      {
-        id: prev.reduce((max, lease) => Math.max(max, lease.id), 0) + 1,
-        contractNo: nextContractNo(prev),
-        landlord: draft.landlord,
-        branchId: Number(draft.branchId),
-        propertyType: draft.propertyType,
-        address: draft.address.trim(),
-        // The contract itself has not been entered yet.
-        building: "",
-        unit: "",
-        start: "",
-        end: "",
-        rent: 0,
-        frequency: "",
-        method: "",
-      },
-      ...prev,
-    ]);
+    // The number and the empty contract are filled in where leases are kept.
+    addLease({
+      landlord: draft.landlord,
+      branchId: Number(draft.branchId),
+      propertyType: draft.propertyType,
+      address: draft.address.trim(),
+    });
     setCurrentPage(1);
     close();
   };
@@ -163,7 +152,15 @@ export default function LeasesPage() {
       exportValue: (row) => row.rowNo + " (" + LEASE_STATE[row.state].label + ")",
       render: (value, row) => (
         <span className="inline-flex items-center gap-2">
-          <span className="font-medium">{value}</span>
+          {/* The number opens the lease itself. */}
+          <button
+            type="button"
+            onClick={() => navigate("/leases/" + row.id)}
+            title={"Open " + row.contractNo}
+            className="rounded font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            {value}
+          </button>
           <IdStatusDot
             status={LEASE_STATE[row.state].label}
             tone={LEASE_STATE[row.state].dot}

@@ -139,6 +139,47 @@ export function nextPaymentDate(lease, today = todayIso()) {
   return due <= lease.end ? due : "";
 }
 
+/** Where the property is, in one line: its address, or its building and unit. */
+export const addressOf = (lease) =>
+  lease.address || [lease.building, lease.unit].filter(Boolean).join(", ");
+
+/** How each payment in the schedule stands against today. */
+export const SCHEDULE_STATE = {
+  passed: { label: "Due date passed", tone: "bg-muted text-muted-foreground" },
+  next: { label: "Next payment", tone: "bg-blue-100 text-blue-800" },
+  upcoming: { label: "Upcoming", tone: "bg-amber-100 text-amber-800" },
+};
+
+/**
+ * Every payment the contract falls due for, from its first day to its last.
+ *
+ * Counted from the start date, stepping by the payment frequency, and never
+ * stored: change the dates, the rent or the frequency and the schedule follows.
+ * Whether a payment was actually made is not recorded yet, so a past date is
+ * only called what it is - passed - and not "paid" or "overdue".
+ */
+export function paymentSchedule(lease, today = todayIso()) {
+  if (!lease.start || !lease.end || !lease.frequency || lease.end < lease.start)
+    return [];
+  const step = monthsBetweenPayments(lease.frequency);
+  const next = nextPaymentDate(lease, today);
+  const rent = Number(lease.rent || 0);
+  const rows = [];
+  for (let n = 0; n < 1200; n++) {
+    const due = addMonths(lease.start, n * step);
+    if (due > lease.end) break;
+    rows.push({
+      no: n + 1,
+      due,
+      rent,
+      vat: vatOf(rent),
+      total: totalOf(rent),
+      when: due === next ? "next" : due < today ? "passed" : "upcoming",
+    });
+  }
+  return rows;
+}
+
 /** The next number in the year's run: RNT-2026-002. */
 export function nextContractNo(leases, date = todayIso()) {
   const prefix = "RNT-" + String(date).slice(0, 4) + "-";
