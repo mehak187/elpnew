@@ -7,6 +7,7 @@ import FirmProvider from "@/lib/firm/FirmProvider";
 import ExpensesProvider from "@/lib/expenses/ExpensesProvider";
 import SuppliersProvider from "@/lib/suppliers/SuppliersProvider";
 import ClientsProvider from "@/lib/clients/ClientsProvider";
+import LeasesProvider from "@/lib/leases/LeasesProvider";
 
 // Root Pages
 import Dashboard from "@/pages/Dashboard";
@@ -40,6 +41,10 @@ import NewInvoice from "@/pages/expenses/NewInvoice";
 import SuppliersPage from "@/pages/suppliers/SuppliersPage";
 import SupplierForm from "@/pages/suppliers/SupplierForm";
 
+// Leases
+import LeasesPage from "@/pages/leases/LeasesPage";
+import LeaseDetails from "@/pages/leases/LeaseDetails";
+
 // Corporate Module
 import CorporateList from "@/pages/corporate/CorporateList";
 
@@ -68,6 +73,7 @@ function App() {
       <ExpensesProvider>
         <SuppliersProvider>
           <ClientsProvider>
+          <LeasesProvider>
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<MainLayout />}>
@@ -84,6 +90,10 @@ function App() {
               <Route path="suppliers" element={<SuppliersPage />} />
               <Route path="suppliers/create" element={<SupplierForm />} />
               <Route path="suppliers/:id" element={<SupplierForm />} />
+
+              {/* Leases */}
+              <Route path="leases" element={<LeasesPage />} />
+              <Route path="leases/:id" element={<LeaseDetails />} />
               <Route path="expenses" element={<ExpensesPage />} />
               <Route path="expenses/create" element={<ExpenseForm />} />
               <Route path="expense-requests" element={<GeneralInvoices />} />
@@ -152,6 +162,7 @@ function App() {
             </Route>
           </Routes>
         </BrowserRouter>
+          </LeasesProvider>
           </ClientsProvider>
         </SuppliersProvider>
       </ExpensesProvider>

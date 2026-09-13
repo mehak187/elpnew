@@ -4,7 +4,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -13,12 +12,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Info,
   Users,
   UserCog,
   Scale,
   UserRound,
   Calculator,
+  Building2,
+  Briefcase,
 } from "lucide-react";
 import { useClients } from "@/lib/clients/context";
 import { clientLinkedCases } from "@/pages/clients/clientMockData";
@@ -30,7 +30,9 @@ import {
   categoriesOf,
   subcategoriesOf,
   legalFeesCollected,
-  legalFeesOnCase,
+  legalFeesInvoicesOnFile,
+  legalFeesOnInvoice,
+  isFullyPaid,
 } from "../commissionData";
 
 /**
@@ -40,29 +42,55 @@ import {
  * than the whole firm - `role` is the field on the employee record that decides
  * who belongs to it.
  */
+const ALL_MEMBERS = "All Office Members";
+const OTHER_STAFF = "Other Staff";
+
+/**
+ * Commission is not a partners' matter: anyone in the office who brings in a
+ * client or a case can be owed a share of the fees. So the first choice is the
+ * whole office, and the last catches anyone whose role none of the named groups
+ * covers - nobody who can earn commission is left out of the list.
+ */
 export const CLASSIFICATIONS = [
+  { key: ALL_MEMBERS, role: null, icon: Building2 },
   { key: "Partners", role: "Partner", icon: Users },
   { key: "Consultants", role: "Advisor", icon: UserCog },
   { key: "Lawyers", role: "Lawyer", icon: Scale },
   { key: "Administrators", role: "Administrative", icon: UserRound },
   { key: "Accountants", role: "Accountant", icon: Calculator },
+  { key: OTHER_STAFF, role: null, icon: Briefcase },
 ];
 
+const NAMED_ROLES = CLASSIFICATIONS.map((group) => group.role).filter(Boolean);
+
 const peopleIn = (classification) => {
+  if (classification === ALL_MEMBERS) return employeeRecords;
+  if (classification === OTHER_STAFF)
+    return employeeRecords.filter((e) => !NAMED_ROLES.includes(e.role));
   const group = CLASSIFICATIONS.find((c) => c.key === classification);
   if (!group) return [];
   return employeeRecords.filter((e) => e.role === group.role);
 };
 
+/**
+ * The groups worth offering: the whole office always, and any other group
+ * only when somebody is in it - an empty group is a choice that leads nowhere.
+ */
+const offeredClassifications = () =>
+  CLASSIFICATIONS.filter(
+    (group) => group.key === ALL_MEMBERS || peopleIn(group.key).length > 0
+  );
+
 /** The group a person's job puts them in. */
 const classificationOf = (role) =>
-  CLASSIFICATIONS.find((group) => group.role === role)?.key || "";
+  CLASSIFICATIONS.find((group) => group.role === role)?.key || OTHER_STAFF;
 
 const emptyDraft = {
   ...DEFAULT_COMMISSION_BOOKING,
   clientType: "",
   clientNo: "",
   caseFileNo: "",
+  invoiceNo: "",
   periodFrom: "",
   periodTo: "",
   classification: "",
@@ -93,40 +121,39 @@ function FieldLabel({ htmlFor, required, children }) {
   );
 }
 
-/** A note the form makes about itself. */
-function Notice({ children }) {
-  return (
-    <p className="flex items-start gap-2 text-xs text-primary">
-      <Info className="mt-0.5 h-4 w-4 shrink-0" />
-      <span>{children}</span>
-    </p>
-  );
-}
-
 /**
  * The arrangement being agreed: who, on whose fees, at what rate, over what
  * period.
  *
- * One form for both places it is asked for - the firm's own commission page,
- * where anyone can be named, and an employee's record, where the person is
- * already known and so is not asked for again.
+ * One form for every place it is asked for. Anyone in the office can be named
+ * as the beneficiary - not only partners - because commission is earned by
+ * whoever brought in the client or the case. On an employee's record that
+ * employee is simply the starting choice.
  *
  * The commission amount is on the form but is never typed: it is the legal fees
- * the client has actually paid in the period, times the percentage. A figure
- * that could be typed could be typed wrong.
+ * before VAT the client has paid in full - on the chosen invoice, or within the
+ * period - times the percentage. A figure that could be typed could be typed
+ * wrong.
  */
-export default function CommissionForm({ employee, onCancel, onSave }) {
+export default function CommissionForm({
+  employee,
+  onCancel,
+  onSave,
+  // Told which client is chosen, so the list under the form can narrow to
+  // that client's commissions while one for them is being written.
+  onClientChange,
+}) {
   const { clients } = useClients();
 
-  // On an employee's own record the commission is theirs by definition, so
-  // the two questions about who it is for are answered before it opens.
+  // Opened from an employee's record, that employee is filled in to start
+  // with - but only to start with. Commission can go to any member of the
+  // office who brought in the client or the case, so both questions about who
+  // it is for stay open to change.
   const [draft, setDraft] = useState(() => ({
     ...emptyDraft,
     classification: employee ? classificationOf(employee.role) : "",
     paidTo: employee ? employee.name : "",
   }));
-
-  const ownsPerson = Boolean(employee);
 
   const setField = (name, value) =>
     setDraft((prev) => ({ ...prev, [name]: value }));
@@ -136,8 +163,30 @@ export default function CommissionForm({ employee, onCancel, onSave }) {
     setDraft((prev) => ({ ...prev, classification: value, paidTo: "" }));
 
   /** Changing the kind of client empties the client, for the same reason. */
-  const chooseClientType = (value) =>
-    setDraft((prev) => ({ ...prev, clientType: value, clientNo: "" }));
+  const chooseClientType = (value) => {
+    if (!value) return;
+    setDraft((prev) => ({
+      ...prev,
+      clientType: value,
+      clientNo: "",
+      invoiceNo: "",
+    }));
+    onClientChange?.("");
+  };
+
+  /**
+   * The client, passed on to whoever shows the list.
+   *
+   * An empty value is ignored: inside the employee's form Radix keeps a hidden
+   * native select that reports "" when its list is rebuilt, which would clear
+   * the choice - and the filter with it - on its own.
+   */
+  const chooseClient = (value) => {
+    if (!value) return;
+    // Invoices belong to a client, so one chosen for the last client goes.
+    setDraft((prev) => ({ ...prev, clientNo: value, invoiceNo: "" }));
+    onClientChange?.(value);
+  };
 
   // The kinds of client the firm actually has, read off the directory rather
   // than listed here - a kind nobody is would only ever be an empty choice.
@@ -154,11 +203,27 @@ export default function CommissionForm({ employee, onCancel, onSave }) {
   // other and never for both.
   const isSpecific = draft.subcategory === SPECIFIC_COMMISSION;
 
-  // What the arrangement is worth so far: the fees it runs on, times the
-  // rate. Both sides come from elsewhere, so it moves on its own as the case
-  // file or the period and the percentage are set.
+  /** Another file has its own invoices, so the one chosen for the last goes. */
+  const chooseCaseFile = (value) => {
+    if (!value) return;
+    setDraft((prev) => ({ ...prev, caseFileNo: value, invoiceNo: "" }));
+  };
+
+  const chooseInvoice = (value) => {
+    if (!value) return;
+    setField("invoiceNo", value);
+  };
+
+  // What a specific commission can be calculated from: the legal-fees
+  // invoices this client was sent on this file, and no others.
+  const fileInvoices = legalFeesInvoicesOnFile(draft.clientNo, draft.caseFileNo);
+
+  // What the arrangement is worth so far: the legal fees before VAT it runs
+  // on, times the rate - one invoice for a specific commission, everything
+  // paid in the period for a fixed one. Both sides come from elsewhere, so it
+  // moves on its own as the invoice or the period and the percentage are set.
   const fees = isSpecific
-    ? legalFeesOnCase(draft.clientNo, draft.caseFileNo)
+    ? legalFeesOnInvoice(draft.clientNo, draft.invoiceNo)
     : legalFeesCollected(draft.clientNo, draft.periodFrom, draft.periodTo);
   const commission = (fees * Number(draft.rate || 0)) / 100;
 
@@ -169,7 +234,7 @@ export default function CommissionForm({ employee, onCancel, onSave }) {
     draft.clientType &&
     draft.clientNo &&
     (isSpecific
-      ? draft.caseFileNo
+      ? draft.caseFileNo && draft.invoiceNo
       : draft.periodFrom && draft.periodTo) &&
     draft.classification &&
     draft.paidTo &&
@@ -186,6 +251,7 @@ export default function CommissionForm({ employee, onCancel, onSave }) {
       // Only one of the two was asked for, so only one is kept: a period
       // on a case-file commission would be a figure nobody set.
       caseFileNo: isSpecific ? draft.caseFileNo : "",
+      invoiceNo: isSpecific ? draft.invoiceNo : "",
       periodFrom: isSpecific ? "" : draft.periodFrom,
       periodTo: isSpecific ? "" : draft.periodTo,
       clientName: client?.clientName || "",
@@ -266,7 +332,7 @@ export default function CommissionForm({ employee, onCancel, onSave }) {
               disabled={!draft.category}
             >
               <SelectTrigger id="commissionSubcategory">
-                <SelectValue placeholder="Select Subcategory" />
+                <SelectValue placeholder="Please Select" />
               </SelectTrigger>
               <SelectContent>
                 {subcategoriesOf(draft.expenseType, draft.category).map(
@@ -281,13 +347,15 @@ export default function CommissionForm({ employee, onCancel, onSave }) {
           </div>
         </div>
 
+        {/* Nothing below the first row until a subcategory is chosen: a fixed
+            and a specific commission ask different questions, so there is
+            nothing sensible to show before the choice is made. */}
+        {draft.subcategory && (
+        <>
         {/* Whose fees it runs on, and what bounds them. */}
-        <div
-          className={cn(
-            "grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6",
-            isSpecific ? "lg:grid-cols-3" : "lg:grid-cols-4"
-          )}
-        >
+        {/* Four to a row either way: client type, client, and then a case
+            file and its invoice, or the two ends of a period. */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
           <div className="flex h-full flex-col justify-end gap-2">
             <FieldLabel htmlFor="commissionClientType" required>
               Client Type
@@ -312,7 +380,7 @@ export default function CommissionForm({ employee, onCancel, onSave }) {
             </FieldLabel>
             <Select
               value={draft.clientNo}
-              onValueChange={(value) => setField("clientNo", value)}
+              onValueChange={chooseClient}
               disabled={!draft.clientType}
             >
               <SelectTrigger id="commissionClient">
@@ -337,14 +405,12 @@ export default function CommissionForm({ employee, onCancel, onSave }) {
           {/* A case file, or a period - never both. Which one is asked
               for is the whole difference between the two subcategories. */}
           {isSpecific ? (
+            <>
             <div className="flex h-full flex-col justify-end gap-2">
               <FieldLabel htmlFor="caseFileNo" required>
                 Case File Number
               </FieldLabel>
-              <Select
-                value={draft.caseFileNo}
-                onValueChange={(value) => setField("caseFileNo", value)}
-              >
+              <Select value={draft.caseFileNo} onValueChange={chooseCaseFile}>
                 <SelectTrigger id="caseFileNo">
                   <SelectValue placeholder="Select Case File" />
                 </SelectTrigger>
@@ -357,6 +423,55 @@ export default function CommissionForm({ employee, onCancel, onSave }) {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* The invoice the commission is calculated from: only this
+                client's legal-fees invoices on this file are offered. One not
+                yet paid in full is shown - so it is clear it exists - but
+                cannot be chosen, because commission is earned only on fees the
+                client has actually paid. */}
+            <div className="flex h-full flex-col justify-end gap-2">
+              <FieldLabel htmlFor="commissionInvoice" required>
+                Invoice Number
+              </FieldLabel>
+              <Select
+                value={draft.invoiceNo}
+                onValueChange={chooseInvoice}
+                disabled={
+                  !draft.clientNo ||
+                  !draft.caseFileNo ||
+                  fileInvoices.length === 0
+                }
+              >
+                <SelectTrigger id="commissionInvoice">
+                  <SelectValue
+                    placeholder={
+                      !draft.clientNo || !draft.caseFileNo
+                        ? "Select a case file first"
+                        : fileInvoices.length === 0
+                          ? "No legal-fees invoice on this file"
+                          : "Select Invoice"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {fileInvoices.map((invoice) => {
+                    const paidInFull = isFullyPaid(invoice);
+                    return (
+                      <SelectItem
+                        key={invoice.invoiceNo}
+                        value={invoice.invoiceNo}
+                        disabled={!paidInFull}
+                      >
+                        {invoice.invoiceNo} &mdash; {money(invoice.legalFees)}{" "}
+                        before VAT
+                        {!paidInFull && " · " + invoice.status}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+            </>
           ) : (
             <>
               <div className="flex h-full flex-col justify-end gap-2">
@@ -397,13 +512,12 @@ export default function CommissionForm({ employee, onCancel, onSave }) {
             <Select
               value={draft.classification}
               onValueChange={chooseClassification}
-              disabled={ownsPerson}
             >
               <SelectTrigger id="classification">
                 <SelectValue placeholder="Select Classification" />
               </SelectTrigger>
               <SelectContent>
-                {CLASSIFICATIONS.map((group) => {
+                {offeredClassifications().map((group) => {
                   const Icon = group.icon;
                   return (
                     <SelectItem key={group.key} value={group.key}>
@@ -425,7 +539,7 @@ export default function CommissionForm({ employee, onCancel, onSave }) {
             <Select
               value={draft.paidTo}
               onValueChange={(value) => setField("paidTo", value)}
-              disabled={ownsPerson || !draft.classification}
+              disabled={!draft.classification}
             >
               <SelectTrigger id="paidTo">
                 <SelectValue
@@ -496,20 +610,13 @@ export default function CommissionForm({ employee, onCancel, onSave }) {
             placeholder="Enter any notes (optional)"
           />
         </div>
+        </>
+        )}
 
-        <div className="rounded-lg bg-secondary/50 p-4">
-          <Notice>
-            Commission will be calculated automatically when legal fees are
-            collected:
-            {/* The formula on its own line: it is the thing being said,
-                not an aside to the sentence above it. */}
-            <span className="mt-1 block font-semibold">
-              Legal Fees (Before VAT) &times; Commission Percentage = Commission
-              Amount
-            </span>
-          </Notice>
-        </div>
-
+        {/* The rule is not written on the form - it is what the Commission
+            Amount field above is worked out by:
+            Legal Fees (Before VAT) x Commission Percentage = Commission Amount,
+            counted only on fees the client has actually paid. */}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel

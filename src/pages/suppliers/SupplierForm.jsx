@@ -18,7 +18,6 @@ import {
   ArrowLeft,
   Save,
   FileText,
-  FolderOpen,
   Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -37,15 +36,13 @@ import { SUPPLIER_CATEGORIES, SUPPLIER_STATUSES } from "./supplierData";
  *
  * `existingOnly` keeps payments behind a saved supplier: a supplier that
  * has not been created yet has nothing to have been billed for.
+ *
+ * Documents are not a section of their own: the C.R, the contract and the tax
+ * certificates are what the details above them are taken from, so they are
+ * read on the same page as those details.
  */
 const SECTIONS = [
   { key: "information", label: "Supplier Information", icon: FileText },
-  {
-    key: "documents",
-    label: "Supplier Documents",
-    icon: FolderOpen,
-    existingOnly: true,
-  },
   {
     key: "payments",
     label: "Supplier Payments",
@@ -206,11 +203,10 @@ export default function SupplierForm() {
 
         {/* min-w-0 or a wide table in here would stretch the whole page */}
         <div className="w-full min-w-0 flex-1">
-          {activeSection === "documents" ? (
-            <SupplierDocumentsSection supplier={existing} />
-          ) : activeSection === "payments" ? (
+          {activeSection === "payments" ? (
             <SupplierPaymentsSection supplier={existing} />
           ) : (
+      <div className="space-y-4 sm:space-y-6">
       <Card>
         <CardContent className="p-4 sm:p-6">
           <form id="supplier-form" onSubmit={handleSubmit} className="space-y-6">
@@ -375,6 +371,11 @@ export default function SupplierForm() {
           </form>
         </CardContent>
       </Card>
+
+      {/* The supplier's papers, under the details they back. Only once the
+          supplier exists: there is nobody to file a paper against before. */}
+      {isEdit && <SupplierDocumentsSection supplier={existing} />}
+      </div>
           )}
         </div>
       </div>

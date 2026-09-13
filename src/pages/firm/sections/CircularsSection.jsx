@@ -54,7 +54,6 @@ const preview = (content) =>
   content.length > PREVIEW_LIMIT
     ? content.slice(0, PREVIEW_LIMIT).trimEnd() + " ..."
     : content;
-const PAGE_SIZE = 10;
 
 const emptyDraft = {
   date: today(),
@@ -104,6 +103,7 @@ export default function CircularsSection({ canEdit }) {
   const [detailsFor, setDetailsFor] = useState(null);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [showAudit, setShowAudit] = useState(false);
 
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
@@ -174,10 +174,10 @@ export default function CircularsSection({ canEdit }) {
     )
     .sort((a, b) => b.date.localeCompare(a.date));
 
-  const totalPages = Math.max(1, Math.ceil(listed.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(listed.length / pageSize));
   const currentPage = Math.min(page, totalPages);
-  const start = (currentPage - 1) * PAGE_SIZE;
-  const shown = listed.slice(start, start + PAGE_SIZE);
+  const start = (currentPage - 1) * pageSize;
+  const shown = listed.slice(start, start + pageSize);
 
   const exportCirculars = () =>
     downloadCsv(
@@ -402,21 +402,18 @@ export default function CircularsSection({ canEdit }) {
           same line rather than costing a row of its own. */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
         <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">Circulars</h2>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button variant="outline" onClick={exportCirculars}>
-            <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" />
-            Export Excel
+        {canEdit && (
+          <Button onClick={startNew} disabled={Boolean(open)}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            New Circular
           </Button>
-          {canEdit && (
-            <Button onClick={startNew} disabled={Boolean(open)}>
-              <Plus className="mr-1.5 h-4 w-4" />
-              New Circular
-            </Button>
-          )}
-        </div>
+        )}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* The same toolbar every table in the system has: search on the left,
+          page size and export on the right. Export used to be a second button
+          up in the heading as well, which was one action offered twice. */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <AiSearch
           value={query}
           onChange={(value) => {
@@ -425,6 +422,39 @@ export default function CircularsSection({ canEdit }) {
           }}
           placeholder="Ask about circulars..."
         />
+
+        <div className="hidden flex-1 sm:block" />
+
+        <div className="flex items-center justify-between gap-2 sm:justify-end">
+          <Select
+            value={String(pageSize)}
+            onValueChange={(value) => {
+              setPageSize(Number(value));
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-20" aria-label="Rows per page">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="25">25</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="100">100</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button
+            variant="outline"
+            size="icon"
+            className="shrink-0"
+            title="Export to CSV"
+            onClick={exportCirculars}
+          >
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+            <span className="sr-only">Export to CSV</span>
+          </Button>
+        </div>
       </div>
 
       {form}
@@ -573,7 +603,7 @@ export default function CircularsSection({ canEdit }) {
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
           <span>
             Showing {listed.length === 0 ? 0 : start + 1} to{" "}
-            {Math.min(start + PAGE_SIZE, listed.length)} of {listed.length}{" "}
+            {Math.min(start + pageSize, listed.length)} of {listed.length}{" "}
             entries
           </span>
           <div className="flex items-center gap-1">

@@ -200,7 +200,14 @@ function Choice({ id, label, value, onChange, placeholder, options }) {
  * reads them off the salary above, so a payslip and the payment that settles it
  * cannot disagree.
  */
-export default function SalariesSection({ employee, adding, onCloseAdd, onSave }) {
+export default function SalariesSection({
+  employee,
+  adding,
+  onCloseAdd,
+  onSave,
+  // Whether the salary breakdown is open. The history under it is always shown.
+  detailsOpen = true,
+}) {
   // Opened on what the employee is already paid, so the page shows the salary
   // in force rather than a blank form somebody has to fill in from memory.
   // What has been recorded through this form. The monthly history beside it
@@ -562,7 +569,10 @@ export default function SalariesSection({ employee, adding, onCloseAdd, onSave }
 
   return (
     <div className="space-y-6">
-      <div className="space-y-6 rounded-lg border p-4 sm:p-6">
+      {/* The breakdown is opened and closed from beside the heading, so that
+          when it is closed the history below is all there is to read. */}
+      {detailsOpen && (
+      <div id="salary-details" className="space-y-6 rounded-lg border p-4 sm:p-6">
         <Group title="Salary & Allowances">
           <Amount
             id="salary-basic"
@@ -646,6 +656,7 @@ export default function SalariesSection({ employee, adding, onCloseAdd, onSave }
           </Button>
         </div>
       </div>
+      )}
 
       {/* What has been paid, month by month */}
       <SalaryHistory />

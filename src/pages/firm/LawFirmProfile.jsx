@@ -69,13 +69,6 @@ const SECTIONS = [
   },
   {
     ownsHeader: true,
-    key: "documents",
-    label: "Documents",
-    icon: FileText,
-    note: "Licences, certificates and reports on file",
-  },
-  {
-    ownsHeader: true,
     key: "circulars",
     label: "Circulars",
     icon: Megaphone,
@@ -116,8 +109,11 @@ export default function LawFirmProfile() {
   const [sectionArgs, setSectionArgs] = useState({});
   const [role, setRole] = useState(CURRENT_USER.role);
 
+  // Documents are read under Company Details now, not on a page of their own:
+  // the licences and certificates are what those details are taken from. A
+  // link that still asks for them lands where they are.
   const goToSection = (key, args = {}) => {
-    setActiveSection(key);
+    setActiveSection(key === "documents" ? "information" : key);
     setSectionArgs(args);
   };
 
@@ -199,7 +195,7 @@ export default function LawFirmProfile() {
         {/* min-w-0 or the column will not shrink: a flex child sizes itself to
             its widest content by default, so one wide table in here would
             stretch the whole page and push the sidebar off screen. */}
-        <div className="w-full min-w-0 flex-1">
+        <div className="w-full min-w-0 flex-1 space-y-4 sm:space-y-6">
           <Card>
             <CardContent className="p-4 sm:p-6">
               {/* The name of the section, and nothing else. A section that
@@ -218,9 +214,6 @@ export default function LawFirmProfile() {
               )}
               {activeSection === "information" && (
                 <FirmInformationSection canEdit={isAdmin} />
-              )}
-              {activeSection === "documents" && (
-                <DocumentsSection canEdit={canEditDocuments} />
               )}
               {activeSection === "circulars" && (
                 <CircularsSection canEdit={isAdmin} />
@@ -243,6 +236,16 @@ export default function LawFirmProfile() {
               {activeSection === "commission" && <CommissionSection />}
             </CardContent>
           </Card>
+
+          {/* The company's papers, in a box of their own under the details
+              they back - one page for what the company is and what proves it. */}
+          {activeSection === "information" && (
+            <Card>
+              <CardContent className="p-4 sm:p-6">
+                <DocumentsSection canEdit={canEditDocuments} />
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

@@ -1,13 +1,46 @@
 import { clientInvoices } from "@/pages/clients/clientMockData";
 
+/* ------------------------------------------ what commission is counted on */
+
 /**
- * The legal fees a client settled in a period.
+ * The only kind of invoice commission is earned on.
  *
- * Commission is owed on fees, not on tax, so the VAT on each invoice is left
- * out - an invoice of 1,050 made of 1,000 fees and 50 VAT earns commission on
- * the 1,000. Only invoices actually paid count, and they count on the day the
- * money arrived rather than the day the invoice was raised, because that is
- * when the commission fell due.
+ * Court charges, execution fees, expenses and disbursements are money the firm
+ * collects and passes on, not fees it earns, so an invoice for any of them
+ * earns nobody a share.
+ */
+export const LEGAL_FEES = "Legal Fees";
+
+export const isLegalFeesInvoice = (invoice) => invoice.feeType === LEGAL_FEES;
+
+/**
+ * Settled in full, going by the money rather than the label.
+ *
+ * What was paid has to reach the whole invoice, VAT included, and there has to
+ * be a day it arrived. A part payment earns nothing until it is complete, and a
+ * cancelled invoice never does. The status is not trusted on its own: it is
+ * written separately, and a stored label can disagree with the amounts beside
+ * it.
+ */
+export const isFullyPaid = (invoice) =>
+  invoice.status !== "Cancelled" &&
+  Boolean(invoice.paidDate) &&
+  Number(invoice.paidAmount || 0) >= Number(invoice.amount || 0);
+
+/**
+ * What an invoice earns commission on: its legal fees before VAT.
+ *
+ * An invoice of OMR 105 made of 100 legal fees and 5 VAT earns commission on
+ * the 100. VAT is the government's money, collected on its behalf.
+ */
+const feesBeforeVat = (invoice) => Number(invoice.legalFees || 0);
+
+/**
+ * The legal fees a client paid in full within a period.
+ *
+ * Counted on the day the money arrived rather than the day the invoice was
+ * raised, because that is when the commission fell due - so an invoice raised
+ * in March and settled in May belongs to May. Both ends of the period count.
  */
 export function legalFeesCollected(clientNo, from, to) {
   if (!clientNo || !from) return 0;
@@ -15,30 +48,48 @@ export function legalFeesCollected(clientNo, from, to) {
     .filter(
       (invoice) =>
         invoice.clientNo === clientNo &&
-        invoice.status === "Paid" &&
+        isLegalFeesInvoice(invoice) &&
+        isFullyPaid(invoice) &&
         invoice.paidDate >= from &&
         (!to || invoice.paidDate <= to)
     )
-    .reduce((sum, invoice) => sum + Number(invoice.legalFees || 0), 0);
+    .reduce((sum, invoice) => sum + feesBeforeVat(invoice), 0);
 }
 
 /**
- * The legal fees a client settled on one case file.
+ * The legal-fees invoices raised to a client on one case file.
  *
- * A commission agreed for a single case is owed on that case's fees and no
- * others, so the invoice has to say which file it was for. An invoice that
- * names no file belongs to no case, and is counted by period instead.
+ * What a specific commission can be calculated from: the invoice has to belong
+ * to the file the commission was agreed for, and it has to be for legal fees -
+ * an invoice for court charges or execution fees earns nobody a share, so it is
+ * not offered at all.
  */
-export function legalFeesOnCase(clientNo, caseFileNo) {
-  if (!clientNo || !caseFileNo) return 0;
-  return clientInvoices
-    .filter(
-      (invoice) =>
-        invoice.clientNo === clientNo &&
-        invoice.caseFileNo === caseFileNo &&
-        invoice.status === "Paid"
-    )
-    .reduce((sum, invoice) => sum + Number(invoice.legalFees || 0), 0);
+export const legalFeesInvoicesOnFile = (clientNo, caseFileNo) =>
+  !clientNo || !caseFileNo
+    ? []
+    : clientInvoices.filter(
+        (invoice) =>
+          invoice.clientNo === clientNo &&
+          invoice.caseFileNo === caseFileNo &&
+          isLegalFeesInvoice(invoice)
+      );
+
+/**
+ * What one invoice earns commission on: its legal fees before VAT.
+ *
+ * An invoice of OMR 105 made of 100 legal fees and 5 VAT earns on the 100. Only
+ * once it is paid in full, by the same rule as a period - an invoice still
+ * owed has earned nothing yet.
+ */
+export function legalFeesOnInvoice(clientNo, invoiceNo) {
+  if (!clientNo || !invoiceNo) return 0;
+  const invoice = clientInvoices.find(
+    (candidate) =>
+      candidate.clientNo === clientNo && candidate.invoiceNo === invoiceNo
+  );
+  return invoice && isLegalFeesInvoice(invoice) && isFullyPaid(invoice)
+    ? feesBeforeVat(invoice)
+    : 0;
 }
 
 /* ------------------------------------------------- where it lands in the books */
@@ -72,21 +123,13 @@ export const categoriesOf = (type) =>
 export const subcategoriesOf = (type, category) =>
   categoriesOf(type).find((c) => c.name === category)?.subcategories || [];
 
+// The subcategory is left for the user to choose: it decides which questions
+// the form asks next, so it is never answered for them.
 export const DEFAULT_COMMISSION_BOOKING = {
   expenseType: "Employee Expenses",
   category: "Commission",
-  subcategory: FIXED_COMMISSION,
+  subcategory: "",
 };
-
-/**
- * Whether the arrangement stands or was agreed once.
- *
- * Not stored: a fixed commission runs for the whole period and a specific one
- * is agreed for a single piece of work, so the subcategory already says it. A
- * field of its own could only ever repeat it or contradict it.
- */
-export const recurrenceOf = (record) =>
-  record.type === SPECIFIC_COMMISSION ? "One-time" : "Recurring";
 
 /* ------------------------------------------------------------ the arrangements */
 
@@ -103,7 +146,7 @@ export const recurrenceOf = (record) =>
  */
 export const commissionRecords = [
   { id: 1, commissionNo: "COM-2024-001", classification: "Partners", paidTo: "Mohammed Al Yahyaei", clientNo: "1", clientName: "ABC Holdings LLC", type: FIXED_COMMISSION, caseFileNo: "", rate: 10, periodFrom: "2024-01-01", periodTo: "", notes: "" },
-  { id: 2, commissionNo: "COM-2024-002", classification: "Lawyers", paidTo: "Fatima Al Rashdi", clientNo: "1", clientName: "ABC Holdings LLC", type: SPECIFIC_COMMISSION, caseFileNo: "21", rate: 5, periodFrom: "2024-05-01", periodTo: "2024-12-31", notes: "" },
+  { id: 2, commissionNo: "COM-2024-002", classification: "Lawyers", paidTo: "Fatima Al Rashdi", clientNo: "1", clientName: "ABC Holdings LLC", type: SPECIFIC_COMMISSION, caseFileNo: "21", invoiceNo: "INV-2024-011", rate: 5, periodFrom: "2024-05-01", periodTo: "2024-12-31", notes: "" },
   { id: 3, commissionNo: "COM-2024-003", classification: "Consultants", paidTo: "Amina Al Farsi", clientNo: "3", clientName: "Al Madina Trading", type: FIXED_COMMISSION, caseFileNo: "", rate: 7.5, periodFrom: "2024-07-01", periodTo: "", notes: "" },
 ];
 
@@ -140,12 +183,12 @@ export const monthAndYear = (record) => {
  * The fees an arrangement has run on so far.
  *
  * Which fees those are depends on what kind it is: a specific commission is
- * agreed for one case file and earns on that file alone, while a fixed one
- * stands over a period and earns on everything paid inside it.
+ * calculated from one invoice on one case file, while a fixed one stands over
+ * a period and earns on every legal fee paid inside it.
  */
 export const feesFor = (record) =>
   record.type === SPECIFIC_COMMISSION
-    ? legalFeesOnCase(record.clientNo, record.caseFileNo)
+    ? legalFeesOnInvoice(record.clientNo, record.invoiceNo)
     : legalFeesCollected(record.clientNo, record.periodFrom, record.periodTo);
 
 /** What it has earned: the fees times the rate, worked out on the spot. */

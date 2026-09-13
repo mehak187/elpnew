@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($env:NODE_ENV = 'development'; npx vite --port 5173 --strictPort)",
+      "PowerShell(npx eslint src/pages/firm/)",
+      "PowerShell(npx vite build --logLevel error)",
+      "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-firm-docs.cjs\")",
+      "PowerShell(npx eslint src/pages/firm/sections/CircularsSection.jsx)",
+      "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-circ-comm.cjs\")",
+      "PowerShell(try { \"dev server: \" + \\(Invoke-WebRequest -Uri \"http://localhost:5173/\" -UseBasicParsing -TimeoutSec 5\\).StatusCode } catch { \"dev server DOWN: \" + $_.Exception.Message }; git -C \"D:\\\\Other P\\\\ELP New\" status --short src/pages/employees/EmployeeForm.jsx; git -C \"D:\\\\Other P\\\\ELP New\" branch --show-current)",
+      "PowerShell(npx eslint src/pages/employees/sections/CircularsSection.jsx)",
+      "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-my-circulars.cjs\")",
+      "PowerShell(npx eslint src/pages/employees/sections/LeaveForm.jsx)",
+      "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-leave-balance.cjs\")",
+      "PowerShell(npx eslint src/pages/employees/)",
+      "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\diag-leave-click.cjs\")",
+      "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-general-request.cjs\")",
+      "PowerShell(npx eslint src/pages/firm/sections/CommissionForm.jsx)",
+      "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-commission-note.cjs\")",
+      "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-commission-steps.cjs\")",
+      "PowerShell(npx eslint src/pages/firm/sections/CommissionForm.jsx src/pages/employees/sections/FinancialBenefitsSection.jsx)",
+      "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-commission-beneficiary.cjs\")",
+      "PowerShell(npx eslint src/pages/firm/commissionData.js src/pages/clients/clientMockData.js src/pages/firm/sections/CommissionForm.jsx)",
+      "PowerShell(npx eslint src/pages/firm/sections/CommissionSection.jsx src/pages/employees/sections/FinancialBenefitsSection.jsx src/pages/firm/commissionData.js)",
+      "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-commission-type-column.cjs\")",
+      "PowerShell(npx eslint src/pages/employees/sections/SalariesSection.jsx src/pages/employees/sections/FinancialBenefitsSection.jsx)",
+      "PowerShell(npx eslint src/pages/suppliers/SupplierPaymentsSection.jsx)",
+      "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-supplier-payments-clean.cjs\")",
+      "PowerShell(npx eslint src/pages/leases/ src/App.jsx src/components/layout/Header.jsx)",
+      "PowerShell(npx eslint src/pages/leases/)",
+      "PowerShell(npx eslint src/pages/leases/ src/lib/leases/ src/App.jsx)",
+      "PowerShell(npx eslint src/pages/leases/ src/lib/leases/)",
+      "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-lease-rental.cjs\")",
+      "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-payment-schedule.cjs\")",
+      "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-installment-panel.cjs\")",
+      "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\shot-installment-panel.cjs\")",
+      "PowerShell(node \"C:\\\\Users\\\\mehak\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Other-P-ELP-New\\\\6a7627b8-e5ac-480e-a1d6-41081f557e85\\\\scratchpad\\\\verify-pending-rent.cjs\")"
+    ]
+  }
+}

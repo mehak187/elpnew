@@ -30,6 +30,7 @@ import {
   Lock,
   CalendarCheck,
   ShieldCheck,
+  ClipboardList,
   MapPin,
   Phone,
   Mail,
@@ -59,6 +60,7 @@ import DailyActivitiesSection from "./sections/DailyActivitiesSection";
 import PerformanceSection from "./sections/PerformanceSection";
 import EmployeeCircularsSection from "./sections/CircularsSection";
 import LeavesSection from "./sections/LeavesSection";
+import GeneralRequestSection from "./sections/GeneralRequestSection";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 import {
   employeeRecords,
@@ -84,15 +86,9 @@ const SECTIONS = [
     icon: User,
     note: "Employee profile, job description and contact details",
   },
-
-  {
-    key: "documents",
-    label: "Documents",
-    icon: FileText,
-    ownsHeader: true,
-    noSave: true,
-    note: "Manage employee documents and attachments",
-  },
+  // Documents are not a section of their own any more: the papers on file
+  // are what the details above are taken from, so they are read on the same
+  // page, under the three boxes.
   {
     // Salary, loans, assistance and commission were four entries in this
     // menu, all answering the same question: what the firm pays this
@@ -131,6 +127,16 @@ const SECTIONS = [
     noSave: true,
     note: "Leave requests and what was decided about them",
     ownsHeader: true,
+  },
+  {
+    // Anything asked of the administration that has no form of its own - a
+    // parking card, a laptop. Nothing to save on the page: each request is
+    // submitted on its own.
+    key: "generalRequest",
+    label: "General Request",
+    icon: ClipboardList,
+    noSave: true,
+    note: "Submit your request to the administration",
   },
   {
     // What one employee may see and change. Set for someone by whoever
@@ -898,7 +904,13 @@ export default function EmployeeForm({ self }) {
                   </fieldset>
                 )}
 
-                {activeSection === "documents" && (
+                {/* The employee's papers, in a box of their own under the
+                    details they back. Only once the employee exists - there is
+                    nobody to file a paper against before - and outside the
+                    locked fieldset, so they stay usable on My Profile. */}
+                {isInfo && isEditMode && (
+                  <Card>
+                  <CardContent className="p-4 sm:p-6">
                   <div className="space-y-6">
                     {/* Nothing is asked for until it is asked for: the page
                         is the documents on file, and the form is opened over
@@ -1019,7 +1031,11 @@ export default function EmployeeForm({ self }) {
                       </div>
 
                       <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-                        <Button variant="outline" onClick={closeDocForm}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={closeDocForm}
+                        >
                           Cancel
                         </Button>
                         <Button
@@ -1111,6 +1127,8 @@ export default function EmployeeForm({ self }) {
                       )}
                     </div>
                   </div>
+                  </CardContent>
+                  </Card>
                 )}
 
                 {activeSection === "benefits" && (
@@ -1133,6 +1151,10 @@ export default function EmployeeForm({ self }) {
 
                 {activeSection === "leaves" && (
                   <LeavesSection employee={formData} />
+                )}
+
+                {activeSection === "generalRequest" && (
+                  <GeneralRequestSection employee={formData} />
                 )}
 
                 {/* Not yet specified, so nothing is invented for it */}
