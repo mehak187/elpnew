@@ -2,69 +2,82 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import DataTable from "@/components/shared/DataTable";
 import FormHeading from "@/components/shared/FormHeading";
+import Panel from "@/components/shared/Panel";
 import { IdStatusDot } from "@/components/shared/panels";
-import { Box, FileText, Plus, ShoppingCart, Wallet } from "lucide-react";
+import {
+  Box,
+  Coins,
+  FileText,
+  LayoutGrid,
+  Plus,
+  ReceiptText,
+  Save,
+  Tag,
+  X,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useFirm } from "@/lib/firm/context";
 import { useSuppliers } from "@/lib/suppliers/context";
 import { useAssets } from "@/lib/assets/context";
-import { Field, FieldLabel, Choice, Attach } from "@/pages/leases/fields";
+import { Field, FieldLabel, Attach } from "@/pages/leases/fields";
+import { CASH, omr, shortDate, todayIso } from "@/pages/leases/leaseData";
 import {
-  CASH,
-  LEASE_PAYMENT_METHODS as PAYMENT_METHODS,
-  accountLabel,
-  omr,
-  shortDate,
-  todayIso,
-} from "@/pages/leases/leaseData";
-import {
-  ASSET_TYPES,
+  ASSET_EXPENSE_TYPE,
+  ASSET_CATEGORIES,
   ASSET_STATUS,
+  assetState,
   accumulatedDepreciation,
   netBookValue,
 } from "./assetData";
 
 const emptyDraft = {
-  branchId: "",
-  name: "",
-  type: "",
-  brandModel: "",
-  serialNo: "",
   purchaseDate: "",
-  supplier: "",
   invoiceNo: "",
-  purchaseInvoiceFile: "",
-  warrantyFile: "",
-  cost: "",
-  rate: "",
-  method: "",
-  bankAccountId: "",
-  transactionNo: "",
-  receiptFile: "",
+  invoiceFile: "",
+  invoiceLater: false,
+  guaranteeNo: "",
+  guaranteeFile: "",
+  supplier: "",
+  expenseType: ASSET_EXPENSE_TYPE,
+  category: "",
+  subcategory: "",
 };
 
-/** A typed field, with anything that belongs beside the input (an upload) after it. */
-function TextField({ id, label, required, value, onChange, placeholder, type, inputMode, max, children }) {
+/**
+ * A choice from a list, with the icon that marks what kind of choice it is.
+ * Empty values are ignored - nobody picks "nothing".
+ */
+function IconSelect({ id, label, required, icon, value, onChange, options, disabled }) {
+  const Icon = icon;
   return (
     <Field>
       <FieldLabel htmlFor={id} required={required}>
         {label}
       </FieldLabel>
-      <div className="flex gap-2">
-        <Input
-          id={id}
-          type={type}
-          inputMode={inputMode}
-          max={max}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          autoComplete="off"
-          className="min-w-0 flex-1"
-        />
-        {children}
-      </div>
+      <Select value={value} onValueChange={(next) => next && onChange(next)} disabled={disabled}>
+        {/* The icon sits straight inside the trigger: a wrapping span would take
+            the trigger's one-line clamp and stack the icon over the value. */}
+        <SelectTrigger id={id} className="justify-start gap-3 [&>svg:last-child]:ml-auto">
+          {Icon && <Icon className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />}
+          <SelectValue placeholder="Please select" />
+        </SelectTrigger>
+        <SelectContent className="max-h-72">
+          {options.map((option) => (
+            <SelectItem key={option} value={option}>
+              {option}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </Field>
   );
 }
@@ -80,17 +93,20 @@ function DocLink({ file, label }) {
   );
 }
 
-/** Only digits and one decimal point, for amounts and rates. */
-const decimal = (value) => value.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1");
+/** A dash for anything the asset has not been given yet. */
+const Missing = () => <span className="text-muted-foreground">-</span>;
 
 /**
  * The fixed asset register.
  *
- * Each asset shows what it is, where and when it was bought, what it cost, the
- * rate it depreciates at, and how it was paid - with the invoice, warranty and
- * transfer receipt kept beside the figures they back. What it has lost so far
- * and what it is still worth are worked out from the cost, the rate and the
- * years since it was bought, never typed in.
+ * A new asset starts from its purchase invoice - the date, the number with a
+ * copy of it (or a note that the copy comes later), the guarantee and the
+ * supplier - and the expense it is booked under. What the asset is, its cost,
+ * depreciation rate and payment are completed afterwards, and show as not yet
+ * recorded until they are.
+ *
+ * What it has lost so far and what it is still worth are worked out from the
+ * cost, the rate and the years since it was bought, never typed in.
  */
 export default function AssetsPage() {
   const { branches, bankAccounts } = useFirm();
@@ -98,56 +114,48 @@ export default function AssetsPage() {
   const { assets, addAsset } = useAssets();
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState(emptyDraft);
+  const [error, setError] = useState("");
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
-  const isCash = draft.method === CASH;
 
-  /** Cash never touches a bank, so choosing it clears the account. */
-  const chooseMethod = (value) =>
-    setDraft((prev) => ({
-      ...prev,
-      method: value,
-      bankAccountId: value === CASH ? "" : prev.bankAccountId,
-    }));
+  const subcategories =
+    ASSET_CATEGORIES.find((category) => category.name === draft.category)?.subcategories || [];
 
-  const branchLabel = (branchId) => {
-    const branch = branches.find((option) => option.id === Number(branchId));
-    return branch ? branch.name + " Branch" : "-";
+  /** A different category has different subcategories, so the old one goes. */
+  const chooseCategory = (value) =>
+    setDraft((prev) => ({ ...prev, category: value, subcategory: "" }));
+
+  /** An attached copy and "later" cannot both be true. Either answers the copy's error. */
+  const attachInvoice = (name) => {
+    setDraft((prev) => ({ ...prev, invoiceFile: name, invoiceLater: false }));
+    setError("");
   };
-  const accountOf = (id) => bankAccounts.find((account) => account.id === Number(id));
-
-  const canSave =
-    draft.branchId &&
-    draft.name.trim() &&
-    draft.type &&
-    draft.purchaseDate &&
-    draft.supplier &&
-    Number(draft.cost) > 0 &&
-    Number(draft.rate) > 0 &&
-    Number(draft.rate) <= 100 &&
-    draft.method &&
-    (isCash || draft.bankAccountId);
+  const toggleInvoiceLater = () => {
+    setDraft((prev) => ({ ...prev, invoiceLater: !prev.invoiceLater, invoiceFile: "" }));
+    setError("");
+  };
 
   const close = () => {
     setAdding(false);
     setDraft(emptyDraft);
+    setError("");
   };
 
   const save = () => {
-    if (!canSave) return;
+    if (!draft.invoiceNo.trim() || !draft.category || !draft.subcategory) {
+      setError("Invoice Number, Category and Subcategory are required.");
+      return;
+    }
+    if (!draft.invoiceFile && !draft.invoiceLater) {
+      setError("Upload the invoice copy, or choose Later to add it afterwards.");
+      return;
+    }
     addAsset({
       ...draft,
-      branchId: Number(draft.branchId),
-      name: draft.name.trim(),
-      brandModel: draft.brandModel.trim(),
-      serialNo: draft.serialNo.trim(),
       invoiceNo: draft.invoiceNo.trim(),
-      transactionNo: draft.transactionNo.trim(),
-      cost: Number(draft.cost),
-      rate: Number(draft.rate),
-      bankAccountId: isCash ? "" : Number(draft.bankAccountId),
+      guaranteeNo: draft.guaranteeNo.trim(),
       status: "active",
     });
     // New assets join the end of the register, so show the page they land on.
@@ -155,20 +163,38 @@ export default function AssetsPage() {
     close();
   };
 
-  const rows = assets.map((asset) => ({
-    ...asset,
-    branchLabel: branchLabel(asset.branchId),
-    accumulated: accumulatedDepreciation(asset),
-    netBookValue: netBookValue(asset),
-  }));
+  const branchLabel = (branchId) => {
+    const branch = branches.find((option) => option.id === Number(branchId));
+    return branch ? branch.name + " Branch" : "-";
+  };
+
+  const rows = assets.map((asset) => {
+    const hasCost = Number(asset.cost) > 0;
+    return {
+      ...asset,
+      hasCost,
+      state: assetState(asset),
+      branchLabel: branchLabel(asset.branchId),
+      accumulated: hasCost ? accumulatedDepreciation(asset) : null,
+      netBookValue: hasCost ? netBookValue(asset) : null,
+    };
+  });
 
   const paymentLines = (row) => {
-    if (row.method === CASH) return [];
-    const account = accountOf(row.bankAccountId);
+    if (!row.method || row.method === CASH) return [];
+    const account = bankAccounts.find((option) => option.id === Number(row.bankAccountId));
     return account ? [account.bankName, account.accountNumber] : ["-"];
   };
 
-  const figure = (value) => <span className="font-semibold text-primary">{omr(value)}</span>;
+  /** What the asset is: its type, or until that is entered, the subcategory it was booked under. */
+  const typeOf = (row) => row.type || row.subcategory;
+
+  const figure = (value) =>
+    value === null || value === undefined ? (
+      <Missing />
+    ) : (
+      <span className="font-semibold text-primary">{omr(value)}</span>
+    );
 
   const columns = [
     {
@@ -178,11 +204,11 @@ export default function AssetsPage() {
       subHeader: "Branch",
       width: "9%",
       exportValue: (row) =>
-        row.assetNo + " - " + row.branchLabel + " (" + ASSET_STATUS[row.status].label + ")",
+        row.assetNo + " - " + row.branchLabel + " (" + ASSET_STATUS[row.state].label + ")",
       sortValue: (row) => row.assetNo,
       render: (value, row) => (
         <div className="flex items-center gap-3">
-          <IdStatusDot status={ASSET_STATUS[row.status].label} tone={ASSET_STATUS[row.status].dot} />
+          <IdStatusDot status={ASSET_STATUS[row.state].label} tone={ASSET_STATUS[row.state].dot} />
           <div>
             <p className="text-base font-semibold text-primary">{value}</p>
             <p className="whitespace-nowrap text-primary/80">{row.branchLabel}</p>
@@ -196,14 +222,14 @@ export default function AssetsPage() {
       subHeader: "Name / Type / Brand & Model / Serial No.",
       width: "16%",
       exportValue: (row) =>
-        [row.name, row.type, row.brandModel, row.serialNo && "SN: " + row.serialNo]
+        [row.name || "-", typeOf(row), row.brandModel, row.serialNo && "SN: " + row.serialNo]
           .filter(Boolean)
           .join(" - "),
-      sortValue: (row) => row.name,
+      sortValue: (row) => row.name || null,
       render: (value, row) => (
         <div className="text-primary/80">
-          <p className="font-semibold text-primary">{value}</p>
-          <p>{row.type}</p>
+          <p className="font-semibold text-primary">{value || "-"}</p>
+          {typeOf(row) && <p>{typeOf(row)}</p>}
           {row.brandModel && <p>{row.brandModel}</p>}
           {row.serialNo && <p>SN: {row.serialNo}</p>}
         </div>
@@ -215,15 +241,15 @@ export default function AssetsPage() {
       subHeader: "Date / Supplier / Invoice No.",
       width: "15%",
       exportValue: (row) =>
-        [shortDate(row.purchaseDate), row.supplier, row.invoiceNo].filter(Boolean).join(" - "),
-      sortValue: (row) => row.purchaseDate,
+        [shortDate(row.purchaseDate), row.supplier || "-", row.invoiceNo].filter(Boolean).join(" - "),
+      sortValue: (row) => row.purchaseDate || null,
       render: (value, row) => (
         <div className="space-y-0.5 text-primary/80">
           <p className="font-semibold text-primary">{shortDate(value)}</p>
-          <p>{row.supplier}</p>
+          <p>{row.supplier || "-"}</p>
           {row.invoiceNo && <p>{row.invoiceNo}</p>}
-          <DocLink file={row.purchaseInvoiceFile} label="Purchase Invoice" />
-          <DocLink file={row.warrantyFile} label="Warranty Invoice" />
+          <DocLink file={row.invoiceFile} label="Purchase Invoice" />
+          <DocLink file={row.guaranteeFile} label="Warranty Invoice" />
         </div>
       ),
     },
@@ -233,9 +259,9 @@ export default function AssetsPage() {
       width: "9%",
       className: "text-center",
       cellClassName: "text-center",
-      exportValue: (row) => omr(row.cost),
-      sortValue: (row) => row.cost,
-      render: (value) => figure(value),
+      exportValue: (row) => (row.hasCost ? omr(row.cost) : "-"),
+      sortValue: (row) => (row.hasCost ? row.cost : null),
+      render: (value, row) => figure(row.hasCost ? value : null),
     },
     {
       key: "rate",
@@ -244,9 +270,9 @@ export default function AssetsPage() {
       width: "9%",
       className: "text-center",
       cellClassName: "text-center",
-      exportValue: (row) => row.rate + "%",
-      sortValue: (row) => row.rate,
-      render: (value) => <span className="text-primary/80">{value}%</span>,
+      exportValue: (row) => (row.rate ? row.rate + "%" : "-"),
+      sortValue: (row) => row.rate || null,
+      render: (value) => (value ? <span className="text-primary/80">{value}%</span> : <Missing />),
     },
     {
       // Worked out from the cost, the rate and the full years since purchase.
@@ -257,7 +283,7 @@ export default function AssetsPage() {
       className: "text-center",
       cellClassName: "text-center",
       disableSort: true,
-      exportValue: (row) => omr(row.accumulated),
+      exportValue: (row) => (row.hasCost ? omr(row.accumulated) : "-"),
       render: (value) => figure(value),
     },
     {
@@ -267,7 +293,7 @@ export default function AssetsPage() {
       width: "9%",
       className: "text-center",
       cellClassName: "text-center",
-      exportValue: (row) => omr(row.netBookValue),
+      exportValue: (row) => (row.hasCost ? omr(row.netBookValue) : "-"),
       sortValue: (row) => row.netBookValue,
       render: (value) => figure(value),
     },
@@ -278,10 +304,10 @@ export default function AssetsPage() {
       width: "16%",
       disableSort: true,
       exportValue: (row) =>
-        [row.method, ...paymentLines(row), row.transactionNo].filter(Boolean).join(" - "),
+        [row.method || "-", ...paymentLines(row), row.transactionNo].filter(Boolean).join(" - "),
       render: (value, row) => (
         <div className="space-y-0.5 text-primary/80">
-          <p className="font-semibold text-primary">{value}</p>
+          <p className="font-semibold text-primary">{value || "-"}</p>
           {paymentLines(row).map((line) => (
             <p key={line}>{line}</p>
           ))}
@@ -314,156 +340,135 @@ export default function AssetsPage() {
       {adding && (
         <Card>
           <CardContent className="space-y-6 p-4 sm:p-6">
-            <FormHeading title="Asset Details" note="What the asset is and where it is used" icon={Box} />
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 sm:gap-6">
-              <Choice
-                id="assetBranch"
-                label="Branch"
-                required
-                value={draft.branchId}
-                onChange={(value) => set("branchId", value)}
-                options={branches.map((branch) => ({ value: String(branch.id), label: branch.name }))}
-                placeholder="Select Branch"
-              />
-              <TextField
-                id="assetName"
-                label="Asset Name"
-                required
-                value={draft.name}
-                onChange={(value) => set("name", value)}
-                placeholder="e.g. Laptop"
-              />
-              <Choice
-                id="assetType"
-                label="Asset Type"
-                required
-                value={draft.type}
-                onChange={(value) => set("type", value)}
-                options={ASSET_TYPES.map((type) => ({ value: type, label: type }))}
-              />
-              <TextField
-                id="assetBrandModel"
-                label="Brand & Model"
-                value={draft.brandModel}
-                onChange={(value) => set("brandModel", value)}
-                placeholder="e.g. Dell Latitude 5440"
-              />
-              <TextField
-                id="assetSerialNo"
-                label="Serial No."
-                value={draft.serialNo}
-                onChange={(value) => set("serialNo", value)}
-                placeholder="e.g. DL5440-9823"
-              />
-            </div>
+            <FormHeading
+              title="Add New Asset"
+              note="Enter the basic information to create the asset. You can complete the remaining details later."
+              icon={Box}
+            />
 
-            <FormHeading title="Purchase Details" note="When, from whom and for how much" icon={ShoppingCart} />
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 sm:gap-6">
-              <TextField
-                id="assetPurchaseDate"
-                label="Purchase Date"
-                required
-                type="date"
-                max={todayIso()}
-                value={draft.purchaseDate}
-                onChange={(value) => set("purchaseDate", value)}
-              />
-              <Choice
-                id="assetSupplier"
-                label="Supplier"
-                required
-                value={draft.supplier}
-                onChange={(value) => set("supplier", value)}
-                options={suppliers
-                  .filter((supplier) => supplier.status === "Active")
-                  .map((supplier) => ({ value: supplier.name, label: supplier.name }))}
-                placeholder="Select supplier"
-              />
-              {/* The invoice number, with the purchase invoice and the warranty beside it. */}
-              <TextField
-                id="assetInvoiceNo"
-                label="Invoice No."
-                value={draft.invoiceNo}
-                onChange={(value) => set("invoiceNo", value)}
-                placeholder="e.g. INV-4587"
-              >
-                <Attach
-                  id="assetPurchaseInvoice"
-                  file={draft.purchaseInvoiceFile}
-                  onFile={(name) => set("purchaseInvoiceFile", name)}
-                  what="purchase invoice"
-                />
-                <Attach
-                  id="assetWarranty"
-                  file={draft.warrantyFile}
-                  onFile={(name) => set("warrantyFile", name)}
-                  what="warranty invoice"
-                />
-              </TextField>
-              <TextField
-                id="assetCost"
-                label="Cost (OMR)"
-                required
-                inputMode="decimal"
-                value={draft.cost}
-                onChange={(value) => set("cost", decimal(value))}
-                placeholder="0.000"
-              />
-              <TextField
-                id="assetRate"
-                label="Depreciation Rate (% Per Annum)"
-                required
-                inputMode="decimal"
-                value={draft.rate}
-                onChange={(value) => set("rate", decimal(value))}
-                placeholder="e.g. 20"
-              />
-            </div>
+            <Panel title="Invoice Data" icon={ReceiptText}>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1.25fr)_minmax(0,1fr)]">
+                <Field>
+                  <FieldLabel htmlFor="assetInvoiceDate">Invoice Date</FieldLabel>
+                  <Input
+                    id="assetInvoiceDate"
+                    type="date"
+                    max={todayIso()}
+                    value={draft.purchaseDate}
+                    onChange={(e) => set("purchaseDate", e.target.value)}
+                  />
+                </Field>
 
-            <FormHeading title="Payment Details" note="How the asset was paid for" icon={Wallet} />
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 sm:gap-6">
-              <Choice
-                id="assetMethod"
-                label="Payment Method"
-                required
-                value={draft.method}
-                onChange={chooseMethod}
-                options={PAYMENT_METHODS.map((method) => ({ value: method, label: method }))}
-                placeholder="Select payment method"
-              />
-              <Choice
-                id="assetBankAccount"
-                label="Bank Account"
-                required={!isCash}
-                value={draft.bankAccountId}
-                onChange={(value) => set("bankAccountId", value)}
-                options={bankAccounts
-                  .filter((account) => account.active)
-                  .map((account) => ({ value: String(account.id), label: accountLabel(account) }))}
-                placeholder={isCash ? "Not needed for cash" : "Select bank account"}
-                disabled={isCash}
-              />
-              <TextField
-                id="assetTransactionNo"
-                label="Transaction No."
-                value={draft.transactionNo}
-                onChange={(value) => set("transactionNo", value)}
-                placeholder="e.g. TRX-20250115-001"
-              >
-                <Attach
-                  id="assetReceipt"
-                  file={draft.receiptFile}
-                  onFile={(name) => set("receiptFile", name)}
-                  what="transfer receipt"
-                />
-              </TextField>
-            </div>
+                {/* The number, with its copy - or a note that the copy follows. */}
+                <Field>
+                  <FieldLabel htmlFor="assetInvoiceNo" required>
+                    Invoice Number
+                  </FieldLabel>
+                  <div className="flex gap-2">
+                    <Input
+                      id="assetInvoiceNo"
+                      value={draft.invoiceNo}
+                      onChange={(e) => set("invoiceNo", e.target.value)}
+                      placeholder="e.g. INV-001"
+                      autoComplete="off"
+                      className="min-w-0 flex-1"
+                    />
+                    <Attach
+                      id="assetInvoiceFile"
+                      file={draft.invoiceFile}
+                      onFile={attachInvoice}
+                      what="invoice copy"
+                    />
+                    <Button
+                      id="assetInvoiceLater"
+                      type="button"
+                      variant="outline"
+                      aria-pressed={draft.invoiceLater}
+                      title={draft.invoiceLater ? "The invoice copy will be added later" : "Add the invoice copy later"}
+                      onClick={toggleInvoiceLater}
+                      className={cn(
+                        "shrink-0 px-3",
+                        draft.invoiceLater && "border-primary bg-primary/10 text-primary"
+                      )}
+                    >
+                      Later
+                    </Button>
+                  </div>
+                </Field>
 
-            <div className="flex justify-end gap-2">
+                <Field>
+                  <FieldLabel htmlFor="assetGuaranteeNo">Guarantee Number</FieldLabel>
+                  <div className="flex gap-2">
+                    <Input
+                      id="assetGuaranteeNo"
+                      value={draft.guaranteeNo}
+                      onChange={(e) => set("guaranteeNo", e.target.value)}
+                      placeholder="Guarantee Number"
+                      autoComplete="off"
+                      className="min-w-0 flex-1"
+                    />
+                    <Attach
+                      id="assetGuaranteeFile"
+                      file={draft.guaranteeFile}
+                      onFile={(name) => set("guaranteeFile", name)}
+                      what="guarantee"
+                    />
+                  </div>
+                </Field>
+
+                <IconSelect
+                  id="assetSupplier"
+                  label="Supplier"
+                  value={draft.supplier}
+                  onChange={(value) => set("supplier", value)}
+                  options={suppliers
+                    .filter((supplier) => supplier.status === "Active")
+                    .map((supplier) => supplier.name)}
+                />
+              </div>
+            </Panel>
+
+            <Panel title="Expense Details" icon={FileText}>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
+                <IconSelect
+                  id="assetExpenseType"
+                  label="Type of Expense"
+                  icon={Coins}
+                  value={draft.expenseType}
+                  onChange={(value) => set("expenseType", value)}
+                  options={[ASSET_EXPENSE_TYPE]}
+                />
+                <IconSelect
+                  id="assetCategory"
+                  label="Category"
+                  required
+                  icon={LayoutGrid}
+                  value={draft.category}
+                  onChange={chooseCategory}
+                  options={ASSET_CATEGORIES.map((category) => category.name)}
+                />
+                <IconSelect
+                  id="assetSubcategory"
+                  label="Subcategory"
+                  required
+                  icon={Tag}
+                  value={draft.subcategory}
+                  onChange={(value) => set("subcategory", value)}
+                  options={subcategories}
+                  disabled={!draft.category}
+                />
+              </div>
+            </Panel>
+
+            {error && <p className="text-sm text-destructive">{error}</p>}
+
+            <div className="flex justify-between gap-2">
               <Button type="button" variant="outline" onClick={close}>
+                <X className="mr-2 h-4 w-4" />
                 Cancel
               </Button>
-              <Button type="button" onClick={save} disabled={!canSave}>
+              <Button type="button" onClick={save}>
+                <Save className="mr-2 h-4 w-4" />
                 Save
               </Button>
             </div>
