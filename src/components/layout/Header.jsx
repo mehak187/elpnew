@@ -19,6 +19,7 @@ import {
   Archive,
   Menu,
   Home,
+  Box,
 } from "lucide-react";
 import {
   NavigationMenu,
@@ -102,6 +103,13 @@ const navSections = [
         key: "leases",
         icon: Home,
         description: "Office and property lease contracts",
+      },
+      {
+        name: "Assets",
+        path: "/assets",
+        key: "assets",
+        icon: Box,
+        description: "Fixed asset register",
       },
       {
         name: "Company Profile",

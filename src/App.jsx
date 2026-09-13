@@ -8,6 +8,7 @@ import ExpensesProvider from "@/lib/expenses/ExpensesProvider";
 import SuppliersProvider from "@/lib/suppliers/SuppliersProvider";
 import ClientsProvider from "@/lib/clients/ClientsProvider";
 import LeasesProvider from "@/lib/leases/LeasesProvider";
+import AssetsProvider from "@/lib/assets/AssetsProvider";
 
 // Root Pages
 import Dashboard from "@/pages/Dashboard";
@@ -45,6 +46,9 @@ import SupplierForm from "@/pages/suppliers/SupplierForm";
 import LeasesPage from "@/pages/leases/LeasesPage";
 import LeaseDetails from "@/pages/leases/LeaseDetails";
 
+// Assets
+import AssetsPage from "@/pages/assets/AssetsPage";
+
 // Corporate Module
 import CorporateList from "@/pages/corporate/CorporateList";
 
@@ -74,6 +78,7 @@ function App() {
         <SuppliersProvider>
           <ClientsProvider>
           <LeasesProvider>
+          <AssetsProvider>
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<MainLayout />}>
@@ -94,6 +99,9 @@ function App() {
               {/* Leases */}
               <Route path="leases" element={<LeasesPage />} />
               <Route path="leases/:id" element={<LeaseDetails />} />
+
+              {/* Assets */}
+              <Route path="assets" element={<AssetsPage />} />
               <Route path="expenses" element={<ExpensesPage />} />
               <Route path="expenses/create" element={<ExpenseForm />} />
               <Route path="expense-requests" element={<GeneralInvoices />} />
@@ -162,6 +170,7 @@ function App() {
             </Route>
           </Routes>
         </BrowserRouter>
+          </AssetsProvider>
           </LeasesProvider>
           </ClientsProvider>
         </SuppliersProvider>
