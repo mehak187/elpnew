@@ -45,6 +45,10 @@ import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/shared/panels";
 import { useExpenses } from "@/lib/expenses/context";
 import { useSuppliers } from "@/lib/suppliers/context";
+import { useFirm } from "@/lib/firm/context";
+import { useLeases } from "@/lib/leases/context";
+import InstallmentPanel from "@/pages/leases/InstallmentPanel";
+import { dueInstallments } from "@/pages/leases/leaseData";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 import { initialBankAccounts } from "@/pages/firm/firmData";
 import { findType } from "./links";
@@ -681,6 +685,8 @@ export default function GeneralInvoices({ partnersOnly = false }) {
   const navigate = useNavigate();
   const { invoices, updateInvoice } = useExpenses();
   const { suppliers } = useSuppliers();
+  const { leases, recordInstallment } = useLeases();
+  const { branches, bankAccounts } = useFirm();
 
   // Where this supplier is paid, taken from the supplier record.
   const accountFor = (name) => suppliers.find((s) => s.name === name) || null;
@@ -706,6 +712,11 @@ export default function GeneralInvoices({ partnersOnly = false }) {
     // Oldest first, so whatever has waited longest is dealt with first.
     .slice()
     .sort((a, b) => raisedAt(a).localeCompare(raisedAt(b)) || a.id - b.id);
+
+  // Rent needs nobody to raise a request: a lease installment joins the
+  // partners' queue by itself once it falls due, and leaves it once it is
+  // paid. It is not waiting at any stage, so narrowing to one hides it.
+  const dueRent = partnersOnly && !stage ? dueInstallments(leases) : [];
 
   const atStage = (key) => forRole.filter((i) => i.status === key);
   const sumOf = (list) => list.reduce((sum, i) => sum + invoiceTotal(i), 0);
@@ -896,7 +907,7 @@ export default function GeneralInvoices({ partnersOnly = false }) {
 
       {/* ------------------------------------------------------- invoices */}
       <div className="space-y-4">
-        {visible.length === 0 && (
+        {visible.length === 0 && dueRent.length === 0 && (
           <Card>
             <CardContent className="p-6">
               <EmptyState>
@@ -1282,6 +1293,21 @@ export default function GeneralInvoices({ partnersOnly = false }) {
             </Card>
           );
         })}
+
+        {dueRent.map(({ lease, row, count }, i) => (
+          <InstallmentPanel
+            key={lease.id + "-" + row.no}
+            className={cn("border-2", FRAMES[(visible.length + i) % FRAMES.length])}
+            row={row}
+            lease={lease}
+            count={count}
+            branchName={
+              branches.find((branch) => branch.id === Number(lease.branchId))?.name || "-"
+            }
+            bankAccounts={bankAccounts}
+            onSave={(entry) => recordInstallment(lease.id, row.no, entry)}
+          />
+        ))}
       </div>
 
       {requestHistoryFor && (

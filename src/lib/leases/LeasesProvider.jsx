@@ -73,6 +73,25 @@ export default function LeasesProvider({ children }) {
             lease.id === Number(id) ? { ...lease, ...changes } : lease
           )
         ),
+
+      /**
+       * One installment's payment and note, from wherever it was recorded -
+       * the lease's own schedule or the pending disbursements. No payment
+       * takes a recorded one back off; an empty note removes the note.
+       */
+      recordInstallment: (id, no, { payment, note }) =>
+        setLeases((prev) =>
+          prev.map((lease) => {
+            if (lease.id !== Number(id)) return lease;
+            const payments = { ...(lease.payments || {}) };
+            if (payment) payments[no] = payment;
+            else delete payments[no];
+            const installmentNotes = { ...(lease.installmentNotes || {}) };
+            if (note) installmentNotes[no] = note;
+            else delete installmentNotes[no];
+            return { ...lease, payments, installmentNotes };
+          })
+        ),
     }),
     [leases]
   );

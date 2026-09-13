@@ -232,6 +232,53 @@ export function installmentsOf(lease, today = todayIso()) {
   }));
 }
 
+/**
+ * What the payment method says about one installment: which cheque pays it and
+ * how many are still to be cashed, or which account the rent goes to. Cash says
+ * nothing beyond its name. `labelled` facts need their label to be understood.
+ */
+export function paymentFacts(lease, row, bankAccounts, count) {
+  if (lease.method === CHEQUE) {
+    const facts = [{ label: "Cheque No.", value: row.chequeNo || "-", labelled: true }];
+    if (!row.payment && row.status !== "cancelled") {
+      facts.push({
+        label: "Remaining Cheques",
+        value: row.remainingCheques + " of " + count,
+        labelled: true,
+      });
+    }
+    return facts;
+  }
+  if (!lease.method || lease.method === CASH) return [];
+  if (lease.bankAccountId === OTHER_ACCOUNT) {
+    return [{ label: "Bank Account", value: "Other account" }];
+  }
+  const account = bankAccounts.find((option) => option.id === Number(lease.bankAccountId));
+  return account
+    ? [
+        { label: "Bank", value: account.bankName },
+        { label: "Account No.", value: groupedAccountNumber(account.accountNumber) },
+      ]
+    : [{ label: "Bank Account", value: "-" }];
+}
+
+/**
+ * The installments waiting to be paid across every lease - overdue, or due
+ * within DUE_SOON_DAYS - earliest due date first, so whatever is most late is
+ * dealt with first. Each comes with its lease and how many installments that
+ * lease has.
+ */
+export function dueInstallments(leases, today = todayIso()) {
+  return leases
+    .flatMap((lease) => {
+      const rows = installmentsOf(lease, today);
+      return rows
+        .filter((row) => row.status === "unpaid" || row.status === "soon")
+        .map((row) => ({ lease, row, count: rows.length }));
+    })
+    .sort((a, b) => a.row.due.localeCompare(b.row.due) || a.lease.id - b.lease.id);
+}
+
 /** The next installment still to be paid, today or later. An ended lease has none. */
 export function nextPaymentDate(lease, today = todayIso()) {
   if (!lease.end || lease.end < today) return "";

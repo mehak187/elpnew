@@ -3,17 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import BackButton from "@/components/shared/BackButton";
 import FormHeading from "@/components/shared/FormHeading";
-import UploadIcon from "@/components/shared/UploadIcon";
 import { EmptyState } from "@/components/shared/panels";
 import {
   Home,
@@ -22,17 +13,14 @@ import {
   CalendarClock,
   Ban,
   Save,
-  FileCheck,
   Percent,
-  Landmark,
-  Building2,
-  Coins,
-  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFirm } from "@/lib/firm/context";
 import { useSuppliers } from "@/lib/suppliers/context";
 import { useLeases } from "@/lib/leases/context";
+import InstallmentPanel, { AmountLine } from "./InstallmentPanel";
+import { Field, FieldLabel, Choice, Worked, Attach } from "./fields";
 import {
   PROPERTY_TYPES,
   CONTRACT_STATUSES,
@@ -46,7 +34,7 @@ import {
   RENT_EXPENSE_TYPE,
   RENT_CATEGORY,
   rentSubcategoryOf,
-  groupedAccountNumber,
+  paymentFacts,
   accountLabel,
   addressOf,
   leaseMonths,
@@ -55,7 +43,6 @@ import {
   totalOf,
   omr,
   shortDate,
-  todayIso,
 } from "./leaseData";
 
 /**
@@ -98,97 +85,6 @@ const draftFrom = (lease) =>
         nonRenewalFile: lease.nonRenewalFile || "",
       }
     : null;
-
-/** A field's label, with its required mark glued to the last word. */
-function FieldLabel({ htmlFor, required, children }) {
-  return (
-    <Label htmlFor={htmlFor}>
-      {children}
-      {required && (
-        <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
-      )}
-    </Label>
-  );
-}
-
-function Field({ children }) {
-  return <div className="flex h-full flex-col justify-end gap-2">{children}</div>;
-}
-
-/** A choice from a list. Empty values are ignored - nobody picks "nothing". */
-function Choice({ id, label, required, value, onChange, options, placeholder = "Please Select", disabled, children }) {
-  return (
-    <Field>
-      <FieldLabel htmlFor={id} required={required}>
-        {label}
-      </FieldLabel>
-      <div className="flex gap-2">
-        <Select
-          value={value}
-          onValueChange={(next) => next && onChange(next)}
-          disabled={disabled}
-        >
-          <SelectTrigger id={id} className="min-w-0 flex-1">
-            <SelectValue placeholder={placeholder} />
-          </SelectTrigger>
-          <SelectContent className="max-h-72">
-            {options.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {children}
-      </div>
-    </Field>
-  );
-}
-
-/** A figure worked out from the fields beside it - shown, never typed. */
-function Worked({ id, label, value }) {
-  return (
-    <Field>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <Input
-        id={id}
-        readOnly
-        tabIndex={-1}
-        className="cursor-default bg-muted text-muted-foreground"
-        value={value}
-        placeholder="Auto calculated"
-      />
-    </Field>
-  );
-}
-
-/**
- * A file attached beside the field it backs. The name lives in the tooltip,
- * so the control stays the size of a button whether a file is there or not.
- */
-function Attach({ id, file, onFile, what }) {
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      size="icon"
-      asChild
-      title={file ? file + " attached" : "Upload " + what}
-      className={cn("shrink-0", file && "border-green-600 text-green-600")}
-    >
-      <label className="cursor-pointer">
-        {file ? <FileCheck className="h-4 w-4" /> : <UploadIcon className="h-4 w-4" />}
-        <span className="sr-only">Upload {what}</span>
-        <Input
-          id={id}
-          type="file"
-          className="hidden"
-          onChange={(e) => e.target.files[0] && onFile(e.target.files[0].name)}
-        />
-      </label>
-    </Button>
-  );
-}
 
 /** The installments, as a table - with a cheque number to fill in where rent is paid by cheque. */
 function InstallmentTable({ rows, byCheque, onCheque, editable }) {
@@ -251,46 +147,6 @@ function InstallmentTable({ rows, byCheque, onCheque, editable }) {
 }
 
 /**
- * What the payment method says about one installment: which cheque pays it and
- * how many are still to be cashed, or which account the rent goes to. Cash says
- * nothing beyond its name. `labelled` facts need their label to be understood.
- */
-function paymentFacts(lease, row, bankAccounts, count) {
-  if (lease.method === CHEQUE) {
-    const facts = [{ label: "Cheque No.", value: row.chequeNo || "-", labelled: true }];
-    if (!row.payment && row.status !== "cancelled") {
-      facts.push({
-        label: "Remaining Cheques",
-        value: row.remainingCheques + " of " + count,
-        labelled: true,
-      });
-    }
-    return facts;
-  }
-  if (!lease.method || lease.method === CASH) return [];
-  if (lease.bankAccountId === OTHER_ACCOUNT) {
-    return [{ label: "Bank Account", value: "Other account" }];
-  }
-  const account = bankAccounts.find((option) => option.id === Number(lease.bankAccountId));
-  return account
-    ? [
-        { label: "Bank", value: account.bankName },
-        { label: "Account No.", value: groupedAccountNumber(account.accountNumber) },
-      ]
-    : [{ label: "Bank Account", value: "-" }];
-}
-
-/** A label and its value on one line, the value pushed to the right edge. */
-function AmountLine({ label, value, strong }) {
-  return (
-    <p className={cn("flex justify-between gap-4", strong && "font-semibold text-primary")}>
-      <span className={strong ? "" : "text-muted-foreground"}>{label}</span>
-      <span>{value}</span>
-    </p>
-  );
-}
-
-/**
  * Every installment, as the finance team reads it.
  *
  * The dot beside each installment is its status. The date is the due date
@@ -339,7 +195,7 @@ function PaymentScheduleTable({ rows, lease, bankAccounts, openNo, onOpen }) {
                         type="button"
                         onClick={() => onOpen(row.no)}
                         aria-expanded={openNo === row.no}
-                        className="font-semibold text-primary underline underline-offset-4 hover:text-primary/80"
+                        className="font-semibold text-primary hover:text-primary/70"
                       >
                         <span className="sr-only">{status.label}: </span>
                         Installment {row.no}
@@ -411,224 +267,6 @@ function PaymentScheduleTable({ rows, lease, bankAccounts, openNo, onOpen }) {
   );
 }
 
-/** A titled box of label - value lines. */
-function DetailCard({ icon, title, children }) {
-  const Icon = icon;
-  return (
-    <div className="overflow-hidden rounded-lg border bg-card">
-      <p className="flex items-center gap-2 border-b bg-secondary/60 px-3 py-2 text-sm font-semibold text-primary">
-        <Icon className="h-4 w-4 shrink-0" />
-        {title}
-      </p>
-      <div className="space-y-1.5 p-3 text-sm">{children}</div>
-    </div>
-  );
-}
-
-/** Label - value lines whose values all start at the same edge. */
-function DetailLines({ lines }) {
-  return (
-    <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5">
-      {lines.map(([label, value]) => (
-        <div key={label} className="contents">
-          <dt className="whitespace-nowrap text-muted-foreground">{label}</dt>
-          <dd className="min-w-0 wrap-break-word">{value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
-const NOTE_LIMIT = 500;
-const EMPTY_ENTRY = { paidOn: "", transactionNo: "", receiptFile: "", note: "" };
-
-/**
- * One installment, opened from its number in the schedule: the property it is
- * for, where it is booked, what it comes to and how it is paid - with its
- * payment recorded underneath.
- *
- * The payment date is what marks the installment paid. Clear empties the
- * entry, so saving after it takes a payment recorded by mistake back off.
- */
-function InstallmentPanel({ row, lease, branchName, bankAccounts, count, onSave }) {
-  const [entry, setEntry] = useState(() => ({
-    paidOn: row.payment?.paidOn || "",
-    transactionNo: row.payment?.transactionNo || "",
-    receiptFile: row.payment?.receiptFile || "",
-    note: row.note,
-  }));
-  const [error, setError] = useState("");
-  const status = INSTALLMENT_STATUS[row.status];
-  const vatExempt = lease.vatApplied === false;
-
-  const set = (name, value) => setEntry((prev) => ({ ...prev, [name]: value }));
-
-  const clear = () => {
-    setEntry(EMPTY_ENTRY);
-    setError("");
-  };
-
-  const save = () => {
-    const transactionNo = entry.transactionNo.trim();
-    if (!entry.paidOn && (transactionNo || entry.receiptFile)) {
-      setError("Enter the payment date for this payment.");
-      return;
-    }
-    onSave({
-      payment: entry.paidOn
-        ? { paidOn: entry.paidOn, transactionNo, receiptFile: entry.receiptFile }
-        : null,
-      note: entry.note.trim(),
-    });
-  };
-
-  return (
-    <div
-      id="installment-details"
-      className="scroll-mt-24 space-y-4 rounded-xl border bg-secondary/30 p-4 sm:p-5"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-        <h3 className="text-lg font-semibold text-primary">
-          Installment {row.no} Details
-        </h3>
-        <span
-          className={cn(
-            "inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium",
-            status.pill
-          )}
-        >
-          <span className={cn("h-2.5 w-2.5 rounded-full", status.dot)} />
-          {status.label}
-        </span>
-      </div>
-
-      <div
-        className={cn(
-          "grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6",
-          // Transaction No. shares its row with the upload button, so it gets a little more room.
-          lease.method === CHEQUE
-            ? "lg:grid-cols-[repeat(4,minmax(0,1fr))_minmax(0,1.4fr)]"
-            : "lg:grid-cols-[repeat(3,minmax(0,1fr))_minmax(0,1.4fr)]"
-        )}
-      >
-        <Worked id="installmentNoField" label="Installment No." value={"Installment " + row.no} />
-        <Worked id="installmentDue" label="Due Date" value={shortDate(row.due)} />
-        {lease.method === CHEQUE && (
-          <Worked id="installmentChequeNo" label="Cheque No." value={row.chequeNo || "-"} />
-        )}
-        <Field>
-          <FieldLabel htmlFor="installmentPaidOn">Payment Date</FieldLabel>
-          <Input
-            id="installmentPaidOn"
-            type="date"
-            value={entry.paidOn}
-            max={todayIso()}
-            onChange={(e) => set("paidOn", e.target.value)}
-          />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="installmentTransactionNo">Transaction No.</FieldLabel>
-          <div className="flex gap-2">
-            <Input
-              id="installmentTransactionNo"
-              value={entry.transactionNo}
-              onChange={(e) => set("transactionNo", e.target.value)}
-              placeholder="Enter transaction number"
-              autoComplete="off"
-              className="min-w-0 flex-1"
-            />
-            <Attach
-              id="installmentReceipt"
-              file={entry.receiptFile}
-              onFile={(name) => set("receiptFile", name)}
-              what="payment receipt"
-            />
-          </div>
-        </Field>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <DetailCard icon={Building2} title="Leased Property Details">
-          <DetailLines
-            lines={[
-              ["Property Type:", lease.propertyType || "-"],
-              ["Address:", addressOf(lease) || "-"],
-              ["Branch:", branchName],
-              ["Landlord:", lease.landlord || "-"],
-            ]}
-          />
-        </DetailCard>
-
-        <DetailCard icon={FileText} title="Payment Details">
-          <DetailLines
-            lines={[
-              ["Expense Type:", RENT_EXPENSE_TYPE],
-              ["Category:", RENT_CATEGORY],
-              ["Subcategory:", rentSubcategoryOf(lease.propertyType)],
-            ]}
-          />
-        </DetailCard>
-
-        <DetailCard icon={Coins} title="Amount Details">
-          <AmountLine label="Rental Amount (OMR):" value={omr(row.rentPart)} />
-          <AmountLine label={vatExempt ? "VAT (exempt):" : "VAT (5%):"} value={omr(row.vat)} />
-          <div className="border-t pt-2">
-            <AmountLine label="Total Amount (OMR):" value={omr(row.amount)} strong />
-          </div>
-        </DetailCard>
-
-        <DetailCard icon={Landmark} title="Payment Method & Details">
-          <DetailLines
-            lines={[
-              ["Payment Method:", lease.method || "-"],
-              ...paymentFacts(lease, row, bankAccounts, count).map((fact) => [
-                fact.label + ":",
-                fact.value,
-              ]),
-            ]}
-          />
-        </DetailCard>
-      </div>
-
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        <Label
-          htmlFor="installmentNote"
-          className="flex shrink-0 items-center gap-2 text-primary"
-        >
-          <FileText className="h-5 w-5" />
-          Notes
-        </Label>
-        <div className="relative min-w-0 flex-1">
-          <Input
-            id="installmentNote"
-            value={entry.note}
-            maxLength={NOTE_LIMIT}
-            onChange={(e) => set("note", e.target.value)}
-            placeholder="Enter notes for this installment..."
-            autoComplete="off"
-            className="pr-20"
-          />
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-            {entry.note.length}/{NOTE_LIMIT}
-          </span>
-        </div>
-        <div className="flex gap-2">
-          <Button type="button" onClick={save}>
-            <Save className="mr-2 h-4 w-4" />
-            Save
-          </Button>
-          <Button type="button" variant="outline" onClick={clear}>
-            <X className="mr-2 h-4 w-4" />
-            Clear
-          </Button>
-        </div>
-      </div>
-
-      {error && <p className="text-sm text-destructive">{error}</p>}
-    </div>
-  );
-}
-
 /**
  * One lease, section by section.
  *
@@ -639,7 +277,7 @@ function InstallmentPanel({ row, lease, branchName, bankAccounts, count, onSave 
 export default function LeaseDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { findLease, updateLease } = useLeases();
+  const { findLease, updateLease, recordInstallment } = useLeases();
   const { branches, bankAccounts } = useFirm();
   const { suppliers } = useSuppliers();
 
@@ -710,14 +348,8 @@ export default function LeaseDetails() {
    * payment is a record of money that moved, not an edit waiting on the
    * sections' Save Changes.
    */
-  const recordInstallment = (no, { payment, note }) => {
-    const payments = { ...(lease.payments || {}) };
-    if (payment) payments[no] = payment;
-    else delete payments[no];
-    const installmentNotes = { ...(lease.installmentNotes || {}) };
-    if (note) installmentNotes[no] = note;
-    else delete installmentNotes[no];
-    updateLease(lease.id, { payments, installmentNotes });
+  const saveInstallment = (no, entry) => {
+    recordInstallment(lease.id, no, entry);
     setInstallmentNo(null);
   };
 
@@ -1142,6 +774,7 @@ export default function LeaseDetails() {
                     {openRow && (
                       <InstallmentPanel
                         key={lease.id + "-" + openRow.no}
+                        id="installment-details"
                         row={openRow}
                         lease={preview}
                         branchName={
@@ -1149,7 +782,7 @@ export default function LeaseDetails() {
                         }
                         bankAccounts={bankAccounts}
                         count={installments.length}
-                        onSave={(entry) => recordInstallment(openRow.no, entry)}
+                        onSave={(entry) => saveInstallment(openRow.no, entry)}
                       />
                     )}
                     <PaymentScheduleTable
