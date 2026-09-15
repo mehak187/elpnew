@@ -168,10 +168,10 @@ export default function InstallmentPanel({ id, className, row, lease, branchName
       <div
         className={cn(
           "grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6",
-          // Transaction No. shares its row with the upload button, so it gets a little more room.
+          // The last column is the pair of fields to fill in, so it takes the room of two.
           byCheque
-            ? "lg:grid-cols-[repeat(4,minmax(0,1fr))_minmax(0,1.4fr)]"
-            : "lg:grid-cols-[repeat(3,minmax(0,1fr))_minmax(0,1.4fr)]"
+            ? "lg:grid-cols-[repeat(3,minmax(0,1fr))_minmax(0,2.6fr)]"
+            : "lg:grid-cols-[repeat(2,minmax(0,1fr))_minmax(0,2.4fr)]"
         )}
       >
         <Worked id={fieldId("installmentNo")} label="Installment No." value={"Installment " + row.no} />
@@ -179,38 +179,49 @@ export default function InstallmentPanel({ id, className, row, lease, branchName
         {byCheque && (
           <Worked id={fieldId("installmentChequeNo")} label="Cheque No." value={row.chequeNo || "-"} />
         )}
-        <Field>
-          <FieldLabel htmlFor={fieldId("installmentPaidOn")}>Payment Date</FieldLabel>
-          <Input
-            id={fieldId("installmentPaidOn")}
-            type="date"
-            value={entry.paidOn}
-            max={todayIso()}
-            onChange={(e) => set("paidOn", e.target.value)}
-          />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor={fieldId("installmentTransactionNo")}>Transaction No.</FieldLabel>
-          <div className="flex gap-2">
+
+        {/* Everything else here is filled in already; these two are what the
+            person recording the payment has to enter, so they sit together in
+            a tinted box that sets them apart from the grey figures beside them.
+            On a wide screen the box's top and bottom padding is taken back out
+            of its margin, so its labels and inputs still line up with the row. */}
+        <div className="grid grid-cols-1 gap-4 rounded-lg border border-primary/30 bg-primary/5 p-3 sm:col-span-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] sm:gap-6 lg:col-span-1 lg:-my-3 [&_label]:font-semibold [&_label]:text-primary">
+          <Field>
+            <FieldLabel htmlFor={fieldId("installmentPaidOn")}>Payment Date</FieldLabel>
             <Input
-              id={fieldId("installmentTransactionNo")}
-              value={entry.transactionNo}
-              onChange={(e) => set("transactionNo", e.target.value)}
-              placeholder="Enter transaction number"
-              autoComplete="off"
-              className="min-w-0 flex-1"
+              id={fieldId("installmentPaidOn")}
+              type="date"
+              value={entry.paidOn}
+              max={todayIso()}
+              onChange={(e) => set("paidOn", e.target.value)}
+              className="border-primary/40 bg-white"
             />
-            <Attach
-              id={fieldId("installmentReceipt")}
-              file={entry.receiptFile}
-              onFile={(name) => set("receiptFile", name)}
-              what="payment receipt"
-            />
-          </div>
-        </Field>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor={fieldId("installmentTransactionNo")}>Transaction No.</FieldLabel>
+            <div className="flex gap-2">
+              <Input
+                id={fieldId("installmentTransactionNo")}
+                value={entry.transactionNo}
+                onChange={(e) => set("transactionNo", e.target.value)}
+                placeholder="Enter transaction number"
+                autoComplete="off"
+                className="min-w-0 flex-1 border-primary/40 bg-white"
+              />
+              <Attach
+                id={fieldId("installmentReceipt")}
+                file={entry.receiptFile}
+                onFile={(name) => set("receiptFile", name)}
+                what="payment receipt"
+              />
+            </div>
+          </Field>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+      {/* Room below the tinted box, which reaches into the gap above. Padding,
+          not margin: a margin here would merge with the gap and add nothing. */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:pt-3 xl:grid-cols-4">
         <DetailCard icon={Building2} title="Leased Property Details">
           <DetailLines
             lines={[
