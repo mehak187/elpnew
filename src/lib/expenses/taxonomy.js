@@ -20,6 +20,20 @@ export const LEVEL_LABELS = ["Expense Type", "Category", "Subcategory"];
 
 const subs = (names) => names.map((name) => ({ name }));
 
+/**
+ * The kinds of property the firm rents. Rent is classified by them, and a
+ * lease names one - the same list for both, so a rent payment is always booked
+ * under the property type its lease is for.
+ */
+export const RENT_PROPERTY_TYPES = [
+  "Office",
+  "Office Annex",
+  "Apartment",
+  "Storage",
+  "Warehouse",
+  "Parking",
+];
+
 export const EXPENSE_TYPES = [
   /* ----------------------------------------- 1. Office Expenses (general) */
   {
@@ -30,12 +44,9 @@ export const EXPENSE_TYPES = [
     children: [
       {
         name: "Rent",
-        children: subs([
-          "Office Rent",
-          "Storage Rent",
-          "Parking Rent",
-          "Other Rent",
-        ]),
+        // Named for what it holds, wherever the picker shows it.
+        childLabel: "Property Type",
+        children: subs(RENT_PROPERTY_TYPES),
       },
       {
         name: "Utilities & Services",

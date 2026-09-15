@@ -520,7 +520,7 @@ export const initialInvoices = [
       { id: 1, date: dayOffset(-3), amount: 2520, method: "Bank Transfer", reference: "TRF-88420" },
     ],
     lines: [
-      { id: 1, typeKey: "office", path: ["Rent", "Office Rent"], description: "Muscat office - August", amountBeforeTax: 2400, taxAmount: 120 },
+      { id: 1, typeKey: "office", path: ["Rent", "Office"], description: "Muscat office - August", amountBeforeTax: 2400, taxAmount: 120 },
     ],
   },
   {

@@ -2,15 +2,16 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Coins, FileText, Landmark, Save, X } from "lucide-react";
+import { Building2, Coins, FileText, Landmark, Save, WalletCards, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { EXPENSE_TYPES, isPathComplete } from "@/lib/expenses/taxonomy";
+import ExpenseClassificationPicker from "@/pages/expenses/ExpenseClassificationPicker";
 import { Field, FieldLabel, Worked, Attach } from "./fields";
 import {
   CHEQUE,
   INSTALLMENT_STATUS,
-  RENT_EXPENSE_TYPE,
-  RENT_CATEGORY,
-  rentSubcategoryOf,
+  rentBookingOf,
+  expenseTypeName,
   addressOf,
   paymentFacts,
   omr,
@@ -77,6 +78,9 @@ export default function InstallmentPanel({ id, className, row, lease, branchName
     receiptFile: row.payment?.receiptFile || "",
     note: row.note,
   }));
+  // The expense entry, filled in from the lease: Office Expenses, Rent and the
+  // property type. Whoever records the payment only completes what is missing.
+  const [booking, setBooking] = useState(() => rentBookingOf(lease, row));
   const [error, setError] = useState("");
   const status = INSTALLMENT_STATUS[row.status];
   const vatExempt = lease.vatApplied === false;
@@ -85,8 +89,10 @@ export default function InstallmentPanel({ id, className, row, lease, branchName
 
   const set = (name, value) => setEntry((prev) => ({ ...prev, [name]: value }));
 
+  /** Empties what was typed; the expense entry goes back to the lease's own. */
   const clear = () => {
     setEntry(EMPTY_ENTRY);
+    setBooking(rentBookingOf(lease, { ...row, payment: null }));
     setError("");
   };
 
@@ -96,10 +102,21 @@ export default function InstallmentPanel({ id, className, row, lease, branchName
       setError("Enter the payment date for this payment.");
       return;
     }
+    const type = EXPENSE_TYPES.find((option) => option.key === booking.typeKey);
+    if (entry.paidOn && !isPathComplete(type, booking.path)) {
+      setError("Complete the expense entry before recording the payment.");
+      return;
+    }
     setError("");
     onSave({
       payment: entry.paidOn
-        ? { paidOn: entry.paidOn, transactionNo, receiptFile: entry.receiptFile }
+        ? {
+            paidOn: entry.paidOn,
+            transactionNo,
+            receiptFile: entry.receiptFile,
+            typeKey: booking.typeKey,
+            path: booking.path,
+          }
         : null,
       note: entry.note.trim(),
     });
@@ -127,6 +144,25 @@ export default function InstallmentPanel({ id, className, row, lease, branchName
           <span className={cn("h-2.5 w-2.5 rounded-full", status.dot)} />
           {status.label}
         </span>
+      </div>
+
+      {/* The same classification the Add Expense page asks for, already
+          answered from the lease. */}
+      <div className="space-y-4 rounded-lg border bg-card p-4">
+        <p className="flex items-center gap-2 text-sm font-semibold text-primary">
+          <WalletCards className="h-4 w-4 shrink-0" aria-hidden="true" />
+          Expense Entry
+        </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
+          <ExpenseClassificationPicker
+            value={booking}
+            onChange={(next) => {
+              setBooking((prev) => ({ ...prev, ...next }));
+              setError("");
+            }}
+            idPrefix={fieldId("expense")}
+          />
+        </div>
       </div>
 
       <div
@@ -189,9 +225,9 @@ export default function InstallmentPanel({ id, className, row, lease, branchName
         <DetailCard icon={FileText} title="Payment Details">
           <DetailLines
             lines={[
-              ["Expense Type:", RENT_EXPENSE_TYPE],
-              ["Category:", RENT_CATEGORY],
-              ["Subcategory:", rentSubcategoryOf(lease.propertyType)],
+              ["Expense Type:", expenseTypeName(booking.typeKey)],
+              ["Category:", booking.path[0] || "-"],
+              ["Subcategory:", booking.path[1] || "-"],
             ]}
           />
         </DetailCard>

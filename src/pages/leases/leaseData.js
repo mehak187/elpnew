@@ -10,14 +10,10 @@
  * from.
  */
 
-export const PROPERTY_TYPES = [
-  "Office",
-  "Office Annex",
-  "Apartment",
-  "Storage",
-  "Warehouse",
-  "Parking",
-];
+import { EXPENSE_TYPES, RENT_PROPERTY_TYPES } from "@/lib/expenses/taxonomy";
+
+/** What a lease can be for - the same list rent is classified by in the expenses. */
+export const PROPERTY_TYPES = RENT_PROPERTY_TYPES;
 
 /** Whether the contract is the first one for the property or a renewal of it. */
 export const CONTRACT_STATUSES = ["New Contract", "Renewal"];
@@ -45,24 +41,25 @@ export const PAYMENT_DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 export const VAT_RATE = 0.05;
 
 /**
- * Where rent lands in the accounts: always Office Expenses, under Rent, with
- * the kind of place it pays for as the subcategory. A flat for staff is a
- * residence; a warehouse is booked as storage.
+ * Where rent lands in the accounts: Office Expenses, under Rent, with the
+ * property type the lease is for as the subcategory.
  */
-export const RENT_EXPENSE_TYPE = "Office Expenses";
-export const RENT_CATEGORY = "Rent";
+const RENT_TYPE_KEY = "office";
+const RENT_CATEGORY = "Rent";
 
-const RENT_SUBCATEGORY = {
-  Office: "Office",
-  "Office Annex": "Office Annex",
-  Apartment: "Residence",
-  Storage: "Storage",
-  Warehouse: "Storage",
-  Parking: "Parking",
-};
+/**
+ * How an installment is booked as an expense: what was chosen when it was
+ * paid, or - until then - the lease's own rent booking, filled in for whoever
+ * records the payment.
+ */
+export const rentBookingOf = (lease, row) =>
+  row.payment?.typeKey
+    ? { typeKey: row.payment.typeKey, path: row.payment.path || [] }
+    : { typeKey: RENT_TYPE_KEY, path: [RENT_CATEGORY, lease.propertyType].filter(Boolean) };
 
-export const rentSubcategoryOf = (propertyType) =>
-  RENT_SUBCATEGORY[propertyType] || propertyType || "-";
+/** An expense type's name, from its key. */
+export const expenseTypeName = (typeKey) =>
+  EXPENSE_TYPES.find((type) => type.key === typeKey)?.name || "-";
 
 /**
  * How early a lease is flagged as running out.
