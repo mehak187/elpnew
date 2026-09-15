@@ -9,6 +9,7 @@ import SuppliersProvider from "@/lib/suppliers/SuppliersProvider";
 import ClientsProvider from "@/lib/clients/ClientsProvider";
 import LeasesProvider from "@/lib/leases/LeasesProvider";
 import AssetsProvider from "@/lib/assets/AssetsProvider";
+import TaxesProvider from "@/lib/taxes/TaxesProvider";
 
 // Root Pages
 import Dashboard from "@/pages/Dashboard";
@@ -48,6 +49,11 @@ import LeaseDetails from "@/pages/leases/LeaseDetails";
 
 // Assets
 import AssetsPage from "@/pages/assets/AssetsPage";
+import AssetDetails from "@/pages/assets/AssetDetails";
+
+// Taxes
+import IncomeTaxPage from "@/pages/taxes/IncomeTaxPage";
+import VatPage from "@/pages/taxes/VatPage";
 
 // Corporate Module
 import CorporateList from "@/pages/corporate/CorporateList";
@@ -79,6 +85,7 @@ function App() {
           <ClientsProvider>
           <LeasesProvider>
           <AssetsProvider>
+          <TaxesProvider>
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<MainLayout />}>
@@ -102,6 +109,11 @@ function App() {
 
               {/* Assets */}
               <Route path="assets" element={<AssetsPage />} />
+              <Route path="assets/:id" element={<AssetDetails />} />
+
+              {/* Taxes */}
+              <Route path="taxes/income-tax" element={<IncomeTaxPage />} />
+              <Route path="taxes/vat" element={<VatPage />} />
               <Route path="expenses" element={<ExpensesPage />} />
               <Route path="expenses/create" element={<ExpenseForm />} />
               <Route path="expense-requests" element={<GeneralInvoices />} />
@@ -170,6 +182,7 @@ function App() {
             </Route>
           </Routes>
         </BrowserRouter>
+          </TaxesProvider>
           </AssetsProvider>
           </LeasesProvider>
           </ClientsProvider>

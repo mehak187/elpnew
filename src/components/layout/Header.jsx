@@ -20,6 +20,8 @@ import {
   Menu,
   Home,
   Box,
+  Calculator,
+  Percent,
 } from "lucide-react";
 import {
   NavigationMenu,
@@ -158,6 +160,30 @@ const navSections = [
         key: "expenses",
         icon: FileBarChart,
         description: "Every expense, and what has been paid against it",
+      },
+    ],
+  },
+  {
+    // A menu of its own rather than a place under Expenses: VAT is charged on
+    // the firm's invoices as well as paid on its purchases, and income tax is
+    // owed on the year as a whole.
+    name: "Taxes",
+    key: "taxes",
+    icon: Calculator,
+    items: [
+      {
+        name: "Income Tax",
+        path: "/taxes/income-tax",
+        key: "taxes/income-tax",
+        icon: Landmark,
+        description: "Corporate income tax returns and payments",
+      },
+      {
+        name: "Value Added Tax (VAT)",
+        path: "/taxes/vat",
+        key: "taxes/vat",
+        icon: Percent,
+        description: "VAT returns and the VAT on every invoice",
       },
     ],
   },
