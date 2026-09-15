@@ -1,10 +1,43 @@
-/** Money the firm gives away. */
+/** Money the firm gives an employee to help with something in their life. */
+
+/**
+ * The kinds of help an employee can ask for, each with the document the office
+ * will want to see before deciding - so it is attached with the request rather
+ * than chased afterwards.
+ *
+ * Donations to charities are not here: that is the firm giving to the
+ * community, and it is booked under Donations & Assistance in the expenses.
+ */
+export const ASSISTANCE_KINDS = [
+  { name: "Marriage Assistance", document: "Marriage contract" },
+  { name: "New Baby Assistance", document: "Birth certificate" },
+  { name: "Bereavement Assistance", document: "Death certificate" },
+  { name: "Medical Assistance", document: "Medical report or hospital invoice" },
+  { name: "Education Assistance", document: "School or university fee invoice" },
+  { name: "Housing Assistance", document: "Rent contract or quotation" },
+  { name: "Emergency Assistance", document: "Police, incident or damage report" },
+  { name: "Other Assistance", document: "Any document that supports the request" },
+];
+
+/** The document to attach for a kind of help, if one has been chosen. */
+export const documentFor = (subcategory) =>
+  ASSISTANCE_KINDS.find((kind) => kind.name === subcategory)?.document || "";
+
+/** Who the help is for: the employee, or someone in their family. */
+export const BENEFICIARIES = [
+  "Employee (Self)",
+  "Spouse",
+  "Son / Daughter",
+  "Father / Mother",
+  "Brother / Sister",
+  "Other Family Member",
+];
 
 /**
  * Where assistance lands in the accounts.
  *
  * One type and one category, because every kind of help the firm gives is
- * booked the same way. What changes is who it went to, which is what the
+ * booked the same way. What changes is what the help was for, which is what the
  * subcategory records - and so it is the only list with more than one entry.
  */
 export const ASSISTANCE_BOOKING = [
@@ -13,15 +46,7 @@ export const ASSISTANCE_BOOKING = [
     categories: [
       {
         name: "Assistance",
-        subcategories: [
-          "Charitable Donations",
-          "Employee Assistance",
-          "Medical Assistance",
-          "Social Support",
-          "Education Aid",
-          "Emergency Assistance",
-          "Other Assistance",
-        ],
+        subcategories: ASSISTANCE_KINDS.map((kind) => kind.name),
       },
     ],
   },
@@ -77,10 +102,10 @@ export const STATUS_TONE = {
  * has no payment at all, which is why those fields are empty on it.
  */
 export const assistanceRecords = [
-  { id: 1, requestDate: "2026-08-15", decision: "Pending", expenseType: "Employee Expenses", category: "Assistance", subcategory: "Employee Assistance", purpose: "Family emergency aid", amount: 700, paymentDate: "", method: "", account: "", proof: "assistance_150826.pdf", notes: "Family emergency aid" },
-  { id: 2, requestDate: "2026-08-26", decision: "Approved", expenseType: "Employee Expenses", category: "Assistance", subcategory: "Charitable Donations", purpose: "Support for local charity", amount: 500, paymentDate: "2026-08-26", method: "Bank Transfer", account: "Bank Muscat (1234)", proof: "assistance_260826.pdf", notes: "Support for local charity" },
-  { id: 3, requestDate: "2026-08-20", decision: "Approved", expenseType: "Employee Expenses", category: "Assistance", subcategory: "Medical Assistance", purpose: "Medical treatment", amount: 300, paymentDate: "2026-08-20", method: "Bank Transfer", account: "NBO (5678)", proof: "assistance_200826.png", notes: "Medical support" },
-  { id: 4, requestDate: "2026-08-05", decision: "Approved", expenseType: "Employee Expenses", category: "Assistance", subcategory: "Education Aid", purpose: "Student tuition support", amount: 400, paymentDate: "2026-08-05", method: "Bank Transfer", account: "Oman Arab Bank (9012)", proof: "assistance_050826.pdf", notes: "Student tuition support" },
-  { id: 5, requestDate: "2026-07-28", decision: "Rejected", expenseType: "Employee Expenses", category: "Assistance", subcategory: "Other Assistance", purpose: "Car maintenance support", amount: 350, paymentDate: "", method: "", account: "", proof: "", notes: "Car maintenance support" },
-  { id: 6, requestDate: "2026-07-12", decision: "Approved", expenseType: "Employee Expenses", category: "Assistance", subcategory: "Social Support", purpose: "Social assistance", amount: 600, paymentDate: "2026-07-12", method: "Bank Transfer", account: "Sohar Bank (3344)", proof: "assistance_120726.pdf", notes: "Social assistance" },
+  { id: 1, requestDate: "2026-08-15", decision: "Pending", expenseType: "Employee Expenses", category: "Assistance", subcategory: "Emergency Assistance", beneficiary: "Employee (Self)", purpose: "House damaged by flooding", amount: 700, paymentDate: "", method: "", account: "", proof: "assistance_150826.pdf", notes: "Family emergency aid" },
+  { id: 2, requestDate: "2026-08-26", decision: "Approved", expenseType: "Employee Expenses", category: "Assistance", subcategory: "Marriage Assistance", beneficiary: "Employee (Self)", purpose: "Marriage of the employee", amount: 500, paymentDate: "2026-08-26", method: "Bank Transfer", account: "Bank Muscat (1234)", proof: "assistance_260826.pdf", notes: "Marriage contract attached" },
+  { id: 3, requestDate: "2026-08-20", decision: "Approved", expenseType: "Employee Expenses", category: "Assistance", subcategory: "Medical Assistance", beneficiary: "Father / Mother", purpose: "Hospital treatment for the employee's father", amount: 300, paymentDate: "2026-08-20", method: "Bank Transfer", account: "NBO (5678)", proof: "assistance_200826.png", notes: "Medical support" },
+  { id: 4, requestDate: "2026-08-05", decision: "Approved", expenseType: "Employee Expenses", category: "Assistance", subcategory: "Education Assistance", beneficiary: "Son / Daughter", purpose: "School fees for the new term", amount: 400, paymentDate: "2026-08-05", method: "Bank Transfer", account: "Oman Arab Bank (9012)", proof: "assistance_050826.pdf", notes: "Student tuition support" },
+  { id: 5, requestDate: "2026-07-28", decision: "Rejected", expenseType: "Employee Expenses", category: "Assistance", subcategory: "Other Assistance", beneficiary: "Employee (Self)", purpose: "Car maintenance support", amount: 350, paymentDate: "", method: "", account: "", proof: "", notes: "Car maintenance support" },
+  { id: 6, requestDate: "2026-07-12", decision: "Approved", expenseType: "Employee Expenses", category: "Assistance", subcategory: "Bereavement Assistance", beneficiary: "Father / Mother", purpose: "Funeral of the employee's mother", amount: 600, paymentDate: "2026-07-12", method: "Bank Transfer", account: "Sohar Bank (3344)", proof: "assistance_120726.pdf", notes: "Condolences from the firm" },
 ];

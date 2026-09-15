@@ -27,6 +27,8 @@ import { FileText,
 import { amount, formatDate } from "../loanData";
 import {
   DEFAULT_ASSISTANCE_BOOKING,
+  BENEFICIARIES,
+  documentFor,
   subcategoriesOf,
   assistanceRecords,
   statusOf,
@@ -38,6 +40,7 @@ const PAGE_SIZE = 10;
 
 const emptyDraft = {
   ...DEFAULT_ASSISTANCE_BOOKING,
+  beneficiary: "",
   amount: "",
   method: "",
   account: "",
@@ -74,10 +77,13 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
 
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
 
-  // What a request needs: what it is for, how much, and why. How it will
-  // be paid is the office's business once the request is granted.
+  // What a request needs: what it is for, who it is for, how much, and why.
+  // How it will be paid is the office's business once the request is granted.
   const canSave =
-    draft.subcategory && Number(draft.amount) > 0 && draft.notes.trim();
+    draft.subcategory &&
+    draft.beneficiary &&
+    Number(draft.amount) > 0 &&
+    draft.notes.trim();
 
   const saveRecord = () => {
     if (!canSave) return;
@@ -90,6 +96,7 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
         expenseType: draft.expenseType,
         category: draft.category,
         subcategory: draft.subcategory,
+        beneficiary: draft.beneficiary,
         purpose: draft.notes.trim(),
         amount: Number(draft.amount),
         method: "",
@@ -130,7 +137,7 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
         />
 
         <Panel title="Assistance Information" icon={HandHeart}>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 sm:gap-6">
             {/* Where the money comes from is not a choice: assistance is
                 booked to Employee Expenses under Assistance, always. It is
                 shown so the request says what it will be charged to. */}
@@ -165,7 +172,7 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
               <div className="flex gap-2">
                 <Select
                   value={draft.subcategory}
-                  onValueChange={(value) => set("subcategory", value)}
+                  onValueChange={(value) => value && set("subcategory", value)}
                 >
                   <SelectTrigger id="assistance-subcategory" className="flex-1">
                     <SelectValue placeholder="Select Subcategory" />
@@ -214,9 +221,38 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
                   }
                 />
               </div>
-              {proof && (
+              {proof ? (
                 <p className="truncate text-xs text-green-700">{proof.name}</p>
+              ) : (
+                // What the office will ask to see, so it comes with the request.
+                documentFor(draft.subcategory) && (
+                  <p className="text-xs text-muted-foreground">
+                    Attach: {documentFor(draft.subcategory)}
+                  </p>
+                )
               )}
+            </div>
+
+            {/* Who the help is for - the employee, or someone in their family. */}
+            <div className="space-y-2">
+              <FieldLabel htmlFor="assistance-beneficiary" required>
+                Beneficiary
+              </FieldLabel>
+              <Select
+                value={draft.beneficiary}
+                onValueChange={(value) => value && set("beneficiary", value)}
+              >
+                <SelectTrigger id="assistance-beneficiary">
+                  <SelectValue placeholder="Select Beneficiary" />
+                </SelectTrigger>
+                <SelectContent>
+                  {BENEFICIARIES.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -256,7 +292,8 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
         </Panel>
 
         <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-4">
-          <Button variant="outline" onClick={onCloseAdd}>
+          {/* A plain button: this form sits inside the employee form. */}
+          <Button type="button" variant="outline" onClick={onCloseAdd}>
             Cancel
           </Button>
           <Button type="button" onClick={saveRecord} disabled={!canSave}>
@@ -348,6 +385,11 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
                         <span className="block font-semibold text-primary">
                           {record.subcategory}
                         </span>
+                        {record.beneficiary && (
+                          <span className="block text-muted-foreground">
+                            For: {record.beneficiary}
+                          </span>
+                        )}
                         <span className="block text-muted-foreground">
                           {record.purpose}
                         </span>

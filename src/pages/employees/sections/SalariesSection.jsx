@@ -552,12 +552,16 @@ export default function SalariesSection({
           )}
         </div>
 
+        {/* Recording a salary is not a request, so it is saved rather than
+            submitted. Both buttons are plain buttons: this form sits inside
+            the employee form, which either would otherwise submit. */}
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={closeAdd}>
+          <Button type="button" variant="outline" onClick={closeAdd}>
             Cancel
           </Button>
-          <Button onClick={savePayment} disabled={!canPay}>
-            Submit Request
+          <Button type="button" onClick={savePayment} disabled={!canPay}>
+            <Save className="mr-2 h-4 w-4" />
+            Save
           </Button>
         </div>
       </div>
@@ -652,7 +656,7 @@ export default function SalariesSection({
             disabled={!(Number(payslip.basic) > 0)}
           >
             <Save className="mr-2 h-4 w-4" />
-            Submit Request
+            Save
           </Button>
         </div>
       </div>
