@@ -31,9 +31,8 @@ import {
   CHEQUE,
   OTHER_ACCOUNT,
   INSTALLMENT_STATUS,
-  RENT_EXPENSE_TYPE,
-  RENT_CATEGORY,
-  rentSubcategoryOf,
+  rentBookingOf,
+  expenseTypeName,
   paymentFacts,
   accountLabel,
   addressOf,
@@ -177,6 +176,7 @@ function PaymentScheduleTable({ rows, lease, bankAccounts, openNo, onOpen }) {
           <tbody>
             {rows.map((row) => {
               const status = INSTALLMENT_STATUS[row.status];
+              const booking = rentBookingOf(lease, row);
               return (
                 <tr
                   key={row.no}
@@ -222,9 +222,9 @@ function PaymentScheduleTable({ rows, lease, bankAccounts, openNo, onOpen }) {
                   </td>
 
                   <td className="p-3">
-                    <p>{RENT_EXPENSE_TYPE}</p>
-                    <p>{RENT_CATEGORY}</p>
-                    <p>{rentSubcategoryOf(lease.propertyType)}</p>
+                    <p>{expenseTypeName(booking.typeKey)}</p>
+                    <p>{booking.path[0] || "-"}</p>
+                    <p>{booking.path[1] || "-"}</p>
                   </td>
 
                   <td className="p-3">

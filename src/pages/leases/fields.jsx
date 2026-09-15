@@ -75,6 +75,31 @@ export function Worked({ id, label, value }) {
   );
 }
 
+/** A typed field, with anything that belongs beside the input (an upload) after it. */
+export function TextField({ id, label, required, value, onChange, placeholder, type, inputMode, max, children }) {
+  return (
+    <Field>
+      <FieldLabel htmlFor={id} required={required}>
+        {label}
+      </FieldLabel>
+      <div className="flex gap-2">
+        <Input
+          id={id}
+          type={type}
+          inputMode={inputMode}
+          max={max}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          autoComplete="off"
+          className="min-w-0 flex-1"
+        />
+        {children}
+      </div>
+    </Field>
+  );
+}
+
 /**
  * A file attached beside the field it backs. The name lives in the tooltip,
  * so the control stays the size of a button whether a file is there or not.

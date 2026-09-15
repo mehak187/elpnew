@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,7 @@ import {
   ASSET_EXPENSE_TYPE,
   ASSET_CATEGORIES,
   ASSET_STATUS,
+  assetCost,
   assetState,
   accumulatedDepreciation,
   netBookValue,
@@ -111,6 +113,7 @@ const Missing = () => <span className="text-muted-foreground">-</span>;
 export default function AssetsPage() {
   const { branches, bankAccounts } = useFirm();
   const { suppliers } = useSuppliers();
+  const navigate = useNavigate();
   const { assets, addAsset } = useAssets();
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState(emptyDraft);
@@ -169,9 +172,12 @@ export default function AssetsPage() {
   };
 
   const rows = assets.map((asset) => {
-    const hasCost = Number(asset.cost) > 0;
+    // What its purchase invoices add up to, before VAT - never stored.
+    const cost = assetCost(asset);
+    const hasCost = cost > 0;
     return {
       ...asset,
+      cost,
       hasCost,
       state: assetState(asset),
       branchLabel: branchLabel(asset.branchId),
@@ -210,7 +216,15 @@ export default function AssetsPage() {
         <div className="flex items-center gap-3">
           <IdStatusDot status={ASSET_STATUS[row.state].label} tone={ASSET_STATUS[row.state].dot} />
           <div>
-            <p className="text-base font-semibold text-primary">{value}</p>
+            {/* The number opens the asset itself. */}
+            <button
+              type="button"
+              onClick={() => navigate("/assets/" + row.id)}
+              title={"Open " + value}
+              className="rounded text-base font-semibold text-primary hover:text-primary/70 focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              {value}
+            </button>
             <p className="whitespace-nowrap text-primary/80">{row.branchLabel}</p>
           </div>
         </div>

@@ -18,9 +18,9 @@ export const BENEFIT_TABS = [
     label: "Salaries / Allowances",
     icon: Wallet,
     note: "View your salary payments and allowances",
-    // The employee asks for an advance here; the firm records the salary
-    // run itself, which is what the history below shows.
-    add: "Request Salary Advance",
+    // Salary is recorded here, not asked for: the form enters a salary
+    // payment against the payslip above, and the history below lists them.
+    add: "Add Salary",
   },
   {
     key: "loans",

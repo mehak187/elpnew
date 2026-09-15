@@ -150,6 +150,9 @@ export default function LeaveForm({
     draft.type,
     draft.year
   );
+  // What would be left of it once this request is taken - 14 left less 5
+  // asked for is 9. Below zero says the request is more than is left.
+  const afterRequest = balance ? balance.remaining - Math.max(days, 0) : null;
 
   const canSave =
     draft.category &&
@@ -307,7 +310,7 @@ export default function LeaveForm({
         title="Leave Period and Details"
         note="Specify the leave period and provide additional details"
       >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
           <div className="space-y-2">
             <Label htmlFor="leaveFrom">
               From Date<span className="whitespace-nowrap text-destructive">&nbsp;*</span>
@@ -348,27 +351,41 @@ export default function LeaveForm({
             />
           </div>
 
-          <div className="space-y-2 sm:col-span-3">
-            <Label htmlFor="leaveReason">
-              Reason / Notes<span className="whitespace-nowrap text-destructive">&nbsp;*</span>
-            </Label>
-            <Textarea
-              id="leaveReason"
-              rows={3}
-              maxLength={NOTES_LIMIT}
-              value={draft.reason}
-              onChange={(e) => onChange("reason", e.target.value)}
-              placeholder="Enter the reason for your leave request..."
+          {/* The balance again, now less the days on this request, so the
+              effect of the dates is seen beside them. Worked out, never
+              stored. A type with no fixed count shows its entitlement. */}
+          <div className="space-y-2">
+            <Label htmlFor="leaveBalanceAfter">Remaining Leave Balance</Label>
+            <Input
+              id="leaveBalanceAfter"
+              readOnly
+              tabIndex={-1}
+              className={cn(
+                "cursor-default bg-muted font-semibold",
+                afterRequest !== null && afterRequest < 0
+                  ? "text-destructive"
+                  : "text-primary"
+              )}
+              placeholder="Auto calculated"
+              value={
+                !draft.type
+                  ? ""
+                  : balance
+                    ? afterRequest + (Math.abs(afterRequest) === 1 ? " Day" : " Days")
+                    : entitlement
+              }
             />
-            <p className="-mt-1 text-right text-xs text-muted-foreground">
-              {draft.reason.length} / {NOTES_LIMIT}
-            </p>
+            {balance && days > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {balance.remaining} left - {days} on this request
+              </p>
+            )}
           </div>
 
           {/* Who covers the work. Optional, because plenty of leave
               needs no cover - but naming someone is what lets the firm
               approve it without stopping to ask. */}
-          <div className="-mt-2 space-y-2 sm:col-span-2 sm:-mt-4">
+          <div className="space-y-2">
             <Label htmlFor="leaveReplacement">
               Replacement Employee
               <span className="ml-1 font-normal text-muted-foreground">
@@ -381,7 +398,7 @@ export default function LeaveForm({
             </Label>
             <Select
               value={draft.replacement}
-              onValueChange={(value) => onChange("replacement", value)}
+              onValueChange={(value) => value && onChange("replacement", value)}
             >
               <SelectTrigger
                 id="leaveReplacement"
@@ -404,6 +421,23 @@ export default function LeaveForm({
                   ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2 sm:col-span-2 lg:col-span-4">
+            <Label htmlFor="leaveReason">
+              Reason / Notes<span className="whitespace-nowrap text-destructive">&nbsp;*</span>
+            </Label>
+            <Textarea
+              id="leaveReason"
+              rows={3}
+              maxLength={NOTES_LIMIT}
+              value={draft.reason}
+              onChange={(e) => onChange("reason", e.target.value)}
+              placeholder="Enter the reason for your leave request..."
+            />
+            <p className="-mt-1 text-right text-xs text-muted-foreground">
+              {draft.reason.length} / {NOTES_LIMIT}
+            </p>
           </div>
         </div>
 

@@ -11,6 +11,7 @@ import {
   EXPENSE_TYPES,
   LEVEL_LABELS,
   LINK_LABELS,
+  categoriesOf,
   optionsForPath,
   isPathComplete,
 } from "@/lib/expenses/taxonomy";
@@ -47,6 +48,14 @@ export default function ExpenseClassificationPicker({
   const setLevel = (index, name) =>
     onChange({ ...value, path: [...value.path.slice(0, index), name] });
 
+  // A category can name its own subcategories - under Rent they are the
+  // property types, and the field says so.
+  const labelAt = (index) =>
+    (index === 1 &&
+      categoriesOf(type).find((category) => category.name === value.path[0])?.childLabel) ||
+    LEVEL_LABELS[index + 1] ||
+    "Detail";
+
   return (
     <>
       <div className="space-y-2">
@@ -68,7 +77,7 @@ export default function ExpenseClassificationPicker({
       {levels.map((options, index) => (
         <div key={index} className="space-y-2">
           <Label htmlFor={idPrefix + "-level-" + index}>
-            {LEVEL_LABELS[index + 1] || "Detail"} *
+            {labelAt(index)} *
           </Label>
           <Select
             value={value.path[index] || ""}

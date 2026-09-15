@@ -2,15 +2,16 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Coins, FileText, Landmark, Save, X } from "lucide-react";
+import { Building2, Coins, FileText, Landmark, Save, WalletCards, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { EXPENSE_TYPES, isPathComplete } from "@/lib/expenses/taxonomy";
+import ExpenseClassificationPicker from "@/pages/expenses/ExpenseClassificationPicker";
 import { Field, FieldLabel, Worked, Attach } from "./fields";
 import {
   CHEQUE,
   INSTALLMENT_STATUS,
-  RENT_EXPENSE_TYPE,
-  RENT_CATEGORY,
-  rentSubcategoryOf,
+  rentBookingOf,
+  expenseTypeName,
   addressOf,
   paymentFacts,
   omr,
@@ -77,6 +78,9 @@ export default function InstallmentPanel({ id, className, row, lease, branchName
     receiptFile: row.payment?.receiptFile || "",
     note: row.note,
   }));
+  // The expense entry, filled in from the lease: Office Expenses, Rent and the
+  // property type. Whoever records the payment only completes what is missing.
+  const [booking, setBooking] = useState(() => rentBookingOf(lease, row));
   const [error, setError] = useState("");
   const status = INSTALLMENT_STATUS[row.status];
   const vatExempt = lease.vatApplied === false;
@@ -85,8 +89,10 @@ export default function InstallmentPanel({ id, className, row, lease, branchName
 
   const set = (name, value) => setEntry((prev) => ({ ...prev, [name]: value }));
 
+  /** Empties what was typed; the expense entry goes back to the lease's own. */
   const clear = () => {
     setEntry(EMPTY_ENTRY);
+    setBooking(rentBookingOf(lease, { ...row, payment: null }));
     setError("");
   };
 
@@ -96,10 +102,21 @@ export default function InstallmentPanel({ id, className, row, lease, branchName
       setError("Enter the payment date for this payment.");
       return;
     }
+    const type = EXPENSE_TYPES.find((option) => option.key === booking.typeKey);
+    if (entry.paidOn && !isPathComplete(type, booking.path)) {
+      setError("Complete the expense entry before recording the payment.");
+      return;
+    }
     setError("");
     onSave({
       payment: entry.paidOn
-        ? { paidOn: entry.paidOn, transactionNo, receiptFile: entry.receiptFile }
+        ? {
+            paidOn: entry.paidOn,
+            transactionNo,
+            receiptFile: entry.receiptFile,
+            typeKey: booking.typeKey,
+            path: booking.path,
+          }
         : null,
       note: entry.note.trim(),
     });
@@ -129,13 +146,32 @@ export default function InstallmentPanel({ id, className, row, lease, branchName
         </span>
       </div>
 
+      {/* The same classification the Add Expense page asks for, already
+          answered from the lease. */}
+      <div className="space-y-4 rounded-lg border bg-card p-4">
+        <p className="flex items-center gap-2 text-sm font-semibold text-primary">
+          <WalletCards className="h-4 w-4 shrink-0" aria-hidden="true" />
+          Expense Entry
+        </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
+          <ExpenseClassificationPicker
+            value={booking}
+            onChange={(next) => {
+              setBooking((prev) => ({ ...prev, ...next }));
+              setError("");
+            }}
+            idPrefix={fieldId("expense")}
+          />
+        </div>
+      </div>
+
       <div
         className={cn(
           "grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6",
-          // Transaction No. shares its row with the upload button, so it gets a little more room.
+          // The last column is the pair of fields to fill in, so it takes the room of two.
           byCheque
-            ? "lg:grid-cols-[repeat(4,minmax(0,1fr))_minmax(0,1.4fr)]"
-            : "lg:grid-cols-[repeat(3,minmax(0,1fr))_minmax(0,1.4fr)]"
+            ? "lg:grid-cols-[repeat(3,minmax(0,1fr))_minmax(0,2.6fr)]"
+            : "lg:grid-cols-[repeat(2,minmax(0,1fr))_minmax(0,2.4fr)]"
         )}
       >
         <Worked id={fieldId("installmentNo")} label="Installment No." value={"Installment " + row.no} />
@@ -143,38 +179,49 @@ export default function InstallmentPanel({ id, className, row, lease, branchName
         {byCheque && (
           <Worked id={fieldId("installmentChequeNo")} label="Cheque No." value={row.chequeNo || "-"} />
         )}
-        <Field>
-          <FieldLabel htmlFor={fieldId("installmentPaidOn")}>Payment Date</FieldLabel>
-          <Input
-            id={fieldId("installmentPaidOn")}
-            type="date"
-            value={entry.paidOn}
-            max={todayIso()}
-            onChange={(e) => set("paidOn", e.target.value)}
-          />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor={fieldId("installmentTransactionNo")}>Transaction No.</FieldLabel>
-          <div className="flex gap-2">
+
+        {/* Everything else here is filled in already; these two are what the
+            person recording the payment has to enter, so they sit together in
+            a tinted box that sets them apart from the grey figures beside them.
+            On a wide screen the box's top and bottom padding is taken back out
+            of its margin, so its labels and inputs still line up with the row. */}
+        <div className="grid grid-cols-1 gap-4 rounded-lg border border-primary/30 bg-primary/5 p-3 sm:col-span-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] sm:gap-6 lg:col-span-1 lg:-my-3 [&_label]:font-semibold [&_label]:text-primary">
+          <Field>
+            <FieldLabel htmlFor={fieldId("installmentPaidOn")}>Payment Date</FieldLabel>
             <Input
-              id={fieldId("installmentTransactionNo")}
-              value={entry.transactionNo}
-              onChange={(e) => set("transactionNo", e.target.value)}
-              placeholder="Enter transaction number"
-              autoComplete="off"
-              className="min-w-0 flex-1"
+              id={fieldId("installmentPaidOn")}
+              type="date"
+              value={entry.paidOn}
+              max={todayIso()}
+              onChange={(e) => set("paidOn", e.target.value)}
+              className="border-primary/40 bg-white"
             />
-            <Attach
-              id={fieldId("installmentReceipt")}
-              file={entry.receiptFile}
-              onFile={(name) => set("receiptFile", name)}
-              what="payment receipt"
-            />
-          </div>
-        </Field>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor={fieldId("installmentTransactionNo")}>Transaction No.</FieldLabel>
+            <div className="flex gap-2">
+              <Input
+                id={fieldId("installmentTransactionNo")}
+                value={entry.transactionNo}
+                onChange={(e) => set("transactionNo", e.target.value)}
+                placeholder="Enter transaction number"
+                autoComplete="off"
+                className="min-w-0 flex-1 border-primary/40 bg-white"
+              />
+              <Attach
+                id={fieldId("installmentReceipt")}
+                file={entry.receiptFile}
+                onFile={(name) => set("receiptFile", name)}
+                what="payment receipt"
+              />
+            </div>
+          </Field>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+      {/* Room below the tinted box, which reaches into the gap above. Padding,
+          not margin: a margin here would merge with the gap and add nothing. */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:pt-3 xl:grid-cols-4">
         <DetailCard icon={Building2} title="Leased Property Details">
           <DetailLines
             lines={[
@@ -189,9 +236,9 @@ export default function InstallmentPanel({ id, className, row, lease, branchName
         <DetailCard icon={FileText} title="Payment Details">
           <DetailLines
             lines={[
-              ["Expense Type:", RENT_EXPENSE_TYPE],
-              ["Category:", RENT_CATEGORY],
-              ["Subcategory:", rentSubcategoryOf(lease.propertyType)],
+              ["Expense Type:", expenseTypeName(booking.typeKey)],
+              ["Category:", booking.path[0] || "-"],
+              ["Subcategory:", booking.path[1] || "-"],
             ]}
           />
         </DetailCard>
