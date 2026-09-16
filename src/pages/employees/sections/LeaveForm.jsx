@@ -61,7 +61,13 @@ export default function LeaveForm({
   onSubmit,
   onCancel,
   years,
+  // The year an advance would be charged to, offered only when this year's
+  // annual leave is gone.
+  advanceYear,
 }) {
+  // Days taken now against next year: the kind of leave is settled by that
+  // choice, so neither the category nor the type is asked for again.
+  const advance = Boolean(advanceYear) && draft.year === advanceYear;
   const days = leaveDays(draft.from, draft.to);
   const entitlement = entitlementOf(draft.type);
   const balance = remainingBalance(
@@ -112,7 +118,7 @@ export default function LeaveForm({
             </Label>
             <Select
               value={draft.year}
-              onValueChange={(value) => onChange("year", value)}
+              onValueChange={(value) => value && onChange("year", value)}
             >
               <SelectTrigger id="leaveYearField">
                 <SelectValue />
@@ -125,6 +131,11 @@ export default function LeaveForm({
                 ))}
               </SelectContent>
             </Select>
+            {advance && (
+              <p className="text-xs text-muted-foreground">
+                Advance leave: taken now, charged to {advanceYear}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -135,52 +146,72 @@ export default function LeaveForm({
                 hidden native select, which reports "" whenever the list it was
                 built from changes - and would wipe a choice just made. Nobody
                 can pick "nothing" from the list itself. */}
-            <Select
-              value={draft.category}
-              onValueChange={(value) => value && onCategory(value)}
-            >
-              <SelectTrigger id="leaveCategory">
-                <SelectValue placeholder="Select Leave Category" />
-              </SelectTrigger>
-              <SelectContent>
-                {ABSENCE_CATEGORIES.map((category) => (
-                  <SelectItem key={category.name} value={category.name}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {advance ? (
+              <Input
+                id="leaveCategory"
+                readOnly
+                tabIndex={-1}
+                className="cursor-default bg-locked font-semibold text-primary"
+                value={draft.category}
+              />
+            ) : (
+              <Select
+                value={draft.category}
+                onValueChange={(value) => value && onCategory(value)}
+              >
+                <SelectTrigger id="leaveCategory">
+                  <SelectValue placeholder="Select Leave Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ABSENCE_CATEGORIES.map((category) => (
+                    <SelectItem key={category.name} value={category.name}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="leaveType">
               Leave Type<span className="whitespace-nowrap text-destructive">&nbsp;*</span>
             </Label>
-            <Select
-              value={draft.type}
-              onValueChange={(value) => value && onChange("type", value)}
-              disabled={!draft.category}
-            >
-              <SelectTrigger id="leaveType">
-                <SelectValue
-                  placeholder={
-                    draft.category
-                      ? "Select Leave Type"
-                      : "Select a category first"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {typesIn(draft.category).map((type) => (
-                  <SelectItem key={type.name} value={type.name}>
-                    {type.name}
-                    {/* Opacity rather than a colour, so it stays readable
-                        against the highlighted row. */}
-                    <span className="opacity-70"> &mdash; {type.entitlement}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {advance ? (
+              <Input
+                id="leaveType"
+                readOnly
+                tabIndex={-1}
+                className="cursor-default bg-locked font-semibold text-primary"
+                value={draft.type + " — " + entitlementOf(draft.type)}
+              />
+            ) : (
+              <Select
+                value={draft.type}
+                onValueChange={(value) => value && onChange("type", value)}
+                disabled={!draft.category}
+              >
+                <SelectTrigger id="leaveType">
+                  <SelectValue
+                    placeholder={
+                      draft.category
+                        ? "Select Leave Type"
+                        : "Select a category first"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {typesIn(draft.category).map((type) => (
+                    <SelectItem key={type.name} value={type.name}>
+                      {type.name}
+                      {/* Opacity rather than a colour, so it stays readable
+                          against the highlighted row. */}
+                      <span className="opacity-70"> &mdash; {type.entitlement}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           {/* What is left of the chosen type this year: the entitlement less

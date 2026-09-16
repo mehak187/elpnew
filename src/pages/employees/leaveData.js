@@ -84,8 +84,26 @@ export function leaveDays(from, to) {
   return days > 0 ? days : 0;
 }
 
-/** The year a leave is charged against: the year it starts in. */
+/** The year a leave falls in: the year it starts in. */
 export const leaveYear = (from) => (from ? from.slice(0, 4) : "");
+
+/**
+ * Advance annual leave: days taken now against next year's entitlement.
+ *
+ * Someone who has used up this year's annual leave can still be granted days
+ * out of next year's. The leave is taken in this year but paid for out of
+ * next, so the record carries the year it is charged to, and every balance is
+ * counted by that year rather than by the dates.
+ */
+export const ADVANCE_LEAVE = "Advance Annual Leave";
+
+export const chargedYear = (leave) => leave.year || leaveYear(leave.from);
+
+export const isAdvance = (leave) => chargedYear(leave) > leaveYear(leave.from);
+
+/** What a leave is called on a row: an advance says so. */
+export const leaveTypeLabel = (leave) =>
+  isAdvance(leave) ? ADVANCE_LEAVE : leave.type;
 
 export const initialLeaves = [
   {
@@ -221,6 +239,8 @@ export const initialLeaves = [
     decidedAt: dayOffset(-2),
     comments: "Granted once in service.",
   },
+  // This year's annual leave, used up to the day: what makes an advance
+  // against next year possible at all.
   {
     id: 12,
     employee: "Aisha Al Kindi",
@@ -232,6 +252,18 @@ export const initialLeaves = [
     status: "Approved",
     decidedAt: dayOffset(-25),
     comments: "",
+  },
+  {
+    id: 15,
+    employee: "Aisha Al Kindi",
+    category: "Regular Leave",
+    type: "Annual Leave",
+    from: dayOffset(-90),
+    to: dayOffset(-68),
+    reason: "Summer holiday",
+    status: "Approved",
+    decidedAt: dayOffset(-100),
+    comments: "Remaining annual leave taken in full.",
   },
   {
     id: 13,
@@ -265,9 +297,9 @@ export const leavesFor = (leaves, name) =>
     .filter((leave) => leave.employee === name)
     .sort((a, b) => a.from.localeCompare(b.from));
 
-/** The years a person has leave in, newest first, for the year picker. */
+/** The years a person has leave charged to, newest first, for the year picker. */
 export const leaveYearsFor = (leaves, name) => [
-  ...new Set(leavesFor(leaves, name).map((leave) => leaveYear(leave.from))),
+  ...new Set(leavesFor(leaves, name).map(chargedYear)),
 ].sort((a, b) => b.localeCompare(a));
 
 /**
@@ -294,15 +326,29 @@ export function remainingBalance(leaves, name, type, year) {
   const allowance = allowanceDays(type);
   if (allowance === null) return null;
 
+  // Counted by the year the leave is charged to, so days taken in advance come
+  // off next year's entitlement rather than the year they were taken in.
   const used = leaves
     .filter(
       (leave) =>
         leave.employee === name &&
         leave.type === type &&
-        leaveYear(leave.from) === String(year) &&
+        chargedYear(leave) === String(year) &&
         leave.status === "Approved"
     )
     .reduce((sum, leave) => sum + leaveDays(leave.from, leave.to), 0);
 
   return { allowance, used, remaining: Math.max(allowance - used, 0) };
+}
+
+/**
+ * Whether days can be asked for against next year.
+ *
+ * Only once this year's annual leave is gone: an advance is what is left to
+ * ask for when there is nothing left to take, not a second balance to dip
+ * into while the first still has days in it.
+ */
+export function canTakeAdvance(leaves, name, year) {
+  const balance = remainingBalance(leaves, name, "Annual Leave", year);
+  return Boolean(balance) && balance.remaining === 0;
 }

@@ -16,6 +16,9 @@ import LeaveForm from "./LeaveForm";
 import { useLeaves } from "@/lib/leaves/context";
 import {
   LEAVE_STATUS_TONE,
+  canTakeAdvance,
+  chargedYear,
+  leaveTypeLabel,
   leaveDays,
   leaveYear,
   leavesFor,
@@ -59,6 +62,14 @@ export default function LeavesSection({ employee }) {
     ...new Set([thisYear(), ...leaveYearsFor(leaves, employee.name)]),
   ].sort((a, b) => b.localeCompare(a));
 
+  /**
+   * The years a new request can be charged to: this one, and next year only
+   * once this year's annual leave is gone - that is what an advance is for.
+   */
+  const nextYear = String(Number(thisYear()) + 1);
+  const advanceOffered = canTakeAdvance(leaves, employee.name, thisYear());
+  const requestYears = advanceOffered ? [thisYear(), nextYear] : [thisYear()];
+
   // Leave is granted a year at a time, so the list is read a year at a time.
   const [year, setYear] = useState(thisYear);
 
@@ -74,7 +85,7 @@ export default function LeavesSection({ employee }) {
 
   const rows = mine.filter(
     (leave) =>
-      leaveYear(leave.from) === year &&
+      chargedYear(leave) === year &&
       (!shownCategory || leave.category === shownCategory) &&
       (!shownType || leave.type === shownType)
   );
@@ -84,17 +95,26 @@ export default function LeavesSection({ employee }) {
     setDraft((prev) => ({ ...prev, category: value, type: "" }));
 
   /**
-   * The year follows the start date on its own.
-   *
-   * Leave is charged to the year it begins in, so leaving both to be typed
-   * would be asking the same question twice - and letting the two disagree.
+   * The year follows the start date on its own - except on an advance, where
+   * the year is the point: the days are taken now and charged to next year,
+   * and the kind of leave is settled by that choice.
    */
   const setField = (name, value) =>
-    setDraft((prev) => ({
-      ...prev,
-      [name]: value,
-      ...(name === "from" && value ? { year: leaveYear(value) } : {}),
-    }));
+    setDraft((prev) => {
+      if (name === "year") {
+        return value === nextYear
+          ? { ...prev, year: value, category: "Regular Leave", type: "Annual Leave" }
+          : { ...prev, year: value };
+      }
+      const chargedToNextYear = prev.year === nextYear;
+      return {
+        ...prev,
+        [name]: value,
+        ...(name === "from" && value && !chargedToNextYear
+          ? { year: leaveYear(value) }
+          : {}),
+      };
+    });
 
   const close = () => {
     setAdding(false);
@@ -116,7 +136,10 @@ export default function LeavesSection({ employee }) {
         <div className="flex flex-wrap items-center gap-3">
           {/* Leave is granted a year at a time, so the year is a choice rather
               than a column repeated down every row. */}
-          <Select value={year} onValueChange={setYear}>
+          {/* Empty values are ignored: Radix keeps a hidden native select and
+              reports "" whenever the list it was built from changes - and the
+              list grows the moment a leave is charged to another year. */}
+          <Select value={year} onValueChange={(value) => value && setYear(value)}>
             <SelectTrigger className="h-8 w-28" aria-label="Leave year">
               <SelectValue />
             </SelectTrigger>
@@ -141,7 +164,8 @@ export default function LeavesSection({ employee }) {
           employee={employee}
           leaves={leaves}
           draft={draft}
-          years={years}
+          years={requestYears}
+          advanceYear={nextYear}
           onChange={setField}
           onCategory={chooseCategory}
           onSubmit={save}
@@ -204,8 +228,10 @@ export default function LeavesSection({ employee }) {
                       className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"
                     >
                       <td className="p-3">
+                        {/* An advance is annual leave charged to another year,
+                            so the row says which year it came out of. */}
                         <p className="font-semibold text-primary">
-                          {leave.type}
+                          {leaveTypeLabel(leave)}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {leave.category}
