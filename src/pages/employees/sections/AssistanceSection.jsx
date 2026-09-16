@@ -27,7 +27,6 @@ import { FileText,
 import { amount, formatDate } from "../loanData";
 import {
   DEFAULT_ASSISTANCE_BOOKING,
-  BENEFICIARIES,
   documentFor,
   subcategoriesOf,
   assistanceRecords,
@@ -40,7 +39,6 @@ const PAGE_SIZE = 10;
 
 const emptyDraft = {
   ...DEFAULT_ASSISTANCE_BOOKING,
-  beneficiary: "",
   amount: "",
   method: "",
   account: "",
@@ -69,7 +67,7 @@ const isImage = (name) =>
  * Cash has no account to choose, so choosing it settles the account field
  * rather than leaving a bank picker open over a payment that never touched one.
  */
-export default function AssistanceSection({ adding, onCloseAdd }) {
+export default function AssistanceSection({ employee, adding, onCloseAdd }) {
   const [records, setRecords] = useState(assistanceRecords);
   const [draft, setDraft] = useState(emptyDraft);
   const [proof, setProof] = useState(null);
@@ -80,10 +78,7 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
   // What a request needs: what it is for, who it is for, how much, and why.
   // How it will be paid is the office's business once the request is granted.
   const canSave =
-    draft.subcategory &&
-    draft.beneficiary &&
-    Number(draft.amount) > 0 &&
-    draft.notes.trim();
+    draft.subcategory && Number(draft.amount) > 0 && draft.notes.trim();
 
   const saveRecord = () => {
     if (!canSave) return;
@@ -96,7 +91,8 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
         expenseType: draft.expenseType,
         category: draft.category,
         subcategory: draft.subcategory,
-        beneficiary: draft.beneficiary,
+        // The page says who this is: whoever's record it was opened on.
+        beneficiary: employee?.name || "",
         purpose: draft.notes.trim(),
         amount: Number(draft.amount),
         method: "",
@@ -137,7 +133,9 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
         />
 
         <Panel title="Assistance Information" icon={HandHeart}>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 sm:gap-6">
+          {/* Four fields across the row, with Subcategory given the extra room
+              its upload button takes. */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,1fr)]">
             {/* Where the money comes from is not a choice: assistance is
                 booked to Employee Expenses under Assistance, always. It is
                 shown so the request says what it will be charged to. */}
@@ -233,27 +231,9 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
               )}
             </div>
 
-            {/* Who the help is for - the employee, or someone in their family. */}
-            <div className="space-y-2">
-              <FieldLabel htmlFor="assistance-beneficiary" required>
-                Beneficiary
-              </FieldLabel>
-              <Select
-                value={draft.beneficiary}
-                onValueChange={(value) => value && set("beneficiary", value)}
-              >
-                <SelectTrigger id="assistance-beneficiary">
-                  <SelectValue placeholder="Select Beneficiary" />
-                </SelectTrigger>
-                <SelectContent>
-                  {BENEFICIARIES.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Who the help is for is not asked: this is the employee's own
+                page, so the assistance is theirs. The record carries their
+                name for the office that pays it. */}
 
             <div className="space-y-2">
               <FieldLabel htmlFor="assistance-amount" required>
@@ -385,11 +365,6 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
                         <span className="block font-semibold text-primary">
                           {record.subcategory}
                         </span>
-                        {record.beneficiary && (
-                          <span className="block text-muted-foreground">
-                            For: {record.beneficiary}
-                          </span>
-                        )}
                         <span className="block text-muted-foreground">
                           {record.purpose}
                         </span>

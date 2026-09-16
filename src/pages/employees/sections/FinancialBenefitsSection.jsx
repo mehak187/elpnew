@@ -287,6 +287,7 @@ export default function FinancialBenefitsSection({
 
       {tab === "assistance" && (
         <AssistanceSection
+          employee={employee}
           adding={adding === "assistance"}
           onCloseAdd={() => setAdding(null)}
         />
