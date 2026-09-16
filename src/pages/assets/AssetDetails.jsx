@@ -287,23 +287,23 @@ function AssetExpensesTable({ expenses }) {
 
   return (
     <div className="overflow-x-auto rounded-lg border">
-      <table className="w-full min-w-200 text-sm">
+      <table className="w-full min-w-200 border text-sm">
         <thead>
           <tr className="border-b bg-secondary/60 text-left text-primary">
-            <th className="p-3 font-semibold">No.</th>
-            <th className="p-3 font-semibold">Invoice Date / Number</th>
-            <th className="p-3 font-semibold">Expense Details</th>
-            <th className="p-3 font-semibold">Payee</th>
-            <th className="p-3 text-right font-semibold">Before VAT (OMR)</th>
-            <th className="p-3 text-right font-semibold">VAT (OMR)</th>
-            <th className="p-3 text-right font-semibold">Total (OMR)</th>
+            <th className="border-r last:border-r-0 p-3 font-semibold">No.</th>
+            <th className="border-r last:border-r-0 p-3 font-semibold">Invoice Date / Number</th>
+            <th className="border-r last:border-r-0 p-3 font-semibold">Expense Details</th>
+            <th className="border-r last:border-r-0 p-3 font-semibold">Payee</th>
+            <th className="border-r last:border-r-0 p-3 text-right font-semibold">Before VAT (OMR)</th>
+            <th className="border-r last:border-r-0 p-3 text-right font-semibold">VAT (OMR)</th>
+            <th className="border-r last:border-r-0 p-3 text-right font-semibold">Total (OMR)</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((expense, index) => (
             <tr key={expense.id} className="border-b align-top transition-colors hover:bg-primary/5">
-              <td className="p-3 text-muted-foreground">{index + 1}</td>
-              <td className="p-3">
+              <td className="border-r last:border-r-0 p-3 text-muted-foreground">{index + 1}</td>
+              <td className="border-r last:border-r-0 p-3">
                 <p className="font-semibold text-primary">{shortDate(expense.invoiceDate)}</p>
                 <p>{expense.invoiceNo}</p>
                 {expense.invoiceFile && (
@@ -313,23 +313,23 @@ function AssetExpensesTable({ expenses }) {
                   </p>
                 )}
               </td>
-              <td className="p-3">
+              <td className="border-r last:border-r-0 p-3">
                 <p className="font-semibold text-primary">{expense.category}</p>
                 <p className="text-muted-foreground">{expense.subcategory}</p>
               </td>
-              <td className="p-3">{expense.payee}</td>
-              <td className="whitespace-nowrap p-3 text-right">{omr(expense.amount)}</td>
-              <td className="whitespace-nowrap p-3 text-right text-muted-foreground">{omr(expenseVat(expense))}</td>
-              <td className="whitespace-nowrap p-3 text-right font-semibold text-primary">{omr(expenseTotal(expense))}</td>
+              <td className="border-r last:border-r-0 p-3">{expense.payee}</td>
+              <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-right">{omr(expense.amount)}</td>
+              <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-right text-muted-foreground">{omr(expenseVat(expense))}</td>
+              <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-right font-semibold text-primary">{omr(expenseTotal(expense))}</td>
             </tr>
           ))}
         </tbody>
         <tfoot>
           <tr className="bg-secondary/40 font-semibold text-primary">
-            <td className="p-3" colSpan={4}>Total</td>
-            <td className="whitespace-nowrap p-3 text-right">{omr(sum((e) => Number(e.amount || 0)))}</td>
-            <td className="whitespace-nowrap p-3 text-right">{omr(sum(expenseVat))}</td>
-            <td className="whitespace-nowrap p-3 text-right">{omr(sum(expenseTotal))}</td>
+            <td className="border-r last:border-r-0 p-3" colSpan={4}>Total</td>
+            <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-right">{omr(sum((e) => Number(e.amount || 0)))}</td>
+            <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-right">{omr(sum(expenseVat))}</td>
+            <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-right">{omr(sum(expenseTotal))}</td>
           </tr>
         </tfoot>
       </table>
@@ -687,29 +687,29 @@ export default function AssetDetails() {
                         <EmptyState>No documents have been uploaded for this asset.</EmptyState>
                       ) : (
                         <div className="overflow-x-auto rounded-lg border">
-                          <table className="w-full min-w-140 text-sm">
+                          <table className="w-full min-w-140 border text-sm">
                             <thead>
                               <tr className="border-b bg-secondary/60 text-left text-primary">
-                                <th className="p-3 font-semibold">No.</th>
-                                <th className="p-3 font-semibold">Document</th>
-                                <th className="p-3 font-semibold">File</th>
-                                <th className="p-3 font-semibold">Uploaded On</th>
-                                <th className="p-3" />
+                                <th className="border-r last:border-r-0 p-3 font-semibold">No.</th>
+                                <th className="border-r last:border-r-0 p-3 font-semibold">Document</th>
+                                <th className="border-r last:border-r-0 p-3 font-semibold">File</th>
+                                <th className="border-r last:border-r-0 p-3 font-semibold">Uploaded On</th>
+                                <th className="border-r last:border-r-0 p-3" />
                               </tr>
                             </thead>
                             <tbody>
                               {draft.documents.map((document, index) => (
                                 <tr key={document.id} className="border-b transition-colors last:border-0 hover:bg-primary/5">
-                                  <td className="p-3 text-muted-foreground">{index + 1}</td>
-                                  <td className="p-3 font-semibold text-primary">{document.name}</td>
-                                  <td className="p-3">
+                                  <td className="border-r last:border-r-0 p-3 text-muted-foreground">{index + 1}</td>
+                                  <td className="border-r last:border-r-0 p-3 font-semibold text-primary">{document.name}</td>
+                                  <td className="border-r last:border-r-0 p-3">
                                     <span className="inline-flex items-center gap-1.5">
                                       <FileText className="h-4 w-4 shrink-0 text-primary" />
                                       {document.file}
                                     </span>
                                   </td>
-                                  <td className="whitespace-nowrap p-3">{shortDate(document.uploadedOn)}</td>
-                                  <td className="p-3 text-right">
+                                  <td className="border-r last:border-r-0 whitespace-nowrap p-3">{shortDate(document.uploadedOn)}</td>
+                                  <td className="border-r last:border-r-0 p-3 text-right">
                                     <Button
                                       type="button"
                                       variant="ghost"

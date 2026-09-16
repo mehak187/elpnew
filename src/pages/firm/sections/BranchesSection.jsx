@@ -256,14 +256,14 @@ export default function BranchesSection({ canEdit }) {
           worth having in view while it is being filled in. */}
       <Card>
         <CardContent className="overflow-x-auto p-0">
-          <table className="w-full min-w-[720px] text-sm">
+          <table className="w-full min-w-[720px] border text-sm">
             <thead>
               <tr className="border-b bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                <th className="p-3 font-semibold">Branch No.</th>
-                <th className="p-3 font-semibold">Branch Name</th>
-                <th className="p-3 font-semibold">Address</th>
-                <th className="p-3 font-semibold">Branch Manager</th>
-                <th className="p-3 font-semibold">Status</th>
+                <th className="border-r last:border-r-0 p-3 font-semibold">Branch No.</th>
+                <th className="border-r last:border-r-0 p-3 font-semibold">Branch Name</th>
+                <th className="border-r last:border-r-0 p-3 font-semibold">Address</th>
+                <th className="border-r last:border-r-0 p-3 font-semibold">Branch Manager</th>
+                <th className="border-r last:border-r-0 p-3 font-semibold">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -273,7 +273,7 @@ export default function BranchesSection({ canEdit }) {
                   className="border-b transition-colors last:border-0 hover:bg-primary/10"
                 >
                   {/* The number opens the branch for editing */}
-                  <td className="p-3">
+                  <td className="border-r last:border-r-0 p-3">
                     <button
                       type="button"
                       onClick={() => setEditing({ ...branch })}
@@ -285,21 +285,21 @@ export default function BranchesSection({ canEdit }) {
                   {/* One language, not both: the list is read in whichever
                       language the interface is set to. Both are still held
                       on the record and both are still entered on the form. */}
-                  <td className="p-3">
+                  <td className="border-r last:border-r-0 p-3">
                     <span className="block font-medium" dir={dir}>
                       {inLanguage(language, branch.name, branch.nameAr)}
                     </span>
                   </td>
-                  <td className="p-3" dir={dir}>
+                  <td className="border-r last:border-r-0 p-3" dir={dir}>
                     {inLanguage(language, branch.address, branch.addressAr) ||
                       "-"}
                   </td>
-                  <td className="p-3">
+                  <td className="border-r last:border-r-0 p-3">
                     {managerName(branch.managerId) || (
                       <span className="text-muted-foreground">Not assigned</span>
                     )}
                   </td>
-                  <td className="p-3">
+                  <td className="border-r last:border-r-0 p-3">
                     <Badge variant={branch.active ? "success" : "secondary"}>
                       {branch.active ? "Active" : "Inactive"}
                     </Badge>

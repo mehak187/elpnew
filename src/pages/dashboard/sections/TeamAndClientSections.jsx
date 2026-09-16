@@ -7,29 +7,29 @@ export function TeamWorkload() {
   return (
     <SectionCard title="Team Workload" icon={Users}>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[560px] text-sm">
+        <table className="w-full min-w-[560px] border text-sm">
           <thead>
-            <tr className="border-b text-left text-xs text-muted-foreground">
-              <th className="pb-2 font-medium">Employee</th>
-              <th className="pb-2 text-right font-medium">Active Cases</th>
-              <th className="pb-2 text-right font-medium">Pending Tasks</th>
-              <th className="pb-2 text-right font-medium">Overdue</th>
-              <th className="pb-2 text-right font-medium">Hearings This Week</th>
-              <th className="pb-2 text-right font-medium">Deadlines</th>
+            <tr className="border-b bg-secondary/60 text-left text-primary">
+              <th className="border-r last:border-r-0 p-3 font-semibold">Employee</th>
+              <th className="border-r last:border-r-0 p-3 text-right font-semibold">Active Cases</th>
+              <th className="border-r last:border-r-0 p-3 text-right font-semibold">Pending Tasks</th>
+              <th className="border-r last:border-r-0 p-3 text-right font-semibold">Overdue</th>
+              <th className="border-r last:border-r-0 p-3 text-right font-semibold">Hearings This Week</th>
+              <th className="border-r last:border-r-0 p-3 text-right font-semibold">Deadlines</th>
             </tr>
           </thead>
           <tbody>
             {teamWorkload.map((member) => (
               <tr key={member.name} className="border-b transition-colors last:border-0 hover:bg-primary/10">
-                <td className="py-2">
+                <td className="border-r last:border-r-0 p-3">
                   <p className="font-medium">{member.name}</p>
                   <p className="text-xs text-muted-foreground">{member.role}</p>
                 </td>
-                <td className="py-2 text-right font-semibold">
+                <td className="border-r last:border-r-0 p-3 text-right font-semibold">
                   {member.activeCases}
                 </td>
-                <td className="py-2 text-right">{member.pendingTasks}</td>
-                <td className="py-2 text-right">
+                <td className="border-r last:border-r-0 p-3 text-right">{member.pendingTasks}</td>
+                <td className="border-r last:border-r-0 p-3 text-right">
                   <span
                     className={
                       member.overdueTasks > 0
@@ -40,8 +40,8 @@ export function TeamWorkload() {
                     {member.overdueTasks}
                   </span>
                 </td>
-                <td className="py-2 text-right">{member.hearingsThisWeek}</td>
-                <td className="py-2 text-right">{member.upcomingDeadlines}</td>
+                <td className="border-r last:border-r-0 p-3 text-right">{member.hearingsThisWeek}</td>
+                <td className="border-r last:border-r-0 p-3 text-right">{member.upcomingDeadlines}</td>
               </tr>
             ))}
           </tbody>

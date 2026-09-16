@@ -249,7 +249,9 @@ export default function BonusSection({ employee, adding, onCloseAdd }) {
                 Bonus Details
               </Th>
               {/* No unit in the heading: every figure below carries it. */}
-              <Th width="16%">Bonus Amount</Th>
+              <Th width="16%" className="text-right">
+                Bonus Amount
+              </Th>
               <Th width="34%">Notes</Th>
             </HeadRow>
             <tbody>
@@ -267,7 +269,7 @@ export default function BonusSection({ employee, adding, onCloseAdd }) {
                       {bonus.expenseType} · {bonus.category}
                     </span>
                   </Td>
-                  <Td className="whitespace-nowrap font-bold text-green-700">
+                  <Td className="whitespace-nowrap text-right font-bold text-green-700">
                     {amount(bonus.amount)}
                   </Td>
                   <Td className="text-left text-muted-foreground">

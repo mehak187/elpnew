@@ -521,10 +521,10 @@ export default function LoansSection({ adding, onCloseAdd }) {
                 <HeadRow>
                     <Th>No.</Th>
                     <Th>Due Date</Th>
-                    <Th>Installment Amount</Th>
-                    <Th>Paid Amount</Th>
-                    <Th>Balance</Th>
-                    <Th>Status</Th>
+                    <Th className="text-right">Installment Amount</Th>
+                    <Th className="text-right">Paid Amount</Th>
+                    <Th className="text-right">Balance</Th>
+                    <Th className="text-center">Status</Th>
                     <Th>Payment Date</Th>
                 </HeadRow>
                 <tbody>
@@ -534,10 +534,10 @@ export default function LoansSection({ adding, onCloseAdd }) {
                       <Td className="whitespace-nowrap">
                         {formatDate(row.due)}
                       </Td>
-                      <Td>{amount(row.installment)}</Td>
-                      <Td>{amount(row.paid)}</Td>
-                      <Td>{amount(row.balance)}</Td>
-                      <Td>
+                      <Td className="text-right">{amount(row.installment)}</Td>
+                      <Td className="text-right">{amount(row.paid)}</Td>
+                      <Td className="text-right">{amount(row.balance)}</Td>
+                      <Td className="text-center">
                         <span
                           className={cn(
                             "inline-block rounded-md px-3 py-1 text-xs font-semibold",
@@ -600,10 +600,16 @@ export default function LoansSection({ adding, onCloseAdd }) {
                   </Th>
                   <Th width="11%">Due Date</Th>
                   {/* No unit in the headings: every figure below carries it. */}
-                  <Th width="13%">Installment Amount</Th>
-                  <Th width="12%">Paid Amount</Th>
+                  <Th width="13%" className="text-right">
+                    Installment Amount
+                  </Th>
+                  <Th width="12%" className="text-right">
+                    Paid Amount
+                  </Th>
                   <Th width="14%">Installment Status</Th>
-                  <Th width="13%">Remaining Balance</Th>
+                  <Th width="13%" className="text-right">
+                    Remaining Balance
+                  </Th>
                   <Th width="5%">
                     <span className="sr-only">Show instalments</span>
                   </Th>
@@ -667,12 +673,12 @@ export default function LoansSection({ adding, onCloseAdd }) {
                             </Detail>
                           )}
                         </Td>
-                        <Td className="text-muted-foreground">-</Td>
-                        <Td className="text-muted-foreground">-</Td>
-                        <Td className="text-muted-foreground">-</Td>
-                        <Td className="text-muted-foreground">-</Td>
-                        <Td className="text-muted-foreground">-</Td>
-                        <Td>
+                        <Td className="text-center text-muted-foreground">-</Td>
+                        <Td className="text-right text-muted-foreground">-</Td>
+                        <Td className="text-right text-muted-foreground">-</Td>
+                        <Td className="text-center text-muted-foreground">-</Td>
+                        <Td className="text-right text-muted-foreground">-</Td>
+                        <Td className="text-center">
                           <button
                             type="button"
                             onClick={() => toggle(record.id)}
@@ -705,9 +711,11 @@ export default function LoansSection({ adding, onCloseAdd }) {
                             <Td className="whitespace-nowrap">
                               {formatDate(row.due)}
                             </Td>
-                            <Td>{amount(row.installment)}</Td>
-                            <Td>{amount(row.paid)}</Td>
-                            <Td>
+                            <Td className="text-right">
+                              {amount(row.installment)}
+                            </Td>
+                            <Td className="text-right">{amount(row.paid)}</Td>
+                            <Td className="text-center">
                               <span
                                 className={cn(
                                   "inline-block rounded-md px-3 py-1 text-xs font-semibold",
@@ -717,7 +725,7 @@ export default function LoansSection({ adding, onCloseAdd }) {
                                 {row.status}
                               </span>
                             </Td>
-                            <Td className="font-medium">
+                            <Td className="text-right font-medium">
                               {amount(row.remaining)}
                             </Td>
                             <Td />

@@ -308,7 +308,9 @@ export default function AssistanceSection({ employee, adding, onCloseAdd }) {
                   <Th width="12%">Request Date</Th>
                   <Th width="24%">Assistance Details</Th>
                   {/* No unit in the heading: every figure below carries it. */}
-                  <Th width="13%">Amount</Th>
+                  <Th width="13%" className="text-right">
+                    Amount
+                  </Th>
                   <Th width="25%">Payment Details</Th>
                   <Th width="20%">Notes</Th>
               </HeadRow>
@@ -362,7 +364,7 @@ export default function AssistanceSection({ employee, adding, onCloseAdd }) {
                         </span>
                       </Td>
 
-                      <Td className="whitespace-nowrap font-bold text-green-700">
+                      <Td className="whitespace-nowrap text-right font-bold text-green-700">
                         {amount(record.amount)}
                       </Td>
 

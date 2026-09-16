@@ -262,10 +262,10 @@ export default function ClientManagementSection() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] text-sm">
+              <table className="w-full min-w-[720px] border text-sm">
                 <thead>
                   <tr className="border-b text-left text-sm font-semibold text-primary">
-                    <th className="p-4">Branch Name</th>
+                    <th className="border-r last:border-r-0 p-4">Branch Name</th>
                     {BRANCH_ROLES.map((role) => (
                       <th key={role} className="p-4">
                         {role}
@@ -279,7 +279,7 @@ export default function ClientManagementSection() {
                       key={branch.id}
                       className="border-b transition-colors last:border-0 hover:bg-primary/10"
                     >
-                      <td className="p-4">
+                      <td className="border-r last:border-r-0 p-4">
                         <button
                           type="button"
                           onClick={() => openBranch(String(branch.id))}

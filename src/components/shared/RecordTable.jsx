@@ -4,17 +4,21 @@ import { cn } from "@/lib/utils";
  * The one table every list of records is drawn with.
  *
  * The salary history settled what such a table looks like - bordered cells, a
- * tinted single-line header, figures centred, sub-headings folded into the
- * heading in brackets - and every other list in the system follows it rather
- * than inventing its own. Anything a particular table needs on top of that is
- * passed as a class; the frame itself is not re-described in each file.
+ * tinted single-line header, sub-headings folded into the heading in brackets -
+ * and every other list in the system follows it rather than inventing its own.
+ * Anything a particular table needs on top of that is passed as a class; the
+ * frame itself is not re-described in each file.
+ *
+ * Text reads from the left and money from the right, the way a ledger is read:
+ * that is what `text-right` on an amount column is for, and it is put on the
+ * heading and the cells together so the figures line up under their name.
  */
 export function RecordTable({ minWidth = 1040, children, className }) {
   return (
     <div className="overflow-x-auto">
       <table
         style={{ minWidth }}
-        className={cn("w-full border text-center text-sm", className)}
+        className={cn("w-full border text-left text-sm", className)}
       >
         {children}
       </table>

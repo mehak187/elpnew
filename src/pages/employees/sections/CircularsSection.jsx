@@ -152,28 +152,28 @@ export default function EmployeeCircularsSection({ employee }) {
               </EmptyState>
             </div>
           ) : (
-            <table className="w-full min-w-[880px] text-sm">
+            <table className="w-full min-w-[880px] border text-sm">
               <thead>
                 <tr className="border-b bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  <th className="p-3 font-semibold" style={{ width: "12%" }}>
+                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "12%" }}>
                     Circular No.
                   </th>
-                  <th className="p-3 font-semibold" style={{ width: "20%" }}>
+                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "20%" }}>
                     Subject / Content
                   </th>
-                  <th className="p-3 font-semibold" style={{ width: "11%" }}>
+                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "11%" }}>
                     Date
                   </th>
-                  <th className="p-3 font-semibold" style={{ width: "13%" }}>
+                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "13%" }}>
                     Target Group
                   </th>
-                  <th className="p-3 font-semibold" style={{ width: "14%" }}>
+                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "14%" }}>
                     Issued By
                   </th>
-                  <th className="p-3 font-semibold" style={{ width: "18%" }}>
+                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "18%" }}>
                     Acknowledgement
                   </th>
-                  <th className="p-3 font-semibold" style={{ width: "12%" }}>
+                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "12%" }}>
                     Status
                   </th>
                 </tr>
@@ -186,17 +186,17 @@ export default function EmployeeCircularsSection({ employee }) {
                       key={circular.id}
                       className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"
                     >
-                      <td className="whitespace-nowrap p-3 font-semibold text-primary">
+                      <td className="border-r last:border-r-0 whitespace-nowrap p-3 font-semibold text-primary">
                         {circular.circularNo}
                       </td>
-                      <td className="p-3">{circular.content}</td>
-                      <td className="whitespace-nowrap p-3">
+                      <td className="border-r last:border-r-0 p-3">{circular.content}</td>
+                      <td className="border-r last:border-r-0 whitespace-nowrap p-3">
                         {formatDate(circular.date)}
                       </td>
-                      <td className="p-3">{circular.targetGroup}</td>
-                      <td className="p-3">{circular.issuedBy}</td>
+                      <td className="border-r last:border-r-0 p-3">{circular.targetGroup}</td>
+                      <td className="border-r last:border-r-0 p-3">{circular.issuedBy}</td>
                       {/* Their own acknowledgement, and nobody else's */}
-                      <td className="p-3">
+                      <td className="border-r last:border-r-0 p-3">
                         {mineAck ? (
                           <span className="flex items-start gap-1.5 text-green-700">
                             <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -225,7 +225,7 @@ export default function EmployeeCircularsSection({ employee }) {
                           </span>
                         )}
                       </td>
-                      <td className="p-3">
+                      <td className="border-r last:border-r-0 p-3">
                         <span
                           className={cn(
                             "inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium",

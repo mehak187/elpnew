@@ -230,7 +230,9 @@ export function AdvanceRequests({ employee }) {
               <Th width="6%">No.</Th>
               <Th width="14%">Request Date</Th>
               {/* No unit in the heading: every figure below carries it. */}
-              <Th width="16%">Requested Amount</Th>
+              <Th width="16%" className="text-right">
+                Requested Amount
+              </Th>
               <Th width="16%">Deducted From</Th>
               <Th width="34%">Request Details</Th>
               <Th width="14%">Status</Th>
@@ -242,7 +244,7 @@ export function AdvanceRequests({ employee }) {
                   <Td className="whitespace-nowrap text-primary">
                     {formatDate(advance.requestedOn)}
                   </Td>
-                  <Td className="whitespace-nowrap font-bold text-green-700">
+                  <Td className="whitespace-nowrap text-right font-bold text-green-700">
                     {amount(advance.amount)}
                   </Td>
                   <Td className="whitespace-nowrap text-primary">

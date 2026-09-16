@@ -314,13 +314,13 @@ export default function DailyActivitiesSection() {
             <table className="w-full min-w-[720px] border text-sm">
               <thead>
                 <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
-                  <th className="p-3 font-semibold">Activity Type</th>
-                  <th className="p-3 font-semibold">Case / File</th>
-                  <th className="p-3 font-semibold">Court / Location</th>
-                  <th className="p-3 font-semibold">Client / Expert</th>
-                  <th className="p-3 font-semibold">From - To</th>
-                  <th className="p-3 font-semibold">Duration</th>
-                  <th className="p-3 font-semibold">Remove</th>
+                  <th className="border-r last:border-r-0 p-3 font-semibold">Activity Type</th>
+                  <th className="border-r last:border-r-0 p-3 font-semibold">Case / File</th>
+                  <th className="border-r last:border-r-0 p-3 font-semibold">Court / Location</th>
+                  <th className="border-r last:border-r-0 p-3 font-semibold">Client / Expert</th>
+                  <th className="border-r last:border-r-0 p-3 font-semibold">From - To</th>
+                  <th className="border-r last:border-r-0 p-3 font-semibold">Duration</th>
+                  <th className="border-r last:border-r-0 p-3 font-semibold">Remove</th>
                 </tr>
               </thead>
               <tbody>
@@ -329,17 +329,17 @@ export default function DailyActivitiesSection() {
                     key={row.id}
                     className="border-b transition-colors last:border-0 hover:bg-primary/10"
                   >
-                    <td className="p-3 font-medium">{row.type}</td>
-                    <td className="p-3">{row.caseNo || "-"}</td>
-                    <td className="p-3">{row.location || "-"}</td>
-                    <td className="p-3">{row.person || "-"}</td>
-                    <td className="whitespace-nowrap p-3">
+                    <td className="border-r last:border-r-0 p-3 font-medium">{row.type}</td>
+                    <td className="border-r last:border-r-0 p-3">{row.caseNo || "-"}</td>
+                    <td className="border-r last:border-r-0 p-3">{row.location || "-"}</td>
+                    <td className="border-r last:border-r-0 p-3">{row.person || "-"}</td>
+                    <td className="border-r last:border-r-0 whitespace-nowrap p-3">
                       {row.from} - {row.to}
                     </td>
-                    <td className="whitespace-nowrap p-3">
+                    <td className="border-r last:border-r-0 whitespace-nowrap p-3">
                       {formatDuration(spanMinutes(row.from, row.to))}
                     </td>
-                    <td className="p-3">
+                    <td className="border-r last:border-r-0 p-3">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -456,11 +456,11 @@ export default function DailyActivitiesSection() {
             <table className="w-full min-w-[640px] border text-sm">
               <thead>
                 <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
-                  <th className="p-3 font-semibold">Document Type</th>
-                  <th className="p-3 font-semibold">Case / File</th>
-                  <th className="p-3 font-semibold">Short Description</th>
-                  <th className="p-3 font-semibold">Number</th>
-                  <th className="p-3 font-semibold">Remove</th>
+                  <th className="border-r last:border-r-0 p-3 font-semibold">Document Type</th>
+                  <th className="border-r last:border-r-0 p-3 font-semibold">Case / File</th>
+                  <th className="border-r last:border-r-0 p-3 font-semibold">Short Description</th>
+                  <th className="border-r last:border-r-0 p-3 font-semibold">Number</th>
+                  <th className="border-r last:border-r-0 p-3 font-semibold">Remove</th>
                 </tr>
               </thead>
               <tbody>
@@ -469,13 +469,13 @@ export default function DailyActivitiesSection() {
                     key={row.id}
                     className="border-b transition-colors last:border-0 hover:bg-primary/10"
                   >
-                    <td className="p-3 font-medium">{row.type}</td>
-                    <td className="p-3">{row.caseNo || "-"}</td>
-                    <td className="p-3 text-muted-foreground">
+                    <td className="border-r last:border-r-0 p-3 font-medium">{row.type}</td>
+                    <td className="border-r last:border-r-0 p-3">{row.caseNo || "-"}</td>
+                    <td className="border-r last:border-r-0 p-3 text-muted-foreground">
                       {row.description || "-"}
                     </td>
-                    <td className="p-3">{row.count}</td>
-                    <td className="p-3">
+                    <td className="border-r last:border-r-0 p-3">{row.count}</td>
+                    <td className="border-r last:border-r-0 p-3">
                       <Button
                         variant="ghost"
                         size="icon"

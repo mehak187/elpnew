@@ -330,15 +330,15 @@ export default function TransactionsSection({
       {/* Everything that has moved through the account, and where it left it */}
       <Card>
         <CardContent className="overflow-x-auto p-0">
-          <table className="w-full min-w-[900px] text-sm">
+          <table className="w-full min-w-[900px] border text-sm">
             <thead>
               <tr className="border-b bg-secondary text-left text-sm font-bold text-primary">
-                <th className="p-3">Date</th>
-                <th className="p-3">Transaction Details</th>
-                <th className="p-3">Document / Reference No.</th>
-                <th className="p-3 text-right">Money In</th>
-                <th className="p-3 text-right">Money Out</th>
-                <th className="p-3 text-right">Balance</th>
+                <th className="border-r last:border-r-0 p-3">Date</th>
+                <th className="border-r last:border-r-0 p-3">Transaction Details</th>
+                <th className="border-r last:border-r-0 p-3">Document / Reference No.</th>
+                <th className="border-r last:border-r-0 p-3 text-right">Money In</th>
+                <th className="border-r last:border-r-0 p-3 text-right">Money Out</th>
+                <th className="border-r last:border-r-0 p-3 text-right">Balance</th>
               </tr>
             </thead>
             <tbody>
@@ -357,10 +357,10 @@ export default function TransactionsSection({
                     key={row.id}
                     className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"
                   >
-                    <td className="whitespace-nowrap p-3 text-muted-foreground">
+                    <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-muted-foreground">
                       {formatDate(row.date)}
                     </td>
-                    <td className="p-3">
+                    <td className="border-r last:border-r-0 p-3">
                       <span className="block font-semibold">{row.title}</span>
                       {row.details.map((line) => (
                         <span
@@ -371,7 +371,7 @@ export default function TransactionsSection({
                         </span>
                       ))}
                     </td>
-                    <td className="p-3">
+                    <td className="border-r last:border-r-0 p-3">
                       {row.reference ? (
                         <>
                           <span className="block font-semibold">
@@ -404,14 +404,14 @@ export default function TransactionsSection({
                     >
                       {incoming ? money(row.amount) : <span className="text-muted-foreground">&ndash;</span>}
                     </td>
-                    <td className="whitespace-nowrap p-3 text-right font-semibold text-red-600">
+                    <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-right font-semibold text-red-600">
                       {incoming ? (
                         <span className="text-muted-foreground">&ndash;</span>
                       ) : (
                         money(Math.abs(row.amount))
                       )}
                     </td>
-                    <td className="whitespace-nowrap p-3 text-right font-bold">
+                    <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-right font-bold">
                       {money(row.balance)}
                     </td>
                   </tr>

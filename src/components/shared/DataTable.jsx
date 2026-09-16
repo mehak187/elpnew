@@ -248,7 +248,9 @@ export default function DataTable({
 
       {/* Table Layout - Always show table on all screen sizes */}
       <div className="block">
-        <Card>
+        {/* overflow-hidden: the header's tint and the cell rules stop at the
+            card's rounded corner instead of squaring it off. */}
+        <Card className="overflow-hidden">
           <div className="relative">
             {isLoading && (
               <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-lg">
@@ -257,16 +259,21 @@ export default function DataTable({
             )}
 
             <ScrollArea className="w-full">
+              {/* The frame every table in the system is drawn in: ruled cells,
+                  a tinted single-line header, figures to the right. It lives
+                  here so the pages that use this table cannot drift apart.
+                  The outer edge is the card's own rounded border - a second,
+                  square one inside it shows through at the corners. */}
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableRow className="border-b bg-secondary/60 hover:bg-secondary/60">
                     {columns.map((column) => (
                       <TableHead
                         key={column.key}
                         className={cn(
                           // Top, not middle: where one heading wraps, the
                           // short ones beside it still start on its first line.
-                          "text-left align-top font-semibold text-primary",
+                          "border-r p-3 text-left align-top font-semibold text-primary last:border-r-0",
                           column.className
                         )}
                         style={{ width: column.width }}
@@ -299,11 +306,11 @@ export default function DataTable({
                     ))}
                   </TableRow>
                   {enableColumnSearch && (
-                    <TableRow className="bg-muted/30 hover:bg-muted/30">
+                    <TableRow className="bg-secondary/30 hover:bg-secondary/30">
                       {columns.map((column) => (
                         <TableHead
                           key={`filter-${column.key}`}
-                          className="p-2"
+                          className="border-r p-2 last:border-r-0"
                           style={{ width: column.width }}
                         >
                           {column.filterComponent ? (
@@ -336,7 +343,7 @@ export default function DataTable({
                       <TableRow
                         key={row.id || rowIndex}
                         className={cn(
-                          rowIndex % 2 === 0 ? "bg-white" : "bg-muted/30",
+                          "align-top hover:bg-primary/5",
                           onRowClick && "cursor-pointer"
                         )}
                         onClick={() => onRowClick && onRowClick(row)}
@@ -345,7 +352,7 @@ export default function DataTable({
                           <TableCell
                             key={column.key}
                             className={cn(
-                              "text-left text-sm",
+                              "border-r p-3 text-left text-sm last:border-r-0",
                               column.cellClassName
                             )}
                           >
