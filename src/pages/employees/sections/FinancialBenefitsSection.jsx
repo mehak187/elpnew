@@ -201,6 +201,8 @@ export default function FinancialBenefitsSection({
   onSaveSalary,
   tab,
   onTabChange,
+  // The firm sets what it pays; on My Profile the figures are only read.
+  canEdit = true,
 }) {
   // Which tab's form is open, if any.
   const [adding, setAdding] = useState(null);
@@ -214,6 +216,12 @@ export default function FinancialBenefitsSection({
 
   const current =
     BENEFIT_TABS.find((option) => option.key === tab) || BENEFIT_TABS[0];
+
+  // Salary and commission are what the firm decides to pay; a loan and
+  // assistance are what the employee asks for. So on My Profile the first two
+  // are only read, and the other two can still be asked for.
+  const firmDecides = tab === "salaries" || tab === "commission";
+  const showsAdd = Boolean(current.add) && (canEdit || !firmDecides);
 
   return (
     <div className="space-y-6">
@@ -246,7 +254,7 @@ export default function FinancialBenefitsSection({
             </Button>
           )}
 
-          {current.add && (
+          {showsAdd && (
             <Button
               type="button"
               onClick={() => setAdding(tab)}
@@ -266,6 +274,7 @@ export default function FinancialBenefitsSection({
           onCloseAdd={() => setAdding(null)}
           onSave={onSaveSalary}
           detailsOpen={salaryDetailsOpen}
+          canEdit={canEdit}
         />
       )}
 

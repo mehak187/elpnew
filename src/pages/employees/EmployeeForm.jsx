@@ -149,6 +149,18 @@ const SECTIONS = [
 ];
 
 /**
+ * The mark beside a field that has to be filled in.
+ *
+ * It is a demand, so it is only shown where the page is asking for something:
+ * on My Profile, where the record is only being read, there is nothing to
+ * demand and the mark would be noise.
+ */
+function Required({ show }) {
+  if (!show) return null;
+  return <span className="whitespace-nowrap text-destructive">&nbsp;*</span>;
+}
+
+/**
  * A phone number and the country it belongs to.
  *
  * The dial code is a field of its own rather than something typed into the
@@ -406,7 +418,9 @@ export default function EmployeeForm({ self }) {
    * Employees page. Two places to edit one record is two records waiting
    * to disagree - and nobody amends their own job title or joining date.
    */
-  const readOnly = Boolean(self) && isInfo;
+  const readOnly = Boolean(self);
+  // Nothing is being asked for on a page that only shows the record.
+  const asksFor = !readOnly;
   const employeeNo = record?.empNo || nextEmployeeNo(employeeRecords);
   const hasLeft = HAS_LEFT.includes(formData.status);
 
@@ -555,7 +569,10 @@ export default function EmployeeForm({ self }) {
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
                       {/* Given by the system, so it is shown and not asked for */}
                       <div className="space-y-2">
-                        <Label htmlFor="employeeNo">Employee No. *</Label>
+                        <Label htmlFor="employeeNo">
+                          Employee No.
+                          <Required show={asksFor} />
+                        </Label>
                         <Input
                           id="employeeNo"
                           value={employeeNo}
@@ -566,7 +583,10 @@ export default function EmployeeForm({ self }) {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="arabicName">Full Name (Arabic) *</Label>
+                        <Label htmlFor="arabicName">
+                          Full Name (Arabic)
+                          <Required show={asksFor} />
+                        </Label>
                         <Input
                           id="arabicName"
                           name="arabicName"
@@ -580,7 +600,8 @@ export default function EmployeeForm({ self }) {
 
                       <div className="space-y-2">
                         <Label htmlFor="employeeName">
-                          Full Name (English) *
+                          Full Name (English)
+                          <Required show={asksFor} />
                         </Label>
                         <Input
                           id="employeeName"
@@ -593,7 +614,10 @@ export default function EmployeeForm({ self }) {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="nationality">Nationality *</Label>
+                        <Label htmlFor="nationality">
+                          Nationality
+                          <Required show={asksFor} />
+                        </Label>
                         <Select
                           value={formData.nationality}
                           onValueChange={(value) => set("nationality", value)}
@@ -612,7 +636,10 @@ export default function EmployeeForm({ self }) {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="gender">Gender *</Label>
+                        <Label htmlFor="gender">
+                          Gender
+                          <Required show={asksFor} />
+                        </Label>
                         <Select
                           value={formData.gender}
                           onValueChange={(value) => set("gender", value)}
@@ -631,7 +658,10 @@ export default function EmployeeForm({ self }) {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="dateOfBirth">Date of Birth *</Label>
+                        <Label htmlFor="dateOfBirth">
+                          Date of Birth
+                          <Required show={asksFor} />
+                        </Label>
                         <Input
                           id="dateOfBirth"
                           name="dateOfBirth"
@@ -643,7 +673,10 @@ export default function EmployeeForm({ self }) {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="dateOfJoining">Date of Joining *</Label>
+                        <Label htmlFor="dateOfJoining">
+                          Date of Joining
+                          <Required show={asksFor} />
+                        </Label>
                         <Input
                           id="dateOfJoining"
                           name="dateOfJoining"
@@ -655,7 +688,10 @@ export default function EmployeeForm({ self }) {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="status">Status *</Label>
+                        <Label htmlFor="status">
+                          Status
+                          <Required show={asksFor} />
+                        </Label>
                         <Select
                           value={formData.status}
                           onValueChange={(value) => set("status", value)}
@@ -730,7 +766,10 @@ export default function EmployeeForm({ self }) {
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
                       <div className="space-y-2">
-                        <Label htmlFor="category">Category / Role *</Label>
+                        <Label htmlFor="category">
+                          Category / Role
+                          <Required show={asksFor} />
+                        </Label>
                         <Select
                           value={formData.category}
                           onValueChange={(value) => set("category", value)}
@@ -749,7 +788,10 @@ export default function EmployeeForm({ self }) {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="jobLevel">Job Level *</Label>
+                        <Label htmlFor="jobLevel">
+                          Job Level
+                          <Required show={asksFor} />
+                        </Label>
                         <Select
                           value={formData.jobLevel}
                           onValueChange={(value) => set("jobLevel", value)}
@@ -769,7 +811,8 @@ export default function EmployeeForm({ self }) {
 
                       <div className="space-y-2">
                         <Label htmlFor="department">
-                          Department / Division *
+                          Department / Division
+                          <Required show={asksFor} />
                         </Label>
                         <Select
                           value={formData.department}
@@ -790,7 +833,8 @@ export default function EmployeeForm({ self }) {
 
                       <div className="space-y-2">
                         <Label htmlFor="occupation">
-                          Profession / Occupation *
+                          Profession / Occupation
+                          <Required show={asksFor} />
                         </Label>
                         <Select
                           value={formData.occupation}
@@ -819,7 +863,7 @@ export default function EmployeeForm({ self }) {
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
                       <PhoneField
                         id="phone"
-                        label="Phone Number *"
+                        label={<>Phone Number<Required show={asksFor} /></>}
                         placeholder="Enter phone number"
                         dialCode={formData.dialCode}
                         onDialCode={(value) => set("dialCode", value)}
@@ -832,7 +876,7 @@ export default function EmployeeForm({ self }) {
                         id="email"
                         name="email"
                         type="email"
-                        label="Email Address *"
+                        label={<>Email Address<Required show={asksFor} /></>}
                         placeholder="Enter email address"
                         value={formData.email}
                         onChange={onChange}
@@ -842,7 +886,7 @@ export default function EmployeeForm({ self }) {
                         icon={MapPin}
                         id="address"
                         name="address"
-                        label="Address *"
+                        label={<>Address<Required show={asksFor} /></>}
                         placeholder="Enter full address"
                         value={formData.address}
                         onChange={onChange}
@@ -853,7 +897,7 @@ export default function EmployeeForm({ self }) {
                         icon={User}
                         id="emergencyName"
                         name="emergencyName"
-                        label="Emergency Contact Name *"
+                        label={<>Emergency Contact Name<Required show={asksFor} /></>}
                         placeholder="Enter emergency contact name"
                         value={formData.emergencyName}
                         onChange={onChange}
@@ -861,7 +905,7 @@ export default function EmployeeForm({ self }) {
 
                       <PhoneField
                         id="emergencyPhone"
-                        label="Emergency Contact Phone Number *"
+                        label={<>Emergency Contact Phone Number<Required show={asksFor} /></>}
                         placeholder="Enter emergency contact phone number"
                         dialCode={formData.emergencyDialCode}
                         onDialCode={(value) => set("emergencyDialCode", value)}
@@ -898,14 +942,18 @@ export default function EmployeeForm({ self }) {
                       <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
                         Documents
                       </h2>
-                      <Button
-                        type="button"
-                        onClick={() => setAddingDoc(true)}
-                        disabled={addingDoc}
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Document
-                      </Button>
+                      {/* The firm files the papers on an employee's record;
+                          on My Profile they are read, not added to. */}
+                      {!readOnly && (
+                        <Button
+                          type="button"
+                          onClick={() => setAddingDoc(true)}
+                          disabled={addingDoc}
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Document
+                        </Button>
+                      )}
                     </div>
 
                     {addingDoc && (
@@ -1115,6 +1163,7 @@ export default function EmployeeForm({ self }) {
                     employee={formData}
                     tab={benefitsTab}
                     onTabChange={setBenefitsTab}
+                    canEdit={!readOnly}
                     onSaveSalary={(payslip) =>
                       setFormData((prev) => ({ ...prev, ...payslip }))
                     }
