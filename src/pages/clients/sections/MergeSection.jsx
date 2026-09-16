@@ -113,7 +113,7 @@ export default function MergeSection({ client }) {
               <Label htmlFor="mainClient">Main Client</Label>
               <Input
                 id="mainClient"
-                value={client.clientNo + " - " + client.clientName}
+                value={client.clientName}
                 readOnly
                 disabled
                 className="bg-locked"
@@ -130,10 +130,10 @@ export default function MergeSection({ client }) {
                 onValueChange={setOtherId}
                 options={options.map((c) => ({
                   value: String(c.id),
-                  label: c.clientNo + " - " + c.clientName,
+                  label: c.clientName,
                 }))}
                 placeholder="Select client"
-                searchPlaceholder="Search by number or name..."
+                searchPlaceholder="Search by name..."
               />
             </div>
           </div>
@@ -161,7 +161,7 @@ export default function MergeSection({ client }) {
               {absorbed.map((c) => (
                 <li key={c.id} className="flex items-center gap-2">
                   <Check className="h-3 w-3 shrink-0 text-green-600" />
-                  {c.clientNo} - {c.clientName}
+                  {c.clientName}
                   {c.mergedOn && (
                     <span className="text-xs">
                       on {new Date(c.mergedOn).toLocaleDateString("en-GB")}

@@ -67,7 +67,9 @@ function NumberWithCopy({
       </div>
 
       {file && (
-        <div className="flex h-8 items-center justify-between gap-2 rounded-md bg-muted px-3">
+        /* A faint ground: the chip is a note that a file is attached, not a
+           block of its own competing with the field above it. */
+        <div className="flex h-8 items-center justify-between gap-2 rounded-md bg-muted/40 px-3">
           <span className="inline-flex min-w-0 items-center gap-1 text-xs text-primary">
             <Paperclip className="h-3 w-3 shrink-0" />
             <span className="truncate">{fileName}</span>
@@ -104,7 +106,8 @@ export default function BasicSection({
     : [...MANUAL_CLIENT_STATUSES, status];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+    // Three to a row, the width every form in the system is laid out on.
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
       {/* Date of Registration - stamped by the system on creation.
           The day a client came on to the books is a record of what happened,
           not a choice, so it is shown rather than asked for. */}

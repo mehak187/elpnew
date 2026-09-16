@@ -495,7 +495,7 @@ function FinanceApproval({ invoice, supplierAccount, outstanding, onDecide }) {
           <div className="space-y-2 sm:col-span-2">
             <Label>Bank Transfer Document</Label>
             {transfer.document ? (
-              <div className="flex h-9 items-center justify-between gap-2 rounded-md bg-muted px-3">
+              <div className="flex h-9 items-center justify-between gap-2 rounded-md bg-muted/40 px-3">
                 <span className="truncate text-sm">{transfer.document}</span>
                 <button
                   type="button"

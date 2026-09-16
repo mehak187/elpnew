@@ -51,7 +51,8 @@ function NotificationToggle({ id, icon, label, value, onChange }) {
 
 export default function ContactSection({ formData, onChange, onSelectChange }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+    // Three to a row, the width every form in the system is laid out on.
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
       {/* Mobile - the country code is picked, not typed into the number */}
       <div className="space-y-2">
         <Label htmlFor="mobile">Mobile Number *</Label>

@@ -309,14 +309,13 @@ export default function ClientDetails() {
   };
 
   // Whatever this client has absorbed travels in its name, so the old name
-  // still finds the records that came in under it.
+  // still finds the records that came in under it. The client's number is not
+  // in the heading: a person is known here by name, and a number beside it
+  // only belongs where files are numbered - in Litigation.
   const title = isExisting
-    ? [
-        record?.clientNo,
-        clientDisplayName(clients, record) || formData.englishName,
-      ]
-        .filter(Boolean)
-        .join(" : ") || "Client Details"
+    ? clientDisplayName(clients, record) ||
+      formData.englishName ||
+      "Client Details"
     : "Add New Client";
 
   return (
