@@ -11,6 +11,7 @@ import LeasesProvider from "@/lib/leases/LeasesProvider";
 import AssetsProvider from "@/lib/assets/AssetsProvider";
 import TaxesProvider from "@/lib/taxes/TaxesProvider";
 import LeavesProvider from "@/lib/leaves/LeavesProvider";
+import BonusesProvider from "@/lib/bonuses/BonusesProvider";
 
 // Root Pages
 import Dashboard from "@/pages/Dashboard";
@@ -88,6 +89,7 @@ function App() {
           <AssetsProvider>
           <TaxesProvider>
           <LeavesProvider>
+          <BonusesProvider>
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<MainLayout />}>
@@ -184,6 +186,7 @@ function App() {
             </Route>
           </Routes>
         </BrowserRouter>
+          </BonusesProvider>
           </LeavesProvider>
           </TaxesProvider>
           </AssetsProvider>

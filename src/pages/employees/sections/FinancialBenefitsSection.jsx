@@ -19,6 +19,7 @@ import CommissionForm from "@/pages/firm/sections/CommissionForm";
 import { useClients } from "@/lib/clients/context";
 
 import SalariesSection from "./SalariesSection";
+import BonusSection from "./BonusSection";
 import LoansSection from "./LoansSection";
 import AssistanceSection from "./AssistanceSection";
 import { BENEFIT_TABS } from "./benefitTabs";
@@ -212,15 +213,22 @@ export default function FinancialBenefitsSection({
   // that would push it off the screen every time the tab is opened.
   const [salaryDetailsOpen, setSalaryDetailsOpen] = useState(false);
 
-  const showsDetailsToggle = tab === "salaries" && adding !== "salaries";
+  // My Profile shows what the employee is paid. What the office keeps its own
+  // record of - the bonuses it decided on - is not shown there at all, so the
+  // tab itself goes, and with it any chance of landing on a tab that is gone.
+  const tabs = canEdit
+    ? BENEFIT_TABS
+    : BENEFIT_TABS.filter((option) => !option.office);
 
-  const current =
-    BENEFIT_TABS.find((option) => option.key === tab) || BENEFIT_TABS[0];
+  const current = tabs.find((option) => option.key === tab) || tabs[0];
+  const open = current.key;
+
+  const showsDetailsToggle = open === "salaries" && adding !== "salaries";
 
   // Salary and commission are what the firm decides to pay; a loan and
   // assistance are what the employee asks for. So on My Profile the first two
   // are only read, and the other two can still be asked for.
-  const firmDecides = tab === "salaries" || tab === "commission";
+  const firmDecides = open === "salaries" || open === "commission";
   const showsAdd = Boolean(current.add) && (canEdit || !firmDecides);
 
   return (
@@ -233,7 +241,7 @@ export default function FinancialBenefitsSection({
         <FormHeading title={current.label} note={current.note} icon={current.icon} />
 
         <div className="flex flex-wrap items-center gap-2">
-          <TabBar options={BENEFIT_TABS} value={tab} onChange={onTabChange} />
+          <TabBar options={tabs} value={open} onChange={onTabChange} />
 
           {/* The word says what a click will do, not what is on screen now. */}
           {showsDetailsToggle && (
@@ -257,8 +265,8 @@ export default function FinancialBenefitsSection({
           {showsAdd && (
             <Button
               type="button"
-              onClick={() => setAdding(tab)}
-              disabled={adding === tab}
+              onClick={() => setAdding(open)}
+              disabled={adding === open}
             >
               <Plus className="mr-2 h-4 w-4" />
               {current.add}
@@ -267,7 +275,7 @@ export default function FinancialBenefitsSection({
         </div>
       </div>
 
-      {tab === "salaries" && (
+      {open === "salaries" && (
         <SalariesSection
           employee={employee}
           adding={adding === "salaries"}
@@ -278,14 +286,22 @@ export default function FinancialBenefitsSection({
         />
       )}
 
-      {tab === "loans" && (
+      {open === "bonus" && (
+        <BonusSection
+          employee={employee}
+          adding={adding === "bonus"}
+          onCloseAdd={() => setAdding(null)}
+        />
+      )}
+
+      {open === "loans" && (
         <LoansSection
           adding={adding === "loans"}
           onCloseAdd={() => setAdding(null)}
         />
       )}
 
-      {tab === "assistance" && (
+      {open === "assistance" && (
         <AssistanceSection
           employee={employee}
           adding={adding === "assistance"}
@@ -293,7 +309,7 @@ export default function FinancialBenefitsSection({
         />
       )}
 
-      {tab === "commission" && (
+      {open === "commission" && (
         <CommissionTab
           employee={employee}
           adding={adding === "commission"}
