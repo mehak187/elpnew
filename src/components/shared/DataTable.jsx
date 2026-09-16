@@ -48,6 +48,29 @@ function SortMark({ direction }) {
   return <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0" />;
 }
 
+/**
+ * A column's heading, on one line.
+ *
+ * What the column holds, and beside it in lighter type what makes it up.
+ * Stacked over two lines the second line reads as another header row, which is
+ * what the heading of a single column must not look like.
+ */
+function ColumnHeading({ header, subHeader }) {
+  if (!subHeader) return header;
+  // Details are read as an aside, so they are bracketed - unless they say so
+  // themselves already.
+  const detail =
+    typeof subHeader === "string" && !subHeader.startsWith("(")
+      ? "(" + subHeader + ")"
+      : subHeader;
+
+  return (
+    <>
+      {header} <span className="font-normal text-muted-foreground">{detail}</span>
+    </>
+  );
+}
+
 export default function DataTable({
   columns,
   data,
@@ -241,7 +264,9 @@ export default function DataTable({
                       <TableHead
                         key={column.key}
                         className={cn(
-                          "text-left font-semibold text-primary whitespace-nowrap",
+                          // Top, not middle: where one heading wraps, the
+                          // short ones beside it still start on its first line.
+                          "text-left align-top font-semibold text-primary",
                           column.className
                         )}
                         style={{ width: column.width }}
@@ -253,12 +278,10 @@ export default function DataTable({
                             className="inline-flex items-start gap-1 rounded text-left hover:text-primary/80 focus:outline-none focus:ring-2 focus:ring-ring"
                           >
                             <span>
-                              {column.header}
-                              {column.subHeader && (
-                                <span className="block text-[11px] font-normal text-muted-foreground">
-                                  {column.subHeader}
-                                </span>
-                              )}
+                              <ColumnHeading
+                                header={column.header}
+                                subHeader={column.subHeader}
+                              />
                             </span>
                             <SortMark
                               direction={
@@ -267,14 +290,10 @@ export default function DataTable({
                             />
                           </button>
                         ) : (
-                          <>
-                            {column.header}
-                            {column.subHeader && (
-                              <span className="block text-[11px] font-normal text-muted-foreground">
-                                {column.subHeader}
-                              </span>
-                            )}
-                          </>
+                          <ColumnHeading
+                            header={column.header}
+                            subHeader={column.subHeader}
+                          />
                         )}
                       </TableHead>
                     ))}

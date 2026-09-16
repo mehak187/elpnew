@@ -238,8 +238,7 @@ export default function LeasesPage() {
     {
       // The rent for one payment, its VAT and what the two come to.
       key: "rent",
-      header: "Rental Value (OMR)",
-      subHeader: "VAT (5%) · Total (OMR)",
+      header: "Rental Value · VAT 5% · Total (OMR)",
       width: "12%",
       // Monthly rent. A lease exempt from VAT (a flat, say) shows 0.000 VAT.
       exportValue: (row) =>
@@ -284,8 +283,7 @@ export default function LeasesPage() {
     },
     {
       key: "nextPayment",
-      header: "Next Payment",
-      subHeader: "Date",
+      header: "Next Payment Date",
       width: "11%",
       exportValue: (row) => shortDate(nextPaymentDate(row)),
       render: (_, row) => (

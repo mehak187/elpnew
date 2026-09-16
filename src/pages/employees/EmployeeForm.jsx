@@ -5,7 +5,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import BackButton from "@/components/shared/BackButton";
 import FormHeading from "@/components/shared/FormHeading";
-import TabBar from "@/components/shared/TabBar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -53,7 +52,6 @@ import {
   EMPLOYEE_DOCUMENT_TYPES,
 } from "@/lib/constants";
 import FinancialBenefitsSection from "./sections/FinancialBenefitsSection";
-import { BENEFIT_TABS } from "./sections/benefitTabs";
 
 
 import DailyActivitiesSection from "./sections/DailyActivitiesSection";
@@ -126,7 +124,6 @@ const SECTIONS = [
     icon: CalendarCheck,
     noSave: true,
     note: "Leave requests and what was decided about them",
-    ownsHeader: true,
   },
   {
     // Anything asked of the administration that has no form of its own - a
@@ -432,9 +429,27 @@ export default function EmployeeForm({ self }) {
         <div className="flex items-center gap-3">
           <BackButton fallback="/employees" />
           <div>
-            <h1 className="text-xl font-bold text-primary sm:text-2xl">
-              {current.title || current.label}
-            </h1>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-xl font-bold text-primary sm:text-2xl">
+                {current.title || current.label}
+              </h1>
+              {/* Standing travels with the record, whichever side is open -
+                  but only once there is a record. It sits beside the name of
+                  the page rather than over the section below, which would be
+                  the same heading written twice. */}
+              {isEditMode && (
+                <span className="inline-flex items-center gap-1.5 text-sm">
+                  {formData.status}
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "h-2 w-2 rounded-full",
+                      STATUS_DOT[formData.status] || "bg-muted-foreground"
+                    )}
+                  />
+                </span>
+              )}
+            </div>
             <p className="text-xs text-primary/75 sm:text-sm">{current.note}</p>
           </div>
         </div>
@@ -496,42 +511,6 @@ export default function EmployeeForm({ self }) {
                 isInfo && "space-y-4 p-0 sm:space-y-6 sm:p-0"
               )}
             >
-              {!isInfo && !current.ownsHeader && (
-                <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-                  <div className="flex items-center gap-3">
-                  <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
-                    {current.label}
-                  </h2>
-                  {/* Standing travels with the record, whichever side is
-                      open - but only once there is a record. */}
-                  {isEditMode && (
-                    <span className="inline-flex items-center gap-1.5 text-sm">
-                      {formData.status}
-                      <span
-                        aria-hidden="true"
-                        className={cn(
-                          "h-2 w-2 rounded-full",
-                          STATUS_DOT[formData.status] || "bg-muted-foreground"
-                        )}
-                      />
-                    </span>
-                  )}
-                  </div>
-
-                  {/* A section's tabs belong in the corner of its own
-                      heading: the heading names the section and the tabs
-                      say which side of it is open, which is one statement
-                      rather than two headings in a row. */}
-                  {activeSection === "benefits" && (
-                    <TabBar
-                      options={BENEFIT_TABS}
-                      value={benefitsTab}
-                      onChange={setBenefitsTab}
-                    />
-                  )}
-                </div>
-              )}
-
               <form
                 id="employee-form"
                 onSubmit={handleSubmit}
@@ -1135,6 +1114,7 @@ export default function EmployeeForm({ self }) {
                   <FinancialBenefitsSection
                     employee={formData}
                     tab={benefitsTab}
+                    onTabChange={setBenefitsTab}
                     onSaveSalary={(payslip) =>
                       setFormData((prev) => ({ ...prev, ...payslip }))
                     }

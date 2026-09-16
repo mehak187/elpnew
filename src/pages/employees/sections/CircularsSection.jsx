@@ -11,7 +11,7 @@ import {
 import { EmptyState } from "@/components/shared/panels";
 import AiSearch from "@/components/shared/AiSearch";
 import FormHeading from "@/components/shared/FormHeading";
-import { Check, FileSpreadsheet, Megaphone } from "lucide-react";
+import { Check, FileSpreadsheet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toCsv, downloadCsv } from "@/lib/csv";
 import {
@@ -92,7 +92,8 @@ export default function EmployeeCircularsSection({ employee }) {
 
   return (
     <div className="space-y-4">
-      <FormHeading title="Circulars" icon={Megaphone} />
+      {/* No heading of its own: the page above is already called Circulars,
+          and a second one would be the same word twice. */}
 
       {/* The same toolbar every table in the system has: search on the left,
           page size and export on the right - kept inside the page's own width

@@ -104,9 +104,8 @@ export default function LeavesSection({ employee }) {
   return (
     <div className="space-y-6">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+        {/* No heading here: the page above is already called Leaves. */}
         <div className="flex flex-wrap items-center gap-3">
-          <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">Leaves</h2>
-
           {/* Leave is granted a year at a time, so the year is a choice rather
               than a column repeated down every row. */}
           <Select value={year} onValueChange={setYear}>

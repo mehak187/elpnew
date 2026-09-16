@@ -25,25 +25,6 @@ import {
 /** A reason has to fit on the request, so the form says how much room. */
 const NOTES_LIMIT = 500;
 
-/** How each category is coloured wherever its types are listed. */
-const CATEGORY_TONE = {
-  "Regular Leave": {
-    heading: "text-red-600",
-    card: "border-red-200 bg-red-50/60",
-    bullet: "border-red-300",
-  },
-  "Family Leave": {
-    heading: "text-purple-600",
-    card: "border-purple-200 bg-purple-50/60",
-    bullet: "border-purple-300",
-  },
-  "Special Leave": {
-    heading: "text-green-700",
-    card: "border-green-200 bg-green-50/60",
-    bullet: "border-green-300",
-  },
-};
-
 /** A numbered step, so a long form reads as two short ones. */
 function Step({ number, title, note, children }) {
   return (
@@ -61,67 +42,6 @@ function Step({ number, title, note, children }) {
         {children}
       </CardContent>
     </Card>
-  );
-}
-
-/**
- * The leave on offer, laid out so the choice can be made without opening a
- * dropdown to find out what each type is worth.
- *
- * The same list the pickers are built from, so it can never fall out of step
- * with them - and clicking a line is another way of choosing it.
- */
-function CategoryCards({ selectedType, onChoose }) {
-  return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-      {ABSENCE_CATEGORIES.map((category) => {
-        const tone = CATEGORY_TONE[category.name];
-        return (
-          <div
-            key={category.name}
-            className={cn("rounded-lg border", tone.card)}
-          >
-            <p
-              className={cn(
-                "border-b px-4 py-2 text-sm font-semibold",
-                tone.heading
-              )}
-            >
-              {category.name}
-            </p>
-            <div className="space-y-2 p-4">
-              {category.types.map((type) => {
-                const chosen = selectedType === type.name;
-                return (
-                  <button
-                    key={type.name}
-                    type="button"
-                    onClick={() => onChoose(category.name, type.name)}
-                    className="flex w-full items-center gap-2 rounded text-left text-xs focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={cn(
-                        "h-3 w-3 shrink-0 rounded-full border-2",
-                        chosen
-                          ? "border-primary bg-primary"
-                          : cn("bg-white", tone.bullet)
-                      )}
-                    />
-                    <span className={cn("flex-1", chosen && "font-semibold")}>
-                      {type.name}
-                    </span>
-                    <span className="text-muted-foreground">
-                      &mdash; {type.entitlement}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
-    </div>
   );
 }
 
@@ -295,14 +215,6 @@ export default function LeaveForm({
             )}
           </div>
         </div>
-
-        <CategoryCards
-          selectedType={draft.type}
-          onChoose={(category, type) => {
-            onCategory(category);
-            onChange("type", type);
-          }}
-        />
       </Step>
 
       <Step

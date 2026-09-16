@@ -245,8 +245,7 @@ export default function IncomeTaxPage() {
     },
     {
       key: "revenue",
-      header: "Revenue (OMR)",
-      subHeader: "Deductible Expenses",
+      header: "Revenue & Deductible Expenses (OMR)",
       width: "14%",
       exportValue: (row) => omr(row.revenue) + " - " + omr(row.expenses),
       sortValue: (row) => row.revenue,
@@ -267,8 +266,7 @@ export default function IncomeTaxPage() {
     },
     {
       key: "tax",
-      header: "Income Tax (OMR)",
-      subHeader: RATE_LABEL + " of taxable income",
+      header: "Income Tax at " + RATE_LABEL + " (OMR)",
       width: "12%",
       exportValue: (row) => omr(row.tax),
       sortValue: (row) => row.tax,
@@ -306,8 +304,7 @@ export default function IncomeTaxPage() {
     },
     {
       key: "paidAmount",
-      header: "Paid (OMR)",
-      subHeader: "Balance",
+      header: "Paid & Balance (OMR)",
       width: "12%",
       exportValue: (row) => omr(row.paidAmount) + " - balance " + omr(row.balance),
       sortValue: (row) => row.balance,

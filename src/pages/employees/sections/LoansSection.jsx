@@ -615,20 +615,19 @@ export default function LoansSection({ adding, onCloseAdd }) {
                   <th className="whitespace-nowrap p-3 font-semibold" style={{ width: "11%" }}>
                     Due Date
                   </th>
+                  {/* One line to a column: the currency belongs beside the
+                      name, not stacked under it as a second header row. */}
                   <th className="p-3 font-semibold" style={{ width: "13%" }}>
-                    Installment Amount
-                    <span className="block font-normal">(<Rial />)</span>
+                    Installment Amount (<Rial />)
                   </th>
                   <th className="p-3 font-semibold" style={{ width: "12%" }}>
-                    Paid Amount
-                    <span className="block font-normal">(<Rial />)</span>
+                    Paid Amount (<Rial />)
                   </th>
                   <th className="p-3 font-semibold" style={{ width: "14%" }}>
                     Installment Status
                   </th>
                   <th className="p-3 font-semibold" style={{ width: "13%" }}>
-                    Remaining Balance
-                    <span className="block font-normal">(<Rial />)</span>
+                    Remaining Balance (<Rial />)
                   </th>
                   <th className="p-3" style={{ width: "5%" }}>
                     <span className="sr-only">Show instalments</span>
