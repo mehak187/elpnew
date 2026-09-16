@@ -240,10 +240,14 @@ export default function FinancialBenefitsSection({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <FormHeading title={current.label} note={current.note} icon={current.icon} />
 
-        <div className="flex flex-wrap items-center gap-2">
+        {/* ml-auto keeps these to the right even when they wrap onto a line of
+            their own: a wrapped line is laid out on its own, so justify-between
+            above would otherwise drop them back to the left. */}
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
           <TabBar options={tabs} value={open} onChange={onTabChange} />
 
-          {/* The word says what a click will do, not what is on screen now. */}
+          {/* The words say what a click will do, and to what: "Show" on its
+              own leaves the salary breakdown unnamed. */}
           {showsDetailsToggle && (
             <Button
               type="button"
@@ -258,7 +262,7 @@ export default function FinancialBenefitsSection({
               ) : (
                 <Eye className="mr-1.5 h-4 w-4" />
               )}
-              {salaryDetailsOpen ? "Hide" : "Show"}
+              {salaryDetailsOpen ? "Hide Salary Details" : "View Salary Details"}
             </Button>
           )}
 

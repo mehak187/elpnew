@@ -153,7 +153,13 @@ export default function LeavesSection({ employee }) {
           </Select>
         </div>
 
-        <Button type="button" onClick={() => setAdding(true)} disabled={adding}>
+        {/* ml-auto keeps it right once it wraps below the year. */}
+        <Button
+          type="button"
+          className="ml-auto"
+          onClick={() => setAdding(true)}
+          disabled={adding}
+        >
           <Plus className="mr-1.5 h-4 w-4" />
           Add New Leave
         </Button>

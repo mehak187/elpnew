@@ -74,8 +74,10 @@ export default function SupplierPaymentsSection({ supplier }) {
           <span className="text-sm font-bold text-primary">{omr(total)}</span>
         </div>
 
+        {/* ml-auto keeps it right once it wraps below the heading. */}
         <Button
           type="button"
+          className="ml-auto"
           onClick={() => setAdding(true)}
           disabled={adding}
         >
