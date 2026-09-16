@@ -241,11 +241,13 @@ export default function LeaveForm({
             {draft.type && (
               <p className="text-xs text-muted-foreground">
                 {balance
-                  ? balance.allowance +
-                    " days entitlement - " +
-                    balance.used +
-                    " taken in " +
-                    draft.year
+                  ? balance.expired
+                    ? "The balance for " + draft.year + " expired at the end of that year"
+                    : balance.allowance +
+                      " days entitlement - " +
+                      balance.used +
+                      " taken in " +
+                      draft.year
                   : "Settled when the request is decided"}
               </p>
             )}

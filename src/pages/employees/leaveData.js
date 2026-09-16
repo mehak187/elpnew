@@ -316,15 +316,25 @@ export function allowanceDays(type) {
 }
 
 /**
- * What is left of one leave type this year.
+ * What is left of one leave type in a year.
  *
  * Counted off the approved requests every time rather than stored: a balance
  * held as a number is a second copy of the leave already taken, and the two
  * drift apart the moment a request is corrected.
+ *
+ * Nothing carries over. A year that has ended has no balance left to give: on
+ * the first day of the new year whatever was not taken expires, and the year
+ * reads as fully used - which is also what makes an advance against next year
+ * the only way to be granted days once this year's are gone.
  */
 export function remainingBalance(leaves, name, type, year) {
   const allowance = allowanceDays(type);
   if (allowance === null) return null;
+
+  const thisYear = String(new Date().getFullYear());
+  if (String(year) < thisYear) {
+    return { allowance, used: allowance, remaining: 0, expired: true };
+  }
 
   // Counted by the year the leave is charged to, so days taken in advance come
   // off next year's entitlement rather than the year they were taken in.
@@ -338,7 +348,7 @@ export function remainingBalance(leaves, name, type, year) {
     )
     .reduce((sum, leave) => sum + leaveDays(leave.from, leave.to), 0);
 
-  return { allowance, used, remaining: Math.max(allowance - used, 0) };
+  return { allowance, used, remaining: Math.max(allowance - used, 0), expired: false };
 }
 
 /**
