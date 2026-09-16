@@ -115,7 +115,7 @@ function Amount({ id, label, required, value, onChange, readOnly, highlight }) {
           className={cn(
             "pr-12",
             readOnly && "text-muted-foreground",
-            readOnly && !highlight && "bg-muted",
+            readOnly && !highlight && "bg-locked",
             highlight && "border-green-600 bg-green-50 font-bold text-green-700"
           )}
           value={value}
@@ -154,7 +154,7 @@ function Figure({ label, value }) {
         <Input
           readOnly
           tabIndex={-1}
-          className="bg-muted pr-12 text-muted-foreground"
+          className="bg-locked pr-12 text-muted-foreground"
           value={amount(value)}
         />
         <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">

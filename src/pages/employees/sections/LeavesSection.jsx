@@ -13,9 +13,9 @@ import { Plus, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/pages/firm/firmData";
 import LeaveForm from "./LeaveForm";
+import { useLeaves } from "@/lib/leaves/context";
 import {
   LEAVE_STATUS_TONE,
-  initialLeaves,
   leaveDays,
   leaveYear,
   leavesFor,
@@ -48,7 +48,9 @@ const emptyDraft = () => ({
  * on the row can suggest an answer that has not been given.
  */
 export default function LeavesSection({ employee }) {
-  const [leaves, setLeaves] = useState(initialLeaves);
+  // Shared with every other page that reads leave, so a request asked for here
+  // is still there after the page moves away and back.
+  const { leaves, addLeave } = useLeaves();
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState(emptyDraft);
 
@@ -60,7 +62,22 @@ export default function LeavesSection({ employee }) {
   // Leave is granted a year at a time, so the list is read a year at a time.
   const [year, setYear] = useState(thisYear);
 
-  const rows = mine.filter((leave) => leaveYear(leave.from) === year);
+  /**
+   * While a request is being written, the list below it narrows to the kind of
+   * leave being asked for - what is already on record for that type is what
+   * the new request has to be judged against. Closing the form puts the whole
+   * year back.
+   */
+  const shownType = adding ? draft.type : "";
+  const shownCategory = adding ? draft.category : "";
+  const filteredBy = shownType || shownCategory;
+
+  const rows = mine.filter(
+    (leave) =>
+      leaveYear(leave.from) === year &&
+      (!shownCategory || leave.category === shownCategory) &&
+      (!shownType || leave.type === shownType)
+  );
 
   /** A type belongs to one category, so changing the category clears it. */
   const chooseCategory = (value) =>
@@ -85,18 +102,9 @@ export default function LeavesSection({ employee }) {
   };
 
   const save = () => {
-    setLeaves((prev) => [
-      ...prev,
-      {
-        ...draft,
-        id: prev.reduce((max, l) => Math.max(max, l.id), 0) + 1,
-        employee: employee.name,
-        // A new request has not been decided, so it says so and nothing more.
-        status: "Pending",
-        decidedAt: "",
-        comments: "",
-      },
-    ]);
+    // A new request has not been decided on: the store says so, and nothing
+    // here suggests otherwise.
+    addLeave({ ...draft, employee: employee.name });
     setYear(draft.year);
     close();
   };
@@ -141,11 +149,22 @@ export default function LeavesSection({ employee }) {
         />
       )}
 
+      {filteredBy && (
+        <p className="text-sm text-muted-foreground">
+          Showing <span className="font-semibold text-primary">{filteredBy}</span>{" "}
+          in {year} only
+        </p>
+      )}
+
       <Card>
         <CardContent className="overflow-x-auto p-0">
           {rows.length === 0 ? (
             <div className="p-6">
-              <EmptyState>No leave has been requested for {year}.</EmptyState>
+              <EmptyState>
+                {filteredBy
+                  ? "No " + filteredBy + " has been requested in " + year + "."
+                  : "No leave has been requested for " + year + "."}
+              </EmptyState>
             </div>
           ) : (
             <table className="w-full min-w-[960px] text-sm">

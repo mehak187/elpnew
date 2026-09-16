@@ -249,7 +249,7 @@ export default function CircularsSection({ canEdit }) {
                     id="circularNo"
                     readOnly
                     tabIndex={-1}
-                    className="bg-muted pr-9"
+                    className="bg-locked pr-9"
                     value={circularNo}
                   />
                   <Lock

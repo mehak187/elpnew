@@ -529,7 +529,7 @@ export default function EmployeeForm({ self }) {
                       // so the page reads as a record rather than as a form
                       // somebody has greyed out field by field.
                       readOnly &&
-                        "[&_input:disabled]:bg-muted [&_input:disabled]:opacity-100 [&_textarea:disabled]:bg-muted [&_textarea:disabled]:opacity-100 [&_button:disabled]:bg-muted [&_button:disabled]:opacity-100 [&_button:disabled]:text-foreground"
+                        "[&_input:disabled]:bg-locked [&_input:disabled]:opacity-100 [&_textarea:disabled]:bg-locked [&_textarea:disabled]:opacity-100 [&_button:disabled]:bg-locked [&_button:disabled]:opacity-100 [&_button:disabled]:text-foreground"
                     )}
                   >
                     {readOnly && (
@@ -561,7 +561,7 @@ export default function EmployeeForm({ self }) {
                           value={employeeNo}
                           readOnly
                           disabled
-                          className="bg-muted"
+                          className="bg-locked"
                         />
                       </div>
 

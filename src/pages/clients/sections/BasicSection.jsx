@@ -115,7 +115,7 @@ export default function BasicSection({
           value={formatDate(formData.dateOfRegistration)}
           readOnly
           tabIndex={-1}
-          className="cursor-default bg-muted text-muted-foreground"
+          className="cursor-default bg-locked text-muted-foreground"
         />
       </div>
 

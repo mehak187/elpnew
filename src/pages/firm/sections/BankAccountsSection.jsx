@@ -886,7 +886,7 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                       id="transferWords"
                       readOnly
                       tabIndex={-1}
-                      className="bg-muted text-muted-foreground"
+                      className="bg-locked text-muted-foreground"
                       value={amountInWords(transfer.amount) || "-"}
                     />
                   </div>

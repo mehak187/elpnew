@@ -191,7 +191,7 @@ export default function LeaveForm({
               id="leaveBalance"
               readOnly
               tabIndex={-1}
-              className="cursor-default bg-muted font-semibold text-primary"
+              className="cursor-default bg-locked font-semibold text-primary"
               placeholder="Auto calculated"
               value={
                 !draft.type
@@ -257,7 +257,7 @@ export default function LeaveForm({
               id="leaveDays"
               readOnly
               tabIndex={-1}
-              className="cursor-default bg-muted text-muted-foreground"
+              className="cursor-default bg-locked text-muted-foreground"
               value={days > 0 ? days + (days === 1 ? " Day" : " Days") : ""}
               placeholder="Auto calculated"
             />
@@ -273,7 +273,7 @@ export default function LeaveForm({
               readOnly
               tabIndex={-1}
               className={cn(
-                "cursor-default bg-muted font-semibold",
+                "cursor-default bg-locked font-semibold",
                 afterRequest !== null && afterRequest < 0
                   ? "text-destructive"
                   : "text-primary"
@@ -353,13 +353,9 @@ export default function LeaveForm({
           </div>
         </div>
 
-        {days > 0 && balance && days > balance.remaining && (
-          <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-            This is {days} {days === 1 ? "day" : "days"} against a remaining
-            balance of {balance.remaining}. It can be submitted, but management
-            will have to decide whether to allow it.
-          </p>
-        )}
+        {/* No warning about asking for more than is left: the balance beside
+            the dates already turns red and shows how far past it the request
+            goes, and management decides either way. */}
 
         <div className="flex flex-wrap items-center justify-between gap-2">
           {/* type="button": the leave form sits inside the employee record's

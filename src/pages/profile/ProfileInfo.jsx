@@ -133,7 +133,7 @@ export default function ProfileInfo() {
                 name="designation"
                 value={formData.designation}
                 disabled
-                className="h-10 bg-muted"
+                className="h-10 bg-locked"
               />
             </div>
 
@@ -146,7 +146,7 @@ export default function ProfileInfo() {
                 name="department"
                 value={formData.department}
                 disabled
-                className="h-10 bg-muted"
+                className="h-10 bg-locked"
               />
             </div>
 
@@ -159,7 +159,7 @@ export default function ProfileInfo() {
                 name="branch"
                 value={formData.branch}
                 disabled
-                className="h-10 bg-muted"
+                className="h-10 bg-locked"
               />
             </div>
 
@@ -173,7 +173,7 @@ export default function ProfileInfo() {
                 type="date"
                 value={formData.joining_date}
                 disabled
-                className="h-10 bg-muted"
+                className="h-10 bg-locked"
               />
             </div>
 
@@ -186,7 +186,7 @@ export default function ProfileInfo() {
                 name="employee_id"
                 value={formData.employee_id}
                 disabled
-                className="h-10 bg-muted"
+                className="h-10 bg-locked"
               />
             </div>
           </div>

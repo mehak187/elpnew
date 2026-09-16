@@ -423,7 +423,7 @@ function FinanceApproval({ invoice, supplierAccount, outstanding, onDecide }) {
 
         <div className="space-y-2">
           <Label>Supplier&apos;s Bank</Label>
-          <Input value={supplierAccount?.bank || "-"} readOnly disabled className="bg-muted" />
+          <Input value={supplierAccount?.bank || "-"} readOnly disabled className="bg-locked" />
         </div>
 
         <div className="space-y-2">
@@ -432,7 +432,7 @@ function FinanceApproval({ invoice, supplierAccount, outstanding, onDecide }) {
             value={supplierAccount?.accountNumber || "-"}
             readOnly
             disabled
-            className="bg-muted"
+            className="bg-locked"
           />
         </div>
       </div>
@@ -466,7 +466,7 @@ function FinanceApproval({ invoice, supplierAccount, outstanding, onDecide }) {
               value={account?.accountNumber || "-"}
               readOnly
               disabled
-              className="bg-muted"
+              className="bg-locked"
             />
           </div>
 

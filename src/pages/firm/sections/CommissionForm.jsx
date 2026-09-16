@@ -594,7 +594,7 @@ export default function CommissionForm({
               id="commissionAmount"
               readOnly
               tabIndex={-1}
-              className="cursor-default bg-muted text-muted-foreground"
+              className="cursor-default bg-locked text-muted-foreground"
               value={money(commission)}
             />
           </div>

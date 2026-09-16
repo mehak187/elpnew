@@ -136,7 +136,7 @@ function AmountField({ id, label, required, hint, value, onChange, readOnly }) {
         readOnly={readOnly}
         tabIndex={readOnly ? -1 : undefined}
         placeholder="0.000"
-        className={cn(readOnly && "bg-muted text-muted-foreground")}
+        className={cn(readOnly && "bg-locked text-muted-foreground")}
         value={value}
         onChange={onChange}
         title={hint}
@@ -174,7 +174,7 @@ function Ends({ id, label, value }) {
         id={id}
         readOnly
         tabIndex={-1}
-        className="bg-muted text-muted-foreground"
+        className="bg-locked text-muted-foreground"
         value={value ? formatDate(value) : ""}
       />
     </div>
@@ -190,7 +190,7 @@ function Derived({ id, label, value, hint }) {
         id={id}
         readOnly
         tabIndex={-1}
-        className="bg-muted text-muted-foreground"
+        className="bg-locked text-muted-foreground"
         value={value}
       />
       {hint && <Hint>{hint}</Hint>}

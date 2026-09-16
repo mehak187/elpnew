@@ -57,7 +57,7 @@ function BranchFields({ draft, set, idPrefix, assignedNumber }) {
             value={assignedNumber}
             readOnly
             disabled
-            className="bg-muted pr-9"
+            className="bg-locked pr-9"
           />
           {/* Locked on purpose: case files are numbered from it */}
           <Lock

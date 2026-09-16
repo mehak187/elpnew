@@ -78,7 +78,7 @@ export default function PhoneInput({
       <div
         className={cn(
           "flex h-9 w-full items-center overflow-hidden rounded-md border border-input bg-transparent shadow-sm transition-colors focus-within:ring-1 focus-within:ring-primary",
-          disabled && "cursor-not-allowed bg-muted opacity-70"
+          disabled && "cursor-not-allowed bg-locked opacity-70"
         )}
       >
         <button
