@@ -118,21 +118,16 @@ export default function SalaryHistory() {
                     const state = LOAN_STATE[row.loan.state];
 
                     return (
-                      <tr
-                        key={row.id}
-                        className="border-b align-top transition-colors last:border-0 hover:bg-primary/5"
-                      >
-                        <td className="border-r p-3 font-medium text-primary">
-                          {index + 1}
-                        </td>
-                        <td className="border-r p-3 font-medium text-primary">
+                      <Row key={row.id}>
+                        <Td className="font-medium text-primary">{index + 1}</Td>
+                        <Td className="font-medium text-primary">
                           {pad(row.month)}/{row.year}
-                        </td>
+                        </Td>
 
                         {/* Read down: what the salary is, what was added to
                             it, and what the two come to - the total last and
                             in green, because it is the figure being checked. */}
-                        <td className="border-r p-3 text-left">
+                        <Td className="text-left">
                           <p className="flex items-baseline justify-between gap-3">
                             <span className="text-muted-foreground">Salary:</span>
                             <span className="font-medium text-primary">
@@ -151,9 +146,9 @@ export default function SalaryHistory() {
                             <span>Total:</span>
                             <span>{money(row.gross)}</span>
                           </p>
-                        </td>
+                        </Td>
 
-                        <td className="border-r p-3 text-left">
+                        <Td className="text-left">
                           <p className="font-bold text-primary">
                             {money(row.loan.deducted)}
                           </p>
