@@ -2,6 +2,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/panels";
+import {
+  RecordTable,
+  HeadRow,
+  Th,
+  Row,
+  Td,
+} from "@/components/shared/RecordTable";
 import FormHeading from "@/components/shared/FormHeading";
 import TabBar from "@/components/shared/TabBar";
 import { Plus, Eye, EyeOff } from "lucide-react";
@@ -104,43 +111,36 @@ function CommissionTab({ employee, adding, onCloseAdd }) {
         </EmptyState>
       ) : (
         <Card>
-          <CardContent className="overflow-x-auto p-0">
-            <table className="w-full min-w-[1080px] text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  <th className="p-3 font-semibold">Commission No.</th>
-                  <th className="p-3 font-semibold">Client</th>
-                  <th className="p-3 font-semibold">Beneficiary</th>
-                  <th className="whitespace-nowrap p-3 font-semibold">
-                    Month &amp; Year
-                  </th>
-                  <th className="p-3 font-semibold">Commission Type</th>
-                  <th className="p-3 font-semibold">
-                    Legal Fees (Before VAT) &amp; Commission
-                  </th>
-                  <th className="p-3 font-semibold">Period</th>
-                </tr>
-              </thead>
+          <CardContent className="p-4 sm:p-6">
+            <RecordTable minWidth={1080}>
+              <HeadRow>
+                <Th>Commission No.</Th>
+                <Th>Client</Th>
+                <Th>Beneficiary</Th>
+                <Th>Month &amp; Year</Th>
+                <Th>Commission Type</Th>
+                <Th note="Before VAT">Legal Fees &amp; Commission</Th>
+                <Th>Period</Th>
+              </HeadRow>
               <tbody>
                 {shown.map((record) => (
-                  <tr
-                    key={record.id}
-                    className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"
-                  >
-                    <td className="whitespace-nowrap p-3 font-medium">
+                  <Row key={record.id}>
+                    <Td className="whitespace-nowrap font-medium text-primary">
                       {record.commissionNo}
-                    </td>
-                    <td className="p-3">{record.clientName}</td>
-                    <td className="p-3">
-                      <span className="block">{record.paidTo}</span>
+                    </Td>
+                    <Td className="text-left">{record.clientName}</Td>
+                    <Td className="text-left">
+                      <span className="block font-semibold text-primary">
+                        {record.paidTo}
+                      </span>
                       <span className="block text-xs text-muted-foreground">
                         {record.classification}
                       </span>
-                    </td>
-                    <td className="whitespace-nowrap p-3">
+                    </Td>
+                    <Td className="whitespace-nowrap text-primary">
                       {monthAndYear(record)}
-                    </td>
-                    <td className="p-3">
+                    </Td>
+                    <Td className="text-left">
                       <span className="block">{record.type}</span>
                       {/* A specific commission names the file and the invoice
                           it was worked out from; a fixed one runs over the
@@ -155,30 +155,30 @@ function CommissionTab({ employee, adding, onCloseAdd }) {
                           </span>
                         </>
                       )}
-                    </td>
-                    <td className="p-3">
-                      <span className="block font-medium">
+                    </Td>
+                    <Td className="text-left">
+                      <span className="block font-medium text-primary">
                         {money(feesFor(record))}
                       </span>
                       <span className="block text-xs text-muted-foreground">
                         {record.rate}%
                       </span>
-                      <span className="block text-xs font-medium text-green-700">
-                        Commission: {money(commissionOn(record))}
+                      <span className="block font-bold text-green-700">
+                        {money(commissionOn(record))}
                       </span>
-                    </td>
-                    <td className="p-3">
+                    </Td>
+                    <Td className="text-left">
                       <span className="block">{record.periodFrom}</span>
                       <span className="block text-xs text-muted-foreground">
                         {record.periodTo
                           ? "to " + record.periodTo
                           : "Open ended"}
                       </span>
-                    </td>
-                  </tr>
+                    </Td>
+                  </Row>
                 ))}
               </tbody>
-            </table>
+            </RecordTable>
           </CardContent>
         </Card>
       )}

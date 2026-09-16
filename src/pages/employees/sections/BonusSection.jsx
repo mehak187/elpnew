@@ -12,7 +12,15 @@ import {
 } from "@/components/ui/select";
 import FormHeading from "@/components/shared/FormHeading";
 import Panel from "@/components/shared/Panel";
+import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/panels";
+import {
+  RecordTable,
+  HeadRow,
+  Th,
+  Row,
+  Td,
+} from "@/components/shared/RecordTable";
 import { Rial } from "@/components/shared/Rial";
 import { Gift, ClipboardList } from "lucide-react";
 import { useBonuses } from "@/lib/bonuses/context";
@@ -228,59 +236,50 @@ export default function BonusSection({ employee, adding, onCloseAdd }) {
   }
 
   return (
-    <div className="rounded-lg border">
-      {mine.length === 0 ? (
-        <div className="p-6">
+    <Card>
+      <CardContent className="p-4 sm:p-6">
+        {mine.length === 0 ? (
           <EmptyState>No bonus has been paid to this employee yet.</EmptyState>
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-215 text-sm">
-            <thead>
-              <tr className="border-b bg-secondary/60 text-left text-primary">
-                <th className="p-3 font-semibold" style={{ width: "6%" }}>
-                  No.
-                </th>
-                <th className="whitespace-nowrap p-3 font-semibold" style={{ width: "14%" }}>
-                  Payment Date
-                </th>
-                <th className="p-3 font-semibold" style={{ width: "28%" }}>
-                  Bonus Details <span className="font-normal text-muted-foreground">(Category / Reason)</span>
-                </th>
-                <th className="whitespace-nowrap p-3 text-right font-semibold" style={{ width: "16%" }}>
-                  Bonus Amount (<Rial />)
-                </th>
-                <th className="p-3 font-semibold" style={{ width: "36%" }}>
-                  Notes
-                </th>
-              </tr>
-            </thead>
+        ) : (
+          <RecordTable minWidth={860}>
+            <HeadRow>
+              <Th width="6%">No.</Th>
+              <Th width="14%">Payment Date</Th>
+              <Th width="30%" note="Category / Reason">
+                Bonus Details
+              </Th>
+              <Th width="16%">
+                Bonus Amount (<Rial />)
+              </Th>
+              <Th width="34%">Notes</Th>
+            </HeadRow>
             <tbody>
               {mine.map((bonus, index) => (
-                <tr
-                  key={bonus.id}
-                  className="border-b align-top transition-colors last:border-0 hover:bg-primary/5"
-                >
-                  <td className="p-3 font-medium text-primary">{index + 1}</td>
-                  <td className="whitespace-nowrap p-3">{formatDate(bonus.paidOn)}</td>
-                  <td className="p-3">
+                <Row key={bonus.id}>
+                  <Td className="font-medium text-primary">{index + 1}</Td>
+                  <Td className="whitespace-nowrap text-primary">
+                    {formatDate(bonus.paidOn)}
+                  </Td>
+                  <Td className="text-left">
                     <span className="block font-semibold text-primary">
                       {bonusReason(bonus)}
                     </span>
-                    <span className="block text-muted-foreground">
+                    <span className="block text-xs text-muted-foreground">
                       {bonus.expenseType} · {bonus.category}
                     </span>
-                  </td>
-                  <td className="whitespace-nowrap p-3 text-right font-semibold text-primary">
+                  </Td>
+                  <Td className="whitespace-nowrap font-bold text-green-700">
                     {amount(bonus.amount)}
-                  </td>
-                  <td className="p-3 text-muted-foreground">{bonus.notes || "-"}</td>
-                </tr>
+                  </Td>
+                  <Td className="text-left text-muted-foreground">
+                    {bonus.notes || "-"}
+                  </Td>
+                </Row>
               ))}
             </tbody>
-          </table>
-        </div>
-      )}
-    </div>
+          </RecordTable>
+        )}
+      </CardContent>
+    </Card>
   );
 }

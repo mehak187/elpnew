@@ -12,7 +12,15 @@ import {
 } from "@/components/ui/select";
 import FormHeading from "@/components/shared/FormHeading";
 import Panel from "@/components/shared/Panel";
+import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/panels";
+import {
+  RecordTable,
+  HeadRow,
+  Th,
+  Row,
+  Td,
+} from "@/components/shared/RecordTable";
 import { Rial } from "@/components/shared/Rial";
 import { cn } from "@/lib/utils";
 import { CalendarClock, ClipboardList } from "lucide-react";
@@ -209,82 +217,56 @@ export function AdvanceRequests({ employee }) {
   const mine = advancesFor(advances, employee?.name);
 
   return (
-    <div className="rounded-lg border">
-      <div className="border-b bg-secondary/60 px-4 py-3">
-        <p className="text-base font-bold text-primary">
+    <Card>
+      <CardContent className="p-4 sm:p-6">
+        <p className="mb-4 text-base font-bold text-primary">
           Advance Salary Requests
         </p>
-      </div>
 
-      {mine.length === 0 ? (
-        <div className="p-6">
+        {mine.length === 0 ? (
           <EmptyState>No salary advance has been requested yet.</EmptyState>
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-200 text-sm">
-            <thead>
-              <tr className="border-b text-left text-primary">
-                <th className="p-3 font-semibold" style={{ width: "6%" }}>
-                  No.
-                </th>
-                <th
-                  className="whitespace-nowrap p-3 font-semibold"
-                  style={{ width: "14%" }}
-                >
-                  Request Date
-                </th>
-                <th
-                  className="whitespace-nowrap p-3 text-right font-semibold"
-                  style={{ width: "16%" }}
-                >
-                  Requested Amount (<Rial />)
-                </th>
-                <th
-                  className="whitespace-nowrap p-3 font-semibold"
-                  style={{ width: "16%" }}
-                >
-                  Deducted From
-                </th>
-                <th className="p-3 font-semibold" style={{ width: "34%" }}>
-                  Request Details
-                </th>
-                <th className="p-3 font-semibold" style={{ width: "14%" }}>
-                  Status
-                </th>
-              </tr>
-            </thead>
+        ) : (
+          <RecordTable minWidth={860}>
+            <HeadRow>
+              <Th width="6%">No.</Th>
+              <Th width="14%">Request Date</Th>
+              <Th width="16%">
+                Requested Amount (<Rial />)
+              </Th>
+              <Th width="16%">Deducted From</Th>
+              <Th width="34%">Request Details</Th>
+              <Th width="14%">Status</Th>
+            </HeadRow>
             <tbody>
               {mine.map((advance, index) => (
-                <tr
-                  key={advance.id}
-                  className="border-b align-top transition-colors last:border-0 hover:bg-primary/5"
-                >
-                  <td className="p-3 font-medium text-primary">{index + 1}</td>
-                  <td className="whitespace-nowrap p-3">
+                <Row key={advance.id}>
+                  <Td className="font-medium text-primary">{index + 1}</Td>
+                  <Td className="whitespace-nowrap text-primary">
                     {formatDate(advance.requestedOn)}
-                  </td>
-                  <td className="whitespace-nowrap p-3 text-right font-semibold text-primary">
+                  </Td>
+                  <Td className="whitespace-nowrap font-bold text-green-700">
                     {amount(advance.amount)}
-                  </td>
-                  <td className="whitespace-nowrap p-3">
+                  </Td>
+                  <Td className="whitespace-nowrap text-primary">
                     {deductedFrom(advance)}
-                  </td>
-                  <td className="p-3 text-muted-foreground">{advance.reason}</td>
-                  <td
+                  </Td>
+                  <Td className="text-left text-muted-foreground">
+                    {advance.reason}
+                  </Td>
+                  <Td
                     className={cn(
-                      "p-3 font-semibold",
+                      "font-semibold",
                       ADVANCE_STATUS_TONE[advance.status]
                     )}
                   >
                     {advance.status}
-                  </td>
-                </tr>
+                  </Td>
+                </Row>
               ))}
             </tbody>
-          </table>
-        </div>
-      )}
-    </div>
+          </RecordTable>
+        )}
+      </CardContent>
+    </Card>
   );
 }

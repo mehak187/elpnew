@@ -13,6 +13,14 @@ import {
   SelectValue,
   } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/panels";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  RecordTable,
+  HeadRow,
+  Th,
+  Row,
+  Td,
+} from "@/components/shared/RecordTable";
 import { cn } from "@/lib/utils";
 import { Rial } from "@/components/shared/Rial";
 import Panel from "@/components/shared/Panel";
@@ -510,59 +518,50 @@ export default function LoansSection({ adding, onCloseAdd }) {
               </EmptyState>
             </div>
           ) : (
-            <div className="max-h-96 overflow-auto">
-              <table className="w-full min-w-[880px] text-center text-sm">
-                <thead className="sticky top-0 z-10 bg-secondary/60 text-primary">
-                  <tr className="border-b">
-                    <th className="p-3 font-semibold">No.</th>
-                    <th className="whitespace-nowrap p-3 font-semibold">
-                      Due Date
-                    </th>
-                    <th className="whitespace-nowrap p-3 font-semibold">
+            <div className="max-h-96 overflow-auto p-4">
+              <RecordTable minWidth={880}>
+                <HeadRow>
+                    <Th>No.</Th>
+                    <Th>Due Date</Th>
+                    <Th>
                       Installment Amount (<Rial />)
-                    </th>
-                    <th className="whitespace-nowrap p-3 font-semibold">
+                    </Th>
+                    <Th>
                       Paid Amount (<Rial />)
-                    </th>
-                    <th className="whitespace-nowrap p-3 font-semibold">
+                    </Th>
+                    <Th>
                       Balance (<Rial />)
-                    </th>
-                    <th className="p-3 font-semibold">Status</th>
-                    <th className="whitespace-nowrap p-3 font-semibold">
-                      Payment Date
-                    </th>
-                  </tr>
-                </thead>
+                    </Th>
+                    <Th>Status</Th>
+                    <Th>Payment Date</Th>
+                </HeadRow>
                 <tbody>
                   {rows.map((row) => (
-                    <tr
-                      key={row.no}
-                      className="border-b transition-colors last:border-0 hover:bg-primary/5"
-                    >
-                      <td className="p-3 font-medium text-primary">{row.no}</td>
-                      <td className="whitespace-nowrap p-3">
+                    <Row key={row.no}>
+                      <Td className="font-medium text-primary">{row.no}</Td>
+                      <Td className="whitespace-nowrap">
                         {formatDate(row.due)}
-                      </td>
-                      <td className="p-3">{amount(row.installment)}</td>
-                      <td className="p-3">{amount(row.paid)}</td>
-                      <td className="p-3">{amount(row.balance)}</td>
-                      <td className="p-3">
+                      </Td>
+                      <Td>{amount(row.installment)}</Td>
+                      <Td>{amount(row.paid)}</Td>
+                      <Td>{amount(row.balance)}</Td>
+                      <Td>
                         <span
                           className={cn(
-                            "inline-block rounded-full px-3 py-0.5 text-xs font-medium",
+                            "inline-block rounded-md px-3 py-1 text-xs font-semibold",
                             INSTALLMENT_STATUS_TONE[row.status]
                           )}
                         >
                           {row.status}
                         </span>
-                      </td>
-                      <td className="whitespace-nowrap p-3">
+                      </Td>
+                      <Td className="whitespace-nowrap">
                         {row.paymentDate ? formatDate(row.paymentDate) : "-"}
-                      </td>
-                    </tr>
+                      </Td>
+                    </Row>
                   ))}
                 </tbody>
-              </table>
+              </RecordTable>
             </div>
           )}
         </div>
@@ -596,44 +595,34 @@ export default function LoansSection({ adding, onCloseAdd }) {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border">
+      <Card>
+        <CardContent className="p-4 sm:p-6">
         {shown.length === 0 ? (
-          <div className="p-6">
             <EmptyState>No loans were drawn in {shownYear}.</EmptyState>
-          </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1140px] text-sm">
-              <thead>
-                <tr className="border-b bg-secondary/60 text-primary">
-                  <th className="p-3 font-semibold" style={{ width: "5%" }}>
-                    No.
-                  </th>
-                  <th className="p-3 text-left font-semibold" style={{ width: "27%" }}>
+            <RecordTable minWidth={1140}>
+              <HeadRow>
+                  <Th width="5%">No.</Th>
+                  <Th width="27%" className="text-left">
                     Loan / Installment Details
-                  </th>
-                  <th className="whitespace-nowrap p-3 font-semibold" style={{ width: "11%" }}>
-                    Due Date
-                  </th>
+                  </Th>
+                  <Th width="11%">Due Date</Th>
                   {/* One line to a column: the currency belongs beside the
                       name, not stacked under it as a second header row. */}
-                  <th className="p-3 font-semibold" style={{ width: "13%" }}>
+                  <Th width="13%">
                     Installment Amount (<Rial />)
-                  </th>
-                  <th className="p-3 font-semibold" style={{ width: "12%" }}>
+                  </Th>
+                  <Th width="12%">
                     Paid Amount (<Rial />)
-                  </th>
-                  <th className="p-3 font-semibold" style={{ width: "14%" }}>
-                    Installment Status
-                  </th>
-                  <th className="p-3 font-semibold" style={{ width: "13%" }}>
+                  </Th>
+                  <Th width="14%">Installment Status</Th>
+                  <Th width="13%">
                     Remaining Balance (<Rial />)
-                  </th>
-                  <th className="p-3" style={{ width: "5%" }}>
+                  </Th>
+                  <Th width="5%">
                     <span className="sr-only">Show instalments</span>
-                  </th>
-                </tr>
-              </thead>
+                  </Th>
+              </HeadRow>
               <tbody>
                 {shown.map((record, index) => {
                   const total = loanTotal(record);
@@ -649,11 +638,9 @@ export default function LoansSection({ adding, onCloseAdd }) {
                     <Fragment key={record.id}>
                       {/* The loan itself. Nothing in the instalment columns
                           belongs to it, so nothing is put there. */}
-                      <tr className="border-b bg-green-50/70">
-                        <td className="p-3 text-center font-bold text-primary">
-                          {index + 1}
-                        </td>
-                        <td className="p-3">
+                      <Row className="bg-green-50/70">
+                        <Td className="font-bold text-primary">{index + 1}</Td>
+                        <Td className="text-left">
                           <span className="block font-bold text-primary">
                             {record.kind}
                             {record.merged > 0 && (
@@ -682,13 +669,13 @@ export default function LoansSection({ adding, onCloseAdd }) {
                               into this loan.
                             </Detail>
                           )}
-                        </td>
-                        <td className="p-3 text-center text-muted-foreground">-</td>
-                        <td className="p-3 text-center text-muted-foreground">-</td>
-                        <td className="p-3 text-center text-muted-foreground">-</td>
-                        <td className="p-3 text-center text-muted-foreground">-</td>
-                        <td className="p-3 text-center text-muted-foreground">-</td>
-                        <td className="p-3 text-center">
+                        </Td>
+                        <Td className="text-muted-foreground">-</Td>
+                        <Td className="text-muted-foreground">-</Td>
+                        <Td className="text-muted-foreground">-</Td>
+                        <Td className="text-muted-foreground">-</Td>
+                        <Td className="text-muted-foreground">-</Td>
+                        <Td>
                           <button
                             type="button"
                             onClick={() => toggle(record.id)}
@@ -706,31 +693,24 @@ export default function LoansSection({ adding, onCloseAdd }) {
                                 : "Show instalments"}
                             </span>
                           </button>
-                        </td>
-                      </tr>
+                        </Td>
+                      </Row>
 
                       {open &&
                         rows.map((row) => (
-                          <tr
-                            key={record.id + "-" + row.no}
-                            className="border-b transition-colors hover:bg-primary/5"
-                          >
-                            <td className="p-3 text-center text-muted-foreground">
+                          <Row key={record.id + "-" + row.no}>
+                            <Td className="text-muted-foreground">
                               {index + 1}.{row.no}
-                            </td>
-                            <td className="p-3 font-medium text-primary">
+                            </Td>
+                            <Td className="text-left font-medium text-primary">
                               Installment {row.no} of {row.of}
-                            </td>
-                            <td className="whitespace-nowrap p-3 text-center">
+                            </Td>
+                            <Td className="whitespace-nowrap">
                               {formatDate(row.due)}
-                            </td>
-                            <td className="p-3 text-center">
-                              {amount(row.installment)}
-                            </td>
-                            <td className="p-3 text-center">
-                              {amount(row.paid)}
-                            </td>
-                            <td className="p-3 text-center">
+                            </Td>
+                            <Td>{amount(row.installment)}</Td>
+                            <Td>{amount(row.paid)}</Td>
+                            <Td>
                               <span
                                 className={cn(
                                   "inline-block rounded-md px-3 py-1 text-xs font-semibold",
@@ -739,21 +719,21 @@ export default function LoansSection({ adding, onCloseAdd }) {
                               >
                                 {row.status}
                               </span>
-                            </td>
-                            <td className="p-3 text-center font-medium">
+                            </Td>
+                            <Td className="font-medium">
                               {amount(row.remaining)}
-                            </td>
-                            <td className="p-3" />
-                          </tr>
+                            </Td>
+                            <Td />
+                          </Row>
                         ))}
                     </Fragment>
                   );
                 })}
               </tbody>
-            </table>
-          </div>
+            </RecordTable>
         )}
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

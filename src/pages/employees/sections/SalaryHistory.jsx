@@ -9,6 +9,13 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { EmptyState } from "@/components/shared/panels";
+import {
+  RecordTable,
+  HeadRow,
+  Th,
+  Row,
+  Td,
+} from "@/components/shared/RecordTable";
 import { cn } from "@/lib/utils";
 import { MONTH_NAMES, salaryHistoryRows } from "../payrollData";
 
@@ -189,25 +196,25 @@ export default function SalaryHistory() {
                               </LoanLine>
                             </>
                           )}
-                        </td>
+                        </Td>
 
                         {/* Money held back from the pay, so it is red wherever
                             it appears - with what it was held back for beside
                             it, because a deduction without a reason is a
                             figure nobody can answer. */}
-                        <td className="border-r p-3 text-left">
+                        <Td className="text-left">
                           <p className="font-bold text-destructive">
                             {money(row.administrative)}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {row.administrativeReason || "-"}
                           </p>
-                        </td>
+                        </Td>
 
                         {/* What actually reached the bank, which is what the
                             row is for - so it is the one cell that is lit, and
                             it says which account it reached. */}
-                        <td className="border-r bg-green-50/70 p-3 text-left">
+                        <Td className="bg-green-50/70 text-left">
                           <p className="font-bold text-green-700">
                             {money(row.net)}
                           </p>
@@ -217,17 +224,16 @@ export default function SalaryHistory() {
                           <p className="text-xs text-muted-foreground">
                             {row.accountNo}
                           </p>
-                        </td>
+                        </Td>
 
-                        <td className="p-3 text-primary">
+                        <Td className="text-primary">
                           {row.paymentDate.split("-").reverse().join("/")}
-                        </td>
-                      </tr>
+                        </Td>
+                      </Row>
                     );
                   })}
                 </tbody>
-              </table>
-            </div>
+            </RecordTable>
           )}
         </CardContent>
       </Card>

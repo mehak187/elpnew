@@ -14,6 +14,14 @@ import {
   } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/panels";
 import Panel from "@/components/shared/Panel";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  RecordTable,
+  HeadRow,
+  Th,
+  Row,
+  Td,
+} from "@/components/shared/RecordTable";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { Rial } from "@/components/shared/Rial";
@@ -285,58 +293,35 @@ export default function AssistanceSection({ employee, adding, onCloseAdd }) {
   }
 
   return (
-    <div className="rounded-lg border">
+    <Card>
+      <CardContent className="p-4 sm:p-6">
       {records.length === 0 ? (
-        <div className="p-6">
-          <EmptyState>No assistance has been requested yet.</EmptyState>
-        </div>
+        <EmptyState>No assistance has been requested yet.</EmptyState>
       ) : (
         <>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[960px] text-sm">
-              <thead>
-                <tr className="border-b bg-secondary/60 text-left text-primary">
+          <RecordTable minWidth={960}>
+              <HeadRow>
                   {/* Widths are set here rather than left to the browser, so
                       the two columns that carry sentences get the room and
                       the dates and figures stay on one line. */}
-                  <th className="p-3 font-semibold" style={{ width: "6%" }}>
-                    No.
-                  </th>
-                  <th
-                    className="whitespace-nowrap p-3 font-semibold"
-                    style={{ width: "12%" }}
-                  >
-                    Request Date
-                  </th>
-                  <th className="p-3 font-semibold" style={{ width: "24%" }}>
-                    Assistance Details
-                  </th>
-                  <th
-                    className="whitespace-nowrap p-3 text-right font-semibold"
-                    style={{ width: "13%" }}
-                  >
+                  <Th width="6%">No.</Th>
+                  <Th width="12%">Request Date</Th>
+                  <Th width="24%">Assistance Details</Th>
+                  <Th width="13%">
                     Amount (<Rial />)
-                  </th>
-                  <th className="p-3 font-semibold" style={{ width: "25%" }}>
-                    Payment Details
-                  </th>
-                  <th className="p-3 font-semibold" style={{ width: "20%" }}>
-                    Notes
-                  </th>
-                </tr>
-              </thead>
+                  </Th>
+                  <Th width="25%">Payment Details</Th>
+                  <Th width="20%">Notes</Th>
+              </HeadRow>
               <tbody>
                 {shown.map((record, index) => {
                   const status = statusOf(record);
 
                   return (
-                    <tr
-                      key={record.id}
-                      className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"
-                    >
+                    <Row key={record.id}>
                       {/* The row number opens the document the request was
                           made with, when one was attached. */}
-                      <td className="p-3 font-medium text-primary">
+                      <Td className="font-medium text-primary">
                         {record.proof ? (
                           <button
                             type="button"
@@ -354,18 +339,18 @@ export default function AssistanceSection({ employee, adding, onCloseAdd }) {
                         ) : (
                           start + index + 1
                         )}
-                      </td>
+                      </Td>
 
-                      <td className="whitespace-nowrap p-3">
+                      <Td className="whitespace-nowrap text-primary">
                         {formatDate(record.requestDate)}
-                      </td>
+                      </Td>
 
                       {/* What was asked for, why, and where it has got to */}
-                      <td className="p-3">
+                      <Td className="text-left">
                         <span className="block font-semibold text-primary">
                           {record.subcategory}
                         </span>
-                        <span className="block text-muted-foreground">
+                        <span className="block text-xs text-muted-foreground">
                           {record.purpose}
                         </span>
                         <span
@@ -376,43 +361,42 @@ export default function AssistanceSection({ employee, adding, onCloseAdd }) {
                         >
                           {status}
                         </span>
-                      </td>
+                      </Td>
 
-                      <td className="whitespace-nowrap p-3 text-right font-semibold">
+                      <Td className="whitespace-nowrap font-bold text-green-700">
                         {amount(record.amount)}
-                      </td>
+                      </Td>
 
                       {/* Nothing is shown here until money has actually
                           moved: an unpaid request has no payment to describe. */}
-                      <td className="p-3">
+                      <Td className="text-left">
                         {record.paymentDate ? (
                           <>
                             <span className="block font-semibold text-primary">
                               {record.method}
                             </span>
-                            <span className="block text-muted-foreground">
+                            <span className="block text-xs text-muted-foreground">
                               {record.account}
                             </span>
-                            <span className="block text-muted-foreground">
+                            <span className="block text-xs text-muted-foreground">
                               {formatDate(record.paymentDate)}
                             </span>
                           </>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
-                      </td>
+                      </Td>
 
-                      <td className="p-3 text-muted-foreground">
+                      <Td className="text-left text-muted-foreground">
                         {record.notes || "-"}
-                      </td>
-                    </tr>
+                      </Td>
+                    </Row>
                   );
                 })}
               </tbody>
-            </table>
-          </div>
+          </RecordTable>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t p-4 text-sm text-muted-foreground">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4 text-sm text-muted-foreground">
             <span>
               Showing {start + 1} to{" "}
               {Math.min(start + PAGE_SIZE, records.length)} of {records.length}{" "}
@@ -455,6 +439,7 @@ export default function AssistanceSection({ employee, adding, onCloseAdd }) {
           </div>
         </>
       )}
-    </div>
+      </CardContent>
+    </Card>
   );
 }
