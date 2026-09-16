@@ -228,8 +228,15 @@ export default function FinancialBenefitsSection({
   // Salary and commission are what the firm decides to pay; a loan and
   // assistance are what the employee asks for. So on My Profile the first two
   // are only read, and the other two can still be asked for.
+  //
+  // Salary has a second button that belongs to the other page: the employee
+  // cannot record their own pay, but they can ask for part of it in advance,
+  // and the firm never asks for that on their behalf.
   const firmDecides = open === "salaries" || open === "commission";
-  const showsAdd = Boolean(current.add) && (canEdit || !firmDecides);
+  const addLabel = canEdit
+    ? current.add
+    : current.selfAdd || (firmDecides ? "" : current.add);
+  const showsAdd = Boolean(addLabel);
 
   return (
     <div className="space-y-6">
@@ -273,7 +280,7 @@ export default function FinancialBenefitsSection({
               disabled={adding === open}
             >
               <Plus className="mr-2 h-4 w-4" />
-              {current.add}
+              {addLabel}
             </Button>
           )}
         </div>
@@ -287,6 +294,7 @@ export default function FinancialBenefitsSection({
           onSave={onSaveSalary}
           detailsOpen={salaryDetailsOpen}
           canEdit={canEdit}
+          advance={!canEdit}
         />
       )}
 

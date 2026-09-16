@@ -13,6 +13,10 @@ import {
   SelectValue,
   } from "@/components/ui/select";
 import SalaryHistory from "./SalaryHistory";
+import {
+  AdvanceSalaryForm,
+  AdvanceRequests,
+} from "./AdvanceSalarySection";
 import { EmptyState } from "@/components/shared/panels";
 import { Rial } from "@/components/shared/Rial";
 import { cn } from "@/lib/utils";
@@ -209,6 +213,9 @@ export default function SalariesSection({
   detailsOpen = true,
   // The firm sets the salary; on My Profile the payslip is only read.
   canEdit = true,
+  // My Profile, where the employee cannot record a payment to themselves but
+  // can ask for part of their salary in advance.
+  advance = false,
 }) {
   // Opened on what the employee is already paid, so the page shows the salary
   // in force rather than a blank form somebody has to fill in from memory.
@@ -300,6 +307,14 @@ export default function SalariesSection({
   };
 
   /* ------------------------------------------------ the payment being added */
+
+  // On My Profile the only thing that opens here is a request for an advance:
+  // an employee does not pay their own salary.
+  if (adding && advance) {
+    return (
+      <AdvanceSalaryForm employee={employee} net={net} onClose={closeAdd} />
+    );
+  }
 
   if (adding) {
     return (
@@ -670,6 +685,10 @@ export default function SalariesSection({
         )}
       </fieldset>
       )}
+
+      {/* What has been asked for out of the salary above. The firm sees its
+          own record of an advance in the payments; this is the employee's. */}
+      {advance && <AdvanceRequests employee={employee} />}
 
       {/* What has been paid, month by month */}
       <SalaryHistory />

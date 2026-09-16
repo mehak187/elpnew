@@ -23,6 +23,11 @@ export const BENEFIT_TABS = [
     // Salary is recorded here, not asked for: the form enters a salary
     // payment against the payslip above, and the history below lists them.
     add: "Add Salary",
+    // What the employee may do with the same salary on their own page. They
+    // cannot pay themselves, but they can ask for part of it early - and the
+    // firm never asks for an advance on somebody else's behalf, so this is
+    // the one place it exists.
+    selfAdd: "Request Salary Advance",
   },
   {
     // The firm decides a bonus and records it once paid, so it is kept to the
