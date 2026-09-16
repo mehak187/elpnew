@@ -407,17 +407,9 @@ export default function ClientDetails() {
               onSubmit={handleSubmit}
               className="space-y-4 sm:space-y-6"
             >
-              <SectionCard
-                title="Basic Info"
-                aside={
-                  isExisting && (
-                    <StatusDot
-                      status={status}
-                      isGood={status === "Active"}
-                    />
-                  )
-                }
-              >
+              {/* No standing beside the heading: the client's status is on the
+                  row this record was opened from, and it is a field below. */}
+              <SectionCard title="Basic Info">
                 <BasicSection
                   formData={formData}
                   clientType={clientType}

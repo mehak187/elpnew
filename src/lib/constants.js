@@ -170,6 +170,21 @@ export const INVOICE_STATUS_DOT = {
  * Oman leads the list because it is the default, and the Gulf states follow
  * since they are the common case here; the rest are alphabetical.
  */
+/** How the person named as an emergency contact is related to the employee. */
+export const EMERGENCY_RELATIONSHIPS = [
+  "Father",
+  "Mother",
+  "Husband",
+  "Wife",
+  "Son",
+  "Daughter",
+  "Brother",
+  "Sister",
+  "Relative",
+  "Friend",
+  "Other",
+];
+
 export const DEFAULT_DIAL_CODE = "+968";
 
 export const COUNTRY_DIAL_CODES = [
