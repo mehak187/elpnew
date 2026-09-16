@@ -410,7 +410,7 @@ export default function ClientDetails() {
             >
               {/* No standing beside the heading: the client's status is on the
                   row this record was opened from, and it is a field below. */}
-              <SectionCard title="Basic Info">
+              <SectionCard title="Client Information">
                 <BasicSection
                   formData={formData}
                   clientType={clientType}
