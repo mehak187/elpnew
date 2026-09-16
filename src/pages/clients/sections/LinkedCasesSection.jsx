@@ -143,15 +143,16 @@ export default function LinkedCasesSection() {
       exportValue: (row) =>
         isClosed(row)
           ? "Closed - ended at " + row.litigationLevel + " - " + row.caseStage
-          : [row.litigationLevel, row.caseStatus, row.caseStage].join(" - "),
+          : [row.litigationLevel, row.caseStage].join(" - "),
+      // A file still running says only where it is and what is happening
+      // there; saying "Active" as well adds nothing to a row that is plainly
+      // running. A closed one says where it ended.
       render: (_, row) => (
         <div className="space-y-1">
           <p className="font-semibold">{levelOf(row)}</p>
           <p className="text-xs text-muted-foreground">
-            {isClosed(row)
-              ? "Ended at " + row.litigationLevel
-              : row.caseStatus}{" "}
-            &bull; {row.caseStage}
+            {isClosed(row) && "Ended at " + row.litigationLevel + " • "}
+            {row.caseStage}
           </p>
         </div>
       ),

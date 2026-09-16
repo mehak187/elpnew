@@ -53,16 +53,11 @@ function ExpiryDate({ date }) {
         />
       )}
 
-      <span
-        className={cn(
-          "font-medium",
-          state === "valid" && "text-green-600",
-          state === "soon" && "text-red-600",
-          state === "expired" && "text-red-600"
-        )}
-      >
-        {EXPIRY_LABEL[state]}
-      </span>
+      {/* A date still in hand says nothing: only one running out or already
+          gone is worth a word. */}
+      {state !== "valid" && (
+        <span className="font-medium text-red-600">{EXPIRY_LABEL[state]}</span>
+      )}
     </p>
   );
 }
