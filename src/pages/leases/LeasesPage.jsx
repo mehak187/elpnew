@@ -238,7 +238,7 @@ export default function LeasesPage() {
     {
       // The rent for one payment, its VAT and what the two come to.
       key: "rent",
-      header: "Rental Value · VAT 5% · Total (OMR)",
+      header: "Rental Value · VAT 5% · Total",
       width: "12%",
       // Monthly rent. A lease exempt from VAT (a flat, say) shows 0.000 VAT.
       exportValue: (row) =>

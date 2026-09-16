@@ -13,14 +13,8 @@ import {
 import { expenseColumns } from "@/pages/expenses/expenseColumns";
 import InvoiceForm from "@/pages/expenses/InvoiceForm";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
-
-/** Amounts here are read against invoices, so they carry the currency and fils. */
-const omr = (amount) =>
-  "OMR " +
-  Number(amount || 0).toLocaleString("en-GB", {
-    minimumFractionDigits: 3,
-    maximumFractionDigits: 3,
-  });
+// Amounts here are read against invoices, so they carry the currency and fils.
+import { money as omr } from "@/lib/money";
 
 /**
  * Everything the firm has spent with one supplier.

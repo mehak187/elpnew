@@ -94,7 +94,7 @@ function InstallmentTable({ rows, byCheque, onCheque, editable }) {
           <tr className="border-b bg-secondary/60 text-left text-primary">
             <th className="p-3 font-semibold">No.</th>
             <th className="p-3 font-semibold">Due Date</th>
-            <th className="p-3 text-right font-semibold">Amount (OMR)</th>
+            <th className="p-3 text-right font-semibold">Amount</th>
             {byCheque && <th className="p-3 font-semibold">Cheque No.</th>}
             <th className="p-3 font-semibold">Status</th>
           </tr>
@@ -168,7 +168,7 @@ function PaymentScheduleTable({ rows, lease, bankAccounts, openNo, onOpen }) {
               <th className="p-3 font-semibold" style={{ width: "13%" }}>Installment No.</th>
               <th className="p-3 font-semibold" style={{ width: "16%" }}>Due Date / Payment Date</th>
               <th className="p-3 font-semibold" style={{ width: "15%" }}>Payment Details</th>
-              <th className="p-3 font-semibold" style={{ width: "20%" }}>Rental Amount (OMR)</th>
+              <th className="p-3 font-semibold" style={{ width: "20%" }}>Rental Amount</th>
               <th className="p-3 font-semibold" style={{ width: "20%" }}>Payment Method &amp; Details</th>
               <th className="p-3 font-semibold" style={{ width: "16%" }}>Notes</th>
             </tr>
@@ -683,7 +683,7 @@ export default function LeaseDetails() {
 
                     <Worked
                       id="detailRentWithVat"
-                      label={draft.vatApplied ? "Rental Value with 5% VAT (OMR)" : "Rental Value, VAT exempt (OMR)"}
+                      label={draft.vatApplied ? "Rental Value with 5% VAT" : "Rental Value, VAT exempt"}
                       value={Number(draft.rent) > 0 ? omr(totalOf(draft.rent, draft.vatApplied)) : ""}
                     />
 
@@ -733,7 +733,7 @@ export default function LeaseDetails() {
                     />
                     <Worked
                       id="detailVat"
-                      label="VAT per Month (OMR)"
+                      label="VAT per Month"
                       value={Number(draft.rent) > 0 ? omr(vatOf(draft.rent, draft.vatApplied)) : ""}
                     />
                   </div>

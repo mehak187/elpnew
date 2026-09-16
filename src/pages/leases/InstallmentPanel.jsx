@@ -244,10 +244,10 @@ export default function InstallmentPanel({ id, className, row, lease, branchName
         </DetailCard>
 
         <DetailCard icon={Coins} title="Amount Details">
-          <AmountLine label="Rental Amount (OMR):" value={omr(row.rentPart)} />
+          <AmountLine label="Rental Amount:" value={omr(row.rentPart)} />
           <AmountLine label={vatExempt ? "VAT (exempt):" : "VAT (5%):"} value={omr(row.vat)} />
           <div className="border-t pt-2">
-            <AmountLine label="Total Amount (OMR):" value={omr(row.amount)} strong />
+            <AmountLine label="Total Amount:" value={omr(row.amount)} strong />
           </div>
         </DetailCard>
 

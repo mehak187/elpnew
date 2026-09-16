@@ -17,14 +17,8 @@ import {
   Td,
 } from "@/components/shared/RecordTable";
 import { cn } from "@/lib/utils";
+import { money } from "@/lib/money";
 import { MONTH_NAMES, salaryHistoryRows } from "../payrollData";
-
-/** Money as it reads on a payslip: three decimals, grouped. */
-const money = (value) =>
-  Number(value || 0).toLocaleString("en-GB", {
-    minimumFractionDigits: 3,
-    maximumFractionDigits: 3,
-  });
 
 const pad = (n) => String(n).padStart(2, "0");
 

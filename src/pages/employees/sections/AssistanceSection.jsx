@@ -307,9 +307,8 @@ export default function AssistanceSection({ employee, adding, onCloseAdd }) {
                   <Th width="6%">No.</Th>
                   <Th width="12%">Request Date</Th>
                   <Th width="24%">Assistance Details</Th>
-                  <Th width="13%">
-                    Amount (<Rial />)
-                  </Th>
+                  {/* No unit in the heading: every figure below carries it. */}
+                  <Th width="13%">Amount</Th>
                   <Th width="25%">Payment Details</Th>
                   <Th width="20%">Notes</Th>
               </HeadRow>

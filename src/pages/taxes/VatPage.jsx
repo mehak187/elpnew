@@ -69,11 +69,12 @@ function VatFilingForm({ vatReturn, onCancel, onSave }) {
 
         {/* The return's figures, from the invoices - shown, not typed. */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
-          <Worked id="vatFilingOutput" label="Output VAT (OMR)" value={omr(vatReturn.output)} />
-          <Worked id="vatFilingInput" label="Input VAT (OMR)" value={omr(vatReturn.input)} />
+          {/* No unit in the labels: each figure arrives with the currency. */}
+          <Worked id="vatFilingOutput" label="Output VAT" value={omr(vatReturn.output)} />
+          <Worked id="vatFilingInput" label="Input VAT" value={omr(vatReturn.input)} />
           <Worked
             id="vatFilingNet"
-            label={"Net VAT " + netWord(vatReturn.net) + " (OMR)"}
+            label={"Net VAT " + netWord(vatReturn.net)}
             value={omr(Math.abs(vatReturn.net))}
           />
         </div>
@@ -227,7 +228,7 @@ export default function VatPage() {
     },
     {
       key: "net",
-      header: "Before VAT (OMR)",
+      header: "Before VAT",
       width: "13%",
       className: "text-right",
       cellClassName: "text-right",
@@ -237,7 +238,7 @@ export default function VatPage() {
     },
     {
       key: "vat",
-      header: "VAT (OMR)",
+      header: "VAT",
       width: "12%",
       className: "text-right",
       cellClassName: "text-right font-semibold text-primary",
@@ -247,7 +248,7 @@ export default function VatPage() {
     },
     {
       key: "total",
-      header: "Total (OMR)",
+      header: "Total",
       width: "13%",
       className: "text-right",
       cellClassName: "text-right",
@@ -291,11 +292,11 @@ export default function VatPage() {
 
       <SummaryStrip
         items={[
-          { key: "output", label: "Output VAT (OMR)", value: omr(yearOutput), note: "Charged on client invoices in " + year },
-          { key: "input", label: "Input VAT (OMR)", value: omr(yearInput), note: "Paid on purchases, rent and assets" },
+          { key: "output", label: "Output VAT", value: omr(yearOutput), note: "Charged on client invoices in " + year },
+          { key: "input", label: "Input VAT", value: omr(yearInput), note: "Paid on purchases, rent and assets" },
           {
             key: "net",
-            label: "Net VAT " + netWord(yearNet) + " (OMR)",
+            label: "Net VAT " + netWord(yearNet),
             value: omr(Math.abs(yearNet)),
             tone: yearNet > 0 ? "text-red-600" : "text-green-700",
             note: "Output VAT less input VAT",
@@ -334,9 +335,9 @@ export default function VatPage() {
               <thead>
                 <tr className="border-b bg-secondary/60 text-left text-primary">
                   <th className="p-3 font-semibold">Period</th>
-                  <th className="p-3 text-right font-semibold">Output VAT (OMR)</th>
-                  <th className="p-3 text-right font-semibold">Input VAT (OMR)</th>
-                  <th className="p-3 text-right font-semibold">Net VAT (OMR)</th>
+                  <th className="p-3 text-right font-semibold">Output VAT</th>
+                  <th className="p-3 text-right font-semibold">Input VAT</th>
+                  <th className="p-3 text-right font-semibold">Net VAT</th>
                   <th className="p-3 font-semibold">Due Date</th>
                   <th className="p-3 font-semibold">Status</th>
                   <th className="p-3 font-semibold">Filing Details</th>

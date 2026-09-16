@@ -498,13 +498,11 @@ export default function LoansSection({ adding, onCloseAdd }) {
               Installment Schedule
             </p>
             <div className="flex flex-wrap items-center gap-6">
-              <Total label={<>Total Loan Amount (<Rial />)</>}>
-                {amount(totalLoan)}
-              </Total>
-              <Total label={<>Total Paid (<Rial />)</>} tone="text-green-700">
+              <Total label="Total Loan Amount">{amount(totalLoan)}</Total>
+              <Total label="Total Paid" tone="text-green-700">
                 {amount(totalPaid)}
               </Total>
-              <Total label={<>Remaining Amount (<Rial />)</>}>
+              <Total label="Remaining Amount">
                 {amount(totalLoan - totalPaid)}
               </Total>
             </div>
@@ -523,15 +521,9 @@ export default function LoansSection({ adding, onCloseAdd }) {
                 <HeadRow>
                     <Th>No.</Th>
                     <Th>Due Date</Th>
-                    <Th>
-                      Installment Amount (<Rial />)
-                    </Th>
-                    <Th>
-                      Paid Amount (<Rial />)
-                    </Th>
-                    <Th>
-                      Balance (<Rial />)
-                    </Th>
+                    <Th>Installment Amount</Th>
+                    <Th>Paid Amount</Th>
+                    <Th>Balance</Th>
                     <Th>Status</Th>
                     <Th>Payment Date</Th>
                 </HeadRow>
@@ -607,18 +599,11 @@ export default function LoansSection({ adding, onCloseAdd }) {
                     Loan / Installment Details
                   </Th>
                   <Th width="11%">Due Date</Th>
-                  {/* One line to a column: the currency belongs beside the
-                      name, not stacked under it as a second header row. */}
-                  <Th width="13%">
-                    Installment Amount (<Rial />)
-                  </Th>
-                  <Th width="12%">
-                    Paid Amount (<Rial />)
-                  </Th>
+                  {/* No unit in the headings: every figure below carries it. */}
+                  <Th width="13%">Installment Amount</Th>
+                  <Th width="12%">Paid Amount</Th>
                   <Th width="14%">Installment Status</Th>
-                  <Th width="13%">
-                    Remaining Balance (<Rial />)
-                  </Th>
+                  <Th width="13%">Remaining Balance</Th>
                   <Th width="5%">
                     <span className="sr-only">Show instalments</span>
                   </Th>

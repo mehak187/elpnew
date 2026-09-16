@@ -92,12 +92,8 @@ export const SOURCE_SHORT = {
 
 /* --------------------------------------------------------------- amounts */
 
-/** Three decimals, thousands separated - the way Rials are written here. */
-export const amount = (value) =>
-  Number(value || 0).toLocaleString("en-US", {
-    minimumFractionDigits: 3,
-    maximumFractionDigits: 3,
-  });
+/** An amount as it is shown anywhere in the system: figure then currency. */
+export { money as amount } from "@/lib/money";
 
 /** "Aug 2026", or "Q2 2026" for a quarterly payment. */
 export const period = (record) => record.month + " " + record.year;

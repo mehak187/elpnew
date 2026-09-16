@@ -14,7 +14,7 @@ const FILTERS = {
   client: { label: "Client", match: (row, value) => row.client === value },
 };
 import { Wallet, Plus, Eye, Edit, FileText } from "lucide-react";
-import { Rial } from "@/components/shared/Rial";
+import { withRial } from "@/lib/money";
 
 const invoices = [
   { id: 1, invoice_no: "INV/2024/001", client: "ABC Holdings LLC", amount: "2,500.000", date: "2024-12-01", due_date: "2024-12-31", status: "Paid" },
@@ -27,7 +27,8 @@ const invoices = [
 const buildColumns = (onView, onDownload) => [
   { key: "invoice_no", header: "Invoice No.", width: "12%", cellClassName: "text-left font-medium" },
   { key: "client", header: "Client", width: "20%" },
-  { key: "amount", header: <>Amount (<Rial />)</>, width: "12%", className: "text-right", cellClassName: "text-right font-medium" },
+  // The figure carries the currency, so the heading does not repeat it.
+  { key: "amount", header: "Amount", width: "12%", className: "text-right", cellClassName: "text-right font-medium", render: (value) => withRial(value) },
   { key: "date", header: "Invoice Date", width: "12%" },
   { key: "due_date", header: "Due Date", width: "12%" },
   {

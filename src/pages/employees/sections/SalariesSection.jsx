@@ -117,7 +117,7 @@ function Amount({ id, label, required, value, onChange, readOnly, highlight }) {
           tabIndex={readOnly ? -1 : undefined}
           placeholder="0.000"
           className={cn(
-            "pr-12",
+            !readOnly && "pr-12",
             readOnly && "text-muted-foreground",
             readOnly && !highlight && "bg-locked",
             highlight && "border-green-600 bg-green-50 font-bold text-green-700"
@@ -125,9 +125,13 @@ function Amount({ id, label, required, value, onChange, readOnly, highlight }) {
           value={value}
           onChange={onChange}
         />
-        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-          <Rial />
-        </span>
+        {/* A figure that is typed needs the box to say what it is in; one that
+            is worked out arrives with the currency already on it. */}
+        {!readOnly && (
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+            <Rial />
+          </span>
+        )}
       </div>
     </div>
   );
@@ -158,12 +162,9 @@ function Figure({ label, value }) {
         <Input
           readOnly
           tabIndex={-1}
-          className="bg-locked pr-12 text-muted-foreground"
+          className="bg-locked text-muted-foreground"
           value={amount(value)}
         />
-        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-          <Rial />
-        </span>
       </div>
     </div>
   );
@@ -462,17 +463,12 @@ export default function SalariesSection({
                 <p className="mb-3 font-semibold text-green-700">
                   Net Salary Payable
                 </p>
-                <div className="relative">
-                  <Input
-                    readOnly
-                    tabIndex={-1}
-                    className="h-14 border-green-600 bg-white pr-12 text-2xl font-bold text-green-700"
-                    value={amount(net)}
-                  />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                    <Rial />
-                  </span>
-                </div>
+                <Input
+                  readOnly
+                  tabIndex={-1}
+                  className="h-14 border-green-600 bg-white text-2xl font-bold text-green-700"
+                  value={amount(net)}
+                />
                 <p className="mt-3 text-sm text-green-700">
                   Net amount after adding allowances and deducting deductions.
                 </p>

@@ -97,12 +97,8 @@ export const shortDate = (iso) => {
   return day + "/" + month + "/" + year;
 };
 
-/** "500.000" - Rials to three decimals. */
-export const omr = (value) =>
-  Number(value || 0).toLocaleString("en-GB", {
-    minimumFractionDigits: 3,
-    maximumFractionDigits: 3,
-  });
+/** "500.000 OMR" - an amount as it is shown anywhere in the system. */
+export { money as omr } from "@/lib/money";
 
 /** "0123 4567 89" - an account number in fours. */
 export const groupedAccountNumber = (number) =>

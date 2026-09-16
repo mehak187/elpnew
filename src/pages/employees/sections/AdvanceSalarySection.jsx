@@ -100,9 +100,8 @@ export function AdvanceSalaryForm({ employee, net, onClose }) {
           {/* Read off the salary above rather than asked for again, so the
               request is judged against the figure the office already holds. */}
           <div className="space-y-2">
-            <FieldLabel htmlFor="advance-net">
-              Net Monthly Salary (<Rial />)
-            </FieldLabel>
+            {/* Shown, not typed - so the figure itself carries the currency. */}
+            <FieldLabel htmlFor="advance-net">Net Monthly Salary</FieldLabel>
             <Input
               id="advance-net"
               value={amount(net)}
@@ -230,9 +229,8 @@ export function AdvanceRequests({ employee }) {
             <HeadRow>
               <Th width="6%">No.</Th>
               <Th width="14%">Request Date</Th>
-              <Th width="16%">
-                Requested Amount (<Rial />)
-              </Th>
+              {/* No unit in the heading: every figure below carries it. */}
+              <Th width="16%">Requested Amount</Th>
               <Th width="16%">Deducted From</Th>
               <Th width="34%">Request Details</Th>
               <Th width="14%">Status</Th>

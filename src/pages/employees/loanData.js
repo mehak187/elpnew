@@ -58,12 +58,8 @@ export function schedule(total, monthly) {
   return { months, installment: monthly, last };
 }
 
-/** Three decimals, thousands separated - the way Rials are written here. */
-export const amount = (value) =>
-  Number(value || 0).toLocaleString("en-US", {
-    minimumFractionDigits: 3,
-    maximumFractionDigits: 3,
-  });
+/** An amount as it is shown anywhere in the system: figure then currency. */
+export { money as amount } from "@/lib/money";
 
 /** "26/08/2026" */
 export const formatDate = (value) => {

@@ -269,7 +269,7 @@ export default function AssetsPage() {
     },
     {
       key: "cost",
-      header: "Cost (OMR)",
+      header: "Cost",
       width: "9%",
       className: "text-center",
       cellClassName: "text-center",
@@ -292,7 +292,6 @@ export default function AssetsPage() {
       // Worked out from the cost, the rate and the full years since purchase.
       key: "accumulated",
       header: "Accumulated Depreciation",
-      subHeader: "(OMR)",
       width: "10%",
       className: "text-center",
       cellClassName: "text-center",
@@ -303,7 +302,6 @@ export default function AssetsPage() {
     {
       key: "netBookValue",
       header: "Net Book Value",
-      subHeader: "(OMR)",
       width: "9%",
       className: "text-center",
       cellClassName: "text-center",

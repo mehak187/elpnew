@@ -248,9 +248,8 @@ export default function BonusSection({ employee, adding, onCloseAdd }) {
               <Th width="30%" note="Category / Reason">
                 Bonus Details
               </Th>
-              <Th width="16%">
-                Bonus Amount (<Rial />)
-              </Th>
+              {/* No unit in the heading: every figure below carries it. */}
+              <Th width="16%">Bonus Amount</Th>
               <Th width="34%">Notes</Th>
             </HeadRow>
             <tbody>
