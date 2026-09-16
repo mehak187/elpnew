@@ -1,39 +1,21 @@
 import { cn } from "@/lib/utils";
-
-const MASK = {
-  maskImage: "url(/images/rial.png)",
-  WebkitMaskImage: "url(/images/rial.png)",
-  maskSize: "contain",
-  WebkitMaskSize: "contain",
-  maskRepeat: "no-repeat",
-  WebkitMaskRepeat: "no-repeat",
-  maskPosition: "center",
-  WebkitMaskPosition: "center",
-};
+import { CURRENCY } from "@/lib/money";
 
 /**
- * The Rial sign, drawn rather than typed.
+ * The currency mark, written the way the active locale writes it.
  *
- * The sign has a Unicode codepoint (U+20C0) but almost no text font carries the
- * glyph, so typing it lands on a blank box, and the older U+FDFC codepoint is a
- * ligature that fonts draw as the whole word "ريال".
+ * In English that is the ISO code - OMR - which every font carries and every
+ * reader recognises; the Arabic side of the system writes the same amount as
+ * ر.ع. The mark is a component rather than a literal so the two never have to
+ * be spelled out side by side at each amount: one place decides, and the whole
+ * application follows.
  *
- * The artwork is the same file the practice's other systems use. It is applied
- * as a mask rather than shown as an image so the mark takes the colour of the
- * text it sits in - amounts are printed in red, green and grey around the
- * application, and a flat black mark beside them reads as a mistake. It is
- * sized in `em` for the same reason, so it follows the figure it belongs to.
+ * It takes the colour and size of the text it sits in, because amounts are
+ * printed in red, green and grey around the application and a mark that keeps
+ * its own colour beside them reads as a mistake.
  */
 export function Rial({ className }) {
   return (
-    <span
-      role="img"
-      aria-label="Rial"
-      style={MASK}
-      className={cn(
-        "inline-block h-[0.6em] w-[1.2em] shrink-0 translate-y-[0.06em] bg-current",
-        className
-      )}
-    />
+    <span className={cn("whitespace-nowrap", className)}>{CURRENCY}</span>
   );
 }

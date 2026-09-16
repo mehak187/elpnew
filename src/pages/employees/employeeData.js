@@ -95,9 +95,5 @@ export const netSalary = (employee) =>
   totalAllowances(employee) -
   totalDeductions(employee);
 
-/** Three decimals, thousands separated - the way Rials are written here. */
-export const amount = (value) =>
-  Number(value || 0).toLocaleString("en-US", {
-    minimumFractionDigits: 3,
-    maximumFractionDigits: 3,
-  });
+/** An amount as it is shown anywhere in the system: figure then currency. */
+export { money as amount } from "@/lib/money";

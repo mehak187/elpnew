@@ -20,7 +20,8 @@ export default function FinancialSection({
   const vatinRequired = clientType !== "Individual";
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 sm:gap-6">
+    // Three to a row, the width every form in the system is laid out on.
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
       {/* VATIN No. */}
       <div className="space-y-2">
         <Label htmlFor="vatinNo">VATIN No.{vatinRequired && " *"}</Label>

@@ -16,6 +16,7 @@ import {
 import DataTable from "@/components/shared/DataTable";
 import { Hammer, ArrowLeft, Save, Plus } from "lucide-react";
 import { Rial } from "@/components/shared/Rial";
+import { withRial } from "@/lib/money";
 
 const executionActions = [
   { id: 1, date: "2024-12-05", action: "Execution Order Filed", status: "Completed", amount: "15,000.000", notes: "Filed with execution court" },
@@ -44,7 +45,8 @@ const columns = [
       </Badge>
     )
   },
-  { key: "amount", header: <>Amount (<Rial />)</>, width: "12%", cellClassName: "text-right" },
+  // The figure carries the currency, so the heading does not repeat it.
+  { key: "amount", header: "Amount", width: "12%", className: "text-right", cellClassName: "text-right", render: (value) => withRial(value) },
   { key: "notes", header: "Notes", width: "34%", cellClassName: "text-left" },
 ];
 

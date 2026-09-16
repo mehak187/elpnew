@@ -299,7 +299,7 @@ export default function JudicialExpenseForm() {
           <div className="space-y-2">
             <Label>Payment Receipt</Label>
             {draft.receipt ? (
-              <div className="flex h-9 items-center justify-between gap-2 rounded-md bg-muted px-3">
+              <div className="flex h-9 items-center justify-between gap-2 rounded-md bg-muted/40 px-3">
                 <span className="truncate text-sm">{draft.receipt}</span>
                 <button
                   type="button"

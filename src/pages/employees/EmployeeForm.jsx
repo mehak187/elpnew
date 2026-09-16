@@ -208,12 +208,6 @@ function IconField({ icon, id, label, ...props }) {
   );
 }
 
-const STATUS_DOT = {
-  Active: "bg-green-500",
-  "On Leave": "bg-amber-500",
-  Inactive: "bg-muted-foreground",
-  Terminated: "bg-red-500",
-};
 
 /** How much of a note the field will take, shown as a count while typing. */
 const NOTES_LIMIT = 300;
@@ -1131,14 +1125,14 @@ export default function EmployeeForm({ self }) {
                           <table className="mt-4 w-full min-w-[720px] border text-sm">
                             <thead>
                               <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
-                                <th className="p-3 font-semibold">No.</th>
-                                <th className="p-3 font-semibold">
+                                <th className="border-r last:border-r-0 p-3 font-semibold">No.</th>
+                                <th className="border-r last:border-r-0 p-3 font-semibold">
                                   Upload Date
                                 </th>
-                                <th className="p-3 font-semibold">
+                                <th className="border-r last:border-r-0 p-3 font-semibold">
                                   Document Type &amp; Attachment
                                 </th>
-                                <th className="p-3 font-semibold">Notes</th>
+                                <th className="border-r last:border-r-0 p-3 font-semibold">Notes</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -1150,7 +1144,7 @@ export default function EmployeeForm({ self }) {
                                     className="border-b transition-colors last:border-0 hover:bg-primary/10"
                                   >
                                     {/* The row number opens the paper it stands for */}
-                                    <td className="p-3 align-top">
+                                    <td className="border-r last:border-r-0 p-3 align-top">
                                       <button
                                         type="button"
                                         onClick={() => openDocument(document)}
@@ -1159,10 +1153,10 @@ export default function EmployeeForm({ self }) {
                                         {index + 1}
                                       </button>
                                     </td>
-                                    <td className="whitespace-nowrap p-3 align-top">
+                                    <td className="border-r last:border-r-0 whitespace-nowrap p-3 align-top">
                                       {formatUploadedAt(document.uploadedAt)}
                                     </td>
-                                    <td className="p-3 align-top">
+                                    <td className="border-r last:border-r-0 p-3 align-top">
                                       <span className="block">
                                         {document.type}
                                       </span>
@@ -1182,7 +1176,7 @@ export default function EmployeeForm({ self }) {
                                         {document.fileName}
                                       </button>
                                     </td>
-                                    <td className="p-3 align-top text-muted-foreground">
+                                    <td className="border-r last:border-r-0 p-3 align-top text-muted-foreground">
                                       {document.notes || "-"}
                                     </td>
                                   </tr>

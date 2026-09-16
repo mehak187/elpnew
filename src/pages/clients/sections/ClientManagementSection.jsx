@@ -103,12 +103,22 @@ export default function ClientManagementSection() {
     setDraft(emptyRoles());
   };
 
-  // A branch already in the table cannot be added a second time. Said here
-  // rather than by hiding it from the list, so the reason is on screen.
-  const alreadyStaffed = mode === "add" && Boolean(teams[branchId]);
+  /**
+   * The branches this client can still be given a team at.
+   *
+   * A branch with a team is not offered again: there is one team per branch,
+   * and the way to change it is to open it from the table. Editing shows the
+   * branch it belongs to, which is not among them.
+   */
+  const available =
+    mode === "edit"
+      ? branches
+      : branches.filter((branch) => !teams[String(branch.id)]);
 
-  const canSave =
-    branchId && !alreadyStaffed && BRANCH_ROLES.every((role) => draft[role]);
+  // Every branch already staffed: there is nothing to add, only teams to open.
+  const nothingToAdd = mode === "add" && available.length === 0;
+
+  const canSave = branchId && BRANCH_ROLES.every((role) => draft[role]);
 
   const save = () => {
     if (!canSave) return;
@@ -134,8 +144,15 @@ export default function ClientManagementSection() {
       {/* The section's own heading, so the way to add to it sits on the
           same line rather than costing a row of its own. */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-        <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">Client Team</h2>
-        <Button type="button" onClick={openAdd} disabled={mode === "add"}>
+        {/* Named as the sidebar names it: the page is already one client's. */}
+        <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">Team</h2>
+        {/* ml-auto keeps it right once it wraps below the heading. */}
+        <Button
+          type="button"
+          className="ml-auto"
+          onClick={openAdd}
+          disabled={mode === "add"}
+        >
           <Plus className="mr-1.5 h-4 w-4" />
           Add Client Team
         </Button>
@@ -167,10 +184,14 @@ export default function ClientManagementSection() {
                   disabled={mode === "edit"}
                 >
                   <SelectTrigger id="managementBranch">
-                    <SelectValue placeholder="Please Select" />
+                    <SelectValue
+                      placeholder={
+                        nothingToAdd ? "No branch left" : "Please Select"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    {branches.map((branch) => (
+                    {available.map((branch) => (
                       <SelectItem key={branch.id} value={String(branch.id)}>
                         {branch.branchNumber} - {branchName(branch)}
                       </SelectItem>
@@ -193,7 +214,7 @@ export default function ClientManagementSection() {
                     <Select
                       value={draft[role] || ""}
                       onValueChange={(value) => assign(role, value)}
-                      disabled={!branchId || alreadyStaffed || !people.length}
+                      disabled={!branchId || !people.length}
                     >
                       <SelectTrigger id={fieldId}>
                         <SelectValue
@@ -219,12 +240,12 @@ export default function ClientManagementSection() {
               })}
             </div>
 
-            {alreadyStaffed && (
+            {nothingToAdd && (
               <p className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>
-                  This branch already has a Client Team. Please use the table
-                  below to edit the existing assignment.
+                  Every branch already has a team for this client. Open a branch
+                  in the table below to change the people on it.
                 </span>
               </p>
             )}
@@ -255,12 +276,17 @@ export default function ClientManagementSection() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] text-sm">
+              <table className="w-full min-w-[720px] border text-sm">
                 <thead>
-                  <tr className="border-b text-left text-sm font-semibold text-primary">
-                    <th className="p-4">Branch Name</th>
+                  <tr className="border-b bg-secondary/60 text-left text-primary">
+                    <th className="border-r p-3 font-semibold last:border-r-0">
+                      Branch Name
+                    </th>
                     {BRANCH_ROLES.map((role) => (
-                      <th key={role} className="p-4">
+                      <th
+                        key={role}
+                        className="border-r p-3 font-semibold last:border-r-0"
+                      >
                         {role}
                       </th>
                     ))}
@@ -272,7 +298,9 @@ export default function ClientManagementSection() {
                       key={branch.id}
                       className="border-b transition-colors last:border-0 hover:bg-primary/10"
                     >
-                      <td className="p-4">
+                      <td className="border-r p-3 last:border-r-0">
+                        {/* The way into an existing team: the branch name
+                            opens it in the form above. */}
                         <button
                           type="button"
                           onClick={() => openBranch(String(branch.id))}
@@ -282,7 +310,7 @@ export default function ClientManagementSection() {
                         </button>
                       </td>
                       {team.map(({ role, person }) => (
-                        <td key={role} className="p-4">
+                        <td key={role} className="border-r p-3 last:border-r-0">
                           {person ? (
                             person.name
                           ) : (

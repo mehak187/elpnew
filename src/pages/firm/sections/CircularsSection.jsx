@@ -468,28 +468,28 @@ export default function CircularsSection({ canEdit }) {
                 <EmptyState>No circulars match that search.</EmptyState>
               </div>
             ) : (
-              <table className="w-full min-w-[1000px] text-sm">
+              <table className="w-full min-w-[1000px] border text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                    <th className="p-3 font-semibold" style={{ width: "10%" }}>
+                    <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "10%" }}>
                       Circular No.
                     </th>
-                    <th className="p-3 font-semibold" style={{ width: "20%" }}>
+                    <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "20%" }}>
                       Subject / Content (Preview)
                     </th>
-                    <th className="p-3 font-semibold" style={{ width: "9%" }}>
+                    <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "9%" }}>
                       Date
                     </th>
-                    <th className="p-3 font-semibold" style={{ width: "16%" }}>
+                    <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "16%" }}>
                       Target Audience
                     </th>
-                    <th className="p-3 font-semibold" style={{ width: "14%" }}>
+                    <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "14%" }}>
                       Issued By
                     </th>
-                    <th className="p-3 font-semibold" style={{ width: "14%" }}>
+                    <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "14%" }}>
                       Acknowledgement
                     </th>
-                    <th className="p-3 font-semibold" style={{ width: "13%" }}>
+                    <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "13%" }}>
                       Status
                     </th>
                   </tr>
@@ -503,7 +503,7 @@ export default function CircularsSection({ canEdit }) {
                       {/* The number opens the circular for correction - but
                           only while it is in force. A superseded or withdrawn
                           circular is history, and history is read only. */}
-                      <td className="whitespace-nowrap p-3">
+                      <td className="border-r last:border-r-0 whitespace-nowrap p-3">
                         {canEdit && circular.status === ACTIVE ? (
                           <button
                             type="button"
@@ -522,23 +522,23 @@ export default function CircularsSection({ canEdit }) {
                         )}
                       </td>
                       {/* Enough of the circular to tell it apart, no more */}
-                      <td className="p-3 text-muted-foreground">
+                      <td className="border-r last:border-r-0 p-3 text-muted-foreground">
                         {preview(circular.content)}
                       </td>
-                      <td className="whitespace-nowrap p-3">
+                      <td className="border-r last:border-r-0 whitespace-nowrap p-3">
                         {formatDate(circular.date)}
                       </td>
                       {/* Who it is for, and at which office - one answer
                           in two parts, so they read together. */}
-                      <td className="p-3">
+                      <td className="border-r last:border-r-0 p-3">
                         <span className="block">{circular.targetGroup}</span>
                         <span className="block text-xs text-muted-foreground">
                           {branchLabelFor(circular, branches)}
                         </span>
                       </td>
-                      <td className="p-3">{circular.issuedBy}</td>
+                      <td className="border-r last:border-r-0 p-3">{circular.issuedBy}</td>
                       {/* Counted, never typed */}
-                      <td className="p-3">
+                      <td className="border-r last:border-r-0 p-3">
                         <span className="block font-semibold text-primary">
                           {acknowledgementCount(circular)} Acknowledged
                         </span>
@@ -550,15 +550,19 @@ export default function CircularsSection({ canEdit }) {
                           View Details
                         </button>
                       </td>
-                      <td className="p-3">
-                        <span
-                          className={cn(
-                            "inline-block rounded-full px-2.5 py-0.5 text-xs font-medium",
-                            STATUS_TONE[circular.status]
-                          )}
-                        >
-                          {STATUS_LABEL[circular.status]}
-                        </span>
+                      <td className="border-r last:border-r-0 p-3">
+                        {/* A circular still in force says nothing: only one
+                            that has been superseded or cancelled does. */}
+                        {circular.status !== ACTIVE && (
+                          <span
+                            className={cn(
+                              "inline-block rounded-md px-2 py-0.5 text-xs font-semibold",
+                              STATUS_TONE[circular.status]
+                            )}
+                          >
+                            {STATUS_LABEL[circular.status]}
+                          </span>
+                        )}
                         {canEdit && circular.status === ACTIVE && (
                           <button
                             type="button"
@@ -651,28 +655,28 @@ export default function CircularsSection({ canEdit }) {
         {showAudit && (
           <Card className="mt-2">
             <CardContent className="overflow-x-auto p-0">
-              <table className="w-full min-w-[640px] text-sm">
+              <table className="w-full min-w-[640px] border text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
-                    <th className="p-3 font-semibold">Date &amp; Time</th>
-                    <th className="p-3 font-semibold">Action</th>
-                    <th className="p-3 font-semibold">Circular No.</th>
-                    <th className="p-3 font-semibold">By</th>
-                    <th className="p-3 font-semibold">Detail</th>
+                    <th className="border-r last:border-r-0 p-3 font-semibold">Date &amp; Time</th>
+                    <th className="border-r last:border-r-0 p-3 font-semibold">Action</th>
+                    <th className="border-r last:border-r-0 p-3 font-semibold">Circular No.</th>
+                    <th className="border-r last:border-r-0 p-3 font-semibold">By</th>
+                    <th className="border-r last:border-r-0 p-3 font-semibold">Detail</th>
                   </tr>
                 </thead>
                 <tbody>
                   {[...audit].reverse().map((entry) => (
                     <tr key={entry.id} className="border-b last:border-0">
-                      <td className="whitespace-nowrap p-3 text-muted-foreground">
+                      <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-muted-foreground">
                         {entry.at}
                       </td>
-                      <td className="p-3 font-medium">{entry.action}</td>
-                      <td className="whitespace-nowrap p-3">
+                      <td className="border-r last:border-r-0 p-3 font-medium">{entry.action}</td>
+                      <td className="border-r last:border-r-0 whitespace-nowrap p-3">
                         {entry.circularNo}
                       </td>
-                      <td className="p-3">{entry.by}</td>
-                      <td className="p-3 text-muted-foreground">
+                      <td className="border-r last:border-r-0 p-3">{entry.by}</td>
+                      <td className="border-r last:border-r-0 p-3 text-muted-foreground">
                         {entry.detail || "-"}
                       </td>
                     </tr>

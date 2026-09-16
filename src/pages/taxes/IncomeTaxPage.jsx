@@ -139,12 +139,12 @@ function IncomeTaxForm({ record, takenYears, onCancel, onSave }) {
           />
           <Worked
             id="taxTaxableIncome"
-            label="Taxable Income (OMR)"
+            label="Taxable Income"
             value={hasFigures ? omr(taxableIncomeOf(figures)) : ""}
           />
           <Worked
             id="taxIncomeTax"
-            label={"Income Tax " + RATE_LABEL + " (OMR)"}
+            label={"Income Tax " + RATE_LABEL}
             value={hasFigures ? omr(incomeTaxOf(figures)) : ""}
           />
         </div>
@@ -245,7 +245,7 @@ export default function IncomeTaxPage() {
     },
     {
       key: "revenue",
-      header: "Revenue & Deductible Expenses (OMR)",
+      header: "Revenue & Deductible Expenses",
       width: "14%",
       exportValue: (row) => omr(row.revenue) + " - " + omr(row.expenses),
       sortValue: (row) => row.revenue,
@@ -258,7 +258,7 @@ export default function IncomeTaxPage() {
     },
     {
       key: "taxable",
-      header: "Taxable Income (OMR)",
+      header: "Taxable Income",
       width: "12%",
       exportValue: (row) => omr(row.taxable),
       sortValue: (row) => row.taxable,
@@ -266,7 +266,7 @@ export default function IncomeTaxPage() {
     },
     {
       key: "tax",
-      header: "Income Tax at " + RATE_LABEL + " (OMR)",
+      header: "Income Tax at " + RATE_LABEL,
       width: "12%",
       exportValue: (row) => omr(row.tax),
       sortValue: (row) => row.tax,
@@ -304,7 +304,7 @@ export default function IncomeTaxPage() {
     },
     {
       key: "paidAmount",
-      header: "Paid & Balance (OMR)",
+      header: "Paid & Balance",
       width: "12%",
       exportValue: (row) => omr(row.paidAmount) + " - balance " + omr(row.balance),
       sortValue: (row) => row.balance,
@@ -371,11 +371,11 @@ export default function IncomeTaxPage() {
 
       <SummaryStrip
         items={[
-          { key: "tax", label: "Income Tax (OMR)", value: omr(totalTax), note: "On every year on record" },
-          { key: "paid", label: "Paid (OMR)", value: omr(totalPaid), tone: "text-green-700", note: "Paid to the tax authority" },
+          { key: "tax", label: "Income Tax", value: omr(totalTax), note: "On every year on record" },
+          { key: "paid", label: "Paid", value: omr(totalPaid), tone: "text-green-700", note: "Paid to the tax authority" },
           {
             key: "balance",
-            label: "Balance Due (OMR)",
+            label: "Balance Due",
             value: omr(totalBalance),
             tone: totalBalance > 0 ? "text-red-600" : "text-green-700",
             note: "Tax not yet paid",

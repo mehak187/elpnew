@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import DataTable from "@/components/shared/DataTable";
 import { Truck, Plus, FileSpreadsheet } from "lucide-react";
-import { IdStatusDot } from "@/components/shared/panels";
+import { IdStatusDot, isEndedStatus } from "@/components/shared/panels";
 import { toCsv, downloadCsv } from "@/lib/csv";
 import { useSuppliers } from "@/lib/suppliers/context";
 
@@ -17,16 +17,13 @@ export default function SuppliersPage() {
 
   const columns = [
     {
-      // The dot carries the status, so the table does not need a column for it.
+      // A supplier that has stopped says so beside its number; a live one
+      // says nothing, so the table needs no status column either way.
       key: "supplierId",
       header: "Supplier ID",
       width: "14%",
       render: (value, row) => (
         <span className="inline-flex items-center gap-2">
-          <IdStatusDot
-            status={row.status}
-            tone={row.status === "Active" ? "bg-green-500" : "bg-gray-400"}
-          />
           <button
             type="button"
             onClick={() => navigate("/suppliers/" + row.id)}
@@ -34,6 +31,7 @@ export default function SuppliersPage() {
           >
             {value}
           </button>
+          <IdStatusDot status={row.status} />
         </span>
       ),
     },
@@ -133,6 +131,8 @@ export default function SuppliersPage() {
           <DataTable
             columns={columns}
             data={suppliers}
+            // A supplier no longer dealt with is kept, at the foot of the list.
+            endedRow={(row) => isEndedStatus(row.status)}
             searchPlaceholder="Ask anything..."
             showExport={false}
             enableColumnSearch={false}

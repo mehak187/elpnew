@@ -13,7 +13,7 @@ import {
 import DataTable from "@/components/shared/DataTable";
 import FormHeading from "@/components/shared/FormHeading";
 import Panel from "@/components/shared/Panel";
-import { IdStatusDot } from "@/components/shared/panels";
+import { IdStatusDot, isEndedStatus } from "@/components/shared/panels";
 import {
   Box,
   Coins,
@@ -204,7 +204,8 @@ export default function AssetsPage() {
 
   const columns = [
     {
-      // The dot says where the asset stands, so there is no status column.
+      // An asset that has been disposed of says so beside its number; one
+      // still in use says nothing, so there is no status column either way.
       key: "assetNo",
       header: "Asset No.",
       subHeader: "Branch",
@@ -213,8 +214,7 @@ export default function AssetsPage() {
         row.assetNo + " - " + row.branchLabel + " (" + ASSET_STATUS[row.state].label + ")",
       sortValue: (row) => row.assetNo,
       render: (value, row) => (
-        <div className="flex items-center gap-3">
-          <IdStatusDot status={ASSET_STATUS[row.state].label} tone={ASSET_STATUS[row.state].dot} />
+        <div className="flex items-start gap-3">
           <div>
             {/* The number opens the asset itself. */}
             <button
@@ -227,6 +227,7 @@ export default function AssetsPage() {
             </button>
             <p className="whitespace-nowrap text-primary/80">{row.branchLabel}</p>
           </div>
+          <IdStatusDot status={ASSET_STATUS[row.state].label} />
         </div>
       ),
     },
@@ -268,11 +269,12 @@ export default function AssetsPage() {
       ),
     },
     {
+      // Figures read from the right, the way a ledger is read.
       key: "cost",
-      header: "Cost (OMR)",
+      header: "Cost",
       width: "9%",
-      className: "text-center",
-      cellClassName: "text-center",
+      className: "text-right",
+      cellClassName: "text-right",
       exportValue: (row) => (row.hasCost ? omr(row.cost) : "-"),
       sortValue: (row) => (row.hasCost ? row.cost : null),
       render: (value, row) => figure(row.hasCost ? value : null),
@@ -282,8 +284,8 @@ export default function AssetsPage() {
       header: "Depreciation Rate",
       subHeader: "(Per Annum)",
       width: "9%",
-      className: "text-center",
-      cellClassName: "text-center",
+      className: "text-right",
+      cellClassName: "text-right",
       exportValue: (row) => (row.rate ? row.rate + "%" : "-"),
       sortValue: (row) => row.rate || null,
       render: (value) => (value ? <span className="text-primary/80">{value}%</span> : <Missing />),
@@ -292,10 +294,9 @@ export default function AssetsPage() {
       // Worked out from the cost, the rate and the full years since purchase.
       key: "accumulated",
       header: "Accumulated Depreciation",
-      subHeader: "(OMR)",
       width: "10%",
-      className: "text-center",
-      cellClassName: "text-center",
+      className: "text-right",
+      cellClassName: "text-right",
       disableSort: true,
       exportValue: (row) => (row.hasCost ? omr(row.accumulated) : "-"),
       render: (value) => figure(value),
@@ -303,10 +304,9 @@ export default function AssetsPage() {
     {
       key: "netBookValue",
       header: "Net Book Value",
-      subHeader: "(OMR)",
       width: "9%",
-      className: "text-center",
-      cellClassName: "text-center",
+      className: "text-right",
+      cellClassName: "text-right",
       exportValue: (row) => (row.hasCost ? omr(row.netBookValue) : "-"),
       sortValue: (row) => row.netBookValue,
       render: (value) => figure(value),
@@ -495,6 +495,8 @@ export default function AssetsPage() {
           <DataTable
             columns={columns}
             data={rows}
+            // An asset out of service is kept, at the foot of the register.
+            endedRow={(row) => isEndedStatus(ASSET_STATUS[row.state].label)}
             searchPlaceholder="Ask AI anything..."
             exportFileName="assets.csv"
             enableColumnSearch={false}

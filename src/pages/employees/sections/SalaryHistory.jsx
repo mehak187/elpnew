@@ -9,15 +9,16 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { EmptyState } from "@/components/shared/panels";
+import {
+  RecordTable,
+  HeadRow,
+  Th,
+  Row,
+  Td,
+} from "@/components/shared/RecordTable";
 import { cn } from "@/lib/utils";
+import { money } from "@/lib/money";
 import { MONTH_NAMES, salaryHistoryRows } from "../payrollData";
-
-/** Money as it reads on a payslip: three decimals, grouped. */
-const money = (value) =>
-  Number(value || 0).toLocaleString("en-GB", {
-    minimumFractionDigits: 3,
-    maximumFractionDigits: 3,
-  });
 
 const pad = (n) => String(n).padStart(2, "0");
 
@@ -99,74 +100,59 @@ export default function SalaryHistory() {
           {shown.length === 0 ? (
             <EmptyState>No salary was paid in that period.</EmptyState>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[1040px] border text-center text-sm">
-                <thead>
-                  <tr className="border-b bg-secondary/60 text-primary">
-                    <th className="border-r p-3 font-semibold">No.</th>
-                    <th className="border-r p-3 font-semibold">Month &amp; Year</th>
-                    {/* One line to a column: what it holds and what makes it
-                        up read as one heading rather than two stacked rows. */}
-                    <th className="border-r p-3 font-semibold">
-                      Salary &amp; Allowances{" "}
-                      <span className="font-normal text-muted-foreground">
-                        (Basic Salary + Total Allowances)
-                      </span>
-                    </th>
-                    <th className="border-r p-3 font-semibold">Loan Installment</th>
-                    <th className="border-r p-3 font-semibold">
-                      Administrative Deduction
-                    </th>
-                    <th className="border-r p-3 font-semibold">
-                      Amount Paid{" "}
-                      <span className="font-normal text-muted-foreground">
-                        (Net Amount)
-                      </span>
-                    </th>
-                    <th className="p-3 font-semibold">Payment Date</th>
-                  </tr>
-                </thead>
+            <RecordTable>
+                <HeadRow>
+                  <Th>No.</Th>
+                  <Th>Month &amp; Year</Th>
+                  {/* One line to a column: what it holds and what makes it
+                      up read as one heading rather than two stacked rows. */}
+                  <Th note="Basic Salary + Total Allowances">
+                    Salary &amp; Allowances
+                  </Th>
+                  <Th>Loan Installment</Th>
+                  <Th>Administrative Deduction</Th>
+                  <Th note="Net Amount">Amount Paid</Th>
+                  <Th>Payment Date</Th>
+                </HeadRow>
                 <tbody>
                   {shown.map((row, index) => {
                     const state = LOAN_STATE[row.loan.state];
 
                     return (
-                      <tr
-                        key={row.id}
-                        className="border-b align-top transition-colors last:border-0 hover:bg-primary/5"
-                      >
-                        <td className="border-r p-3 font-medium text-primary">
-                          {index + 1}
-                        </td>
-                        <td className="border-r p-3 font-medium text-primary">
+                      <Row key={row.id}>
+                        <Td className="font-medium text-primary">{index + 1}</Td>
+                        <Td className="font-medium text-primary">
                           {pad(row.month)}/{row.year}
-                        </td>
+                        </Td>
 
-                        {/* The two figures that make it, under the one they
-                            make: a total nobody can check is just a number. */}
-                        <td className="border-r p-3">
-                          <p className="font-bold text-green-700">
-                            {money(row.gross)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            ({money(row.basic)} + {money(row.allowances)})
-                          </p>
-                        </td>
-
-                        <td className="border-r p-3 text-left">
-                          <div className="flex items-start justify-between gap-2">
-                            <p className="font-bold text-primary">
-                              {money(row.loan.deducted)}
-                            </p>
-                            <span
-                              className={cn(
-                                "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
-                                state.tone
-                              )}
-                            >
-                              {state.label}
+                        {/* Read down: what the salary is, what was added to
+                            it, and what the two come to - the total last and
+                            in green, because it is the figure being checked. */}
+                        <Td className="text-left">
+                          <p className="flex items-baseline justify-between gap-3">
+                            <span className="text-muted-foreground">Salary:</span>
+                            <span className="font-medium text-primary">
+                              {money(row.basic)}
                             </span>
-                          </div>
+                          </p>
+                          <p className="flex items-baseline justify-between gap-3">
+                            <span className="text-muted-foreground">
+                              Total Allowances:
+                            </span>
+                            <span className="font-medium text-primary">
+                              {money(row.allowances)}
+                            </span>
+                          </p>
+                          <p className="mt-1 flex items-baseline justify-between gap-3 border-t pt-1 text-base font-bold text-green-700">
+                            <span>Total:</span>
+                            <span>{money(row.gross)}</span>
+                          </p>
+                        </Td>
+
+                        <Td className="text-left">
+                          <p className="font-bold text-primary">
+                            {money(row.loan.deducted)}
+                          </p>
 
                           {row.loan.state === "none" ? (
                             <LoanLine>No loan installment</LoanLine>
@@ -175,9 +161,19 @@ export default function SalaryHistory() {
                               <LoanLine>
                                 Installment: {row.loan.number} / {row.loan.count}
                               </LoanLine>
+                              {/* How much of the installment was taken, beside
+                                  the figure it describes rather than off in
+                                  the corner of the cell. */}
                               <LoanLine>
-                                Deducted: {money(row.loan.deducted)} (
-                                {state.label})
+                                Deducted: {money(row.loan.deducted)}{" "}
+                                <span
+                                  className={cn(
+                                    "ml-1 rounded-full px-2 py-0.5 text-xs font-medium",
+                                    state.tone
+                                  )}
+                                >
+                                  {state.label}
+                                </span>
                               </LoanLine>
                               {row.loan.shortfall > 0 && (
                                 <LoanLine>
@@ -194,27 +190,44 @@ export default function SalaryHistory() {
                               </LoanLine>
                             </>
                           )}
-                        </td>
+                        </Td>
 
-                        <td className="border-r p-3 text-primary">
-                          {money(row.administrative)}
-                        </td>
+                        {/* Money held back from the pay, so it is red wherever
+                            it appears - with what it was held back for beside
+                            it, because a deduction without a reason is a
+                            figure nobody can answer. */}
+                        <Td className="text-left">
+                          <p className="font-bold text-destructive">
+                            {money(row.administrative)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {row.administrativeReason || "-"}
+                          </p>
+                        </Td>
 
                         {/* What actually reached the bank, which is what the
-                            row is for - so it is the one cell that is lit. */}
-                        <td className="border-r bg-green-50/70 p-3 font-bold text-green-700">
-                          {money(row.net)}
-                        </td>
+                            row is for - so it is the one cell that is lit, and
+                            it says which account it reached. */}
+                        <Td className="bg-green-50/70 text-left">
+                          <p className="font-bold text-green-700">
+                            {money(row.net)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {row.bank}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {row.accountNo}
+                          </p>
+                        </Td>
 
-                        <td className="p-3 text-primary">
+                        <Td className="text-primary">
                           {row.paymentDate.split("-").reverse().join("/")}
-                        </td>
-                      </tr>
+                        </Td>
+                      </Row>
                     );
                   })}
                 </tbody>
-              </table>
-            </div>
+            </RecordTable>
           )}
         </CardContent>
       </Card>

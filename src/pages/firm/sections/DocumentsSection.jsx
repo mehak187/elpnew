@@ -57,22 +57,20 @@ function ExpiryDate({ date }) {
       >
         {formatDate(date)}
       </span>
-      <span
-        className={cn(
-          "inline-flex items-center gap-1.5 text-xs font-medium",
-          state === "valid" ? "text-green-600" : "text-red-600"
-        )}
-      >
-        <span
-          aria-hidden="true"
-          className={cn(
-            "h-2 w-2 shrink-0 rounded-full",
-            state === "expired" ? "bg-red-500" : "border-2 border-red-500",
-            state === "valid" && "border-0 bg-green-500"
-          )}
-        />
-        {EXPIRY_LABEL[state]}
-      </span>
+      {/* Nothing is said about a date still in hand: only one that is running
+          out or has passed is worth a mark. */}
+      {state !== "valid" && (
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-red-600">
+          <span
+            aria-hidden="true"
+            className={cn(
+              "h-2 w-2 shrink-0 rounded-full",
+              state === "expired" ? "bg-red-500" : "border-2 border-red-500"
+            )}
+          />
+          {EXPIRY_LABEL[state]}
+        </span>
+      )}
     </span>
   );
 }
@@ -292,15 +290,15 @@ export default function DocumentsSection({ canEdit }) {
               <EmptyState>No documents on file yet.</EmptyState>
             </div>
           ) : (
-            <table className="w-full min-w-[820px] text-sm">
+            <table className="w-full min-w-[820px] border text-sm">
               <thead>
                 <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
-                  <th className="p-3 font-semibold">Document ID</th>
-                  <th className="p-3 font-semibold">Branch</th>
-                  <th className="p-3 font-semibold">Document Type</th>
-                  <th className="p-3 font-semibold">Document</th>
-                  <th className="p-3 font-semibold">Expiry Date</th>
-                  <th className="p-3 font-semibold">Notes</th>
+                  <th className="border-r last:border-r-0 p-3 font-semibold">Document ID</th>
+                  <th className="border-r last:border-r-0 p-3 font-semibold">Branch</th>
+                  <th className="border-r last:border-r-0 p-3 font-semibold">Document Type</th>
+                  <th className="border-r last:border-r-0 p-3 font-semibold">Document</th>
+                  <th className="border-r last:border-r-0 p-3 font-semibold">Expiry Date</th>
+                  <th className="border-r last:border-r-0 p-3 font-semibold">Notes</th>
 
                 </tr>
               </thead>
@@ -313,7 +311,7 @@ export default function DocumentsSection({ canEdit }) {
                       className="border-b transition-colors last:border-0 hover:bg-primary/10"
                     >
                       {/* The reference opens the document for editing */}
-                      <td className="p-3">
+                      <td className="border-r last:border-r-0 p-3">
                         <button
                           type="button"
                           onClick={() => setEditing({ ...document })}
@@ -322,11 +320,11 @@ export default function DocumentsSection({ canEdit }) {
                           {document.docId}
                         </button>
                       </td>
-                      <td className="p-3">
+                      <td className="border-r last:border-r-0 p-3">
                         {branchLabel(branches, document.branchId)}
                       </td>
-                      <td className="p-3 font-medium">{document.type}</td>
-                      <td className="p-3">
+                      <td className="border-r last:border-r-0 p-3 font-medium">{document.type}</td>
+                      <td className="border-r last:border-r-0 p-3">
                         <button
                           type="button"
                           onClick={() => open(document)}
@@ -336,10 +334,10 @@ export default function DocumentsSection({ canEdit }) {
                           {document.fileName}
                         </button>
                       </td>
-                      <td className="p-3">
+                      <td className="border-r last:border-r-0 p-3">
                         <ExpiryDate date={document.expiryDate} />
                       </td>
-                      <td className="p-3 text-muted-foreground">
+                      <td className="border-r last:border-r-0 p-3 text-muted-foreground">
                         {document.notes || "-"}
                       </td>
 

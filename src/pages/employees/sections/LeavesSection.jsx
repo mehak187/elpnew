@@ -153,7 +153,13 @@ export default function LeavesSection({ employee }) {
           </Select>
         </div>
 
-        <Button type="button" onClick={() => setAdding(true)} disabled={adding}>
+        {/* ml-auto keeps it right once it wraps below the year. */}
+        <Button
+          type="button"
+          className="ml-auto"
+          onClick={() => setAdding(true)}
+          disabled={adding}
+        >
           <Plus className="mr-1.5 h-4 w-4" />
           Add New Leave
         </Button>
@@ -191,28 +197,28 @@ export default function LeavesSection({ employee }) {
               </EmptyState>
             </div>
           ) : (
-            <table className="w-full min-w-[960px] text-sm">
+            <table className="w-full min-w-[960px] border text-sm">
               <thead>
                 <tr className="border-b bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  <th className="p-3 font-semibold" style={{ width: "20%" }}>
+                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "20%" }}>
                     Leave Type
                   </th>
-                  <th className="p-3 font-semibold" style={{ width: "12%" }}>
+                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "12%" }}>
                     From Date
                   </th>
-                  <th className="p-3 font-semibold" style={{ width: "12%" }}>
+                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "12%" }}>
                     To Date
                   </th>
-                  <th className="p-3 font-semibold" style={{ width: "11%" }}>
+                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "11%" }}>
                     Number of Days
                   </th>
-                  <th className="p-3 font-semibold" style={{ width: "21%" }}>
+                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "21%" }}>
                     Reason
                   </th>
-                  <th className="p-3 font-semibold" style={{ width: "12%" }}>
+                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "12%" }}>
                     Request Status
                   </th>
-                  <th className="p-3 font-semibold" style={{ width: "12%" }}>
+                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "12%" }}>
                     Decision Date
                   </th>
                 </tr>
@@ -227,7 +233,7 @@ export default function LeavesSection({ employee }) {
                       key={leave.id}
                       className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"
                     >
-                      <td className="p-3">
+                      <td className="border-r last:border-r-0 p-3">
                         {/* An advance is annual leave charged to another year,
                             so the row says which year it came out of. */}
                         <p className="font-semibold text-primary">
@@ -237,17 +243,17 @@ export default function LeavesSection({ employee }) {
                           {leave.category}
                         </p>
                       </td>
-                      <td className="whitespace-nowrap p-3">
+                      <td className="border-r last:border-r-0 whitespace-nowrap p-3">
                         {formatDate(leave.from)}
                       </td>
-                      <td className="whitespace-nowrap p-3">
+                      <td className="border-r last:border-r-0 whitespace-nowrap p-3">
                         {formatDate(leave.to)}
                       </td>
                       {/* Counted from the two dates beside it, never stored */}
-                      <td className="p-3 font-medium">
+                      <td className="border-r last:border-r-0 p-3 font-medium">
                         {days} {days === 1 ? "Day" : "Days"}
                       </td>
-                      <td className="p-3">
+                      <td className="border-r last:border-r-0 p-3">
                         <p>{leave.reason || "-"}</p>
                         {/* Who is covering, with the request it belongs
                             to rather than in a column of its own. */}
@@ -258,7 +264,7 @@ export default function LeavesSection({ employee }) {
                         )}
                       </td>
 
-                      <td className="p-3">
+                      <td className="border-r last:border-r-0 p-3">
                         <span
                           className={cn(
                             "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
@@ -279,7 +285,7 @@ export default function LeavesSection({ employee }) {
 
                       {/* Blank until a decision is made, so nothing suggests
                           an answer that has not been given. */}
-                      <td className="whitespace-nowrap p-3">
+                      <td className="border-r last:border-r-0 whitespace-nowrap p-3">
                         {leave.decidedAt ? formatDate(leave.decidedAt) : "-"}
                       </td>
                     </tr>

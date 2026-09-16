@@ -495,7 +495,7 @@ function FinanceApproval({ invoice, supplierAccount, outstanding, onDecide }) {
           <div className="space-y-2 sm:col-span-2">
             <Label>Bank Transfer Document</Label>
             {transfer.document ? (
-              <div className="flex h-9 items-center justify-between gap-2 rounded-md bg-muted px-3">
+              <div className="flex h-9 items-center justify-between gap-2 rounded-md bg-muted/40 px-3">
                 <span className="truncate text-sm">{transfer.document}</span>
                 <button
                   type="button"
@@ -576,16 +576,16 @@ function SupplierHistoryDialog({ invoice, invoices, accountFor, onOpenChange }) 
           </EmptyState>
         ) : (
           <div className="max-h-[60vh] overflow-auto">
-            <table className="w-full min-w-[720px] text-sm">
+            <table className="w-full min-w-[720px] border text-sm">
               <thead>
                 <tr className="border-b text-left text-xs text-muted-foreground">
-                  <th className="pb-2 font-medium">Id</th>
-                  <th className="pb-2 font-medium">Supplier</th>
-                  <th className="pb-2 font-medium">Invoice Date / Number</th>
-                  <th className="pb-2 font-medium">Expense Details</th>
-                  <th className="pb-2 text-right font-medium">Invoice Amount</th>
-                  <th className="pb-2 font-medium">Invoice Status</th>
-                  <th className="pb-2 font-medium">Match</th>
+                  <th className="border-r last:border-r-0 pb-2 font-medium">Id</th>
+                  <th className="border-r last:border-r-0 pb-2 font-medium">Supplier</th>
+                  <th className="border-r last:border-r-0 pb-2 font-medium">Invoice Date / Number</th>
+                  <th className="border-r last:border-r-0 pb-2 font-medium">Expense Details</th>
+                  <th className="border-r last:border-r-0 pb-2 text-right font-medium">Invoice Amount</th>
+                  <th className="border-r last:border-r-0 pb-2 font-medium">Invoice Status</th>
+                  <th className="border-r last:border-r-0 pb-2 font-medium">Match</th>
                 </tr>
               </thead>
               <tbody>
@@ -593,7 +593,7 @@ function SupplierHistoryDialog({ invoice, invoices, accountFor, onOpenChange }) 
                   const account = accountFor(past.supplier);
                   return (
                     <tr key={past.id} className="border-b align-top transition-colors last:border-0 hover:bg-primary/10">
-                      <td className="py-2 font-medium">
+                      <td className="border-r last:border-r-0 py-2 font-medium">
                         {past.reference}
                         {past.requestNo && (
                           <span className="block text-xs font-normal text-muted-foreground">
@@ -602,7 +602,7 @@ function SupplierHistoryDialog({ invoice, invoices, accountFor, onOpenChange }) 
                         )}
                       </td>
 
-                      <td className="py-2">
+                      <td className="border-r last:border-r-0 py-2">
                         <span className="block">{past.supplier}</span>
                         <span className="block text-xs text-muted-foreground">
                           {account?.bank || "-"}
@@ -612,7 +612,7 @@ function SupplierHistoryDialog({ invoice, invoices, accountFor, onOpenChange }) 
                         </span>
                       </td>
 
-                      <td className="py-2 text-muted-foreground">
+                      <td className="border-r last:border-r-0 py-2 text-muted-foreground">
                         <span className="block">{formatDate(past.invoiceDate)}</span>
                         <span className="block text-xs">{past.invoiceNumber}</span>
                         {past.invoiceFile ? (
@@ -628,7 +628,7 @@ function SupplierHistoryDialog({ invoice, invoices, accountFor, onOpenChange }) 
                         )}
                       </td>
 
-                      <td className="py-2 text-xs text-muted-foreground">
+                      <td className="border-r last:border-r-0 py-2 text-xs text-muted-foreground">
                         {past.lines.map((line) => (
                           <span key={line.id} className="block">
                             {findType(line.typeKey)?.name} · {line.path.join(" / ")}
@@ -636,7 +636,7 @@ function SupplierHistoryDialog({ invoice, invoices, accountFor, onOpenChange }) 
                         ))}
                       </td>
 
-                      <td className="py-2 text-right">
+                      <td className="border-r last:border-r-0 py-2 text-right">
                         <span className="block font-semibold">
                           {money(invoiceTotal(past))}
                         </span>
@@ -648,13 +648,13 @@ function SupplierHistoryDialog({ invoice, invoices, accountFor, onOpenChange }) 
                         </span>
                       </td>
 
-                      <td className="py-2">
+                      <td className="border-r last:border-r-0 py-2">
                         <Badge variant={STATUS_VARIANT[past.status]}>
                           {STATUS[past.status]}
                         </Badge>
                       </td>
 
-                      <td className="py-2">
+                      <td className="border-r last:border-r-0 py-2">
                         <div className="flex flex-wrap gap-1">
                           {sameSupplier && <Badge variant="outline">Same supplier</Badge>}
                           {sameKind && <Badge variant="outline">Same expense</Badge>}
@@ -1074,47 +1074,47 @@ export default function GeneralInvoices({ partnersOnly = false }) {
                     Expenses ({invoice.lines.length})
                   </p>
                   <div className="overflow-x-auto">
-                  <table className="w-full min-w-[720px] text-sm">
+                  <table className="w-full min-w-[720px] border text-sm">
                     <thead>
                       <tr className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
-                        <th className="px-4 py-2 font-medium">#</th>
-                        <th className="px-4 py-2 font-medium">
+                        <th className="border-r last:border-r-0 px-4 py-2 font-medium">#</th>
+                        <th className="border-r last:border-r-0 px-4 py-2 font-medium">
                           <span className="inline-flex items-center gap-1.5">
                             <Building2 className="h-3.5 w-3.5" />
                             Expense Type
                           </span>
                         </th>
-                        <th className="px-4 py-2 font-medium">
+                        <th className="border-r last:border-r-0 px-4 py-2 font-medium">
                           <span className="inline-flex items-center gap-1.5">
                             <Tag className="h-3.5 w-3.5" />
                             Category
                           </span>
                         </th>
-                        <th className="px-4 py-2 font-medium">
+                        <th className="border-r last:border-r-0 px-4 py-2 font-medium">
                           <span className="inline-flex items-center gap-1.5">
                             <ListTree className="h-3.5 w-3.5" />
                             Subcategory
                           </span>
                         </th>
-                        <th className="px-4 py-2 font-medium">
+                        <th className="border-r last:border-r-0 px-4 py-2 font-medium">
                           <span className="inline-flex items-center gap-1.5">
                             <AlignLeft className="h-3.5 w-3.5" />
                             Description
                           </span>
                         </th>
-                        <th className="px-4 py-2 text-right font-medium">
+                        <th className="border-r last:border-r-0 px-4 py-2 text-right font-medium">
                           <span className="inline-flex items-center gap-1.5">
                             <Calculator className="h-3.5 w-3.5" />
                             Before VAT
                           </span>
                         </th>
-                        <th className="px-4 py-2 text-right font-medium">
+                        <th className="border-r last:border-r-0 px-4 py-2 text-right font-medium">
                           <span className="inline-flex items-center gap-1.5">
                             <Percent className="h-3.5 w-3.5" />
                             VAT
                           </span>
                         </th>
-                        <th className="px-4 py-2 text-right font-medium">
+                        <th className="border-r last:border-r-0 px-4 py-2 text-right font-medium">
                           <span className="inline-flex items-center gap-1.5">
                             <ClipboardList className="h-3.5 w-3.5" />
                             Total
@@ -1125,28 +1125,28 @@ export default function GeneralInvoices({ partnersOnly = false }) {
                     <tbody>
                       {invoice.lines.map((line, i) => (
                         <tr key={line.id} className="border-b transition-colors last:border-0 hover:bg-primary/10">
-                          <td className="px-4 py-2 text-muted-foreground">
+                          <td className="border-r last:border-r-0 px-4 py-2 text-muted-foreground">
                             {i + 1}
                           </td>
-                          <td className="px-4 py-2 font-medium">
+                          <td className="border-r last:border-r-0 px-4 py-2 font-medium">
                             {findType(line.typeKey)?.name}
                           </td>
-                          <td className="px-4 py-2 text-muted-foreground">
+                          <td className="border-r last:border-r-0 px-4 py-2 text-muted-foreground">
                             {line.path[0]}
                           </td>
-                          <td className="px-4 py-2 text-muted-foreground">
+                          <td className="border-r last:border-r-0 px-4 py-2 text-muted-foreground">
                             {line.path[1] || "-"}
                           </td>
-                          <td className="px-4 py-2 text-muted-foreground">
+                          <td className="border-r last:border-r-0 px-4 py-2 text-muted-foreground">
                             {line.description || "-"}
                           </td>
-                          <td className="px-4 py-2 text-right">
+                          <td className="border-r last:border-r-0 px-4 py-2 text-right">
                             {money(line.amountBeforeTax)}
                           </td>
-                          <td className="px-4 py-2 text-right text-muted-foreground">
+                          <td className="border-r last:border-r-0 px-4 py-2 text-right text-muted-foreground">
                             {money(line.taxAmount)}
                           </td>
-                          <td className="px-4 py-2 text-right font-semibold">
+                          <td className="border-r last:border-r-0 px-4 py-2 text-right font-semibold">
                             {money(lineTotal(line))}
                           </td>
                         </tr>

@@ -14,6 +14,14 @@ import {
   } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/panels";
 import Panel from "@/components/shared/Panel";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  RecordTable,
+  HeadRow,
+  Th,
+  Row,
+  Td,
+} from "@/components/shared/RecordTable";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { Rial } from "@/components/shared/Rial";
@@ -27,7 +35,6 @@ import { FileText,
 import { amount, formatDate } from "../loanData";
 import {
   DEFAULT_ASSISTANCE_BOOKING,
-  BENEFICIARIES,
   documentFor,
   subcategoriesOf,
   assistanceRecords,
@@ -40,7 +47,6 @@ const PAGE_SIZE = 10;
 
 const emptyDraft = {
   ...DEFAULT_ASSISTANCE_BOOKING,
-  beneficiary: "",
   amount: "",
   method: "",
   account: "",
@@ -69,7 +75,7 @@ const isImage = (name) =>
  * Cash has no account to choose, so choosing it settles the account field
  * rather than leaving a bank picker open over a payment that never touched one.
  */
-export default function AssistanceSection({ adding, onCloseAdd }) {
+export default function AssistanceSection({ employee, adding, onCloseAdd }) {
   const [records, setRecords] = useState(assistanceRecords);
   const [draft, setDraft] = useState(emptyDraft);
   const [proof, setProof] = useState(null);
@@ -80,10 +86,7 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
   // What a request needs: what it is for, who it is for, how much, and why.
   // How it will be paid is the office's business once the request is granted.
   const canSave =
-    draft.subcategory &&
-    draft.beneficiary &&
-    Number(draft.amount) > 0 &&
-    draft.notes.trim();
+    draft.subcategory && Number(draft.amount) > 0 && draft.notes.trim();
 
   const saveRecord = () => {
     if (!canSave) return;
@@ -96,7 +99,8 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
         expenseType: draft.expenseType,
         category: draft.category,
         subcategory: draft.subcategory,
-        beneficiary: draft.beneficiary,
+        // The page says who this is: whoever's record it was opened on.
+        beneficiary: employee?.name || "",
         purpose: draft.notes.trim(),
         amount: Number(draft.amount),
         method: "",
@@ -137,7 +141,9 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
         />
 
         <Panel title="Assistance Information" icon={HandHeart}>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 sm:gap-6">
+          {/* Four fields across the row, with Subcategory given the extra room
+              its upload button takes. */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,1fr)]">
             {/* Where the money comes from is not a choice: assistance is
                 booked to Employee Expenses under Assistance, always. It is
                 shown so the request says what it will be charged to. */}
@@ -233,27 +239,9 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
               )}
             </div>
 
-            {/* Who the help is for - the employee, or someone in their family. */}
-            <div className="space-y-2">
-              <FieldLabel htmlFor="assistance-beneficiary" required>
-                Beneficiary
-              </FieldLabel>
-              <Select
-                value={draft.beneficiary}
-                onValueChange={(value) => value && set("beneficiary", value)}
-              >
-                <SelectTrigger id="assistance-beneficiary">
-                  <SelectValue placeholder="Select Beneficiary" />
-                </SelectTrigger>
-                <SelectContent>
-                  {BENEFICIARIES.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Who the help is for is not asked: this is the employee's own
+                page, so the assistance is theirs. The record carries their
+                name for the office that pays it. */}
 
             <div className="space-y-2">
               <FieldLabel htmlFor="assistance-amount" required>
@@ -305,58 +293,36 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
   }
 
   return (
-    <div className="rounded-lg border">
+    <Card>
+      <CardContent className="p-4 sm:p-6">
       {records.length === 0 ? (
-        <div className="p-6">
-          <EmptyState>No assistance has been requested yet.</EmptyState>
-        </div>
+        <EmptyState>No assistance has been requested yet.</EmptyState>
       ) : (
         <>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[960px] text-sm">
-              <thead>
-                <tr className="border-b bg-secondary/60 text-left text-primary">
+          <RecordTable minWidth={960}>
+              <HeadRow>
                   {/* Widths are set here rather than left to the browser, so
                       the two columns that carry sentences get the room and
                       the dates and figures stay on one line. */}
-                  <th className="p-3 font-semibold" style={{ width: "6%" }}>
-                    No.
-                  </th>
-                  <th
-                    className="whitespace-nowrap p-3 font-semibold"
-                    style={{ width: "12%" }}
-                  >
-                    Request Date
-                  </th>
-                  <th className="p-3 font-semibold" style={{ width: "24%" }}>
-                    Assistance Details
-                  </th>
-                  <th
-                    className="whitespace-nowrap p-3 text-right font-semibold"
-                    style={{ width: "13%" }}
-                  >
-                    Amount (<Rial />)
-                  </th>
-                  <th className="p-3 font-semibold" style={{ width: "25%" }}>
-                    Payment Details
-                  </th>
-                  <th className="p-3 font-semibold" style={{ width: "20%" }}>
-                    Notes
-                  </th>
-                </tr>
-              </thead>
+                  <Th width="6%">No.</Th>
+                  <Th width="12%">Request Date</Th>
+                  <Th width="24%">Assistance Details</Th>
+                  {/* No unit in the heading: every figure below carries it. */}
+                  <Th width="13%" className="text-right">
+                    Amount
+                  </Th>
+                  <Th width="25%">Payment Details</Th>
+                  <Th width="20%">Notes</Th>
+              </HeadRow>
               <tbody>
                 {shown.map((record, index) => {
                   const status = statusOf(record);
 
                   return (
-                    <tr
-                      key={record.id}
-                      className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"
-                    >
+                    <Row key={record.id}>
                       {/* The row number opens the document the request was
                           made with, when one was attached. */}
-                      <td className="p-3 font-medium text-primary">
+                      <Td className="font-medium text-primary">
                         {record.proof ? (
                           <button
                             type="button"
@@ -374,23 +340,18 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
                         ) : (
                           start + index + 1
                         )}
-                      </td>
+                      </Td>
 
-                      <td className="whitespace-nowrap p-3">
+                      <Td className="whitespace-nowrap text-primary">
                         {formatDate(record.requestDate)}
-                      </td>
+                      </Td>
 
                       {/* What was asked for, why, and where it has got to */}
-                      <td className="p-3">
+                      <Td className="text-left">
                         <span className="block font-semibold text-primary">
                           {record.subcategory}
                         </span>
-                        {record.beneficiary && (
-                          <span className="block text-muted-foreground">
-                            For: {record.beneficiary}
-                          </span>
-                        )}
-                        <span className="block text-muted-foreground">
+                        <span className="block text-xs text-muted-foreground">
                           {record.purpose}
                         </span>
                         <span
@@ -401,43 +362,42 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
                         >
                           {status}
                         </span>
-                      </td>
+                      </Td>
 
-                      <td className="whitespace-nowrap p-3 text-right font-semibold">
+                      <Td className="whitespace-nowrap text-right font-bold text-green-700">
                         {amount(record.amount)}
-                      </td>
+                      </Td>
 
                       {/* Nothing is shown here until money has actually
                           moved: an unpaid request has no payment to describe. */}
-                      <td className="p-3">
+                      <Td className="text-left">
                         {record.paymentDate ? (
                           <>
                             <span className="block font-semibold text-primary">
                               {record.method}
                             </span>
-                            <span className="block text-muted-foreground">
+                            <span className="block text-xs text-muted-foreground">
                               {record.account}
                             </span>
-                            <span className="block text-muted-foreground">
+                            <span className="block text-xs text-muted-foreground">
                               {formatDate(record.paymentDate)}
                             </span>
                           </>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
-                      </td>
+                      </Td>
 
-                      <td className="p-3 text-muted-foreground">
+                      <Td className="text-left text-muted-foreground">
                         {record.notes || "-"}
-                      </td>
-                    </tr>
+                      </Td>
+                    </Row>
                   );
                 })}
               </tbody>
-            </table>
-          </div>
+          </RecordTable>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t p-4 text-sm text-muted-foreground">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4 text-sm text-muted-foreground">
             <span>
               Showing {start + 1} to{" "}
               {Math.min(start + PAGE_SIZE, records.length)} of {records.length}{" "}
@@ -480,6 +440,7 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
           </div>
         </>
       )}
-    </div>
+      </CardContent>
+    </Card>
   );
 }

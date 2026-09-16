@@ -67,13 +67,13 @@ export default function OverviewSection({ onNavigateSection }) {
       {/* Section 8: what each client and case has been invoiced, paid and owes */}
       <SectionCard title="Client and Case Balances" icon={Scale}>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[560px] text-sm">
+          <table className="w-full min-w-[560px] border text-sm">
             <thead>
               <tr className="border-b text-left text-xs text-muted-foreground">
-                <th className="pb-2 font-medium">Client / Case</th>
-                <th className="pb-2 text-right font-medium">Total Invoiced</th>
-                <th className="pb-2 text-right font-medium">Total Paid</th>
-                <th className="pb-2 text-right font-medium">Outstanding</th>
+                <th className="border-r last:border-r-0 pb-2 font-medium">Client / Case</th>
+                <th className="border-r last:border-r-0 pb-2 text-right font-medium">Total Invoiced</th>
+                <th className="border-r last:border-r-0 pb-2 text-right font-medium">Total Paid</th>
+                <th className="border-r last:border-r-0 pb-2 text-right font-medium">Outstanding</th>
               </tr>
             </thead>
             <tbody>
@@ -88,14 +88,14 @@ export default function OverviewSection({ onNavigateSection }) {
                 return (
                   <Fragment key={client.id}>
                     <tr className="border-b">
-                      <td className="py-2 font-medium">{client.name}</td>
-                      <td className="py-2 text-right font-semibold">
+                      <td className="border-r last:border-r-0 py-2 font-medium">{client.name}</td>
+                      <td className="border-r last:border-r-0 py-2 text-right font-semibold">
                         {money(totals.invoiced)}
                       </td>
-                      <td className="py-2 text-right text-green-600">
+                      <td className="border-r last:border-r-0 py-2 text-right text-green-600">
                         {money(totals.paid)}
                       </td>
-                      <td className="py-2 text-right text-red-600">
+                      <td className="border-r last:border-r-0 py-2 text-right text-red-600">
                         {money(totals.outstanding)}
                       </td>
                     </tr>
@@ -103,16 +103,16 @@ export default function OverviewSection({ onNavigateSection }) {
                       const perCase = caseTotals(legalCase.id, firm);
                       return (
                         <tr key={legalCase.id} className="border-b transition-colors last:border-0 hover:bg-primary/10">
-                          <td className="py-2 pl-6 text-muted-foreground">
+                          <td className="border-r last:border-r-0 py-2 pl-6 text-muted-foreground">
                             Case {legalCase.caseNo}
                           </td>
-                          <td className="py-2 text-right text-muted-foreground">
+                          <td className="border-r last:border-r-0 py-2 text-right text-muted-foreground">
                             {money(perCase.invoiced)}
                           </td>
-                          <td className="py-2 text-right text-muted-foreground">
+                          <td className="border-r last:border-r-0 py-2 text-right text-muted-foreground">
                             {money(perCase.paid)}
                           </td>
-                          <td className="py-2 text-right text-muted-foreground">
+                          <td className="border-r last:border-r-0 py-2 text-right text-muted-foreground">
                             {money(perCase.outstanding)}
                           </td>
                         </tr>

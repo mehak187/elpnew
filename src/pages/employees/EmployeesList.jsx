@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button";
 import DataTable from "@/components/shared/DataTable";
 import { Users, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { IdStatusDot } from "@/components/shared/panels";
-import { withRial } from "@/lib/money";
+import { IdStatusDot, isEndedStatus } from "@/components/shared/panels";
 import {
   employeeRecords,
   netSalary,
@@ -35,16 +34,8 @@ function Inline({ label, children, strong }) {
   );
 }
 
-/** An amount with the Rial sign after it. */
-const money = (value) => withRial(amount(value));
-
-/** Standing, shown as a dot beside the employee number. */
-const STATUS_DOT = {
-  Active: "bg-green-500",
-  "On Leave": "bg-amber-500",
-  Inactive: "bg-muted-foreground",
-  Terminated: "bg-red-500",
-};
+/** An amount as it is written everywhere: the figure, then the currency. */
+const money = (value) => amount(value);
 
 const employees = employeeRecords;
 
@@ -60,11 +51,6 @@ export default function EmployeesList() {
       width: "12%",
       render: (value, row) => (
         <span className="flex items-center gap-2">
-          {/* Standing shown as a dot, so the number keeps the column to itself */}
-          <IdStatusDot
-            status={row.status}
-            tone={STATUS_DOT[row.status] || "bg-muted-foreground"}
-          />
           <button
             type="button"
             onClick={(e) => {
@@ -75,6 +61,8 @@ export default function EmployeesList() {
           >
             {value}
           </button>
+          {/* Only somebody who has stopped working here says so. */}
+          <IdStatusDot status={row.status} />
         </span>
       ),
     },
@@ -187,6 +175,8 @@ export default function EmployeesList() {
           <DataTable
             columns={columns}
             data={employees}
+            // Anyone who has left is kept, at the foot of the list.
+            endedRow={(row) => isEndedStatus(row.status)}
             searchPlaceholder="Search employee by name, ID, department..."
             enableColumnSearch={false}
             enableSorting

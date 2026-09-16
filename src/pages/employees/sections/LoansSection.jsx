@@ -13,6 +13,14 @@ import {
   SelectValue,
   } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/panels";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  RecordTable,
+  HeadRow,
+  Th,
+  Row,
+  Td,
+} from "@/components/shared/RecordTable";
 import { cn } from "@/lib/utils";
 import { Rial } from "@/components/shared/Rial";
 import Panel from "@/components/shared/Panel";
@@ -25,11 +33,13 @@ import {
   ClipboardList,
 } from "lucide-react";
 import {
-  LOAN_BOOKING,
-  DEFAULT_LOAN_BOOKING,
-  ADDITIONAL_LOAN,
-  categoriesOf,
-  subcategoriesOf,
+  LOAN_EXPENSE_TYPE,
+  LOAN_INCREASE,
+  LOAN_PENDING,
+  LOAN_STATUS_TONE,
+  loanCategoryFor,
+  outstandingTotal,
+  pendingRequest,
   loanRecords,
   loanTotal,
   loanYear,
@@ -45,9 +55,9 @@ const NOTES_LIMIT = 300;
 
 // Three figures are asked for and everything else is counted from them:
 // how much is wanted, what comes off each month, and when the first one
-// falls due.
+// falls due. Where the loan is booked is not among them: it is settled by
+// what the employee already owes.
 const emptyDraft = {
-  ...DEFAULT_LOAN_BOOKING,
   requested: "",
   extraRequested: "",
   monthly: "",
@@ -86,9 +96,20 @@ function Total({ label, tone, children }) {
 }
 
 /** The note under a field that says where its figure came from. */
-function Hint({ children }) {
-  return <p className="text-xs text-muted-foreground">{children}</p>;
+function Hint({ className, children }) {
+  return (
+    <p className={cn("text-xs text-muted-foreground", className)}>{children}</p>
+  );
 }
+
+/**
+ * A note under a field that does not push the field around.
+ *
+ * The boxes in a row are lined up by their bottom edge, so anything hanging
+ * below one of them would lift that box above the others. This hangs in the
+ * space the grid leaves under the row instead.
+ */
+const UNDER_FIELD = "absolute left-0 top-full mt-1";
 
 /**
  * One labelled line of a loan's summary.
@@ -118,9 +139,12 @@ function Block({ title, children }) {
 /** An amount field, with the currency named in its label. */
 function AmountField({ id, label, required, hint, value, onChange, readOnly }) {
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col justify-end space-y-2">
       <FieldLabel htmlFor={id} required={required}>
-        {label} (<Rial />)
+        {label}
+        {/* A figure that is typed needs the label to say what it is in; one
+            that is worked out arrives with the currency already on it. */}
+        {!readOnly && <> (<Rial />)</>}
         {hint && (
           <Info
             className="ml-1 inline h-3.5 w-3.5 align-text-top text-muted-foreground"
@@ -148,7 +172,7 @@ function AmountField({ id, label, required, hint, value, onChange, readOnly }) {
 /** A count of months, with the unit named under it. */
 function Count({ id, label, required, unit, value, onChange }) {
   return (
-    <div className="space-y-2">
+    <div className="relative flex flex-col justify-end gap-2">
       <FieldLabel htmlFor={id} required={required}>
         {label}
       </FieldLabel>
@@ -160,7 +184,7 @@ function Count({ id, label, required, unit, value, onChange }) {
         value={value}
         onChange={onChange}
       />
-      <Hint>{unit}</Hint>
+      <Hint className={UNDER_FIELD}>{unit}</Hint>
     </div>
   );
 }
@@ -168,7 +192,7 @@ function Count({ id, label, required, unit, value, onChange }) {
 /** The date a run of instalments finishes on. Counted, never typed. */
 function Ends({ id, label, value }) {
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col justify-end space-y-2">
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <Input
         id={id}
@@ -184,7 +208,7 @@ function Ends({ id, label, value }) {
 /** A worked-out figure, shown rather than asked for. */
 function Derived({ id, label, value, hint }) {
   return (
-    <div className="space-y-2">
+    <div className="relative flex flex-col justify-end gap-2">
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <Input
         id={id}
@@ -193,7 +217,7 @@ function Derived({ id, label, value, hint }) {
         className="bg-locked text-muted-foreground"
         value={value}
       />
-      {hint && <Hint>{hint}</Hint>}
+      {hint && <Hint className={UNDER_FIELD}>{hint}</Hint>}
     </div>
   );
 }
@@ -219,15 +243,20 @@ export default function LoansSection({ adding, onCloseAdd }) {
 
   const num = (value) => Number(value || 0);
 
-  const isAdditional = draft.subcategory === ADDITIONAL_LOAN;
+  // What the employee still owes on everything approved, and therefore which
+  // of the two categories this request falls under. Neither is asked for:
+  // both follow from the loans already on the list, and a request waiting for
+  // a decision is not money in hand.
+  const outstanding = outstandingTotal(records);
+  const category = loanCategoryFor(records);
+  const isIncrease = category === LOAN_INCREASE;
 
-  // What was owed before this one. The list is newest first, so it is the
-  // total the last loan left behind - an additional loan is repaid on the
-  // whole debt, not just on the part being added now.
-  const latest = records[0];
-  const outstanding = latest ? latest.outstanding + latest.newAmount : 0;
-  const requested = num(isAdditional ? draft.extraRequested : draft.requested);
-  const totalLoan = isAdditional ? outstanding + requested : requested;
+  // One request at a time: nothing can be asked for while the office is still
+  // deciding the last one.
+  const waiting = pendingRequest(records);
+
+  const requested = num(isIncrease ? draft.extraRequested : draft.requested);
+  const totalLoan = isIncrease ? outstanding + requested : requested;
 
   // The number of months, the size of the final instalment and the day it
   // falls due all follow from the three figures above. None of them is typed,
@@ -241,21 +270,18 @@ export default function LoansSection({ adding, onCloseAdd }) {
   const totalPaid = rows.reduce((sum, row) => sum + row.paid, 0);
 
   const canSave =
-    draft.expenseType &&
-    draft.category &&
-    draft.subcategory &&
-    requested > 0 &&
-    num(draft.monthly) > 0 &&
-    draft.firstDate;
+    !waiting && requested > 0 && num(draft.monthly) > 0 && draft.firstDate;
 
   const save = () => {
     if (!canSave) return;
     setRecords((prev) => [
       {
         id: prev.reduce((max, r) => Math.max(max, r.id), 0) + 1,
-        kind: draft.subcategory,
+        kind: category,
+        // Asked for, not granted: the office decides it from its own side.
+        status: LOAN_PENDING,
         loanAmount: requested,
-        merged: isAdditional ? outstanding : 0,
+        merged: isIncrease ? outstanding : 0,
         // The office fills these in when it actually pays the loan out.
         disbursementDate: "",
         bankName: "",
@@ -285,6 +311,46 @@ export default function LoansSection({ adding, onCloseAdd }) {
   const shownYear = year || years[0];
   const shown = records.filter((record) => loanYear(record) === shownYear);
 
+  // Nothing can be asked for while a request is still being decided: a second
+  // one would be asking for the same money twice.
+  if (adding && waiting) {
+    return (
+      <div className="space-y-6">
+        <FormHeading
+          icon={HandCoins}
+          title="Add Loan Request"
+          note="Ask for a loan and see exactly how it will be repaid."
+          onBack={closeAdd}
+        />
+
+        <div
+          role="alert"
+          className="flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive"
+        >
+          <span className="relative mt-1 flex h-2.5 w-2.5 shrink-0">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-75" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-destructive" />
+          </span>
+          <span>
+            <span className="block font-semibold">
+              A loan request is already awaiting approval.
+            </span>
+            <span className="block">
+              {amount(waiting.loanAmount)} was asked for and is still being
+              decided. A new request cannot be made until then.
+            </span>
+          </span>
+        </div>
+
+        <div className="flex justify-end">
+          <Button type="button" variant="outline" onClick={closeAdd}>
+            Back to Loans
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   // Adding takes over the section: the list describes loans already running,
   // and none of it helps while a new one is being asked for.
   if (adding) {
@@ -297,122 +363,62 @@ export default function LoansSection({ adding, onCloseAdd }) {
           onBack={closeAdd}
         />
 
-        {/* Where the loan lands in the accounts. The subcategory is chosen
-            first because it decides which questions the form asks. */}
+        {/* Where the loan lands in the accounts. Neither field is a question:
+            a loan is always an employee expense, and which category it falls
+            under is read off what is still owed. */}
         <Panel title="Request Details" icon={ClipboardList}>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
             <div className="space-y-2">
-              <FieldLabel htmlFor="loan-type" required>
-                Expense Type
-              </FieldLabel>
-              <Select
-                value={draft.expenseType}
-                onValueChange={(value) =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    expenseType: value,
-                    category: "",
-                    subcategory: "",
-                  }))
-                }
-              >
-                <SelectTrigger id="loan-type">
-                  {/* Laid out inline: the trigger clamps every span child to
-                      one line with display:-webkit-box, which beats a flex
-                      utility. */}
-                  <span
-                    style={{ display: "flex" }}
-                    className="min-w-0 items-center gap-2"
-                  >
-                    <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <SelectValue placeholder="Select expense type" />
-                  </span>
-                </SelectTrigger>
-                <SelectContent>
-                  {LOAN_BOOKING.map((type) => (
-                    <SelectItem key={type.name} value={type.name}>
-                      {type.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FieldLabel htmlFor="loan-type">Expense Type</FieldLabel>
+              <Input
+                id="loan-type"
+                value={LOAN_EXPENSE_TYPE}
+                readOnly
+                tabIndex={-1}
+                className="cursor-default bg-locked text-muted-foreground"
+              />
             </div>
 
             <div className="space-y-2">
-              <FieldLabel htmlFor="loan-category" required>
-                Category
-              </FieldLabel>
-              <Select
-                value={draft.category}
-                onValueChange={(value) =>
-                  setDraft((prev) => ({ ...prev, category: value, subcategory: "" }))
-                }
-                disabled={!draft.expenseType}
-              >
-                <SelectTrigger id="loan-category">
-                  <span
-                    style={{ display: "flex" }}
-                    className="min-w-0 items-center gap-2"
-                  >
-                    <HandCoins className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <SelectValue placeholder="Select category" />
-                  </span>
-                </SelectTrigger>
-                <SelectContent>
-                  {categoriesOf(draft.expenseType).map((category) => (
-                    <SelectItem key={category.name} value={category.name}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <FieldLabel htmlFor="loan-subcategory" required>
-                Subcategory
-              </FieldLabel>
-              <Select
-                value={draft.subcategory}
-                onValueChange={(value) => set("subcategory", value)}
-                disabled={!draft.category}
-              >
-                <SelectTrigger id="loan-subcategory">
-                  <SelectValue placeholder="Select subcategory" />
-                </SelectTrigger>
-                <SelectContent>
-                  {subcategoriesOf(draft.expenseType, draft.category).map(
-                    (sub) => (
-                      <SelectItem key={sub} value={sub}>
-                        {sub}
-                      </SelectItem>
-                    )
-                  )}
-                </SelectContent>
-              </Select>
+              <FieldLabel htmlFor="loan-category">Category</FieldLabel>
+              <Input
+                id="loan-category"
+                value={category}
+                readOnly
+                tabIndex={-1}
+                className="cursor-default bg-locked text-muted-foreground"
+              />
+              <Hint>
+                {isIncrease
+                  ? "An earlier loan is still being repaid, so this request adds to it."
+                  : "Nothing is outstanding, so this is a new loan."}
+              </Hint>
             </div>
           </div>
         </Panel>
 
-        {/* Three figures are asked for; the three under them are counted. */}
+        {/* Three figures are asked for; the three under them are counted.
+            The boxes line up on their bottom edge, so a label that wraps onto
+            a second line grows upwards and leaves its box where the others
+            are; the notes underneath hang in the padding below the row. */}
         <Panel title="Loan Information" icon={HandCoins}>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+          <div className="grid grid-cols-1 items-end gap-4 pb-5 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-8 lg:grid-cols-4">
             <AmountField
               id="loan-requested"
               label="Requested Amount"
               required
-              value={isAdditional ? draft.extraRequested : draft.requested}
+              value={isIncrease ? draft.extraRequested : draft.requested}
               onChange={(e) =>
                 set(
-                  isAdditional ? "extraRequested" : "requested",
+                  isIncrease ? "extraRequested" : "requested",
                   e.target.value
                 )
               }
             />
 
-            {/* An additional loan is repaid on the whole debt, so what was
-                already owed has to be on the form that adds to it. */}
-            {isAdditional && (
+            {/* An increase is repaid on the whole debt, so what was already
+                owed has to be on the form that adds to it. */}
+            {isIncrease && (
               <>
                 <AmountField
                   id="loan-outstanding"
@@ -438,7 +444,7 @@ export default function LoansSection({ adding, onCloseAdd }) {
               onChange={(e) => set("monthly", e.target.value)}
             />
 
-            <div className="space-y-2">
+            <div className="flex flex-col justify-end space-y-2">
               <FieldLabel htmlFor="loan-first-date" required>
                 First Installment Date
               </FieldLabel>
@@ -466,7 +472,7 @@ export default function LoansSection({ adding, onCloseAdd }) {
 
             <Derived
               id="loan-last-amount"
-              label={<>Last Installment Amount (<Rial />)</>}
+              label="Last Installment Amount"
               value={plan.months ? amount(plan.last) : ""}
               hint="Calculated automatically"
             />
@@ -474,10 +480,12 @@ export default function LoansSection({ adding, onCloseAdd }) {
         </Panel>
 
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <Button variant="outline" onClick={closeAdd}>
+          {/* Plain buttons: this form sits inside the employee form, which a
+              submit button here would send instead. */}
+          <Button type="button" variant="outline" onClick={closeAdd}>
             Cancel
           </Button>
-          <Button onClick={save} disabled={!canSave}>
+          <Button type="button" onClick={save} disabled={!canSave}>
             Submit Request
           </Button>
         </div>
@@ -490,13 +498,11 @@ export default function LoansSection({ adding, onCloseAdd }) {
               Installment Schedule
             </p>
             <div className="flex flex-wrap items-center gap-6">
-              <Total label={<>Total Loan Amount (<Rial />)</>}>
-                {amount(totalLoan)}
-              </Total>
-              <Total label={<>Total Paid (<Rial />)</>} tone="text-green-700">
+              <Total label="Total Loan Amount">{amount(totalLoan)}</Total>
+              <Total label="Total Paid" tone="text-green-700">
                 {amount(totalPaid)}
               </Total>
-              <Total label={<>Remaining Amount (<Rial />)</>}>
+              <Total label="Remaining Amount">
                 {amount(totalLoan - totalPaid)}
               </Total>
             </div>
@@ -510,59 +516,44 @@ export default function LoansSection({ adding, onCloseAdd }) {
               </EmptyState>
             </div>
           ) : (
-            <div className="max-h-96 overflow-auto">
-              <table className="w-full min-w-[880px] text-center text-sm">
-                <thead className="sticky top-0 z-10 bg-secondary/60 text-primary">
-                  <tr className="border-b">
-                    <th className="p-3 font-semibold">No.</th>
-                    <th className="whitespace-nowrap p-3 font-semibold">
-                      Due Date
-                    </th>
-                    <th className="whitespace-nowrap p-3 font-semibold">
-                      Installment Amount (<Rial />)
-                    </th>
-                    <th className="whitespace-nowrap p-3 font-semibold">
-                      Paid Amount (<Rial />)
-                    </th>
-                    <th className="whitespace-nowrap p-3 font-semibold">
-                      Balance (<Rial />)
-                    </th>
-                    <th className="p-3 font-semibold">Status</th>
-                    <th className="whitespace-nowrap p-3 font-semibold">
-                      Payment Date
-                    </th>
-                  </tr>
-                </thead>
+            <div className="max-h-96 overflow-auto p-4">
+              <RecordTable minWidth={880}>
+                <HeadRow>
+                    <Th>No.</Th>
+                    <Th>Due Date</Th>
+                    <Th className="text-right">Installment Amount</Th>
+                    <Th className="text-right">Paid Amount</Th>
+                    <Th className="text-right">Balance</Th>
+                    <Th className="text-center">Status</Th>
+                    <Th>Payment Date</Th>
+                </HeadRow>
                 <tbody>
                   {rows.map((row) => (
-                    <tr
-                      key={row.no}
-                      className="border-b transition-colors last:border-0 hover:bg-primary/5"
-                    >
-                      <td className="p-3 font-medium text-primary">{row.no}</td>
-                      <td className="whitespace-nowrap p-3">
+                    <Row key={row.no}>
+                      <Td className="font-medium text-primary">{row.no}</Td>
+                      <Td className="whitespace-nowrap">
                         {formatDate(row.due)}
-                      </td>
-                      <td className="p-3">{amount(row.installment)}</td>
-                      <td className="p-3">{amount(row.paid)}</td>
-                      <td className="p-3">{amount(row.balance)}</td>
-                      <td className="p-3">
+                      </Td>
+                      <Td className="text-right">{amount(row.installment)}</Td>
+                      <Td className="text-right">{amount(row.paid)}</Td>
+                      <Td className="text-right">{amount(row.balance)}</Td>
+                      <Td className="text-center">
                         <span
                           className={cn(
-                            "inline-block rounded-full px-3 py-0.5 text-xs font-medium",
+                            "inline-block rounded-md px-3 py-1 text-xs font-semibold",
                             INSTALLMENT_STATUS_TONE[row.status]
                           )}
                         >
                           {row.status}
                         </span>
-                      </td>
-                      <td className="whitespace-nowrap p-3">
+                      </Td>
+                      <Td className="whitespace-nowrap">
                         {row.paymentDate ? formatDate(row.paymentDate) : "-"}
-                      </td>
-                    </tr>
+                      </Td>
+                    </Row>
                   ))}
                 </tbody>
-              </table>
+              </RecordTable>
             </div>
           )}
         </div>
@@ -596,44 +587,33 @@ export default function LoansSection({ adding, onCloseAdd }) {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border">
+      <Card>
+        <CardContent className="p-4 sm:p-6">
         {shown.length === 0 ? (
-          <div className="p-6">
             <EmptyState>No loans were drawn in {shownYear}.</EmptyState>
-          </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1140px] text-sm">
-              <thead>
-                <tr className="border-b bg-secondary/60 text-primary">
-                  <th className="p-3 font-semibold" style={{ width: "5%" }}>
-                    No.
-                  </th>
-                  <th className="p-3 text-left font-semibold" style={{ width: "27%" }}>
+            <RecordTable minWidth={1140}>
+              <HeadRow>
+                  <Th width="5%">No.</Th>
+                  <Th width="27%" className="text-left">
                     Loan / Installment Details
-                  </th>
-                  <th className="whitespace-nowrap p-3 font-semibold" style={{ width: "11%" }}>
-                    Due Date
-                  </th>
-                  {/* One line to a column: the currency belongs beside the
-                      name, not stacked under it as a second header row. */}
-                  <th className="p-3 font-semibold" style={{ width: "13%" }}>
-                    Installment Amount (<Rial />)
-                  </th>
-                  <th className="p-3 font-semibold" style={{ width: "12%" }}>
-                    Paid Amount (<Rial />)
-                  </th>
-                  <th className="p-3 font-semibold" style={{ width: "14%" }}>
-                    Installment Status
-                  </th>
-                  <th className="p-3 font-semibold" style={{ width: "13%" }}>
-                    Remaining Balance (<Rial />)
-                  </th>
-                  <th className="p-3" style={{ width: "5%" }}>
+                  </Th>
+                  <Th width="11%">Due Date</Th>
+                  {/* No unit in the headings: every figure below carries it. */}
+                  <Th width="13%" className="text-right">
+                    Installment Amount
+                  </Th>
+                  <Th width="12%" className="text-right">
+                    Paid Amount
+                  </Th>
+                  <Th width="14%">Installment Status</Th>
+                  <Th width="13%" className="text-right">
+                    Remaining Balance
+                  </Th>
+                  <Th width="5%">
                     <span className="sr-only">Show instalments</span>
-                  </th>
-                </tr>
-              </thead>
+                  </Th>
+              </HeadRow>
               <tbody>
                 {shown.map((record, index) => {
                   const total = loanTotal(record);
@@ -649,11 +629,9 @@ export default function LoansSection({ adding, onCloseAdd }) {
                     <Fragment key={record.id}>
                       {/* The loan itself. Nothing in the instalment columns
                           belongs to it, so nothing is put there. */}
-                      <tr className="border-b bg-green-50/70">
-                        <td className="p-3 text-center font-bold text-primary">
-                          {index + 1}
-                        </td>
-                        <td className="p-3">
+                      <Row className="bg-green-50/70">
+                        <Td className="font-bold text-primary">{index + 1}</Td>
+                        <Td className="text-left">
                           <span className="block font-bold text-primary">
                             {record.kind}
                             {record.merged > 0 && (
@@ -665,6 +643,18 @@ export default function LoansSection({ adding, onCloseAdd }) {
                           </span>
                           <Detail label="Loan Amount">
                             {amount(record.loanAmount)}
+                          </Detail>
+                          {/* Where the request has got to: it decides what the
+                              next one may be asked for, so it is on the row. */}
+                          <Detail label="Status">
+                            <span
+                              className={cn(
+                                "font-semibold",
+                                LOAN_STATUS_TONE[record.status]
+                              )}
+                            >
+                              {record.status}
+                            </span>
                           </Detail>
                           <Detail label="Disbursement Date">
                             {record.disbursementDate
@@ -682,13 +672,13 @@ export default function LoansSection({ adding, onCloseAdd }) {
                               into this loan.
                             </Detail>
                           )}
-                        </td>
-                        <td className="p-3 text-center text-muted-foreground">-</td>
-                        <td className="p-3 text-center text-muted-foreground">-</td>
-                        <td className="p-3 text-center text-muted-foreground">-</td>
-                        <td className="p-3 text-center text-muted-foreground">-</td>
-                        <td className="p-3 text-center text-muted-foreground">-</td>
-                        <td className="p-3 text-center">
+                        </Td>
+                        <Td className="text-center text-muted-foreground">-</Td>
+                        <Td className="text-right text-muted-foreground">-</Td>
+                        <Td className="text-right text-muted-foreground">-</Td>
+                        <Td className="text-center text-muted-foreground">-</Td>
+                        <Td className="text-right text-muted-foreground">-</Td>
+                        <Td className="text-center">
                           <button
                             type="button"
                             onClick={() => toggle(record.id)}
@@ -706,31 +696,26 @@ export default function LoansSection({ adding, onCloseAdd }) {
                                 : "Show instalments"}
                             </span>
                           </button>
-                        </td>
-                      </tr>
+                        </Td>
+                      </Row>
 
                       {open &&
                         rows.map((row) => (
-                          <tr
-                            key={record.id + "-" + row.no}
-                            className="border-b transition-colors hover:bg-primary/5"
-                          >
-                            <td className="p-3 text-center text-muted-foreground">
+                          <Row key={record.id + "-" + row.no}>
+                            <Td className="text-muted-foreground">
                               {index + 1}.{row.no}
-                            </td>
-                            <td className="p-3 font-medium text-primary">
+                            </Td>
+                            <Td className="text-left font-medium text-primary">
                               Installment {row.no} of {row.of}
-                            </td>
-                            <td className="whitespace-nowrap p-3 text-center">
+                            </Td>
+                            <Td className="whitespace-nowrap">
                               {formatDate(row.due)}
-                            </td>
-                            <td className="p-3 text-center">
+                            </Td>
+                            <Td className="text-right">
                               {amount(row.installment)}
-                            </td>
-                            <td className="p-3 text-center">
-                              {amount(row.paid)}
-                            </td>
-                            <td className="p-3 text-center">
+                            </Td>
+                            <Td className="text-right">{amount(row.paid)}</Td>
+                            <Td className="text-center">
                               <span
                                 className={cn(
                                   "inline-block rounded-md px-3 py-1 text-xs font-semibold",
@@ -739,21 +724,21 @@ export default function LoansSection({ adding, onCloseAdd }) {
                               >
                                 {row.status}
                               </span>
-                            </td>
-                            <td className="p-3 text-center font-medium">
+                            </Td>
+                            <Td className="text-right font-medium">
                               {amount(row.remaining)}
-                            </td>
-                            <td className="p-3" />
-                          </tr>
+                            </Td>
+                            <Td />
+                          </Row>
                         ))}
                     </Fragment>
                   );
                 })}
               </tbody>
-            </table>
-          </div>
+            </RecordTable>
         )}
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

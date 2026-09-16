@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import DataTable from "@/components/shared/DataTable";
 import ActiveFilters from "@/components/shared/ActiveFilters";
+import { IdStatusDot, isEndedStatus } from "@/components/shared/panels";
 import { Scale, Plus, Eye, Edit } from "lucide-react";
 import { useListFilter } from "@/lib/useListFilter";
 import { dayOffset, daysUntil } from "@/pages/dashboard/dashboardData";
@@ -55,7 +56,21 @@ const STAGE_VARIANT = {
 };
 
 const columns = [
-  { key: "case_no", header: "Case No.", width: "10%", cellClassName: "text-left font-medium" },
+  {
+    // A case still running says nothing beside its number; a closed one says
+    // so, which is why there is no status column of its own.
+    key: "case_no",
+    header: "Case No.",
+    width: "12%",
+    cellClassName: "text-left font-medium",
+    exportValue: (row) => row.case_no + " (" + row.status + ")",
+    render: (value, row) => (
+      <span className="flex flex-wrap items-center gap-2">
+        {value}
+        <IdStatusDot status={row.status} />
+      </span>
+    ),
+  },
   { key: "client", header: "Client", width: "18%" },
   {
     key: "case_type",
@@ -74,16 +89,6 @@ const columns = [
       <Badge
         variant={STAGE_VARIANT[value] || "outline"}
       >
-        {value}
-      </Badge>
-    )
-  },
-  {
-    key: "status",
-    header: "Status",
-    width: "10%",
-    render: (value) => (
-      <Badge variant={value === "Active" ? "success" : "secondary"}>
         {value}
       </Badge>
     )
@@ -154,6 +159,8 @@ export default function LitigationList() {
           <DataTable
             columns={columns}
             data={visibleCases}
+            // A closed case is kept, under the ones still running.
+            endedRow={(row) => isEndedStatus(row.status)}
             searchPlaceholder="Search cases..."
             currentPage={currentPage}
             totalPages={Math.ceil(visibleCases.length / pageSize)}

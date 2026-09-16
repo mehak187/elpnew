@@ -192,16 +192,16 @@ export function CasesReceivedByClient() {
       )}
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] text-sm">
+        <table className="w-full min-w-[640px] border text-sm">
           <thead>
-            <tr className="border-b text-left text-xs text-muted-foreground">
-              <th className="pb-2 font-medium">Client</th>
-              <th className="pb-2 text-right font-medium">Selected Period</th>
-              <th className="pb-2 text-right font-medium">This Month</th>
-              <th className="pb-2 text-right font-medium">Last Month</th>
-              <th className="pb-2 text-right font-medium">This Year</th>
-              <th className="pb-2 text-right font-medium">Change</th>
-              <th className="pb-2 text-right font-medium">Active</th>
+            <tr className="border-b bg-secondary/60 text-left text-primary">
+              <th className="border-r last:border-r-0 p-3 font-semibold">Client</th>
+              <th className="border-r last:border-r-0 p-3 text-right font-semibold">Selected Period</th>
+              <th className="border-r last:border-r-0 p-3 text-right font-semibold">This Month</th>
+              <th className="border-r last:border-r-0 p-3 text-right font-semibold">Last Month</th>
+              <th className="border-r last:border-r-0 p-3 text-right font-semibold">This Year</th>
+              <th className="border-r last:border-r-0 p-3 text-right font-semibold">Change</th>
+              <th className="border-r last:border-r-0 p-3 text-right font-semibold">Active</th>
             </tr>
           </thead>
           <tbody>
@@ -211,15 +211,15 @@ export function CasesReceivedByClient() {
                 onClick={() => navigate("/litigation")}
                 className="cursor-pointer border-b last:border-0 hover:bg-muted/50"
               >
-                <td className="py-2 font-medium">{row.client}</td>
-                <td className="py-2 text-right font-semibold">{row.current}</td>
-                <td className="py-2 text-right text-muted-foreground">{row.thisMonth}</td>
-                <td className="py-2 text-right text-muted-foreground">{row.lastMonth}</td>
-                <td className="py-2 text-right text-muted-foreground">{row.thisYear}</td>
-                <td className="py-2 text-right">
+                <td className="border-r last:border-r-0 p-3 font-medium">{row.client}</td>
+                <td className="border-r last:border-r-0 p-3 text-right font-semibold">{row.current}</td>
+                <td className="border-r last:border-r-0 p-3 text-right text-muted-foreground">{row.thisMonth}</td>
+                <td className="border-r last:border-r-0 p-3 text-right text-muted-foreground">{row.lastMonth}</td>
+                <td className="border-r last:border-r-0 p-3 text-right text-muted-foreground">{row.thisYear}</td>
+                <td className="border-r last:border-r-0 p-3 text-right">
                   <ChangeBadge change={row.change} />
                 </td>
-                <td className="py-2 text-right">{row.activeCases}</td>
+                <td className="border-r last:border-r-0 p-3 text-right">{row.activeCases}</td>
               </tr>
             ))}
           </tbody>

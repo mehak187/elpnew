@@ -6,6 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/shared/panels";
 import FormHeading from "@/components/shared/FormHeading";
+import {
+  RecordTable,
+  HeadRow,
+  Th,
+  Row,
+  Td,
+} from "@/components/shared/RecordTable";
 import { Send, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -135,70 +142,51 @@ export default function GeneralRequestSection({ employee }) {
           {mine.length === 0 ? (
             <EmptyState>No requests have been submitted yet.</EmptyState>
           ) : (
-            <div className="overflow-x-auto rounded-lg border">
-              <table className="w-full min-w-[980px] text-sm">
-                <thead>
-                  <tr className="border-b bg-secondary/60 text-left text-primary">
-                    <th className="p-3 font-semibold" style={{ width: "4%" }}>
-                      #
-                    </th>
-                    <th className="p-3 font-semibold" style={{ width: "13%" }}>
-                      Request No.
-                    </th>
-                    <th className="p-3 font-semibold" style={{ width: "13%" }}>
-                      Subject
-                    </th>
-                    <th className="p-3 font-semibold" style={{ width: "22%" }}>
-                      Details
-                    </th>
-                    <th className="p-3 font-semibold" style={{ width: "11%" }}>
-                      Request Date
-                    </th>
-                    <th className="p-3 font-semibold" style={{ width: "10%" }}>
-                      Status
-                    </th>
-                    <th className="p-3 font-semibold" style={{ width: "15%" }}>
-                      Remarks
-                    </th>
-                    <th className="p-3 font-semibold" style={{ width: "12%" }}>
-                      Reviewed By
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mine.map((request, index) => (
-                    <tr
-                      key={request.id}
-                      className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"
-                    >
-                      <td className="p-3">{index + 1}</td>
-                      <td className="whitespace-nowrap p-3 font-medium text-primary">
-                        {request.requestNo}
-                      </td>
-                      <td className="p-3">{request.subject}</td>
-                      <td className="p-3">{request.details}</td>
-                      <td className="whitespace-nowrap p-3">
-                        {shortDate(request.date)}
-                      </td>
-                      <td className="p-3">
-                        <span
-                          className={cn(
-                            "inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium",
-                            REQUEST_STATUS_TONE[request.status]
-                          )}
-                        >
-                          {request.status}
-                        </span>
-                      </td>
-                      {/* Blank until someone has decided, so nothing
-                          suggests an answer that has not been given. */}
-                      <td className="p-3">{request.remarks || "-"}</td>
-                      <td className="p-3">{request.reviewedBy || "-"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <RecordTable minWidth={980}>
+              <HeadRow>
+                <Th width="4%">#</Th>
+                <Th width="13%">Request No.</Th>
+                <Th width="13%">Subject</Th>
+                <Th width="22%">Details</Th>
+                <Th width="11%">Request Date</Th>
+                <Th width="10%">Status</Th>
+                <Th width="15%">Remarks</Th>
+                <Th width="12%">Reviewed By</Th>
+              </HeadRow>
+              <tbody>
+                {mine.map((request, index) => (
+                  <Row key={request.id}>
+                    <Td className="font-medium text-primary">{index + 1}</Td>
+                    <Td className="whitespace-nowrap font-medium text-primary">
+                      {request.requestNo}
+                    </Td>
+                    <Td className="text-left">{request.subject}</Td>
+                    <Td className="text-left">{request.details}</Td>
+                    <Td className="whitespace-nowrap">
+                      {shortDate(request.date)}
+                    </Td>
+                    <Td>
+                      <span
+                        className={cn(
+                          "inline-block whitespace-nowrap rounded-md px-3 py-1 text-xs font-semibold",
+                          REQUEST_STATUS_TONE[request.status]
+                        )}
+                      >
+                        {request.status}
+                      </span>
+                    </Td>
+                    {/* Blank until someone has decided, so nothing
+                        suggests an answer that has not been given. */}
+                    <Td className="text-left text-muted-foreground">
+                      {request.remarks || "-"}
+                    </Td>
+                    <Td className="text-muted-foreground">
+                      {request.reviewedBy || "-"}
+                    </Td>
+                  </Row>
+                ))}
+              </tbody>
+            </RecordTable>
           )}
         </CardContent>
       </Card>

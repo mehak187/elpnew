@@ -89,14 +89,14 @@ const draftFrom = (lease) =>
 function InstallmentTable({ rows, byCheque, onCheque, editable }) {
   return (
     <div className="overflow-x-auto rounded-lg border">
-      <table className="w-full min-w-[640px] text-sm">
+      <table className="w-full min-w-[640px] border text-sm">
         <thead>
           <tr className="border-b bg-secondary/60 text-left text-primary">
-            <th className="p-3 font-semibold">No.</th>
-            <th className="p-3 font-semibold">Due Date</th>
-            <th className="p-3 text-right font-semibold">Amount (OMR)</th>
-            {byCheque && <th className="p-3 font-semibold">Cheque No.</th>}
-            <th className="p-3 font-semibold">Status</th>
+            <th className="border-r last:border-r-0 p-3 font-semibold">No.</th>
+            <th className="border-r last:border-r-0 p-3 font-semibold">Due Date</th>
+            <th className="border-r last:border-r-0 p-3 text-right font-semibold">Amount</th>
+            {byCheque && <th className="border-r last:border-r-0 p-3 font-semibold">Cheque No.</th>}
+            <th className="border-r last:border-r-0 p-3 font-semibold">Status</th>
           </tr>
         </thead>
         <tbody>
@@ -108,11 +108,11 @@ function InstallmentTable({ rows, byCheque, onCheque, editable }) {
                 row.isNext && "bg-blue-50/60"
               )}
             >
-              <td className="p-3">{row.no}</td>
-              <td className="whitespace-nowrap p-3">{shortDate(row.due)}</td>
-              <td className="p-3 text-right font-semibold">{omr(row.amount)}</td>
+              <td className="border-r last:border-r-0 p-3">{row.no}</td>
+              <td className="border-r last:border-r-0 whitespace-nowrap p-3">{shortDate(row.due)}</td>
+              <td className="border-r last:border-r-0 p-3 text-right font-semibold">{omr(row.amount)}</td>
               {byCheque && (
-                <td className="p-3">
+                <td className="border-r last:border-r-0 p-3">
                   {editable ? (
                     <Input
                       id={"chequeNo-" + row.no}
@@ -127,7 +127,7 @@ function InstallmentTable({ rows, byCheque, onCheque, editable }) {
                   )}
                 </td>
               )}
-              <td className="p-3">
+              <td className="border-r last:border-r-0 p-3">
                 <span
                   className={cn(
                     "inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium",
@@ -162,15 +162,15 @@ function PaymentScheduleTable({ rows, lease, bankAccounts, openNo, onOpen }) {
   return (
     <div className="space-y-4">
       <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full min-w-250 text-sm">
+        <table className="w-full min-w-250 border text-sm">
           <thead>
             <tr className="border-b bg-secondary/60 text-left text-primary">
-              <th className="p-3 font-semibold" style={{ width: "13%" }}>Installment No.</th>
-              <th className="p-3 font-semibold" style={{ width: "16%" }}>Due Date / Payment Date</th>
-              <th className="p-3 font-semibold" style={{ width: "15%" }}>Payment Details</th>
-              <th className="p-3 font-semibold" style={{ width: "20%" }}>Rental Amount (OMR)</th>
-              <th className="p-3 font-semibold" style={{ width: "20%" }}>Payment Method &amp; Details</th>
-              <th className="p-3 font-semibold" style={{ width: "16%" }}>Notes</th>
+              <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "13%" }}>Installment No.</th>
+              <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "16%" }}>Due Date / Payment Date</th>
+              <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "15%" }}>Payment Details</th>
+              <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "20%" }}>Rental Amount</th>
+              <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "20%" }}>Payment Method &amp; Details</th>
+              <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "16%" }}>Notes</th>
             </tr>
           </thead>
           <tbody>
@@ -185,7 +185,7 @@ function PaymentScheduleTable({ rows, lease, bankAccounts, openNo, onOpen }) {
                     openNo === row.no && "bg-primary/5"
                   )}
                 >
-                  <td className="p-3">
+                  <td className="border-r last:border-r-0 p-3">
                     <span className="inline-flex items-center gap-2 whitespace-nowrap">
                       <span
                         title={status.label}
@@ -203,7 +203,7 @@ function PaymentScheduleTable({ rows, lease, bankAccounts, openNo, onOpen }) {
                     </span>
                   </td>
 
-                  <td className="p-3">
+                  <td className="border-r last:border-r-0 p-3">
                     {row.payment ? (
                       <>
                         <p className="text-muted-foreground">Payment Date:</p>
@@ -221,13 +221,13 @@ function PaymentScheduleTable({ rows, lease, bankAccounts, openNo, onOpen }) {
                     )}
                   </td>
 
-                  <td className="p-3">
+                  <td className="border-r last:border-r-0 p-3">
                     <p>{expenseTypeName(booking.typeKey)}</p>
                     <p>{booking.path[0] || "-"}</p>
                     <p>{booking.path[1] || "-"}</p>
                   </td>
 
-                  <td className="p-3">
+                  <td className="border-r last:border-r-0 p-3">
                     <AmountLine label="Rental Amount" value={omr(row.rentPart)} />
                     <AmountLine
                       label={lease.vatApplied === false ? "VAT (exempt)" : "VAT (5%)"}
@@ -236,7 +236,7 @@ function PaymentScheduleTable({ rows, lease, bankAccounts, openNo, onOpen }) {
                     <AmountLine label="Total Amount" value={omr(row.amount)} strong />
                   </td>
 
-                  <td className="p-3">
+                  <td className="border-r last:border-r-0 p-3">
                     <p className="font-semibold text-primary">{lease.method || "-"}</p>
                     {paymentFacts(lease, row, bankAccounts, rows.length).map((fact) => (
                       <p key={fact.label}>
@@ -245,7 +245,7 @@ function PaymentScheduleTable({ rows, lease, bankAccounts, openNo, onOpen }) {
                     ))}
                   </td>
 
-                  <td className="p-3 text-muted-foreground">{row.note || "-"}</td>
+                  <td className="border-r last:border-r-0 p-3 text-muted-foreground">{row.note || "-"}</td>
                 </tr>
               );
             })}
@@ -683,7 +683,7 @@ export default function LeaseDetails() {
 
                     <Worked
                       id="detailRentWithVat"
-                      label={draft.vatApplied ? "Rental Value with 5% VAT (OMR)" : "Rental Value, VAT exempt (OMR)"}
+                      label={draft.vatApplied ? "Rental Value with 5% VAT" : "Rental Value, VAT exempt"}
                       value={Number(draft.rent) > 0 ? omr(totalOf(draft.rent, draft.vatApplied)) : ""}
                     />
 
@@ -733,7 +733,7 @@ export default function LeaseDetails() {
                     />
                     <Worked
                       id="detailVat"
-                      label="VAT per Month (OMR)"
+                      label="VAT per Month"
                       value={Number(draft.rent) > 0 ? omr(vatOf(draft.rent, draft.vatApplied)) : ""}
                     />
                   </div>

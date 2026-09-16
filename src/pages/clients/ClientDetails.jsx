@@ -48,8 +48,17 @@ import MergeSection from "./sections/MergeSection";
  */
 const SECTIONS = [
   {
+    // What the client looks like at a glance comes first; the record behind
+    // it follows. Each item is named by what it holds - the sidebar is
+    // already inside one client, so "Client" in every label said nothing.
+    key: "analytics",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    existingOnly: true,
+  },
+  {
     key: "info",
-    label: "Client Information",
+    label: "Information",
     icon: User,
     form: true,
     required: (formData, clientType) => [
@@ -72,15 +81,14 @@ const SECTIONS = [
       "emailNotification",
     ],
   },
-  {
-    // Everything the firm's own dashboard says, about one client: the
-    // same panels, bars and tiles, so neither has to be learnt twice.
-    key: "analytics",
-    label: "Client Dashboard",
-    icon: LayoutDashboard,
-    existingOnly: true,
-  },
   { key: "cases", label: "Cases", icon: Briefcase, existingOnly: true },
+  {
+    key: "management",
+    label: "Team",
+    icon: Users,
+    existingOnly: true,
+    ownsHeader: true,
+  },
   {
     key: "documents",
     label: "Documents",
@@ -89,15 +97,8 @@ const SECTIONS = [
     ownsHeader: true,
   },
   {
-    key: "management",
-    label: "Client Team",
-    icon: Users,
-    existingOnly: true,
-    ownsHeader: true,
-  },
-  {
     key: "contracts",
-    label: "Client Contracts",
+    label: "Contracts",
     icon: FileSignature,
     existingOnly: true,
     ownsHeader: true,
@@ -308,14 +309,13 @@ export default function ClientDetails() {
   };
 
   // Whatever this client has absorbed travels in its name, so the old name
-  // still finds the records that came in under it.
+  // still finds the records that came in under it. The client's number is not
+  // in the heading: a person is known here by name, and a number beside it
+  // only belongs where files are numbered - in Litigation.
   const title = isExisting
-    ? [
-        record?.clientNo,
-        clientDisplayName(clients, record) || formData.englishName,
-      ]
-        .filter(Boolean)
-        .join(" : ") || "Client Details"
+    ? clientDisplayName(clients, record) ||
+      formData.englishName ||
+      "Client Details"
     : "Add New Client";
 
   return (
@@ -409,7 +409,7 @@ export default function ClientDetails() {
             >
               {/* No standing beside the heading: the client's status is on the
                   row this record was opened from, and it is a field below. */}
-              <SectionCard title="Basic Info">
+              <SectionCard title="Client Information">
                 <BasicSection
                   formData={formData}
                   clientType={clientType}

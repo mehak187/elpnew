@@ -2,6 +2,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/panels";
+import {
+  RecordTable,
+  HeadRow,
+  Th,
+  Row,
+  Td,
+} from "@/components/shared/RecordTable";
 import FormHeading from "@/components/shared/FormHeading";
 import TabBar from "@/components/shared/TabBar";
 import { Plus, Eye, EyeOff } from "lucide-react";
@@ -19,6 +26,7 @@ import CommissionForm from "@/pages/firm/sections/CommissionForm";
 import { useClients } from "@/lib/clients/context";
 
 import SalariesSection from "./SalariesSection";
+import BonusSection from "./BonusSection";
 import LoansSection from "./LoansSection";
 import AssistanceSection from "./AssistanceSection";
 import { BENEFIT_TABS } from "./benefitTabs";
@@ -103,43 +111,36 @@ function CommissionTab({ employee, adding, onCloseAdd }) {
         </EmptyState>
       ) : (
         <Card>
-          <CardContent className="overflow-x-auto p-0">
-            <table className="w-full min-w-[1080px] text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  <th className="p-3 font-semibold">Commission No.</th>
-                  <th className="p-3 font-semibold">Client</th>
-                  <th className="p-3 font-semibold">Beneficiary</th>
-                  <th className="whitespace-nowrap p-3 font-semibold">
-                    Month &amp; Year
-                  </th>
-                  <th className="p-3 font-semibold">Commission Type</th>
-                  <th className="p-3 font-semibold">
-                    Legal Fees (Before VAT) &amp; Commission
-                  </th>
-                  <th className="p-3 font-semibold">Period</th>
-                </tr>
-              </thead>
+          <CardContent className="p-4 sm:p-6">
+            <RecordTable minWidth={1080}>
+              <HeadRow>
+                <Th>Commission No.</Th>
+                <Th>Client</Th>
+                <Th>Beneficiary</Th>
+                <Th>Month &amp; Year</Th>
+                <Th>Commission Type</Th>
+                <Th note="Before VAT">Legal Fees &amp; Commission</Th>
+                <Th>Period</Th>
+              </HeadRow>
               <tbody>
                 {shown.map((record) => (
-                  <tr
-                    key={record.id}
-                    className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"
-                  >
-                    <td className="whitespace-nowrap p-3 font-medium">
+                  <Row key={record.id}>
+                    <Td className="whitespace-nowrap font-medium text-primary">
                       {record.commissionNo}
-                    </td>
-                    <td className="p-3">{record.clientName}</td>
-                    <td className="p-3">
-                      <span className="block">{record.paidTo}</span>
+                    </Td>
+                    <Td className="text-left">{record.clientName}</Td>
+                    <Td className="text-left">
+                      <span className="block font-semibold text-primary">
+                        {record.paidTo}
+                      </span>
                       <span className="block text-xs text-muted-foreground">
                         {record.classification}
                       </span>
-                    </td>
-                    <td className="whitespace-nowrap p-3">
+                    </Td>
+                    <Td className="whitespace-nowrap text-primary">
                       {monthAndYear(record)}
-                    </td>
-                    <td className="p-3">
+                    </Td>
+                    <Td className="text-left">
                       <span className="block">{record.type}</span>
                       {/* A specific commission names the file and the invoice
                           it was worked out from; a fixed one runs over the
@@ -154,30 +155,30 @@ function CommissionTab({ employee, adding, onCloseAdd }) {
                           </span>
                         </>
                       )}
-                    </td>
-                    <td className="p-3">
-                      <span className="block font-medium">
+                    </Td>
+                    <Td className="text-left">
+                      <span className="block font-medium text-primary">
                         {money(feesFor(record))}
                       </span>
                       <span className="block text-xs text-muted-foreground">
                         {record.rate}%
                       </span>
-                      <span className="block text-xs font-medium text-green-700">
-                        Commission: {money(commissionOn(record))}
+                      <span className="block font-bold text-green-700">
+                        {money(commissionOn(record))}
                       </span>
-                    </td>
-                    <td className="p-3">
+                    </Td>
+                    <Td className="text-left">
                       <span className="block">{record.periodFrom}</span>
                       <span className="block text-xs text-muted-foreground">
                         {record.periodTo
                           ? "to " + record.periodTo
                           : "Open ended"}
                       </span>
-                    </td>
-                  </tr>
+                    </Td>
+                  </Row>
                 ))}
               </tbody>
-            </table>
+            </RecordTable>
           </CardContent>
         </Card>
       )}
@@ -212,16 +213,30 @@ export default function FinancialBenefitsSection({
   // that would push it off the screen every time the tab is opened.
   const [salaryDetailsOpen, setSalaryDetailsOpen] = useState(false);
 
-  const showsDetailsToggle = tab === "salaries" && adding !== "salaries";
+  // My Profile shows what the employee is paid. What the office keeps its own
+  // record of - the bonuses it decided on - is not shown there at all, so the
+  // tab itself goes, and with it any chance of landing on a tab that is gone.
+  const tabs = canEdit
+    ? BENEFIT_TABS
+    : BENEFIT_TABS.filter((option) => !option.office);
 
-  const current =
-    BENEFIT_TABS.find((option) => option.key === tab) || BENEFIT_TABS[0];
+  const current = tabs.find((option) => option.key === tab) || tabs[0];
+  const open = current.key;
+
+  const showsDetailsToggle = open === "salaries" && adding !== "salaries";
 
   // Salary and commission are what the firm decides to pay; a loan and
   // assistance are what the employee asks for. So on My Profile the first two
   // are only read, and the other two can still be asked for.
-  const firmDecides = tab === "salaries" || tab === "commission";
-  const showsAdd = Boolean(current.add) && (canEdit || !firmDecides);
+  //
+  // Salary has a second button that belongs to the other page: the employee
+  // cannot record their own pay, but they can ask for part of it in advance,
+  // and the firm never asks for that on their behalf.
+  const firmDecides = open === "salaries" || open === "commission";
+  const addLabel = canEdit
+    ? current.add
+    : current.selfAdd || (firmDecides ? "" : current.add);
+  const showsAdd = Boolean(addLabel);
 
   return (
     <div className="space-y-6">
@@ -232,10 +247,14 @@ export default function FinancialBenefitsSection({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <FormHeading title={current.label} note={current.note} icon={current.icon} />
 
-        <div className="flex flex-wrap items-center gap-2">
-          <TabBar options={BENEFIT_TABS} value={tab} onChange={onTabChange} />
+        {/* ml-auto keeps these to the right even when they wrap onto a line of
+            their own: a wrapped line is laid out on its own, so justify-between
+            above would otherwise drop them back to the left. */}
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+          <TabBar options={tabs} value={open} onChange={onTabChange} />
 
-          {/* The word says what a click will do, not what is on screen now. */}
+          {/* The words say what a click will do, and to what: "Show" on its
+              own leaves the salary breakdown unnamed. */}
           {showsDetailsToggle && (
             <Button
               type="button"
@@ -250,24 +269,24 @@ export default function FinancialBenefitsSection({
               ) : (
                 <Eye className="mr-1.5 h-4 w-4" />
               )}
-              {salaryDetailsOpen ? "Hide" : "Show"}
+              {salaryDetailsOpen ? "Hide Salary Details" : "View Salary Details"}
             </Button>
           )}
 
           {showsAdd && (
             <Button
               type="button"
-              onClick={() => setAdding(tab)}
-              disabled={adding === tab}
+              onClick={() => setAdding(open)}
+              disabled={adding === open}
             >
               <Plus className="mr-2 h-4 w-4" />
-              {current.add}
+              {addLabel}
             </Button>
           )}
         </div>
       </div>
 
-      {tab === "salaries" && (
+      {open === "salaries" && (
         <SalariesSection
           employee={employee}
           adding={adding === "salaries"}
@@ -275,24 +294,34 @@ export default function FinancialBenefitsSection({
           onSave={onSaveSalary}
           detailsOpen={salaryDetailsOpen}
           canEdit={canEdit}
+          advance={!canEdit}
         />
       )}
 
-      {tab === "loans" && (
+      {open === "bonus" && (
+        <BonusSection
+          employee={employee}
+          adding={adding === "bonus"}
+          onCloseAdd={() => setAdding(null)}
+        />
+      )}
+
+      {open === "loans" && (
         <LoansSection
           adding={adding === "loans"}
           onCloseAdd={() => setAdding(null)}
         />
       )}
 
-      {tab === "assistance" && (
+      {open === "assistance" && (
         <AssistanceSection
+          employee={employee}
           adding={adding === "assistance"}
           onCloseAdd={() => setAdding(null)}
         />
       )}
 
-      {tab === "commission" && (
+      {open === "commission" && (
         <CommissionTab
           employee={employee}
           adding={adding === "commission"}

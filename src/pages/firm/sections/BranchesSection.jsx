@@ -26,6 +26,7 @@ import { Plus,
   Lock,
   Building2,
 } from "lucide-react";
+import { IdStatusDot } from "@/components/shared/panels";
 import { useFirm } from "@/lib/firm/context";
 import { useLanguage, inLanguage } from "@/lib/language/context";
 import { nextBranchNumber, firmStaff } from "../firmData";
@@ -256,53 +257,55 @@ export default function BranchesSection({ canEdit }) {
           worth having in view while it is being filled in. */}
       <Card>
         <CardContent className="overflow-x-auto p-0">
-          <table className="w-full min-w-[720px] text-sm">
+          <table className="w-full min-w-[720px] border text-sm">
             <thead>
               <tr className="border-b bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                <th className="p-3 font-semibold">Branch No.</th>
-                <th className="p-3 font-semibold">Branch Name</th>
-                <th className="p-3 font-semibold">Address</th>
-                <th className="p-3 font-semibold">Branch Manager</th>
-                <th className="p-3 font-semibold">Status</th>
+                <th className="border-r last:border-r-0 p-3 font-semibold">Branch No.</th>
+                <th className="border-r last:border-r-0 p-3 font-semibold">Branch Name</th>
+                <th className="border-r last:border-r-0 p-3 font-semibold">Address</th>
+                <th className="border-r last:border-r-0 p-3 font-semibold">Branch Manager</th>
               </tr>
             </thead>
             <tbody>
-              {branches.map((branch) => (
+              {/* Open branches first, closed ones under them. */}
+              {[...branches]
+                .sort((a, b) => Number(b.active) - Number(a.active))
+                .map((branch) => (
                 <tr
                   key={branch.id}
                   className="border-b transition-colors last:border-0 hover:bg-primary/10"
                 >
-                  {/* The number opens the branch for editing */}
-                  <td className="p-3">
-                    <button
-                      type="button"
-                      onClick={() => setEditing({ ...branch })}
-                      className="rounded font-semibold text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
-                    >
-                      {branch.branchNumber}
-                    </button>
+                  {/* The number opens the branch for editing. A branch that
+                      has been closed says so beside it; an open one says
+                      nothing, so there is no status column. */}
+                  <td className="border-r last:border-r-0 p-3">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditing({ ...branch })}
+                        className="rounded font-semibold text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        {branch.branchNumber}
+                      </button>
+                      <IdStatusDot status={branch.active ? "Active" : "Inactive"} />
+                    </span>
                   </td>
                   {/* One language, not both: the list is read in whichever
                       language the interface is set to. Both are still held
                       on the record and both are still entered on the form. */}
-                  <td className="p-3">
+                  <td className="border-r last:border-r-0 p-3">
                     <span className="block font-medium" dir={dir}>
                       {inLanguage(language, branch.name, branch.nameAr)}
                     </span>
                   </td>
-                  <td className="p-3" dir={dir}>
+                  <td className="border-r last:border-r-0 p-3" dir={dir}>
                     {inLanguage(language, branch.address, branch.addressAr) ||
                       "-"}
                   </td>
-                  <td className="p-3">
+                  <td className="border-r last:border-r-0 p-3">
                     {managerName(branch.managerId) || (
                       <span className="text-muted-foreground">Not assigned</span>
                     )}
-                  </td>
-                  <td className="p-3">
-                    <Badge variant={branch.active ? "success" : "secondary"}>
-                      {branch.active ? "Active" : "Inactive"}
-                    </Badge>
                   </td>
                 </tr>
               ))}

@@ -67,19 +67,19 @@ export default function CircularDetails({ circular, onOpenChange }) {
         </DialogHeader>
 
         <div className="max-h-96 overflow-y-auto rounded-lg border">
-          <table className="w-full text-sm">
+          <table className="w-full border text-sm">
             <thead className="sticky top-0 bg-muted/90">
               <tr className="border-b text-left text-xs text-muted-foreground">
-                <th className="p-3 font-semibold">Employee</th>
-                <th className="p-3 font-semibold">Status</th>
-                <th className="p-3 font-semibold">Date &amp; Time</th>
+                <th className="border-r last:border-r-0 p-3 font-semibold">Employee</th>
+                <th className="border-r last:border-r-0 p-3 font-semibold">Status</th>
+                <th className="border-r last:border-r-0 p-3 font-semibold">Date &amp; Time</th>
               </tr>
             </thead>
             <tbody>
               {audience.map(({ employee, acknowledgement }) => (
                 <tr key={employee.id} className="border-b last:border-0">
-                  <td className="p-3">{employee.name}</td>
-                  <td className="p-3">
+                  <td className="border-r last:border-r-0 p-3">{employee.name}</td>
+                  <td className="border-r last:border-r-0 p-3">
                     {acknowledgement ? (
                       <span className="inline-flex items-center gap-1.5 text-green-700">
                         <Check className="h-3.5 w-3.5 shrink-0" />
@@ -92,7 +92,7 @@ export default function CircularDetails({ circular, onOpenChange }) {
                       </span>
                     )}
                   </td>
-                  <td className="p-3 text-muted-foreground">
+                  <td className="border-r last:border-r-0 p-3 text-muted-foreground">
                     {acknowledgement ? acknowledgement.at : "-"}
                   </td>
                 </tr>

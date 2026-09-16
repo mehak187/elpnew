@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DataTable from "@/components/shared/DataTable";
 import { IdStatusDot } from "@/components/shared/panels";
+
 import { cn } from "@/lib/utils";
 import { clientLinkedCases } from "../clientMockData";
 
@@ -99,12 +100,6 @@ export default function LinkedCasesSection() {
       exportValue: (row) => row.fileNo + " (" + row.caseStatus + ")",
       render: (value, row) => (
         <span className="flex items-center gap-2">
-          {/* Closed is grey rather than red: a finished file is not a
-              problem, it is simply finished. */}
-          <IdStatusDot
-            status={row.caseStatus}
-            tone={isClosed(row) ? "bg-muted-foreground" : "bg-green-500"}
-          />
           <button
             type="button"
             onClick={() => navigate("/litigation")}
@@ -112,6 +107,8 @@ export default function LinkedCasesSection() {
           >
             {value}
           </button>
+          {/* A finished file says so; a running one is simply running. */}
+          <IdStatusDot status={row.caseStatus} />
         </span>
       ),
     },
@@ -146,15 +143,16 @@ export default function LinkedCasesSection() {
       exportValue: (row) =>
         isClosed(row)
           ? "Closed - ended at " + row.litigationLevel + " - " + row.caseStage
-          : [row.litigationLevel, row.caseStatus, row.caseStage].join(" - "),
+          : [row.litigationLevel, row.caseStage].join(" - "),
+      // A file still running says only where it is and what is happening
+      // there; saying "Active" as well adds nothing to a row that is plainly
+      // running. A closed one says where it ended.
       render: (_, row) => (
         <div className="space-y-1">
           <p className="font-semibold">{levelOf(row)}</p>
           <p className="text-xs text-muted-foreground">
-            {isClosed(row)
-              ? "Ended at " + row.litigationLevel
-              : row.caseStatus}{" "}
-            &bull; {row.caseStage}
+            {isClosed(row) && "Ended at " + row.litigationLevel + " • "}
+            {row.caseStage}
           </p>
         </div>
       ),
@@ -220,6 +218,8 @@ export default function LinkedCasesSection() {
       <DataTable
         columns={columns}
         data={shown}
+        // A closed file is kept, under the ones still running.
+        endedRow={isClosed}
         searchPlaceholder="Search cases..."
         enableColumnSearch={false}
         currentPage={currentPage}

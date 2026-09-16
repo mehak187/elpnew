@@ -230,7 +230,7 @@ export default function InvoiceForm({ onCancel, onSubmit, forSupplier }) {
               </p>
             )}
             {!noInvoice && invoiceFile && (
-              <div className="flex h-8 items-center justify-between gap-2 rounded-md bg-muted px-3">
+              <div className="flex h-8 items-center justify-between gap-2 rounded-md bg-muted/40 px-3">
                 <span className="truncate text-xs">{invoiceFile}</span>
                 <button
                   type="button"

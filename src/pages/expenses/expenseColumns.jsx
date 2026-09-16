@@ -1,14 +1,8 @@
 import { Badge } from "@/components/ui/badge";
+// Amounts here are read against invoices, so they carry the currency and fils.
+import { money as omr } from "@/lib/money";
 import { findType, linkLabel } from "./links";
 import { settlement, formatDate } from "./expenseData";
-
-/** Amounts here are read against invoices, so they carry the currency and fils. */
-const omr = (amount) =>
-  "OMR " +
-  Number(amount || 0).toLocaleString("en-GB", {
-    minimumFractionDigits: 3,
-    maximumFractionDigits: 3,
-  });
 
 /** One field inside a stacked column. */
 function Line({ label, children }) {

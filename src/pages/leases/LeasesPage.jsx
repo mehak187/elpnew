@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import DataTable from "@/components/shared/DataTable";
 import FormHeading from "@/components/shared/FormHeading";
-import { IdStatusDot } from "@/components/shared/panels";
+import { IdStatusDot, isEndedStatus } from "@/components/shared/panels";
 import { Home, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useFirm } from "@/lib/firm/context";
@@ -162,10 +162,7 @@ export default function LeasesPage() {
           >
             {value}
           </button>
-          <IdStatusDot
-            status={LEASE_STATE[row.state].label}
-            tone={LEASE_STATE[row.state].dot}
-          />
+          <IdStatusDot status={LEASE_STATE[row.state].label} />
         </span>
       ),
     },
@@ -238,7 +235,7 @@ export default function LeasesPage() {
     {
       // The rent for one payment, its VAT and what the two come to.
       key: "rent",
-      header: "Rental Value · VAT 5% · Total (OMR)",
+      header: "Rental Value · VAT 5% · Total",
       width: "12%",
       // Monthly rent. A lease exempt from VAT (a flat, say) shows 0.000 VAT.
       exportValue: (row) =>
@@ -380,6 +377,9 @@ export default function LeasesPage() {
           <DataTable
             columns={columns}
             data={rows}
+            // A lease that has ended or been cancelled sits under the running
+            // ones rather than among them.
+            endedRow={(row) => isEndedStatus(LEASE_STATE[row.state].label)}
             searchPlaceholder="Ask about leases..."
             exportFileName="leases.csv"
             enableColumnSearch={false}
