@@ -236,16 +236,17 @@ export const SALARY_LOAN = { principal: 7560, installment: 120, count: 63 };
  * What was paid each month, oldest first.
  *
  * Only what actually happened is recorded: the pay, the allowances, what came
- * off for the loan and what came off administratively. The net is not here -
- * it is those four numbers, and a stored fifth could disagree with them.
+ * off for the loan and what came off administratively, why that was held back,
+ * and the account the rest went to. The net is not here - it is those figures,
+ * and a stored total could disagree with them.
  */
 export const salaryHistory = [
-  { id: 1, month: 4, year: 2026, basic: 2500, allowances: 580, loanDeducted: 0, administrative: 175, paymentDate: "2026-04-30" },
-  { id: 2, month: 5, year: 2026, basic: 2500, allowances: 580, loanDeducted: 80, administrative: 175, paymentDate: "2026-05-31" },
-  { id: 3, month: 6, year: 2026, basic: 2500, allowances: 580, loanDeducted: 120, administrative: 175, paymentDate: "2026-06-30" },
-  { id: 4, month: 7, year: 2026, basic: 2500, allowances: 580, loanDeducted: 120, administrative: 175, paymentDate: "2026-07-30" },
-  { id: 5, month: 8, year: 2026, basic: 2500, allowances: 580, loanDeducted: 120, administrative: 175, paymentDate: "2026-08-31" },
-  { id: 6, month: 9, year: 2026, basic: 2500, allowances: 580, loanDeducted: 120, administrative: 175, paymentDate: "2026-09-28" },
+  { id: 1, month: 4, year: 2026, basic: 2500, allowances: 580, loanDeducted: 0, administrative: 175, administrativeReason: "Social insurance contribution", bank: "Bank Muscat", accountNo: "0312 5567 8891 0024", paymentDate: "2026-04-30" },
+  { id: 2, month: 5, year: 2026, basic: 2500, allowances: 580, loanDeducted: 80, administrative: 175, administrativeReason: "Social insurance contribution", bank: "Bank Muscat", accountNo: "0312 5567 8891 0024", paymentDate: "2026-05-31" },
+  { id: 3, month: 6, year: 2026, basic: 2500, allowances: 580, loanDeducted: 120, administrative: 175, administrativeReason: "Social insurance contribution", bank: "Bank Muscat", accountNo: "0312 5567 8891 0024", paymentDate: "2026-06-30" },
+  { id: 4, month: 7, year: 2026, basic: 2500, allowances: 580, loanDeducted: 120, administrative: 175, administrativeReason: "Social insurance contribution", bank: "Bank Muscat", accountNo: "0312 5567 8891 0024", paymentDate: "2026-07-30" },
+  { id: 5, month: 8, year: 2026, basic: 2500, allowances: 580, loanDeducted: 120, administrative: 175, administrativeReason: "Social insurance and unpaid leave (1 day)", bank: "Bank Muscat", accountNo: "0312 5567 8891 0024", paymentDate: "2026-08-31" },
+  { id: 6, month: 9, year: 2026, basic: 2500, allowances: 580, loanDeducted: 120, administrative: 175, administrativeReason: "Social insurance contribution", bank: "Bank Muscat", accountNo: "0312 5567 8891 0024", paymentDate: "2026-09-28" },
 ];
 
 /**

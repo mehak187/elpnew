@@ -167,19 +167,9 @@ export default function SalaryHistory() {
                         </td>
 
                         <td className="border-r p-3 text-left">
-                          <div className="flex items-start justify-between gap-2">
-                            <p className="font-bold text-primary">
-                              {money(row.loan.deducted)}
-                            </p>
-                            <span
-                              className={cn(
-                                "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
-                                state.tone
-                              )}
-                            >
-                              {state.label}
-                            </span>
-                          </div>
+                          <p className="font-bold text-primary">
+                            {money(row.loan.deducted)}
+                          </p>
 
                           {row.loan.state === "none" ? (
                             <LoanLine>No loan installment</LoanLine>
@@ -188,9 +178,19 @@ export default function SalaryHistory() {
                               <LoanLine>
                                 Installment: {row.loan.number} / {row.loan.count}
                               </LoanLine>
+                              {/* How much of the installment was taken, beside
+                                  the figure it describes rather than off in
+                                  the corner of the cell. */}
                               <LoanLine>
-                                Deducted: {money(row.loan.deducted)} (
-                                {state.label})
+                                Deducted: {money(row.loan.deducted)}{" "}
+                                <span
+                                  className={cn(
+                                    "ml-1 rounded-full px-2 py-0.5 text-xs font-medium",
+                                    state.tone
+                                  )}
+                                >
+                                  {state.label}
+                                </span>
                               </LoanLine>
                               {row.loan.shortfall > 0 && (
                                 <LoanLine>
@@ -209,14 +209,32 @@ export default function SalaryHistory() {
                           )}
                         </td>
 
-                        <td className="border-r p-3 text-primary">
-                          {money(row.administrative)}
+                        {/* Money held back from the pay, so it is red wherever
+                            it appears - with what it was held back for beside
+                            it, because a deduction without a reason is a
+                            figure nobody can answer. */}
+                        <td className="border-r p-3 text-left">
+                          <p className="font-bold text-destructive">
+                            {money(row.administrative)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {row.administrativeReason || "-"}
+                          </p>
                         </td>
 
                         {/* What actually reached the bank, which is what the
-                            row is for - so it is the one cell that is lit. */}
-                        <td className="border-r bg-green-50/70 p-3 font-bold text-green-700">
-                          {money(row.net)}
+                            row is for - so it is the one cell that is lit, and
+                            it says which account it reached. */}
+                        <td className="border-r bg-green-50/70 p-3 text-left">
+                          <p className="font-bold text-green-700">
+                            {money(row.net)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {row.bank}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {row.accountNo}
+                          </p>
                         </td>
 
                         <td className="p-3 text-primary">
