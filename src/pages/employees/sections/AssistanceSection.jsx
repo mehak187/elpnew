@@ -150,7 +150,7 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
                 value={draft.expenseType}
                 readOnly
                 tabIndex={-1}
-                className="cursor-default bg-muted text-muted-foreground"
+                className="cursor-default bg-locked text-muted-foreground"
               />
             </div>
 
@@ -161,7 +161,7 @@ export default function AssistanceSection({ adding, onCloseAdd }) {
                 value={draft.category}
                 readOnly
                 tabIndex={-1}
-                className="cursor-default bg-muted text-muted-foreground"
+                className="cursor-default bg-locked text-muted-foreground"
               />
             </div>
 

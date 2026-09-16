@@ -94,8 +94,7 @@ export default function CommissionSection() {
       // The fees collected, the rate, and what the two come to - kept together
       // because the last one is only meaningful beside the two it came from.
       key: "rate",
-      header: "Legal Fees (Before VAT)",
-      subHeader: "& Commission Details",
+      header: "Legal Fees (Before VAT) & Commission",
       width: "22%",
       exportValue: (row) =>
         moneyValue(feesFor(row)) +

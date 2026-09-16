@@ -11,7 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { COUNTRY_DIAL_CODES, RECEIVING_BANKS } from "@/lib/constants";
+import PhoneInput from "@/components/shared/PhoneInput";
+import { RECEIVING_BANKS } from "@/lib/constants";
 import { SUPPLIER_CATEGORIES, SUPPLIER_STATUSES } from "./supplierData";
 
 export default function SupplierFields({
@@ -119,36 +120,15 @@ export default function SupplierFields({
 
       <div className="space-y-2">
         <Label htmlFor={id("phone")}>Phone Number</Label>
-        <div className="flex gap-2">
-          <Select
-            value={draft.dialCode}
-            onValueChange={(value) => set("dialCode", value)}
-          >
-            <SelectTrigger className="w-24 shrink-0" aria-label="Country code">
-              <SelectValue>{draft.dialCode}</SelectValue>
-            </SelectTrigger>
-            <SelectContent className="max-h-72">
-              {COUNTRY_DIAL_CODES.map((country) => (
-                <SelectItem key={country.code} value={country.dial}>
-                  <span className="inline-flex w-full items-center gap-2">
-                    <span className="w-12 shrink-0 font-medium">
-                      {country.dial}
-                    </span>
-                    <span className="opacity-70">{country.name}</span>
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
-            id={id("phone")}
-            name="phone"
-            value={draft.phone}
-            onChange={onChange}
-            placeholder="XXXX XXXX"
-            className="flex-1"
-          />
-        </div>
+        <PhoneInput
+          id={id("phone")}
+          name="phone"
+          dialCode={draft.dialCode}
+          onDialCode={(value) => set("dialCode", value)}
+          value={draft.phone}
+          onChange={onChange}
+          placeholder="XXXX XXXX"
+        />
       </div>
 
       {showStatus && (

@@ -66,6 +66,9 @@ const SECTIONS = [
     label: "Bank Accounts",
     icon: Landmark,
     note: "Manage all bank accounts and view account balances",
+    // The tabs name whichever list is open, so the section draws one row of
+    // its own: that name, the tabs, and the button that adds to it.
+    ownsHeader: true,
   },
   {
     ownsHeader: true,

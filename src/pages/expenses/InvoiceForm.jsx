@@ -397,7 +397,7 @@ export default function InvoiceForm({ onCancel, onSubmit, forSupplier }) {
                             value={lineTotalOf(line).toFixed(2)}
                             readOnly
                             disabled
-                            className="bg-muted"
+                            className="bg-locked"
                           />
                         </div>
 
@@ -444,7 +444,7 @@ export default function InvoiceForm({ onCancel, onSubmit, forSupplier }) {
                 value={net.toFixed(2)}
                 readOnly
                 disabled
-                className="bg-muted"
+                className="bg-locked"
               />
             </div>
 
@@ -455,7 +455,7 @@ export default function InvoiceForm({ onCancel, onSubmit, forSupplier }) {
                 value={tax.toFixed(2)}
                 readOnly
                 disabled
-                className="bg-muted"
+                className="bg-locked"
               />
             </div>
 
@@ -466,7 +466,7 @@ export default function InvoiceForm({ onCancel, onSubmit, forSupplier }) {
                 value={total.toFixed(2)}
                 readOnly
                 disabled
-                className="bg-muted font-bold text-primary"
+                className="bg-locked font-bold text-primary"
               />
             </div>
           </div>

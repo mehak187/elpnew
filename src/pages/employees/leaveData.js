@@ -84,8 +84,26 @@ export function leaveDays(from, to) {
   return days > 0 ? days : 0;
 }
 
-/** The year a leave is charged against: the year it starts in. */
+/** The year a leave falls in: the year it starts in. */
 export const leaveYear = (from) => (from ? from.slice(0, 4) : "");
+
+/**
+ * Advance annual leave: days taken now against next year's entitlement.
+ *
+ * Someone who has used up this year's annual leave can still be granted days
+ * out of next year's. The leave is taken in this year but paid for out of
+ * next, so the record carries the year it is charged to, and every balance is
+ * counted by that year rather than by the dates.
+ */
+export const ADVANCE_LEAVE = "Advance Annual Leave";
+
+export const chargedYear = (leave) => leave.year || leaveYear(leave.from);
+
+export const isAdvance = (leave) => chargedYear(leave) > leaveYear(leave.from);
+
+/** What a leave is called on a row: an advance says so. */
+export const leaveTypeLabel = (leave) =>
+  isAdvance(leave) ? ADVANCE_LEAVE : leave.type;
 
 export const initialLeaves = [
   {
@@ -148,6 +166,129 @@ export const initialLeaves = [
     decidedAt: dayOffset(-48),
     comments: "Cover arranged with the Muscat office.",
   },
+  {
+    id: 6,
+    employee: "Fatima Al Rashdi",
+    category: "Family Leave",
+    type: "Marriage Leave",
+    from: dayOffset(20),
+    to: dayOffset(22),
+    reason: "Wedding",
+    status: "Pending",
+    decidedAt: "",
+    comments: "",
+  },
+  // Someone the list says is on leave right now, so the record shows why.
+  {
+    id: 7,
+    employee: "Ahmed Al Balushi",
+    category: "Regular Leave",
+    type: "Sick Leave",
+    from: dayOffset(-3),
+    to: dayOffset(4),
+    reason: "Surgery and recovery",
+    status: "Approved",
+    decidedAt: dayOffset(-6),
+    comments: "Medical report on file.",
+  },
+  {
+    id: 8,
+    employee: "Ahmed Al Balushi",
+    category: "Regular Leave",
+    type: "Annual Leave",
+    from: dayOffset(-120),
+    to: dayOffset(-111),
+    reason: "Annual holiday",
+    status: "Approved",
+    decidedAt: dayOffset(-130),
+    comments: "",
+  },
+  {
+    id: 9,
+    employee: "Sarah Al Lawati",
+    category: "Regular Leave",
+    type: "Annual Leave",
+    from: dayOffset(45),
+    to: dayOffset(52),
+    reason: "Family visit abroad",
+    status: "Pending",
+    decidedAt: "",
+    comments: "",
+  },
+  {
+    id: 10,
+    employee: "Sarah Al Lawati",
+    category: "Family Leave",
+    type: "Paternity Leave",
+    from: dayOffset(-200),
+    to: dayOffset(-194),
+    reason: "New baby",
+    status: "Rejected",
+    decidedAt: dayOffset(-205),
+    comments: "Paternity leave is for the father.",
+  },
+  {
+    id: 11,
+    employee: "Khalid Al Hinai",
+    category: "Special Leave",
+    type: "Hajj Leave",
+    from: dayOffset(60),
+    to: dayOffset(74),
+    reason: "Pilgrimage",
+    status: "Approved",
+    decidedAt: dayOffset(-2),
+    comments: "Granted once in service.",
+  },
+  // This year's annual leave, used up to the day: what makes an advance
+  // against next year possible at all.
+  {
+    id: 12,
+    employee: "Aisha Al Kindi",
+    category: "Regular Leave",
+    type: "Annual Leave",
+    from: dayOffset(-15),
+    to: dayOffset(-9),
+    reason: "Rest days",
+    status: "Approved",
+    decidedAt: dayOffset(-25),
+    comments: "",
+  },
+  {
+    id: 15,
+    employee: "Aisha Al Kindi",
+    category: "Regular Leave",
+    type: "Annual Leave",
+    from: dayOffset(-90),
+    to: dayOffset(-68),
+    reason: "Summer holiday",
+    status: "Approved",
+    decidedAt: dayOffset(-100),
+    comments: "Remaining annual leave taken in full.",
+  },
+  {
+    id: 13,
+    employee: "Omar Al Maskari",
+    category: "Regular Leave",
+    type: "Annual Leave",
+    from: dayOffset(-2),
+    to: dayOffset(8),
+    reason: "Annual holiday",
+    status: "Approved",
+    decidedAt: dayOffset(-12),
+    comments: "Hearings covered by Maryam Al Harthi.",
+  },
+  {
+    id: 14,
+    employee: "Layla Al Habsi",
+    category: "Special Leave",
+    type: "Study / Examination Leave",
+    from: dayOffset(30),
+    to: dayOffset(36),
+    reason: "Final examinations",
+    status: "Pending",
+    decidedAt: "",
+    comments: "",
+  },
 ];
 
 /** Everything one person has asked for, soonest first. */
@@ -156,9 +297,9 @@ export const leavesFor = (leaves, name) =>
     .filter((leave) => leave.employee === name)
     .sort((a, b) => a.from.localeCompare(b.from));
 
-/** The years a person has leave in, newest first, for the year picker. */
+/** The years a person has leave charged to, newest first, for the year picker. */
 export const leaveYearsFor = (leaves, name) => [
-  ...new Set(leavesFor(leaves, name).map((leave) => leaveYear(leave.from))),
+  ...new Set(leavesFor(leaves, name).map(chargedYear)),
 ].sort((a, b) => b.localeCompare(a));
 
 /**
@@ -175,25 +316,49 @@ export function allowanceDays(type) {
 }
 
 /**
- * What is left of one leave type this year.
+ * What is left of one leave type in a year.
  *
  * Counted off the approved requests every time rather than stored: a balance
  * held as a number is a second copy of the leave already taken, and the two
  * drift apart the moment a request is corrected.
+ *
+ * Nothing carries over. A year that has ended has no balance left to give: on
+ * the first day of the new year whatever was not taken expires, and the year
+ * reads as fully used - which is also what makes an advance against next year
+ * the only way to be granted days once this year's are gone.
  */
 export function remainingBalance(leaves, name, type, year) {
   const allowance = allowanceDays(type);
   if (allowance === null) return null;
 
+  const thisYear = String(new Date().getFullYear());
+  if (String(year) < thisYear) {
+    return { allowance, used: allowance, remaining: 0, expired: true };
+  }
+
+  // Counted by the year the leave is charged to, so days taken in advance come
+  // off next year's entitlement rather than the year they were taken in.
   const used = leaves
     .filter(
       (leave) =>
         leave.employee === name &&
         leave.type === type &&
-        leaveYear(leave.from) === String(year) &&
+        chargedYear(leave) === String(year) &&
         leave.status === "Approved"
     )
     .reduce((sum, leave) => sum + leaveDays(leave.from, leave.to), 0);
 
-  return { allowance, used, remaining: Math.max(allowance - used, 0) };
+  return { allowance, used, remaining: Math.max(allowance - used, 0), expired: false };
+}
+
+/**
+ * Whether days can be asked for against next year.
+ *
+ * Only once this year's annual leave is gone: an advance is what is left to
+ * ask for when there is nothing left to take, not a second balance to dip
+ * into while the first still has days in it.
+ */
+export function canTakeAdvance(leaves, name, year) {
+  const balance = remainingBalance(leaves, name, "Annual Leave", year);
+  return Boolean(balance) && balance.remaining === 0;
 }

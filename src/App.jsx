@@ -10,6 +10,7 @@ import ClientsProvider from "@/lib/clients/ClientsProvider";
 import LeasesProvider from "@/lib/leases/LeasesProvider";
 import AssetsProvider from "@/lib/assets/AssetsProvider";
 import TaxesProvider from "@/lib/taxes/TaxesProvider";
+import LeavesProvider from "@/lib/leaves/LeavesProvider";
 
 // Root Pages
 import Dashboard from "@/pages/Dashboard";
@@ -86,6 +87,7 @@ function App() {
           <LeasesProvider>
           <AssetsProvider>
           <TaxesProvider>
+          <LeavesProvider>
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<MainLayout />}>
@@ -182,6 +184,7 @@ function App() {
             </Route>
           </Routes>
         </BrowserRouter>
+          </LeavesProvider>
           </TaxesProvider>
           </AssetsProvider>
           </LeasesProvider>

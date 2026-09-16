@@ -136,7 +136,7 @@ function AmountField({ id, label, required, hint, value, onChange, readOnly }) {
         readOnly={readOnly}
         tabIndex={readOnly ? -1 : undefined}
         placeholder="0.000"
-        className={cn(readOnly && "bg-muted text-muted-foreground")}
+        className={cn(readOnly && "bg-locked text-muted-foreground")}
         value={value}
         onChange={onChange}
         title={hint}
@@ -174,7 +174,7 @@ function Ends({ id, label, value }) {
         id={id}
         readOnly
         tabIndex={-1}
-        className="bg-muted text-muted-foreground"
+        className="bg-locked text-muted-foreground"
         value={value ? formatDate(value) : ""}
       />
     </div>
@@ -190,7 +190,7 @@ function Derived({ id, label, value, hint }) {
         id={id}
         readOnly
         tabIndex={-1}
-        className="bg-muted text-muted-foreground"
+        className="bg-locked text-muted-foreground"
         value={value}
       />
       {hint && <Hint>{hint}</Hint>}
@@ -615,20 +615,19 @@ export default function LoansSection({ adding, onCloseAdd }) {
                   <th className="whitespace-nowrap p-3 font-semibold" style={{ width: "11%" }}>
                     Due Date
                   </th>
+                  {/* One line to a column: the currency belongs beside the
+                      name, not stacked under it as a second header row. */}
                   <th className="p-3 font-semibold" style={{ width: "13%" }}>
-                    Installment Amount
-                    <span className="block font-normal">(<Rial />)</span>
+                    Installment Amount (<Rial />)
                   </th>
                   <th className="p-3 font-semibold" style={{ width: "12%" }}>
-                    Paid Amount
-                    <span className="block font-normal">(<Rial />)</span>
+                    Paid Amount (<Rial />)
                   </th>
                   <th className="p-3 font-semibold" style={{ width: "14%" }}>
                     Installment Status
                   </th>
                   <th className="p-3 font-semibold" style={{ width: "13%" }}>
-                    Remaining Balance
-                    <span className="block font-normal">(<Rial />)</span>
+                    Remaining Balance (<Rial />)
                   </th>
                   <th className="p-3" style={{ width: "5%" }}>
                     <span className="sr-only">Show instalments</span>

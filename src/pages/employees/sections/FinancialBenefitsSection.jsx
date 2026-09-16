@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/panels";
 import FormHeading from "@/components/shared/FormHeading";
+import TabBar from "@/components/shared/TabBar";
 import { Plus, Eye, EyeOff } from "lucide-react";
 import { withRial } from "@/lib/money";
 import {
@@ -199,6 +200,9 @@ export default function FinancialBenefitsSection({
   employee,
   onSaveSalary,
   tab,
+  onTabChange,
+  // The firm sets what it pays; on My Profile the figures are only read.
+  canEdit = true,
 }) {
   // Which tab's form is open, if any.
   const [adding, setAdding] = useState(null);
@@ -213,20 +217,25 @@ export default function FinancialBenefitsSection({
   const current =
     BENEFIT_TABS.find((option) => option.key === tab) || BENEFIT_TABS[0];
 
+  // Salary and commission are what the firm decides to pay; a loan and
+  // assistance are what the employee asks for. So on My Profile the first two
+  // are only read, and the other two can still be asked for.
+  const firmDecides = tab === "salaries" || tab === "commission";
+  const showsAdd = Boolean(current.add) && (canEdit || !firmDecides);
+
   return (
     <div className="space-y-6">
-      {/* The heading of the category, and the way to add to it, at the start
-          of that category rather than at the top of the page. The icon is
-          what says this names the tab and not the section above it. */}
+      {/* One row for the whole section: the open tab's name on the left, and
+          on the right the tabs and the buttons that act on what is open. A
+          heading above the tabs would only name the tab that is already
+          highlighted. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <FormHeading
-            title={current.label}
-            note={current.note}
-            icon={current.icon}
-          />
-          {/* Beside the heading of what it opens and closes. The word says
-              what a click will do, not what is on screen now. */}
+        <FormHeading title={current.label} note={current.note} icon={current.icon} />
+
+        <div className="flex flex-wrap items-center gap-2">
+          <TabBar options={BENEFIT_TABS} value={tab} onChange={onTabChange} />
+
+          {/* The word says what a click will do, not what is on screen now. */}
           {showsDetailsToggle && (
             <Button
               type="button"
@@ -244,17 +253,18 @@ export default function FinancialBenefitsSection({
               {salaryDetailsOpen ? "Hide" : "Show"}
             </Button>
           )}
+
+          {showsAdd && (
+            <Button
+              type="button"
+              onClick={() => setAdding(tab)}
+              disabled={adding === tab}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              {current.add}
+            </Button>
+          )}
         </div>
-        {current.add && (
-          <Button
-            type="button"
-            onClick={() => setAdding(tab)}
-            disabled={adding === tab}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            {current.add}
-          </Button>
-        )}
       </div>
 
       {tab === "salaries" && (
@@ -264,6 +274,7 @@ export default function FinancialBenefitsSection({
           onCloseAdd={() => setAdding(null)}
           onSave={onSaveSalary}
           detailsOpen={salaryDetailsOpen}
+          canEdit={canEdit}
         />
       )}
 

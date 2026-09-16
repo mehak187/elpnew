@@ -13,9 +13,12 @@ import { Plus, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/pages/firm/firmData";
 import LeaveForm from "./LeaveForm";
+import { useLeaves } from "@/lib/leaves/context";
 import {
   LEAVE_STATUS_TONE,
-  initialLeaves,
+  canTakeAdvance,
+  chargedYear,
+  leaveTypeLabel,
   leaveDays,
   leaveYear,
   leavesFor,
@@ -48,7 +51,9 @@ const emptyDraft = () => ({
  * on the row can suggest an answer that has not been given.
  */
 export default function LeavesSection({ employee }) {
-  const [leaves, setLeaves] = useState(initialLeaves);
+  // Shared with every other page that reads leave, so a request asked for here
+  // is still there after the page moves away and back.
+  const { leaves, addLeave } = useLeaves();
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState(emptyDraft);
 
@@ -57,27 +62,59 @@ export default function LeavesSection({ employee }) {
     ...new Set([thisYear(), ...leaveYearsFor(leaves, employee.name)]),
   ].sort((a, b) => b.localeCompare(a));
 
+  /**
+   * The years a new request can be charged to: this one, and next year only
+   * once this year's annual leave is gone - that is what an advance is for.
+   */
+  const nextYear = String(Number(thisYear()) + 1);
+  const advanceOffered = canTakeAdvance(leaves, employee.name, thisYear());
+  const requestYears = advanceOffered ? [thisYear(), nextYear] : [thisYear()];
+
   // Leave is granted a year at a time, so the list is read a year at a time.
   const [year, setYear] = useState(thisYear);
 
-  const rows = mine.filter((leave) => leaveYear(leave.from) === year);
+  /**
+   * While a request is being written, the list below it narrows to the kind of
+   * leave being asked for - what is already on record for that type is what
+   * the new request has to be judged against. Closing the form puts the whole
+   * year back.
+   */
+  const shownType = adding ? draft.type : "";
+  const shownCategory = adding ? draft.category : "";
+  const filteredBy = shownType || shownCategory;
+
+  const rows = mine.filter(
+    (leave) =>
+      chargedYear(leave) === year &&
+      (!shownCategory || leave.category === shownCategory) &&
+      (!shownType || leave.type === shownType)
+  );
 
   /** A type belongs to one category, so changing the category clears it. */
   const chooseCategory = (value) =>
     setDraft((prev) => ({ ...prev, category: value, type: "" }));
 
   /**
-   * The year follows the start date on its own.
-   *
-   * Leave is charged to the year it begins in, so leaving both to be typed
-   * would be asking the same question twice - and letting the two disagree.
+   * The year follows the start date on its own - except on an advance, where
+   * the year is the point: the days are taken now and charged to next year,
+   * and the kind of leave is settled by that choice.
    */
   const setField = (name, value) =>
-    setDraft((prev) => ({
-      ...prev,
-      [name]: value,
-      ...(name === "from" && value ? { year: leaveYear(value) } : {}),
-    }));
+    setDraft((prev) => {
+      if (name === "year") {
+        return value === nextYear
+          ? { ...prev, year: value, category: "Regular Leave", type: "Annual Leave" }
+          : { ...prev, year: value };
+      }
+      const chargedToNextYear = prev.year === nextYear;
+      return {
+        ...prev,
+        [name]: value,
+        ...(name === "from" && value && !chargedToNextYear
+          ? { year: leaveYear(value) }
+          : {}),
+      };
+    });
 
   const close = () => {
     setAdding(false);
@@ -85,18 +122,9 @@ export default function LeavesSection({ employee }) {
   };
 
   const save = () => {
-    setLeaves((prev) => [
-      ...prev,
-      {
-        ...draft,
-        id: prev.reduce((max, l) => Math.max(max, l.id), 0) + 1,
-        employee: employee.name,
-        // A new request has not been decided, so it says so and nothing more.
-        status: "Pending",
-        decidedAt: "",
-        comments: "",
-      },
-    ]);
+    // A new request has not been decided on: the store says so, and nothing
+    // here suggests otherwise.
+    addLeave({ ...draft, employee: employee.name });
     setYear(draft.year);
     close();
   };
@@ -104,12 +132,14 @@ export default function LeavesSection({ employee }) {
   return (
     <div className="space-y-6">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+        {/* No heading here: the page above is already called Leaves. */}
         <div className="flex flex-wrap items-center gap-3">
-          <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">Leaves</h2>
-
           {/* Leave is granted a year at a time, so the year is a choice rather
               than a column repeated down every row. */}
-          <Select value={year} onValueChange={setYear}>
+          {/* Empty values are ignored: Radix keeps a hidden native select and
+              reports "" whenever the list it was built from changes - and the
+              list grows the moment a leave is charged to another year. */}
+          <Select value={year} onValueChange={(value) => value && setYear(value)}>
             <SelectTrigger className="h-8 w-28" aria-label="Leave year">
               <SelectValue />
             </SelectTrigger>
@@ -134,7 +164,8 @@ export default function LeavesSection({ employee }) {
           employee={employee}
           leaves={leaves}
           draft={draft}
-          years={years}
+          years={requestYears}
+          advanceYear={nextYear}
           onChange={setField}
           onCategory={chooseCategory}
           onSubmit={save}
@@ -142,11 +173,22 @@ export default function LeavesSection({ employee }) {
         />
       )}
 
+      {filteredBy && (
+        <p className="text-sm text-muted-foreground">
+          Showing <span className="font-semibold text-primary">{filteredBy}</span>{" "}
+          in {year} only
+        </p>
+      )}
+
       <Card>
         <CardContent className="overflow-x-auto p-0">
           {rows.length === 0 ? (
             <div className="p-6">
-              <EmptyState>No leave has been requested for {year}.</EmptyState>
+              <EmptyState>
+                {filteredBy
+                  ? "No " + filteredBy + " has been requested in " + year + "."
+                  : "No leave has been requested for " + year + "."}
+              </EmptyState>
             </div>
           ) : (
             <table className="w-full min-w-[960px] text-sm">
@@ -186,8 +228,10 @@ export default function LeavesSection({ employee }) {
                       className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"
                     >
                       <td className="p-3">
+                        {/* An advance is annual leave charged to another year,
+                            so the row says which year it came out of. */}
                         <p className="font-semibold text-primary">
-                          {leave.type}
+                          {leaveTypeLabel(leave)}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {leave.category}

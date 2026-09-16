@@ -115,7 +115,7 @@ function Amount({ id, label, required, value, onChange, readOnly, highlight }) {
           className={cn(
             "pr-12",
             readOnly && "text-muted-foreground",
-            readOnly && !highlight && "bg-muted",
+            readOnly && !highlight && "bg-locked",
             highlight && "border-green-600 bg-green-50 font-bold text-green-700"
           )}
           value={value}
@@ -154,7 +154,7 @@ function Figure({ label, value }) {
         <Input
           readOnly
           tabIndex={-1}
-          className="bg-muted pr-12 text-muted-foreground"
+          className="bg-locked pr-12 text-muted-foreground"
           value={amount(value)}
         />
         <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -207,6 +207,8 @@ export default function SalariesSection({
   onSave,
   // Whether the salary breakdown is open. The history under it is always shown.
   detailsOpen = true,
+  // The firm sets the salary; on My Profile the payslip is only read.
+  canEdit = true,
 }) {
   // Opened on what the employee is already paid, so the page shows the salary
   // in force rather than a blank form somebody has to fill in from memory.
@@ -576,7 +578,11 @@ export default function SalariesSection({
       {/* The breakdown is opened and closed from beside the heading, so that
           when it is closed the history below is all there is to read. */}
       {detailsOpen && (
-      <div id="salary-details" className="space-y-6 rounded-lg border p-4 sm:p-6">
+      <fieldset
+        id="salary-details"
+        disabled={!canEdit}
+        className="space-y-6 rounded-lg border p-4 sm:p-6"
+      >
         <Group title="Salary & Allowances">
           <Amount
             id="salary-basic"
@@ -648,18 +654,21 @@ export default function SalariesSection({
         </div>
 
         {/* The salary belongs to the employee, so it is saved onto the record
-            rather than only feeding the payment form below. */}
-        <div className="flex justify-end">
-          <Button
-            type="button"
-            onClick={savePayslip}
-            disabled={!(Number(payslip.basic) > 0)}
-          >
-            <Save className="mr-2 h-4 w-4" />
-            Save
-          </Button>
-        </div>
-      </div>
+            rather than only feeding the payment form below - by the firm, on
+            the Employees page. */}
+        {canEdit && (
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              onClick={savePayslip}
+              disabled={!(Number(payslip.basic) > 0)}
+            >
+              <Save className="mr-2 h-4 w-4" />
+              Save
+            </Button>
+          </div>
+        )}
+      </fieldset>
       )}
 
       {/* What has been paid, month by month */}

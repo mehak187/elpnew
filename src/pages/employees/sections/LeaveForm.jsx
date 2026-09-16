@@ -25,25 +25,6 @@ import {
 /** A reason has to fit on the request, so the form says how much room. */
 const NOTES_LIMIT = 500;
 
-/** How each category is coloured wherever its types are listed. */
-const CATEGORY_TONE = {
-  "Regular Leave": {
-    heading: "text-red-600",
-    card: "border-red-200 bg-red-50/60",
-    bullet: "border-red-300",
-  },
-  "Family Leave": {
-    heading: "text-purple-600",
-    card: "border-purple-200 bg-purple-50/60",
-    bullet: "border-purple-300",
-  },
-  "Special Leave": {
-    heading: "text-green-700",
-    card: "border-green-200 bg-green-50/60",
-    bullet: "border-green-300",
-  },
-};
-
 /** A numbered step, so a long form reads as two short ones. */
 function Step({ number, title, note, children }) {
   return (
@@ -65,67 +46,6 @@ function Step({ number, title, note, children }) {
 }
 
 /**
- * The leave on offer, laid out so the choice can be made without opening a
- * dropdown to find out what each type is worth.
- *
- * The same list the pickers are built from, so it can never fall out of step
- * with them - and clicking a line is another way of choosing it.
- */
-function CategoryCards({ selectedType, onChoose }) {
-  return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-      {ABSENCE_CATEGORIES.map((category) => {
-        const tone = CATEGORY_TONE[category.name];
-        return (
-          <div
-            key={category.name}
-            className={cn("rounded-lg border", tone.card)}
-          >
-            <p
-              className={cn(
-                "border-b px-4 py-2 text-sm font-semibold",
-                tone.heading
-              )}
-            >
-              {category.name}
-            </p>
-            <div className="space-y-2 p-4">
-              {category.types.map((type) => {
-                const chosen = selectedType === type.name;
-                return (
-                  <button
-                    key={type.name}
-                    type="button"
-                    onClick={() => onChoose(category.name, type.name)}
-                    className="flex w-full items-center gap-2 rounded text-left text-xs focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={cn(
-                        "h-3 w-3 shrink-0 rounded-full border-2",
-                        chosen
-                          ? "border-primary bg-primary"
-                          : cn("bg-white", tone.bullet)
-                      )}
-                    />
-                    <span className={cn("flex-1", chosen && "font-semibold")}>
-                      {type.name}
-                    </span>
-                    <span className="text-muted-foreground">
-                      &mdash; {type.entitlement}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-/**
  * A new leave request.
  *
  * Asked for in two steps: what kind of leave, then when and why. The balance
@@ -141,7 +61,13 @@ export default function LeaveForm({
   onSubmit,
   onCancel,
   years,
+  // The year an advance would be charged to, offered only when this year's
+  // annual leave is gone.
+  advanceYear,
 }) {
+  // Days taken now against next year: the kind of leave is settled by that
+  // choice, so neither the category nor the type is asked for again.
+  const advance = Boolean(advanceYear) && draft.year === advanceYear;
   const days = leaveDays(draft.from, draft.to);
   const entitlement = entitlementOf(draft.type);
   const balance = remainingBalance(
@@ -153,6 +79,10 @@ export default function LeaveForm({
   // What would be left of it once this request is taken - 14 left less 5
   // asked for is 9. Below zero says the request is more than is left.
   const afterRequest = balance ? balance.remaining - Math.max(days, 0) : null;
+  // A type counted in days cannot be asked for beyond what is left. One whose
+  // length depends on the case (Sick, Bereavement, Widowhood) has no count to
+  // exceed, so nothing is blocked there.
+  const exceeded = afterRequest !== null && afterRequest < 0;
 
   const canSave =
     draft.category &&
@@ -161,7 +91,8 @@ export default function LeaveForm({
     draft.to &&
     draft.year &&
     draft.reason.trim() &&
-    days > 0;
+    days > 0 &&
+    !exceeded;
 
   return (
     <div className="space-y-6">
@@ -187,7 +118,7 @@ export default function LeaveForm({
             </Label>
             <Select
               value={draft.year}
-              onValueChange={(value) => onChange("year", value)}
+              onValueChange={(value) => value && onChange("year", value)}
             >
               <SelectTrigger id="leaveYearField">
                 <SelectValue />
@@ -200,6 +131,11 @@ export default function LeaveForm({
                 ))}
               </SelectContent>
             </Select>
+            {advance && (
+              <p className="text-xs text-muted-foreground">
+                Advance leave: taken now, charged to {advanceYear}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -210,52 +146,72 @@ export default function LeaveForm({
                 hidden native select, which reports "" whenever the list it was
                 built from changes - and would wipe a choice just made. Nobody
                 can pick "nothing" from the list itself. */}
-            <Select
-              value={draft.category}
-              onValueChange={(value) => value && onCategory(value)}
-            >
-              <SelectTrigger id="leaveCategory">
-                <SelectValue placeholder="Select Leave Category" />
-              </SelectTrigger>
-              <SelectContent>
-                {ABSENCE_CATEGORIES.map((category) => (
-                  <SelectItem key={category.name} value={category.name}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {advance ? (
+              <Input
+                id="leaveCategory"
+                readOnly
+                tabIndex={-1}
+                className="cursor-default bg-locked font-semibold text-primary"
+                value={draft.category}
+              />
+            ) : (
+              <Select
+                value={draft.category}
+                onValueChange={(value) => value && onCategory(value)}
+              >
+                <SelectTrigger id="leaveCategory">
+                  <SelectValue placeholder="Select Leave Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ABSENCE_CATEGORIES.map((category) => (
+                    <SelectItem key={category.name} value={category.name}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="leaveType">
               Leave Type<span className="whitespace-nowrap text-destructive">&nbsp;*</span>
             </Label>
-            <Select
-              value={draft.type}
-              onValueChange={(value) => value && onChange("type", value)}
-              disabled={!draft.category}
-            >
-              <SelectTrigger id="leaveType">
-                <SelectValue
-                  placeholder={
-                    draft.category
-                      ? "Select Leave Type"
-                      : "Select a category first"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {typesIn(draft.category).map((type) => (
-                  <SelectItem key={type.name} value={type.name}>
-                    {type.name}
-                    {/* Opacity rather than a colour, so it stays readable
-                        against the highlighted row. */}
-                    <span className="opacity-70"> &mdash; {type.entitlement}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {advance ? (
+              <Input
+                id="leaveType"
+                readOnly
+                tabIndex={-1}
+                className="cursor-default bg-locked font-semibold text-primary"
+                value={draft.type + " — " + entitlementOf(draft.type)}
+              />
+            ) : (
+              <Select
+                value={draft.type}
+                onValueChange={(value) => value && onChange("type", value)}
+                disabled={!draft.category}
+              >
+                <SelectTrigger id="leaveType">
+                  <SelectValue
+                    placeholder={
+                      draft.category
+                        ? "Select Leave Type"
+                        : "Select a category first"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {typesIn(draft.category).map((type) => (
+                    <SelectItem key={type.name} value={type.name}>
+                      {type.name}
+                      {/* Opacity rather than a colour, so it stays readable
+                          against the highlighted row. */}
+                      <span className="opacity-70"> &mdash; {type.entitlement}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           {/* What is left of the chosen type this year: the entitlement less
@@ -271,7 +227,7 @@ export default function LeaveForm({
               id="leaveBalance"
               readOnly
               tabIndex={-1}
-              className="cursor-default bg-muted font-semibold text-primary"
+              className="cursor-default bg-locked font-semibold text-primary"
               placeholder="Auto calculated"
               value={
                 !draft.type
@@ -285,24 +241,18 @@ export default function LeaveForm({
             {draft.type && (
               <p className="text-xs text-muted-foreground">
                 {balance
-                  ? balance.allowance +
-                    " days entitlement - " +
-                    balance.used +
-                    " taken in " +
-                    draft.year
+                  ? balance.expired
+                    ? "The balance for " + draft.year + " expired at the end of that year"
+                    : balance.allowance +
+                      " days entitlement - " +
+                      balance.used +
+                      " taken in " +
+                      draft.year
                   : "Settled when the request is decided"}
               </p>
             )}
           </div>
         </div>
-
-        <CategoryCards
-          selectedType={draft.type}
-          onChoose={(category, type) => {
-            onCategory(category);
-            onChange("type", type);
-          }}
-        />
       </Step>
 
       <Step
@@ -345,7 +295,7 @@ export default function LeaveForm({
               id="leaveDays"
               readOnly
               tabIndex={-1}
-              className="cursor-default bg-muted text-muted-foreground"
+              className="cursor-default bg-locked text-muted-foreground"
               value={days > 0 ? days + (days === 1 ? " Day" : " Days") : ""}
               placeholder="Auto calculated"
             />
@@ -361,7 +311,7 @@ export default function LeaveForm({
               readOnly
               tabIndex={-1}
               className={cn(
-                "cursor-default bg-muted font-semibold",
+                "cursor-default bg-locked font-semibold",
                 afterRequest !== null && afterRequest < 0
                   ? "text-destructive"
                   : "text-primary"
@@ -375,9 +325,26 @@ export default function LeaveForm({
                     : entitlement
               }
             />
-            {balance && days > 0 && (
+            {balance && days > 0 && !exceeded && (
               <p className="text-xs text-muted-foreground">
                 {balance.remaining} left - {days} on this request
+              </p>
+            )}
+
+            {/* Asking for more than is left is not a request management can be
+                sent: it is said here, beside the figure that says why, and the
+                request cannot be submitted until the dates are changed. The
+                dot pulses so the message is noticed where the eye already is. */}
+            {exceeded && (
+              <p
+                role="alert"
+                className="flex items-center gap-2 text-xs font-medium text-destructive"
+              >
+                <span
+                  aria-hidden="true"
+                  className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-destructive"
+                />
+                Duration exceeded, please adjust your dates
               </p>
             )}
           </div>
@@ -441,13 +408,9 @@ export default function LeaveForm({
           </div>
         </div>
 
-        {days > 0 && balance && days > balance.remaining && (
-          <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-            This is {days} {days === 1 ? "day" : "days"} against a remaining
-            balance of {balance.remaining}. It can be submitted, but management
-            will have to decide whether to allow it.
-          </p>
-        )}
+        {/* No warning about asking for more than is left: the balance beside
+            the dates already turns red and shows how far past it the request
+            goes, and management decides either way. */}
 
         <div className="flex flex-wrap items-center justify-between gap-2">
           {/* type="button": the leave form sits inside the employee record's

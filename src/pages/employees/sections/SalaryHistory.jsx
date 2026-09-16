@@ -105,9 +105,11 @@ export default function SalaryHistory() {
                   <tr className="border-b bg-secondary/60 text-primary">
                     <th className="border-r p-3 font-semibold">No.</th>
                     <th className="border-r p-3 font-semibold">Month &amp; Year</th>
+                    {/* One line to a column: what it holds and what makes it
+                        up read as one heading rather than two stacked rows. */}
                     <th className="border-r p-3 font-semibold">
-                      Salary &amp; Allowances
-                      <span className="block text-xs font-normal text-muted-foreground">
+                      Salary &amp; Allowances{" "}
+                      <span className="font-normal text-muted-foreground">
                         (Basic Salary + Total Allowances)
                       </span>
                     </th>
@@ -116,8 +118,8 @@ export default function SalaryHistory() {
                       Administrative Deduction
                     </th>
                     <th className="border-r p-3 font-semibold">
-                      Amount Paid
-                      <span className="block text-xs font-normal text-muted-foreground">
+                      Amount Paid{" "}
+                      <span className="font-normal text-muted-foreground">
                         (Net Amount)
                       </span>
                     </th>

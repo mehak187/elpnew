@@ -174,7 +174,7 @@ export default function DailyActivitiesSection() {
               id="day-office"
               readOnly
               tabIndex={-1}
-              className="bg-muted text-muted-foreground"
+              className="bg-locked text-muted-foreground"
               value={formatDuration(officeMinutes)}
             />
             <p className="text-xs text-muted-foreground">
@@ -188,7 +188,7 @@ export default function DailyActivitiesSection() {
               id="day-active"
               readOnly
               tabIndex={-1}
-              className="bg-muted text-muted-foreground"
+              className="bg-locked text-muted-foreground"
               value={formatDuration(activeMinutes)}
             />
             <p className="text-xs text-muted-foreground">

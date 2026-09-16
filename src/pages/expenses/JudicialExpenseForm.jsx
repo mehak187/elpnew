@@ -229,7 +229,7 @@ export default function JudicialExpenseForm() {
               value={JUDICIAL_CATEGORY}
               readOnly
               disabled
-              className="bg-muted"
+              className="bg-locked"
             />
           </div>
 

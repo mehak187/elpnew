@@ -292,9 +292,19 @@ function BankFields({ draft, set }) {
 
 /** The two lists this section holds, one at a time. */
 const TABS = [
-  { key: "accounts", label: "Bank Accounts" },
-  { key: "transfer", label: "Account Transfers" },
+  {
+    key: "accounts",
+    label: "Bank Accounts",
+    note: "Every account the firm holds, and what is in it",
+  },
+  {
+    key: "transfer",
+    label: "Account Transfers",
+    note: "Money moved between the firm's own accounts",
+  },
 ];
+
+const tabOf = (key) => TABS.find((option) => option.key === key) || TABS[0];
 
 const PAGE_SIZES = [10, 25, 50];
 
@@ -511,31 +521,38 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
     <div className="space-y-6">
       {/* The two lists and the way to add to them sit together on the right,
           so every control on this row is in one place. */}
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        <div className="grid flex-1 grid-cols-2 gap-2 rounded-lg border p-1 sm:max-w-xs sm:flex-none">
-          {TABS.map((option) => (
-            <button
-              key={option.key}
-              type="button"
-              onClick={() => setTab(option.key)}
-              className={cn(
-                "rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                tab === option.key
-                  ? "bg-secondary text-secondary-foreground"
-                  : "text-muted-foreground hover:bg-muted/50",
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
+      {/* One row for the section: the open list's name on the left, and on the
+          right the tabs and the button that acts on it. A heading above the
+          tabs would only name the tab that is already highlighted. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <FormHeading icon={Landmark} title={tabOf(tab).label} note={tabOf(tab).note} />
 
-        {canEdit && (
-          <Button onClick={openAddBank}>
-            <Plus className="mr-1.5 h-4 w-4" />
-            Add New Bank
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="grid grid-cols-2 gap-2 rounded-lg border p-1 sm:max-w-xs">
+            {TABS.map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                onClick={() => setTab(option.key)}
+                className={cn(
+                  "rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  tab === option.key
+                    ? "bg-secondary text-secondary-foreground"
+                    : "text-muted-foreground hover:bg-muted/50",
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+
+          {canEdit && (
+            <Button onClick={openAddBank}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              Add New Bank
+            </Button>
+          )}
+        </div>
       </div>
 
       {tab === "accounts" && (
@@ -869,7 +886,7 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                       id="transferWords"
                       readOnly
                       tabIndex={-1}
-                      className="bg-muted text-muted-foreground"
+                      className="bg-locked text-muted-foreground"
                       value={amountInWords(transfer.amount) || "-"}
                     />
                   </div>

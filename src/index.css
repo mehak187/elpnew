@@ -36,6 +36,7 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-locked: var(--locked);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
@@ -66,6 +67,10 @@
   /* Every other request card is framed in brown, so where one ends and the
      next begins is read at a glance rather than counted. */
   --frame-alt: oklch(0.44 0.075 55);
+  /* The background of a field the system fills in: a figure worked out, or a
+     record being read rather than written. One tint for all of them, so "you
+     cannot type here" is the same colour wherever it appears. */
+  --locked: oklch(0.975 0.022 150);
   --background: oklch(0.99 0 0);
   --foreground: oklch(0.20 0 0);
   --card: oklch(1 0 0);

@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import BackButton from "@/components/shared/BackButton";
 import FormHeading from "@/components/shared/FormHeading";
-import TabBar from "@/components/shared/TabBar";
+import PhoneInput from "@/components/shared/PhoneInput";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -51,9 +51,9 @@ import {
   DEFAULT_DIAL_CODE,
   COUNTRY_DIAL_CODES,
   EMPLOYEE_DOCUMENT_TYPES,
+  EMERGENCY_RELATIONSHIPS,
 } from "@/lib/constants";
 import FinancialBenefitsSection from "./sections/FinancialBenefitsSection";
-import { BENEFIT_TABS } from "./sections/benefitTabs";
 
 
 import DailyActivitiesSection from "./sections/DailyActivitiesSection";
@@ -86,9 +86,15 @@ const SECTIONS = [
     icon: User,
     note: "Employee profile, job description and contact details",
   },
-  // Documents are not a section of their own any more: the papers on file
-  // are what the details above are taken from, so they are read on the same
-  // page, under the three boxes.
+  {
+    // The papers the details above were taken from, in a section of their own
+    // again - they are looked up as often as the details themselves.
+    noSave: true,
+    key: "documents",
+    label: "Documents",
+    icon: FileText,
+    note: "The papers on file for this employee",
+  },
   {
     // Salary, loans, assistance and commission were four entries in this
     // menu, all answering the same question: what the firm pays this
@@ -100,11 +106,21 @@ const SECTIONS = [
     note: "Salaries, loans, assistance and commission",
   },
   {
-    key: "daily",
-    label: "Daily Activities",
-    icon: CalendarClock,
-    note: "Record today's working time and activities",
-    save: "Save Daily Activity",
+    // Anything asked of the administration that has no form of its own - a
+    // parking card, a laptop. Nothing to save on the page: each request is
+    // submitted on its own.
+    key: "generalRequest",
+    label: "General Requests",
+    icon: ClipboardList,
+    noSave: true,
+    note: "Submit your request to the administration",
+  },
+  {
+    key: "leaves",
+    label: "Leaves",
+    icon: CalendarCheck,
+    noSave: true,
+    note: "Leave requests and what was decided about them",
   },
   {
     noSave: true,
@@ -114,29 +130,18 @@ const SECTIONS = [
     note: "Notices addressed to this employee",
   },
   {
+    key: "daily",
+    label: "Daily Activities",
+    icon: CalendarClock,
+    note: "Record today's working time and activities",
+    save: "Save Daily Activity",
+  },
+  {
     noSave: true,
     key: "performance",
     label: "Performance Evaluation",
     icon: Gauge,
     note: "Statistics collected by the system from recorded activity",
-  },
-  {
-    key: "leaves",
-    label: "Leaves",
-    icon: CalendarCheck,
-    noSave: true,
-    note: "Leave requests and what was decided about them",
-    ownsHeader: true,
-  },
-  {
-    // Anything asked of the administration that has no form of its own - a
-    // parking card, a laptop. Nothing to save on the page: each request is
-    // submitted on its own.
-    key: "generalRequest",
-    label: "General Request",
-    icon: ClipboardList,
-    noSave: true,
-    note: "Submit your request to the administration",
   },
   {
     // What one employee may see and change. Set for someone by whoever
@@ -152,6 +157,18 @@ const SECTIONS = [
 ];
 
 /**
+ * The mark beside a field that has to be filled in.
+ *
+ * It is a demand, so it is only shown where the page is asking for something:
+ * on My Profile, where the record is only being read, there is nothing to
+ * demand and the mark would be noise.
+ */
+function Required({ show }) {
+  if (!show) return null;
+  return <span className="whitespace-nowrap text-destructive">&nbsp;*</span>;
+}
+
+/**
  * A phone number and the country it belongs to.
  *
  * The dial code is a field of its own rather than something typed into the
@@ -162,36 +179,14 @@ function PhoneField({ id, label, placeholder, dialCode, onDialCode, value, onCha
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
-      <div className="flex gap-2">
-        <Select
-          value={dialCode || DEFAULT_DIAL_CODE}
-          onValueChange={onDialCode}
-        >
-          <SelectTrigger className="w-24 shrink-0" aria-label="Country code">
-            {/* The trigger shows the code alone. The flag and country belong
-                in the list, where they are what you choose by; once chosen,
-                the code is the only part that is dialled. */}
-            <SelectValue>{dialCode || DEFAULT_DIAL_CODE}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {COUNTRY_DIAL_CODES.map((country) => (
-              <SelectItem key={country.code} value={country.dial}>
-                {country.flag} {country.dial}
-                {/* Dimmed by opacity, not by a fixed grey: the row turns navy
-                    on hover, and a grey that reads on white vanishes on it. */}
-                <span className="opacity-70"> {country.name}</span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Input
-          id={id}
-          className="flex-1"
-          placeholder={placeholder}
-          value={value}
-          onChange={onChange}
-        />
-      </div>
+      <PhoneInput
+        id={id}
+        dialCode={dialCode}
+        onDialCode={onDialCode}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+      />
     </div>
   );
 }
@@ -275,11 +270,20 @@ const emptyFormData = {
 
 
 
+  // The card a person is identified by in Oman: a citizen's civil ID, or a
+  // resident's card. One field, because a person carries one or the other.
+  civilId: "",
+
   dialCode: DEFAULT_DIAL_CODE,
   phone: "",
+  // Which address is which matters when somebody has to be reached: the work
+  // one is the firm's, the personal one is theirs.
+  workEmail: "",
+  personalEmail: "",
   email: "",
   address: "",
   emergencyName: "",
+  emergencyRelationship: "",
   emergencyDialCode: DEFAULT_DIAL_CODE,
   emergencyPhone: "",
 };
@@ -299,6 +303,9 @@ const toFormData = (record) =>
         ...record,
         employeeName: record.name || "",
         arabicName: record.nameAr || "",
+        // Records written before the two addresses were told apart hold one
+        // `email`, which was always the work one.
+        workEmail: record.workEmail || record.email || "",
       }
     : emptyFormData;
 
@@ -307,6 +314,8 @@ const toRecord = (formData) => ({
   ...formData,
   name: formData.employeeName,
   nameAr: formData.arabicName,
+  // The lists still read `email`, and the work address is the one they mean.
+  email: formData.workEmail || formData.email,
 });
 
 /**
@@ -401,6 +410,9 @@ export default function EmployeeForm({ self }) {
 
   const current = SECTIONS.find((s) => s.key === activeSection) || SECTIONS[0];
   const isInfo = activeSection === "information";
+  // Both of these draw their own boxes, so the page's card steps out of the
+  // way rather than drawing a border around borders.
+  const isDocuments = activeSection === "documents";
 
   /**
    * Whether the record can be changed on this page.
@@ -409,7 +421,9 @@ export default function EmployeeForm({ self }) {
    * Employees page. Two places to edit one record is two records waiting
    * to disagree - and nobody amends their own job title or joining date.
    */
-  const readOnly = Boolean(self) && isInfo;
+  const readOnly = Boolean(self);
+  // Nothing is being asked for on a page that only shows the record.
+  const asksFor = !readOnly;
   const employeeNo = record?.empNo || nextEmployeeNo(employeeRecords);
   const hasLeft = HAS_LEFT.includes(formData.status);
 
@@ -432,9 +446,14 @@ export default function EmployeeForm({ self }) {
         <div className="flex items-center gap-3">
           <BackButton fallback="/employees" />
           <div>
-            <h1 className="text-xl font-bold text-primary sm:text-2xl">
-              {current.title || current.label}
-            </h1>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-xl font-bold text-primary sm:text-2xl">
+                {current.title || current.label}
+              </h1>
+              {/* No standing beside the title: it is already on the row this
+                  record was opened from, and the title says which record is
+                  open, not how it stands. */}
+            </div>
             <p className="text-xs text-primary/75 sm:text-sm">{current.note}</p>
           </div>
         </div>
@@ -489,49 +508,13 @@ export default function EmployeeForm({ self }) {
           {/* On the merged page the three boxes are the frame, so the
               page's own card steps out of the way rather than drawing a
               border around three borders. */}
-          <Card className={cn(isInfo && "border-0 bg-transparent shadow-none")}>
+          <Card className={cn((isInfo || isDocuments) && "border-0 bg-transparent shadow-none")}>
             <CardContent
               className={cn(
                 "p-4 sm:p-6",
-                isInfo && "space-y-4 p-0 sm:space-y-6 sm:p-0"
+                (isInfo || isDocuments) && "space-y-4 p-0 sm:space-y-6 sm:p-0"
               )}
             >
-              {!isInfo && !current.ownsHeader && (
-                <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-                  <div className="flex items-center gap-3">
-                  <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
-                    {current.label}
-                  </h2>
-                  {/* Standing travels with the record, whichever side is
-                      open - but only once there is a record. */}
-                  {isEditMode && (
-                    <span className="inline-flex items-center gap-1.5 text-sm">
-                      {formData.status}
-                      <span
-                        aria-hidden="true"
-                        className={cn(
-                          "h-2 w-2 rounded-full",
-                          STATUS_DOT[formData.status] || "bg-muted-foreground"
-                        )}
-                      />
-                    </span>
-                  )}
-                  </div>
-
-                  {/* A section's tabs belong in the corner of its own
-                      heading: the heading names the section and the tabs
-                      say which side of it is open, which is one statement
-                      rather than two headings in a row. */}
-                  {activeSection === "benefits" && (
-                    <TabBar
-                      options={BENEFIT_TABS}
-                      value={benefitsTab}
-                      onChange={setBenefitsTab}
-                    />
-                  )}
-                </div>
-              )}
-
               <form
                 id="employee-form"
                 onSubmit={handleSubmit}
@@ -540,7 +523,14 @@ export default function EmployeeForm({ self }) {
                 {isInfo && (
                   <fieldset
                     disabled={readOnly}
-                    className="space-y-4 border-0 p-0 sm:space-y-6"
+                    className={cn(
+                      "space-y-4 border-0 p-0 sm:space-y-6",
+                      // One background for everything that cannot be changed,
+                      // so the page reads as a record rather than as a form
+                      // somebody has greyed out field by field.
+                      readOnly &&
+                        "[&_input:disabled]:bg-locked [&_input:disabled]:opacity-100 [&_textarea:disabled]:bg-locked [&_textarea:disabled]:opacity-100 [&_button:disabled]:bg-locked [&_button:disabled]:opacity-100 [&_button:disabled]:text-foreground"
+                    )}
                   >
                     {readOnly && (
                       <p className="flex items-start gap-2 rounded-lg border border-primary/30 bg-secondary p-4 text-sm text-primary">
@@ -555,39 +545,31 @@ export default function EmployeeForm({ self }) {
                 {/* Standing travels with the record - but only once there
                     is one. A new employee has not been created yet, so
                     there is nothing to be Active. */}
-                <SectionCard
-                  title="Employee Information"
-                  aside={
-                    isEditMode && (
-                      <span className="inline-flex items-center gap-1.5 text-sm">
-                        {formData.status}
-                        <span
-                          aria-hidden="true"
-                          className={cn(
-                            "h-2 w-2 rounded-full",
-                            STATUS_DOT[formData.status] || "bg-muted-foreground"
-                          )}
-                        />
-                      </span>
-                    )
-                  }
-                >
+                {/* No standing beside the heading: it is already on the row
+                    this record was opened from, and it is a field below. */}
+                <SectionCard title="Employee Information">
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
                       {/* Given by the system, so it is shown and not asked for */}
                       <div className="space-y-2">
-                        <Label htmlFor="employeeNo">Employee No. *</Label>
+                        <Label htmlFor="employeeNo">
+                          Employee No.
+                          <Required show={asksFor} />
+                        </Label>
                         <Input
                           id="employeeNo"
                           value={employeeNo}
                           readOnly
                           disabled
-                          className="bg-muted"
+                          className="bg-locked"
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="arabicName">Full Name (Arabic) *</Label>
+                        <Label htmlFor="arabicName">
+                          Full Name (Arabic)
+                          <Required show={asksFor} />
+                        </Label>
                         <Input
                           id="arabicName"
                           name="arabicName"
@@ -601,7 +583,8 @@ export default function EmployeeForm({ self }) {
 
                       <div className="space-y-2">
                         <Label htmlFor="employeeName">
-                          Full Name (English) *
+                          Full Name (English)
+                          <Required show={asksFor} />
                         </Label>
                         <Input
                           id="employeeName"
@@ -614,7 +597,10 @@ export default function EmployeeForm({ self }) {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="nationality">Nationality *</Label>
+                        <Label htmlFor="nationality">
+                          Nationality
+                          <Required show={asksFor} />
+                        </Label>
                         <Select
                           value={formData.nationality}
                           onValueChange={(value) => set("nationality", value)}
@@ -633,7 +619,10 @@ export default function EmployeeForm({ self }) {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="gender">Gender *</Label>
+                        <Label htmlFor="gender">
+                          Gender
+                          <Required show={asksFor} />
+                        </Label>
                         <Select
                           value={formData.gender}
                           onValueChange={(value) => set("gender", value)}
@@ -652,7 +641,10 @@ export default function EmployeeForm({ self }) {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="dateOfBirth">Date of Birth *</Label>
+                        <Label htmlFor="dateOfBirth">
+                          Date of Birth
+                          <Required show={asksFor} />
+                        </Label>
                         <Input
                           id="dateOfBirth"
                           name="dateOfBirth"
@@ -663,8 +655,38 @@ export default function EmployeeForm({ self }) {
                         />
                       </div>
 
+                      {/* The card the person is identified by. The copy of it
+                          is filed on the Documents page, with the rest. */}
                       <div className="space-y-2">
-                        <Label htmlFor="dateOfJoining">Date of Joining *</Label>
+                        <Label htmlFor="civilId">
+                          Civil ID / Resident Card No.
+                          <Required show={asksFor} />
+                        </Label>
+                        <Input
+                          id="civilId"
+                          name="civilId"
+                          value={formData.civilId}
+                          onChange={onChange}
+                          placeholder="Enter civil ID or resident card number"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </SectionCard>
+
+                {/* When somebody joined, where they stand and what they do:
+                    the firm's own view of the employment, so it is kept to the
+                    Employees page and not shown on My Profile. */}
+                {!self && (
+                <SectionCard title="Employment & Job Information">
+                  <div className="space-y-6">
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="dateOfJoining">
+                          Date of Joining
+                          <Required show={asksFor} />
+                        </Label>
                         <Input
                           id="dateOfJoining"
                           name="dateOfJoining"
@@ -676,7 +698,10 @@ export default function EmployeeForm({ self }) {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="status">Status *</Label>
+                        <Label htmlFor="status">
+                          Status
+                          <Required show={asksFor} />
+                        </Label>
                         <Select
                           value={formData.status}
                           onValueChange={(value) => set("status", value)}
@@ -693,6 +718,95 @@ export default function EmployeeForm({ self }) {
                           </SelectContent>
                         </Select>
                       </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="category">
+                          Category / Role
+                          <Required show={asksFor} />
+                        </Label>
+                        <Select
+                          value={formData.category}
+                          onValueChange={(value) => set("category", value)}
+                        >
+                          <SelectTrigger id="category">
+                            <SelectValue placeholder="Select Category / Role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {EMPLOYEE_CATEGORIES.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="jobLevel">
+                          Job Level
+                          <Required show={asksFor} />
+                        </Label>
+                        <Select
+                          value={formData.jobLevel}
+                          onValueChange={(value) => set("jobLevel", value)}
+                        >
+                          <SelectTrigger id="jobLevel">
+                            <SelectValue placeholder="Select Job Level" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {JOB_LEVELS.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="department">
+                          Department / Division
+                          <Required show={asksFor} />
+                        </Label>
+                        <Select
+                          value={formData.department}
+                          onValueChange={(value) => set("department", value)}
+                        >
+                          <SelectTrigger id="department">
+                            <SelectValue placeholder="Select Department / Division" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {DEPARTMENTS.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="occupation">
+                          Profession / Occupation
+                          <Required show={asksFor} />
+                        </Label>
+                        <Select
+                          value={formData.occupation}
+                          onValueChange={(value) => set("occupation", value)}
+                        >
+                          <SelectTrigger id="occupation">
+                            <SelectValue placeholder="Select Profession / Occupation" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {OCCUPATIONS.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
                     </div>
 
                     {/* Asked for only once the status says somebody has left */}
@@ -745,94 +859,7 @@ export default function EmployeeForm({ self }) {
                     )}
                   </div>
                 </SectionCard>
-
-                <SectionCard title="Job Description Information">
-                  <div className="space-y-6">
-
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="category">Category / Role *</Label>
-                        <Select
-                          value={formData.category}
-                          onValueChange={(value) => set("category", value)}
-                        >
-                          <SelectTrigger id="category">
-                            <SelectValue placeholder="Select Category / Role" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {EMPLOYEE_CATEGORIES.map((option) => (
-                              <SelectItem key={option} value={option}>
-                                {option}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="jobLevel">Job Level *</Label>
-                        <Select
-                          value={formData.jobLevel}
-                          onValueChange={(value) => set("jobLevel", value)}
-                        >
-                          <SelectTrigger id="jobLevel">
-                            <SelectValue placeholder="Select Job Level" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {JOB_LEVELS.map((option) => (
-                              <SelectItem key={option} value={option}>
-                                {option}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="department">
-                          Department / Division *
-                        </Label>
-                        <Select
-                          value={formData.department}
-                          onValueChange={(value) => set("department", value)}
-                        >
-                          <SelectTrigger id="department">
-                            <SelectValue placeholder="Select Department / Division" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {DEPARTMENTS.map((option) => (
-                              <SelectItem key={option} value={option}>
-                                {option}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="occupation">
-                          Profession / Occupation *
-                        </Label>
-                        <Select
-                          value={formData.occupation}
-                          onValueChange={(value) => set("occupation", value)}
-                        >
-                          <SelectTrigger id="occupation">
-                            <SelectValue placeholder="Select Profession / Occupation" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {OCCUPATIONS.map((option) => (
-                              <SelectItem key={option} value={option}>
-                                {option}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                    </div>
-                  </div>
-                </SectionCard>
+                )}
 
                 <SectionCard title="Contact &amp; Address Information">
                   <div className="space-y-6">
@@ -840,7 +867,7 @@ export default function EmployeeForm({ self }) {
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
                       <PhoneField
                         id="phone"
-                        label="Phone Number *"
+                        label={<>Phone Number<Required show={asksFor} /></>}
                         placeholder="Enter phone number"
                         dialCode={formData.dialCode}
                         onDialCode={(value) => set("dialCode", value)}
@@ -848,14 +875,27 @@ export default function EmployeeForm({ self }) {
                         onChange={(e) => set("phone", e.target.value)}
                       />
 
+                      {/* Two addresses, said apart: the firm writes to the
+                          work one, and reaches a person on the other. */}
                       <IconField
                         icon={Mail}
-                        id="email"
-                        name="email"
+                        id="workEmail"
+                        name="workEmail"
                         type="email"
-                        label="Email Address *"
-                        placeholder="Enter email address"
-                        value={formData.email}
+                        label={<>Work Email<Required show={asksFor} /></>}
+                        placeholder="name@firm.com"
+                        value={formData.workEmail}
+                        onChange={onChange}
+                      />
+
+                      <IconField
+                        icon={Mail}
+                        id="personalEmail"
+                        name="personalEmail"
+                        type="email"
+                        label="Personal Email"
+                        placeholder="Enter personal email address"
+                        value={formData.personalEmail}
                         onChange={onChange}
                       />
 
@@ -863,7 +903,7 @@ export default function EmployeeForm({ self }) {
                         icon={MapPin}
                         id="address"
                         name="address"
-                        label="Address *"
+                        label={<>Address<Required show={asksFor} /></>}
                         placeholder="Enter full address"
                         value={formData.address}
                         onChange={onChange}
@@ -874,15 +914,41 @@ export default function EmployeeForm({ self }) {
                         icon={User}
                         id="emergencyName"
                         name="emergencyName"
-                        label="Emergency Contact Name *"
+                        label={<>Emergency Contact Name<Required show={asksFor} /></>}
                         placeholder="Enter emergency contact name"
                         value={formData.emergencyName}
                         onChange={onChange}
                       />
 
+                      {/* Who they are to the employee: whoever answers that
+                          call needs to know who they are speaking to. */}
+                      <div className="space-y-2">
+                        <Label htmlFor="emergencyRelationship">
+                          Relationship to Employee
+                          <Required show={asksFor} />
+                        </Label>
+                        <Select
+                          value={formData.emergencyRelationship}
+                          onValueChange={(value) =>
+                            value && set("emergencyRelationship", value)
+                          }
+                        >
+                          <SelectTrigger id="emergencyRelationship">
+                            <SelectValue placeholder="Select Relationship" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {EMERGENCY_RELATIONSHIPS.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
                       <PhoneField
                         id="emergencyPhone"
-                        label="Emergency Contact Phone Number *"
+                        label={<>Emergency Contact Phone Number<Required show={asksFor} /></>}
                         placeholder="Enter emergency contact phone number"
                         dialCode={formData.emergencyDialCode}
                         onDialCode={(value) => set("emergencyDialCode", value)}
@@ -904,30 +970,31 @@ export default function EmployeeForm({ self }) {
                   </fieldset>
                 )}
 
-                {/* The employee's papers, in a box of their own under the
-                    details they back. Only once the employee exists - there is
-                    nobody to file a paper against before - and outside the
-                    locked fieldset, so they stay usable on My Profile. */}
-                {isInfo && isEditMode && (
+                {/* The employee's papers, in a section of their own. Only once
+                    the employee exists - there is nobody to file a paper
+                    against before. */}
+                {isDocuments && isEditMode && (
                   <Card>
                   <CardContent className="p-4 sm:p-6">
                   <div className="space-y-6">
                     {/* Nothing is asked for until it is asked for: the page
                         is the documents on file, and the form is opened over
                         them when there is one to add. */}
-                    <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-                      <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
-                        Documents
-                      </h2>
-                      <Button
-                        type="button"
-                        onClick={() => setAddingDoc(true)}
-                        disabled={addingDoc}
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Document
-                      </Button>
-                    </div>
+                    {/* No heading: the page above is already called Documents.
+                        The firm files the papers on an employee's record; on My
+                        Profile they are read, not added to. */}
+                    {!readOnly && (
+                      <div className="mb-6 flex justify-end border-b pb-3">
+                        <Button
+                          type="button"
+                          onClick={() => setAddingDoc(true)}
+                          disabled={addingDoc}
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Document
+                        </Button>
+                      </div>
+                    )}
 
                     {addingDoc && (
                     <div className="rounded-lg border p-4">
@@ -1135,6 +1202,8 @@ export default function EmployeeForm({ self }) {
                   <FinancialBenefitsSection
                     employee={formData}
                     tab={benefitsTab}
+                    onTabChange={setBenefitsTab}
+                    canEdit={!readOnly}
                     onSaveSalary={(payslip) =>
                       setFormData((prev) => ({ ...prev, ...payslip }))
                     }

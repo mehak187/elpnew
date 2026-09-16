@@ -116,7 +116,7 @@ export default function MergeSection({ client }) {
                 value={client.clientNo + " - " + client.clientName}
                 readOnly
                 disabled
-                className="bg-muted"
+                className="bg-locked"
               />
             </div>
 
