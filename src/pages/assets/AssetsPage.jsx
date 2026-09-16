@@ -13,7 +13,7 @@ import {
 import DataTable from "@/components/shared/DataTable";
 import FormHeading from "@/components/shared/FormHeading";
 import Panel from "@/components/shared/Panel";
-import { IdStatusDot } from "@/components/shared/panels";
+import { IdStatusDot, isEndedStatus } from "@/components/shared/panels";
 import {
   Box,
   Coins,
@@ -204,7 +204,8 @@ export default function AssetsPage() {
 
   const columns = [
     {
-      // The dot says where the asset stands, so there is no status column.
+      // An asset that has been disposed of says so beside its number; one
+      // still in use says nothing, so there is no status column either way.
       key: "assetNo",
       header: "Asset No.",
       subHeader: "Branch",
@@ -213,8 +214,7 @@ export default function AssetsPage() {
         row.assetNo + " - " + row.branchLabel + " (" + ASSET_STATUS[row.state].label + ")",
       sortValue: (row) => row.assetNo,
       render: (value, row) => (
-        <div className="flex items-center gap-3">
-          <IdStatusDot status={ASSET_STATUS[row.state].label} tone={ASSET_STATUS[row.state].dot} />
+        <div className="flex items-start gap-3">
           <div>
             {/* The number opens the asset itself. */}
             <button
@@ -227,6 +227,7 @@ export default function AssetsPage() {
             </button>
             <p className="whitespace-nowrap text-primary/80">{row.branchLabel}</p>
           </div>
+          <IdStatusDot status={ASSET_STATUS[row.state].label} />
         </div>
       ),
     },
@@ -494,6 +495,8 @@ export default function AssetsPage() {
           <DataTable
             columns={columns}
             data={rows}
+            // An asset out of service is kept, at the foot of the register.
+            endedRow={(row) => isEndedStatus(ASSET_STATUS[row.state].label)}
             searchPlaceholder="Ask AI anything..."
             exportFileName="assets.csv"
             enableColumnSearch={false}

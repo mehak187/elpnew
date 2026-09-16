@@ -208,12 +208,6 @@ function IconField({ icon, id, label, ...props }) {
   );
 }
 
-const STATUS_DOT = {
-  Active: "bg-green-500",
-  "On Leave": "bg-amber-500",
-  Inactive: "bg-muted-foreground",
-  Terminated: "bg-red-500",
-};
 
 /** How much of a note the field will take, shown as a count while typing. */
 const NOTES_LIMIT = 300;

@@ -105,20 +105,16 @@ function ExpiryLine({ date }) {
         {date || "-"}
       </span>
 
-      {state !== "none" && (
-        <span
-          className={cn(
-            "inline-flex items-center gap-1.5 font-medium",
-            state === "valid" ? "text-green-600" : "text-red-600"
-          )}
-        >
+      {/* Nothing is said about a date still in hand: only one that is running
+          out or has passed is worth a mark. */}
+      {state !== "none" && state !== "valid" && (
+        <span className="inline-flex items-center gap-1.5 font-medium text-red-600">
           <span
             aria-hidden="true"
             className={cn(
               "h-2 w-2 shrink-0 rounded-full",
               // Hollow while the date is only approaching, solid once it
               // has passed - the same two marks the rest of the system uses.
-              state === "valid" && "bg-green-500",
               state === "soon" && "border-2 border-red-500",
               state === "expired" && "bg-red-500"
             )}

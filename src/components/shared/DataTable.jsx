@@ -90,6 +90,9 @@ export default function DataTable({
   onRowClick,
   enableColumnSearch = true,
   enableSorting = false,
+  // Says whether a row's record has ended - cancelled, inactive, expired.
+  // Those are kept, but they belong under the live ones.
+  endedRow,
 }) {
   const [searchValue, setSearchValue] = useState("");
   const [columnFilters, setColumnFilters] = useState({});
@@ -169,13 +172,27 @@ export default function DataTable({
     });
   })();
 
+  /**
+   * The rows that have ended, under the rows that have not.
+   *
+   * Whatever order the table is in otherwise is kept inside each of the two
+   * groups, so sorting a column still sorts - it simply sorts the live records
+   * and the finished ones separately.
+   */
+  const orderedData = endedRow
+    ? [
+        ...sortedData.filter((row) => !endedRow(row)),
+        ...sortedData.filter((row) => endedRow(row)),
+      ]
+    : sortedData;
+
   // Calculate total pages based on filtered data
-  const calculatedTotalPages = Math.ceil(sortedData.length / pageSize) || 1;
+  const calculatedTotalPages = Math.ceil(orderedData.length / pageSize) || 1;
 
   // Paginate filtered data
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
-  const paginatedData = sortedData.slice(startIndex, endIndex);
+  const paginatedData = orderedData.slice(startIndex, endIndex);
 
   return (
     <div className="space-y-4">

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import DataTable from "@/components/shared/DataTable";
 import { Users, Plus, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { IdStatusDot } from "@/components/shared/panels";
+import { IdStatusDot, isEndedStatus } from "@/components/shared/panels";
 import ActiveFilters from "@/components/shared/ActiveFilters";
 import { useListFilter } from "@/lib/useListFilter";
 import { deriveClientStatus } from "@/lib/clientStatus";
@@ -133,10 +133,6 @@ export default function ClientsList() {
       // it belongs to the client, not to a separate fact about them.
       render: (value, row) => (
         <span className="flex items-center gap-2">
-          <IdStatusDot
-            status={row.status}
-            isGood={row.status === "Active"}
-          />
           <button
             type="button"
             onClick={(e) => {
@@ -147,6 +143,8 @@ export default function ClientsList() {
           >
             {value}
           </button>
+          {/* Only a client that has stopped says so; a live one says nothing. */}
+          <IdStatusDot status={row.status} />
         </span>
       ),
     },
@@ -232,6 +230,8 @@ export default function ClientsList() {
           <DataTable
             columns={columns}
             data={processedClients}
+            // Clients that have stopped are kept, at the foot of the list.
+            endedRow={(row) => isEndedStatus(row.status)}
             searchPlaceholder="Ask anything..."
             enableColumnSearch={false}
             currentPage={currentPage}

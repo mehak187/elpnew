@@ -57,22 +57,20 @@ function ExpiryDate({ date }) {
       >
         {formatDate(date)}
       </span>
-      <span
-        className={cn(
-          "inline-flex items-center gap-1.5 text-xs font-medium",
-          state === "valid" ? "text-green-600" : "text-red-600"
-        )}
-      >
-        <span
-          aria-hidden="true"
-          className={cn(
-            "h-2 w-2 shrink-0 rounded-full",
-            state === "expired" ? "bg-red-500" : "border-2 border-red-500",
-            state === "valid" && "border-0 bg-green-500"
-          )}
-        />
-        {EXPIRY_LABEL[state]}
-      </span>
+      {/* Nothing is said about a date still in hand: only one that is running
+          out or has passed is worth a mark. */}
+      {state !== "valid" && (
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-red-600">
+          <span
+            aria-hidden="true"
+            className={cn(
+              "h-2 w-2 shrink-0 rounded-full",
+              state === "expired" ? "bg-red-500" : "border-2 border-red-500"
+            )}
+          />
+          {EXPIRY_LABEL[state]}
+        </span>
+      )}
     </span>
   );
 }

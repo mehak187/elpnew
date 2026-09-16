@@ -201,29 +201,51 @@ export function StatusDot({ status, isGood }) {
   );
 }
 
+/** A record that is simply running: nothing is said about it. */
+const LIVE = /^(active|open|valid|running|current|in progress)$/i;
+
+/** A record that has come to an end, and is therefore listed last. */
+const ENDED = /^(cancelled|canceled|inactive|expired|closed|disposed|terminated|left)$/i;
+
+/** Whether a record has come to an end, wherever a list needs to know. */
+export const isEndedStatus = (status) => Boolean(status) && ENDED.test(String(status).trim());
+
+const ENDED_TONE = "bg-red-100 text-red-800";
+const QUIET_TONE = "bg-muted text-muted-foreground";
+const WARNING_TONE = "bg-amber-100 text-amber-800";
+
 /**
- * Standing beside an ID number, as a dot alone.
+ * Standing beside an ID number, in words and only when there is something to
+ * say.
  *
- * Always before the number, never with the word. A table of IDs is scanned
- * down its left edge, and "Active" repeated on every row is noise the colour
- * already carries. The word stays in the tooltip and is read out to screen
- * readers, so nothing is lost for anyone who needs it spelled out.
+ * A list is mostly live records, and "Active" on every row of it says nothing
+ * that the row's presence does not - so a running record is marked in no way
+ * at all. What is worth stopping at is a record that has ended or is about to:
+ * cancelled, inactive, expired, or a date coming up. Those say so in words
+ * rather than by a colour somebody has to learn, and their rows sort to the
+ * bottom of the table.
  *
- * `tone` is for records with more than two states - an employee on leave is
- * neither healthy nor a problem. Without it the dot is green or red.
+ * Invoices, payments and instalments are not this: Paid, Unpaid, Overdue and
+ * the rest are the point of those tables and keep their own colours.
  */
-export function IdStatusDot({ status, isGood, tone }) {
+export function IdStatusDot({ status }) {
+  const word = String(status || "").trim();
+  if (!word || LIVE.test(word)) return null;
+
+  const tone = ENDED.test(word)
+    ? /^(inactive|closed|disposed|left)$/i.test(word)
+      ? QUIET_TONE
+      : ENDED_TONE
+    : WARNING_TONE;
+
   return (
-    <>
-      <span
-        aria-hidden="true"
-        title={status}
-        className={cn(
-          "h-2 w-2 shrink-0 rounded-full",
-          tone || (isGood ? "bg-green-500" : "bg-red-500")
-        )}
-      />
-      <span className="sr-only">{status}</span>
-    </>
+    <span
+      className={cn(
+        "inline-block whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-semibold",
+        tone
+      )}
+    >
+      {word}
+    </span>
   );
 }
