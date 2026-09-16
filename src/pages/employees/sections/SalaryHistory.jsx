@@ -142,14 +142,27 @@ export default function SalaryHistory() {
                           {pad(row.month)}/{row.year}
                         </td>
 
-                        {/* The two figures that make it, under the one they
-                            make: a total nobody can check is just a number. */}
-                        <td className="border-r p-3">
-                          <p className="font-bold text-green-700">
-                            {money(row.gross)}
+                        {/* Read down: what the salary is, what was added to
+                            it, and what the two come to - the total last and
+                            in green, because it is the figure being checked. */}
+                        <td className="border-r p-3 text-left">
+                          <p className="flex items-baseline justify-between gap-3">
+                            <span className="text-muted-foreground">Salary:</span>
+                            <span className="font-medium text-primary">
+                              {money(row.basic)}
+                            </span>
                           </p>
-                          <p className="text-xs text-muted-foreground">
-                            ({money(row.basic)} + {money(row.allowances)})
+                          <p className="flex items-baseline justify-between gap-3">
+                            <span className="text-muted-foreground">
+                              Total Allowances:
+                            </span>
+                            <span className="font-medium text-primary">
+                              {money(row.allowances)}
+                            </span>
+                          </p>
+                          <p className="mt-1 flex items-baseline justify-between gap-3 border-t pt-1 text-base font-bold text-green-700">
+                            <span>Total:</span>
+                            <span>{money(row.gross)}</span>
                           </p>
                         </td>
 
