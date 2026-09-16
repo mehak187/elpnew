@@ -73,6 +73,10 @@ export default function LeaveForm({
   // What would be left of it once this request is taken - 14 left less 5
   // asked for is 9. Below zero says the request is more than is left.
   const afterRequest = balance ? balance.remaining - Math.max(days, 0) : null;
+  // A type counted in days cannot be asked for beyond what is left. One whose
+  // length depends on the case (Sick, Bereavement, Widowhood) has no count to
+  // exceed, so nothing is blocked there.
+  const exceeded = afterRequest !== null && afterRequest < 0;
 
   const canSave =
     draft.category &&
@@ -81,7 +85,8 @@ export default function LeaveForm({
     draft.to &&
     draft.year &&
     draft.reason.trim() &&
-    days > 0;
+    days > 0 &&
+    !exceeded;
 
   return (
     <div className="space-y-6">
@@ -287,9 +292,26 @@ export default function LeaveForm({
                     : entitlement
               }
             />
-            {balance && days > 0 && (
+            {balance && days > 0 && !exceeded && (
               <p className="text-xs text-muted-foreground">
                 {balance.remaining} left - {days} on this request
+              </p>
+            )}
+
+            {/* Asking for more than is left is not a request management can be
+                sent: it is said here, beside the figure that says why, and the
+                request cannot be submitted until the dates are changed. The
+                dot pulses so the message is noticed where the eye already is. */}
+            {exceeded && (
+              <p
+                role="alert"
+                className="flex items-center gap-2 text-xs font-medium text-destructive"
+              >
+                <span
+                  aria-hidden="true"
+                  className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-destructive"
+                />
+                Duration exceeded, please adjust your dates
               </p>
             )}
           </div>
