@@ -9,35 +9,75 @@
 
 /** A loan taken for the first time, and money added to one already running. */
 export const NEW_LOAN = "New Loan";
-export const ADDITIONAL_LOAN = "Additional Loan";
+export const LOAN_INCREASE = "Loan Amount Increase";
 
 /**
  * Where a loan lands in the accounts.
  *
- * Only two things can happen: a loan is taken, or more is added to one that
- * is already running. The form asks different questions for each, which is
- * why the subcategory is chosen before anything else.
+ * Neither of these is a choice. A loan is always an employee expense, and
+ * which of the two categories it falls under is decided by what the employee
+ * already owes - asking would only invite an answer the loans contradict.
  */
-export const LOAN_BOOKING = [
-  {
-    name: "Employee Expenses",
-    categories: [
-      { name: "Loan", subcategories: [NEW_LOAN, ADDITIONAL_LOAN] },
-    ],
-  },
-];
+export const LOAN_EXPENSE_TYPE = "Employee Expenses";
 
-export const categoriesOf = (type) =>
-  LOAN_BOOKING.find((t) => t.name === type)?.categories || [];
+/* ------------------------------------------------------ where a request is */
 
-export const subcategoriesOf = (type, category) =>
-  categoriesOf(type).find((c) => c.name === category)?.subcategories || [];
+/**
+ * What has become of a request.
+ *
+ * A rejected or cancelled request is not money owed and never was, so neither
+ * counts towards what the employee is carrying.
+ */
+export const LOAN_PENDING = "Pending";
+export const LOAN_APPROVED = "Approved";
+export const LOAN_REJECTED = "Rejected";
+export const LOAN_CANCELLED = "Cancelled";
 
-export const DEFAULT_LOAN_BOOKING = {
-  expenseType: "Employee Expenses",
-  category: "Loan",
-  subcategory: NEW_LOAN,
+export const LOAN_STATUS_TONE = {
+  [LOAN_PENDING]: "text-amber-600",
+  [LOAN_APPROVED]: "text-green-700",
+  [LOAN_REJECTED]: "text-destructive",
+  [LOAN_CANCELLED]: "text-muted-foreground",
 };
+
+/** A request that was turned down or withdrawn counts for nothing. */
+export const isLiveLoan = (record) =>
+  record.status !== LOAN_REJECTED && record.status !== LOAN_CANCELLED;
+
+/** What has been repaid against one loan. */
+export const paidOn = (record) =>
+  (record.payments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+/** What is still owed on one loan. */
+export const outstandingOf = (record) =>
+  Math.max(Number((loanTotal(record) - paidOn(record)).toFixed(3)), 0);
+
+/**
+ * What the employee still owes on everything approved.
+ *
+ * A request waiting for a decision is not money in hand, so it is not counted
+ * here; nor is anything rejected or cancelled.
+ */
+export const outstandingTotal = (records) =>
+  Number(
+    records
+      .filter((record) => record.status === LOAN_APPROVED)
+      .reduce((sum, record) => sum + outstandingOf(record), 0)
+      .toFixed(3)
+  );
+
+/** The request still waiting for a decision, if there is one. */
+export const pendingRequest = (records) =>
+  records.find((record) => record.status === LOAN_PENDING) || null;
+
+/**
+ * Which of the two categories a new request falls under.
+ *
+ * Nothing owed - no loan yet, or the last one repaid in full - is a new loan;
+ * anything still outstanding makes the request an increase on it.
+ */
+export const loanCategoryFor = (records) =>
+  outstandingTotal(records) > 0 ? LOAN_INCREASE : NEW_LOAN;
 
 /* ------------------------------------------------------- the repayment plan */
 
@@ -205,6 +245,7 @@ export const loanRecords = [
   {
     id: 1,
     kind: NEW_LOAN,
+    status: LOAN_APPROVED,
     loanAmount: 7000,
     merged: 0,
     disbursementDate: "2026-08-26",
@@ -222,6 +263,7 @@ export const loanRecords = [
   {
     id: 2,
     kind: NEW_LOAN,
+    status: LOAN_APPROVED,
     loanAmount: 5000,
     merged: 2000,
     disbursementDate: "2026-07-10",
@@ -237,6 +279,7 @@ export const loanRecords = [
   {
     id: 3,
     kind: NEW_LOAN,
+    status: LOAN_APPROVED,
     loanAmount: 8500,
     merged: 0,
     disbursementDate: "2026-05-18",

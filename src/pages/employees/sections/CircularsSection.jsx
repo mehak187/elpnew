@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/panels";
 import AiSearch from "@/components/shared/AiSearch";
-import FormHeading from "@/components/shared/FormHeading";
 import { Check, FileSpreadsheet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toCsv, downloadCsv } from "@/lib/csv";
