@@ -43,7 +43,7 @@ export default function EmployeeCircularsSection({ employee }) {
   const mine = circularsFor(circulars, group);
 
   const search = query.trim().toLowerCase();
-  const listed = mine.filter((c) =>
+  const found = mine.filter((c) =>
     !search
       ? true
       : [c.circularNo, c.content, c.targetGroup, c.issuedBy]
@@ -51,6 +51,12 @@ export default function EmployeeCircularsSection({ employee }) {
           .toLowerCase()
           .includes(search)
   );
+
+  // The ones still in force first; superseded and cancelled ones under them.
+  const listed = [
+    ...found.filter((c) => c.status === ACTIVE),
+    ...found.filter((c) => c.status !== ACTIVE),
+  ];
 
   const totalPages = Math.max(1, Math.ceil(listed.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -225,15 +231,19 @@ export default function EmployeeCircularsSection({ employee }) {
                           </span>
                         )}
                       </td>
+                      {/* A circular still in force says nothing: only one
+                          that has been superseded or cancelled does. */}
                       <td className="border-r last:border-r-0 p-3">
-                        <span
-                          className={cn(
-                            "inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium",
-                            STATUS_TONE[circular.status]
-                          )}
-                        >
-                          {STATUS_LABEL[circular.status]}
-                        </span>
+                        {circular.status !== ACTIVE && (
+                          <span
+                            className={cn(
+                              "inline-block whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-semibold",
+                              STATUS_TONE[circular.status]
+                            )}
+                          >
+                            {STATUS_LABEL[circular.status]}
+                          </span>
+                        )}
                       </td>
                     </tr>
                   );

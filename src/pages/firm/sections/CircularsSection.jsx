@@ -551,14 +551,18 @@ export default function CircularsSection({ canEdit }) {
                         </button>
                       </td>
                       <td className="border-r last:border-r-0 p-3">
-                        <span
-                          className={cn(
-                            "inline-block rounded-full px-2.5 py-0.5 text-xs font-medium",
-                            STATUS_TONE[circular.status]
-                          )}
-                        >
-                          {STATUS_LABEL[circular.status]}
-                        </span>
+                        {/* A circular still in force says nothing: only one
+                            that has been superseded or cancelled does. */}
+                        {circular.status !== ACTIVE && (
+                          <span
+                            className={cn(
+                              "inline-block rounded-md px-2 py-0.5 text-xs font-semibold",
+                              STATUS_TONE[circular.status]
+                            )}
+                          >
+                            {STATUS_LABEL[circular.status]}
+                          </span>
+                        )}
                         {canEdit && circular.status === ACTIVE && (
                           <button
                             type="button"

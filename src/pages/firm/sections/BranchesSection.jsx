@@ -26,6 +26,7 @@ import { Plus,
   Lock,
   Building2,
 } from "lucide-react";
+import { IdStatusDot } from "@/components/shared/panels";
 import { useFirm } from "@/lib/firm/context";
 import { useLanguage, inLanguage } from "@/lib/language/context";
 import { nextBranchNumber, firmStaff } from "../firmData";
@@ -263,24 +264,31 @@ export default function BranchesSection({ canEdit }) {
                 <th className="border-r last:border-r-0 p-3 font-semibold">Branch Name</th>
                 <th className="border-r last:border-r-0 p-3 font-semibold">Address</th>
                 <th className="border-r last:border-r-0 p-3 font-semibold">Branch Manager</th>
-                <th className="border-r last:border-r-0 p-3 font-semibold">Status</th>
               </tr>
             </thead>
             <tbody>
-              {branches.map((branch) => (
+              {/* Open branches first, closed ones under them. */}
+              {[...branches]
+                .sort((a, b) => Number(b.active) - Number(a.active))
+                .map((branch) => (
                 <tr
                   key={branch.id}
                   className="border-b transition-colors last:border-0 hover:bg-primary/10"
                 >
-                  {/* The number opens the branch for editing */}
+                  {/* The number opens the branch for editing. A branch that
+                      has been closed says so beside it; an open one says
+                      nothing, so there is no status column. */}
                   <td className="border-r last:border-r-0 p-3">
-                    <button
-                      type="button"
-                      onClick={() => setEditing({ ...branch })}
-                      className="rounded font-semibold text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
-                    >
-                      {branch.branchNumber}
-                    </button>
+                    <span className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditing({ ...branch })}
+                        className="rounded font-semibold text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        {branch.branchNumber}
+                      </button>
+                      <IdStatusDot status={branch.active ? "Active" : "Inactive"} />
+                    </span>
                   </td>
                   {/* One language, not both: the list is read in whichever
                       language the interface is set to. Both are still held
@@ -298,11 +306,6 @@ export default function BranchesSection({ canEdit }) {
                     {managerName(branch.managerId) || (
                       <span className="text-muted-foreground">Not assigned</span>
                     )}
-                  </td>
-                  <td className="border-r last:border-r-0 p-3">
-                    <Badge variant={branch.active ? "success" : "secondary"}>
-                      {branch.active ? "Active" : "Inactive"}
-                    </Badge>
                   </td>
                 </tr>
               ))}

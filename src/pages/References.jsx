@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import DataTable from "@/components/shared/DataTable";
 import RecordDialog from "@/components/shared/RecordDialog";
+import { IdStatusDot, isEndedStatus } from "@/components/shared/panels";
 import { BookOpen, Plus, Eye, Edit, Trash2 } from "lucide-react";
 
 const references = [
@@ -34,18 +35,22 @@ const buildColumns = (onEdit, onDelete) => [
       <Badge variant="outline">{value}</Badge>
     )
   },
-  { key: "name", header: "Name", width: "30%", cellClassName: "text-left font-medium" },
-  { key: "code", header: "Code", width: "12%", cellClassName: "font-mono" },
   {
-    key: "status",
-    header: "Status",
-    width: "12%",
-    render: (value) => (
-      <Badge variant={value === "Active" ? "success" : "secondary"}>
+    // One no longer in use says so beside its name; one in use says nothing,
+    // so the table needs no status column.
+    key: "name",
+    header: "Name",
+    width: "36%",
+    cellClassName: "text-left font-medium",
+    exportValue: (row) => row.name + " (" + row.status + ")",
+    render: (value, row) => (
+      <span className="flex flex-wrap items-center gap-2">
         {value}
-      </Badge>
-    )
+        <IdStatusDot status={row.status} />
+      </span>
+    ),
   },
+  { key: "code", header: "Code", width: "14%", cellClassName: "font-mono" },
   {
     key: "actions",
     header: "Actions",
@@ -181,6 +186,8 @@ export default function References() {
           <DataTable
             columns={columns}
             data={filteredData}
+            // One no longer in use is kept, at the foot of its list.
+            endedRow={(row) => isEndedStatus(row.status)}
             searchPlaceholder="Search references..."
             currentPage={currentPage}
             totalPages={Math.ceil(filteredData.length / pageSize)}
