@@ -48,7 +48,14 @@ export const DEDUCTION_PENALTY = "Financial Deduction";
 /** A case that ends in no penalty is never numbered: nothing was issued. */
 export const NO_PENALTY = "No Penalty";
 
-export const APPEAL_OUTCOMES = ["Penalty Upheld", "Penalty Reduced", "Penalty Cancelled"];
+export const APPEAL_OUTCOMES = [
+  "Reject Appeal and Uphold Decision",
+  "Partially Accept Appeal and Modify Penalty",
+  "Accept Appeal and Cancel Penalty",
+];
+
+/** The one outcome that takes the penalty away again. */
+export const CANCELLING_OUTCOME = "Accept Appeal and Cancel Penalty";
 
 /** Where a violation has got to, as the status column reads it. */
 export const VIOLATION_STATUS_TONE = {
@@ -117,6 +124,7 @@ export const initialViolations = [
     appealGrounds: "",
     appealDocument: "",
     appealOutcome: "",
+    outcomeReasons: "",
     outcomeApprovedBy: "",
     outcomeDate: "",
     status: "Under Investigation",

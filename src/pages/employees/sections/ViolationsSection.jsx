@@ -27,7 +27,6 @@ import { FileCheck, Gavel, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useViolations } from "@/lib/violations/context";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
-import { employeeRecords } from "../employeeData";
 import { formatDate } from "../loanData";
 import { Rial } from "@/components/shared/Rial";
 import {
@@ -38,6 +37,7 @@ import {
   DEDUCTION_PENALTY,
   NO_PENALTY,
   APPEAL_OUTCOMES,
+  CANCELLING_OUTCOME,
   VIOLATION_STATUS_TONE,
   stagesDone,
   nextStage,
@@ -67,7 +67,7 @@ const draftFrom = (record) => ({
   appealGrounds: record?.appealGrounds || "",
   appealDocument: record?.appealDocument || "",
   appealOutcome: record?.appealOutcome || "",
-  outcomeApprovedBy: record?.outcomeApprovedBy || "",
+  outcomeReasons: record?.outcomeReasons || "",
   outcomeDate: record?.outcomeDate || today(),
 });
 
@@ -221,8 +221,6 @@ export default function ViolationsSection({ employee, canEdit = true }) {
       )
     : mine;
 
-  const people = employeeRecords.map((e) => e.name);
-
   const openNew = () => {
     setOpenId("new");
     setStage("violation");
@@ -328,13 +326,20 @@ export default function ViolationsSection({ employee, canEdit = true }) {
     setStage("outcome");
   };
 
+  const canApproveOutcome = Boolean(
+    draft.appealOutcome && draft.outcomeDate && draft.outcomeReasons.trim()
+  );
+
   const saveOutcome = () => {
-    if (!record || !draft.appealOutcome || !draft.outcomeApprovedBy || !draft.outcomeDate) return;
+    if (!record || !canApproveOutcome) return;
+    // Approving the outcome settles the case: the penalty either stands, is
+    // modified, or is taken away - and the status follows from that.
     updateViolation(record.id, {
       appealOutcome: draft.appealOutcome,
-      outcomeApprovedBy: draft.outcomeApprovedBy,
+      outcomeReasons: draft.outcomeReasons.trim(),
+      outcomeApprovedBy: CURRENT_USER.name,
       outcomeDate: draft.outcomeDate,
-      status: draft.appealOutcome === "Penalty Cancelled" ? "Cancelled" : "Closed",
+      status: draft.appealOutcome === CANCELLING_OUTCOME ? "Cancelled" : "Closed",
     });
     close();
   };
@@ -546,6 +551,13 @@ export default function ViolationsSection({ employee, canEdit = true }) {
     outcome: (
       <>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+          {/* What is being answered, read off the appeal itself. */}
+          <Settled id="violation-outcome-no" label="Violation No." value={record?.violationNo} />
+          <Settled
+            id="violation-outcome-appeal-date"
+            label="Appeal Date"
+            value={record?.appealDate && formatDate(record.appealDate)}
+          />
           <Choice
             id="violation-outcome"
             label="Appeal Outcome"
@@ -555,23 +567,30 @@ export default function ViolationsSection({ employee, canEdit = true }) {
             placeholder="Select outcome"
             options={APPEAL_OUTCOMES}
           />
-          <Choice
-            id="violation-outcome-approver"
-            label="Manager Approval"
+          <DateField
+            id="violation-outcome-date"
+            label="Outcome Date"
             required
-            value={draft.outcomeApprovedBy}
-            onChange={(v) => set("outcomeApprovedBy", v)}
-            placeholder="Select manager"
-            options={people}
+            value={draft.outcomeDate}
+            onChange={(v) => set("outcomeDate", v)}
           />
-          <DateField id="violation-outcome-date" label="Approval Date" required value={draft.outcomeDate} onChange={(v) => set("outcomeDate", v)} />
+          <LongText
+            id="violation-outcome-reasons"
+            label="Reasons for Appeal Outcome"
+            required
+            className="sm:col-span-2 lg:col-span-3"
+            value={draft.outcomeReasons}
+            onChange={(v) => set("outcomeReasons", v)}
+            placeholder="Enter the detailed reasons for the appeal outcome"
+          />
+          {/* Whoever approves it is whoever is signed in. */}
+          <Settled
+            id="violation-outcome-approver"
+            label="Approved By"
+            value={CURRENT_USER.name}
+          />
         </div>
-        {footer(
-          "Save",
-          saveOutcome,
-          Boolean(draft.appealOutcome && draft.outcomeApprovedBy && draft.outcomeDate),
-          "appeal"
-        )}
+        {footer("Save & Approve Outcome", saveOutcome, canApproveOutcome, "appeal")}
       </>
     ),
   };
