@@ -10,17 +10,18 @@ import {
   Td,
 } from "@/components/shared/RecordTable";
 import FormHeading from "@/components/shared/FormHeading";
+import AiSearch from "@/components/shared/AiSearch";
 import TabBar from "@/components/shared/TabBar";
 import { Plus, Eye, EyeOff } from "lucide-react";
 import { withRial } from "@/lib/money";
+import { smartSearch } from "@/lib/search/smartSearch";
+import { formatDate } from "@/pages/firm/firmData";
 import {
   commissionRecords,
   commissionsFor,
   feesFor,
   commissionOn,
-  monthAndYear,
   nextCommissionNo,
-  SPECIFIC_COMMISSION,
 } from "@/pages/firm/commissionData";
 import CommissionForm from "@/pages/firm/sections/CommissionForm";
 import { useClients } from "@/lib/clients/context";
@@ -30,6 +31,12 @@ import BonusSection from "./BonusSection";
 import LoansSection from "./LoansSection";
 import AssistanceSection from "./AssistanceSection";
 import { BENEFIT_TABS } from "./benefitTabs";
+
+/** The day the commission was recorded, however far back it goes. */
+const commissionDate = (record) =>
+  record.date || record.periodFrom
+    ? formatDate(record.date || record.periodFrom)
+    : "-";
 
 const money = (amount) =>
   withRial(
@@ -54,6 +61,7 @@ function CommissionTab({ employee, adding, onCloseAdd }) {
   // written for a client, the list shows only what is already agreed with that
   // client - which is what the new one has to be judged against.
   const [clientFilter, setClientFilter] = useState("");
+  const [query, setQuery] = useState("");
 
   const filtering = adding && Boolean(clientFilter);
   const clientName =
@@ -62,6 +70,7 @@ function CommissionTab({ employee, adding, onCloseAdd }) {
   const shown = filtering
     ? records.filter((record) => record.clientNo === clientFilter)
     : records;
+  const found = smartSearch(shown, query);
 
   /** Closing the form, by either button, puts the whole list back. */
   const close = () => {
@@ -87,6 +96,7 @@ function CommissionTab({ employee, adding, onCloseAdd }) {
       {adding && (
         <CommissionForm
           employee={employee}
+          commissionNo={nextCommissionNo(commissionRecords.concat(records))}
           onCancel={close}
           onSave={save}
           onClientChange={setClientFilter}
@@ -101,87 +111,84 @@ function CommissionTab({ employee, adding, onCloseAdd }) {
         </p>
       )}
 
-      {shown.length === 0 ? (
-        <EmptyState>
-          {filtering
-            ? "No commission has been agreed with this employee on " +
-              clientName +
-              " yet."
-            : "No commission has been agreed with this employee."}
-        </EmptyState>
-      ) : (
-        <Card>
-          <CardContent className="p-4 sm:p-6">
+      <Card>
+        <CardContent className="space-y-4 p-4 sm:p-6">
+          {/* The search on the left, where every list in the system has it,
+              and the name of the list on the right. */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <AiSearch
+              value={query}
+              onChange={setQuery}
+              placeholder="Ask about commission..."
+            />
+            <h3 className="ml-auto text-lg font-bold text-primary">
+              Commission History
+            </h3>
+          </div>
+
+          {found.length === 0 ? (
+            <EmptyState>
+              {filtering
+                ? "No commission has been agreed with this employee on " +
+                  clientName +
+                  " yet."
+                : "No commission has been agreed with this employee."}
+            </EmptyState>
+          ) : (
             <RecordTable minWidth={1080}>
               <HeadRow>
-                <Th>Commission No.</Th>
-                <Th>Client</Th>
-                <Th>Beneficiary</Th>
-                <Th>Month &amp; Year</Th>
-                <Th>Commission Type</Th>
-                <Th note="Before VAT">Legal Fees &amp; Commission</Th>
-                <Th>Period</Th>
+                <Th width="13%">Commission No.</Th>
+                <Th width="13%">Commission Date</Th>
+                <Th width="18%">Client Name</Th>
+                <Th width="18%">Payee</Th>
+                <Th width="22%">Legal Fees &amp; Commission</Th>
+                <Th width="16%">Notes</Th>
               </HeadRow>
               <tbody>
-                {shown.map((record) => (
+                {found.map((record) => (
                   <Row key={record.id}>
                     <Td className="whitespace-nowrap font-medium text-primary">
                       {record.commissionNo}
                     </Td>
-                    <Td className="text-left">{record.clientName}</Td>
-                    <Td className="text-left">
-                      <span className="block font-semibold text-primary">
-                        {record.paidTo}
-                      </span>
-                      <span className="block text-xs text-muted-foreground">
-                        {record.classification}
-                      </span>
-                    </Td>
                     <Td className="whitespace-nowrap text-primary">
-                      {monthAndYear(record)}
+                      {commissionDate(record)}
                     </Td>
+                    <Td className="text-left">{record.clientName}</Td>
+                    <Td className="text-left">{record.paidTo}</Td>
+
+                    {/* What it was worked out from, then what it came to:
+                        the fees before VAT, the rate, and the commission. */}
                     <Td className="text-left">
-                      <span className="block">{record.type}</span>
-                      {/* A specific commission names the file and the invoice
-                          it was worked out from; a fixed one runs over the
-                          period in the last column and has neither. */}
-                      {record.type === SPECIFIC_COMMISSION && (
-                        <>
-                          <span className="block text-xs text-muted-foreground">
-                            File No.: {record.caseFileNo || "-"}
-                          </span>
-                          <span className="block text-xs text-muted-foreground">
-                            Invoice No.: {record.invoiceNo || "-"}
-                          </span>
-                        </>
-                      )}
-                    </Td>
-                    <Td className="text-left">
-                      <span className="block font-medium text-primary">
+                      <span className="block">
+                        <span className="text-muted-foreground">
+                          Before VAT:{" "}
+                        </span>
                         {money(feesFor(record))}
                       </span>
-                      <span className="block text-xs text-muted-foreground">
+                      <span className="block">
+                        <span className="text-muted-foreground">
+                          Commission:{" "}
+                        </span>
                         {record.rate}%
                       </span>
                       <span className="block font-bold text-green-700">
+                        <span className="font-normal text-muted-foreground">
+                          Paid Commission:{" "}
+                        </span>
                         {money(commissionOn(record))}
                       </span>
                     </Td>
-                    <Td className="text-left">
-                      <span className="block">{record.periodFrom}</span>
-                      <span className="block text-xs text-muted-foreground">
-                        {record.periodTo
-                          ? "to " + record.periodTo
-                          : "Open ended"}
-                      </span>
+
+                    <Td className="text-left text-muted-foreground">
+                      {record.notes || "-"}
                     </Td>
                   </Row>
                 ))}
               </tbody>
             </RecordTable>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

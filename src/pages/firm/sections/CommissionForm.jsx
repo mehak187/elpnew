@@ -19,15 +19,20 @@ import {
   Calculator,
   Building2,
   Briefcase,
+  ArrowRight,
+  FileCheck,
 } from "lucide-react";
+import UploadIcon from "@/components/shared/UploadIcon";
+import { RequestSteps } from "@/components/shared/RequestSteps";
+import { cn } from "@/lib/utils";
+import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
+import { PAYMENT_SOURCES, DEFAULT_BANK } from "@/pages/employees/payrollData";
 import { useClients } from "@/lib/clients/context";
 import { clientLinkedCases } from "@/pages/clients/clientMockData";
 import { employeeRecords } from "@/pages/employees/employeeData";
 import {
-  COMMISSION_BOOKING,
   DEFAULT_COMMISSION_BOOKING,
   SPECIFIC_COMMISSION,
-  categoriesOf,
   subcategoriesOf,
   legalFeesCollected,
   legalFeesInvoicesOnFile,
@@ -99,6 +104,16 @@ const emptyDraft = {
   notes: "",
 };
 
+/** How the commission was actually paid, once it has been settled. */
+const emptyPayment = {
+  method: "",
+  bank: DEFAULT_BANK,
+  accountNo: "",
+  paymentDate: "",
+  reference: "",
+  notes: "",
+};
+
 /** Three decimals, the way Rials are written here. */
 const money = (value) =>
   Number(value || 0).toLocaleString("en-US", {
@@ -122,6 +137,183 @@ function FieldLabel({ htmlFor, required, children }) {
 }
 
 /**
+ * A booking the form does not ask about: every commission is an employee
+ * expense, and every one is booked under Commission.
+ */
+function Fixed({ id, label, value }) {
+  return (
+    <div className="flex h-full flex-col justify-end gap-2">
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <Select value={value} onValueChange={() => {}}>
+        <SelectTrigger id={id} className="bg-locked">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={value}>{value}</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+/**
+ * How the commission actually reached the person it was agreed with.
+ *
+ * The figure is not asked for again: it is what the first stage worked out,
+ * and a typed one could disagree with the fees it came from.
+ */
+function CommissionPayment({
+  commissionNo,
+  payee,
+  amount,
+  payment,
+  onChange,
+  receipt,
+  onReceipt,
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+      <Locked id="payCommissionNo" label="Commission No." value={commissionNo} />
+      <Locked id="payPayee" label="Payee" value={payee} />
+      <Locked
+        id="payAmount"
+        label="Commission Amount (OMR)"
+        value={amount}
+        highlight
+      />
+
+      <div className="flex h-full flex-col justify-end gap-2">
+        <FieldLabel htmlFor="payMethod" required>
+          Payment Method
+        </FieldLabel>
+        <Select
+          value={payment.method}
+          onValueChange={(value) => value && onChange("method", value)}
+        >
+          <SelectTrigger id="payMethod">
+            <SelectValue placeholder="Select method" />
+          </SelectTrigger>
+          <SelectContent>
+            {PAYMENT_METHODS.map((method) => (
+              <SelectItem key={method} value={method}>
+                {method}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex h-full flex-col justify-end gap-2">
+        <FieldLabel htmlFor="payBank">Bank</FieldLabel>
+        <Select
+          value={payment.bank}
+          onValueChange={(value) => value && onChange("bank", value)}
+        >
+          <SelectTrigger id="payBank">
+            <SelectValue placeholder="Select bank or cash" />
+          </SelectTrigger>
+          <SelectContent>
+            {PAYMENT_SOURCES.map((source) => (
+              <SelectItem key={source} value={source}>
+                {source}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex h-full flex-col justify-end gap-2">
+        <FieldLabel htmlFor="payAccount">Account No.</FieldLabel>
+        <Input
+          id="payAccount"
+          value={payment.accountNo}
+          onChange={(e) => onChange("accountNo", e.target.value)}
+          placeholder="Enter the account the commission goes to"
+        />
+      </div>
+
+      <div className="flex h-full flex-col justify-end gap-2">
+        <FieldLabel htmlFor="payDate" required>
+          Payment Date
+        </FieldLabel>
+        <Input
+          id="payDate"
+          type="date"
+          value={payment.paymentDate}
+          onChange={(e) => onChange("paymentDate", e.target.value)}
+        />
+      </div>
+
+      {/* What the bank called the payment, and the proof of it. */}
+      <div className="flex h-full flex-col justify-end gap-2 sm:col-span-1 lg:col-span-2">
+        <FieldLabel htmlFor="payReference">Payment Reference</FieldLabel>
+        <div className="flex gap-2">
+          <Input
+            id="payReference"
+            value={payment.reference}
+            onChange={(e) => onChange("reference", e.target.value)}
+            placeholder="TRX-0000-00000"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            asChild
+            title={receipt ? receipt.name + " attached" : "Attach payment receipt"}
+            className={cn("shrink-0", receipt && "border-green-600 text-green-600")}
+          >
+            <label htmlFor="payReceipt" className="cursor-pointer">
+              {receipt ? (
+                <FileCheck className="h-4 w-4" />
+              ) : (
+                <UploadIcon className="h-4 w-4" />
+              )}
+              <span className="sr-only">Attach payment receipt</span>
+            </label>
+          </Button>
+          <Input
+            id="payReceipt"
+            type="file"
+            className="hidden"
+            onChange={(e) => e.target.files[0] && onReceipt(e.target.files[0])}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2 sm:col-span-2">
+        <FieldLabel htmlFor="payNotes">Notes</FieldLabel>
+        <Textarea
+          id="payNotes"
+          rows={3}
+          value={payment.notes}
+          onChange={(e) => onChange("notes", e.target.value)}
+          placeholder="Enter payment notes"
+        />
+      </div>
+    </div>
+  );
+}
+
+/** A figure or a fact the payment stage reads back rather than asks for. */
+function Locked({ id, label, value, highlight }) {
+  return (
+    <div className="flex h-full flex-col justify-end gap-2">
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <Input
+        id={id}
+        readOnly
+        tabIndex={-1}
+        value={value}
+        className={cn(
+          "cursor-default bg-locked text-muted-foreground",
+          highlight && "border-green-600/40 font-semibold text-green-700"
+        )}
+      />
+    </div>
+  );
+}
+
+/**
  * The arrangement being agreed: who, on whose fees, at what rate, over what
  * period.
  *
@@ -139,11 +331,22 @@ export default function CommissionForm({
   employee,
   onCancel,
   onSave,
+  // The number this commission will carry, handed down by whoever keeps the
+  // list, so the form can show it before it is saved.
+  commissionNo = "",
   // Told which client is chosen, so the list under the form can narrow to
   // that client's commissions while one for them is being written.
   onClientChange,
 }) {
   const { clients } = useClients();
+
+  // Which half of the commission is open: what it comes to, and then how it
+  // was paid.
+  const [stage, setStage] = useState("commission");
+  const [payment, setPayment] = useState(emptyPayment);
+  const [receipt, setReceipt] = useState(null);
+  const setPay = (name, value) =>
+    setPayment((prev) => ({ ...prev, [name]: value }));
 
   // Opened from an employee's record, that employee is filled in to start
   // with - but only to start with. Commission can go to any member of the
@@ -240,11 +443,28 @@ export default function CommissionForm({
     draft.paidTo &&
     Number(draft.rate) > 0;
 
-  const save = () => {
+  // The commission has to be settled before how it was paid can be entered.
+  const saveAndContinue = () => {
     if (!canSave) return;
+    setStage("payment");
+  };
+
+  const canPay = canSave && payment.method && payment.paymentDate;
+
+  const save = () => {
+    if (!canPay) return;
     const client = clients.find((c) => c.clientNo === draft.clientNo);
     onSave({
       ...draft,
+      // The day it was agreed, which is what the list reads it by.
+      date: new Date().toISOString().slice(0, 10),
+      method: payment.method,
+      bank: payment.bank,
+      accountNo: payment.accountNo,
+      paymentDate: payment.paymentDate,
+      reference: payment.reference.trim(),
+      receipt: receipt?.name || "",
+      paymentNotes: payment.notes.trim(),
       // The subcategory is what kind of commission this is, so the record
       // keeps it under the name the rest of the system reads it by.
       type: draft.subcategory,
@@ -262,65 +482,70 @@ export default function CommissionForm({
   return (
     <Card>
       <CardContent className="space-y-6 p-4 sm:p-6">
+        {/* The two halves of a commission: what it comes to, and then how it
+            was paid. Either header opens its own half. */}
+        <RequestSteps
+          active={stage}
+          onChange={setStage}
+          steps={[
+            {
+              key: "commission",
+              title: "Add Commission",
+              note: "Commission calculation and eligibility details",
+              done: Boolean(canSave),
+            },
+            {
+              key: "payment",
+              title: "Commission Payment",
+              note: "Payment and bank transfer details",
+              done: Boolean(canPay),
+              // Nothing can be paid until there is a figure to pay.
+              disabled: !canSave,
+            },
+          ]}
+        />
+
+        <h3 className="text-base font-semibold text-primary">
+          {stage === "payment" ? "Commission Payment" : "Add Commission"}
+        </h3>
+
+        {stage === "payment" ? (
+          <CommissionPayment
+            commissionNo={commissionNo}
+            payee={draft.paidTo}
+            amount={money(commission)}
+            payment={payment}
+            onChange={setPay}
+            receipt={receipt}
+            onReceipt={setReceipt}
+          />
+        ) : (
+        <>
         {/* Where the commission lands in the accounts. Neither of the first
             two is a choice - every commission is booked the same way - but
-            they are shown so the request says what it will be charged to. */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
+            they are shown so the record says what it will be charged to. */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
           <div className="flex h-full flex-col justify-end gap-2">
-            <FieldLabel htmlFor="commissionExpenseType" required>
-              Expense Type
-            </FieldLabel>
-            <Select
-              value={draft.expenseType}
-              onValueChange={(value) =>
-                setDraft((prev) => ({
-                  ...prev,
-                  expenseType: value,
-                  category: "",
-                  subcategory: "",
-                }))
-              }
-            >
-              <SelectTrigger id="commissionExpenseType">
-                <SelectValue placeholder="Select Expense Type" />
-              </SelectTrigger>
-              <SelectContent>
-                {COMMISSION_BOOKING.map((option) => (
-                  <SelectItem key={option.name} value={option.name}>
-                    {option.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <FieldLabel htmlFor="commissionNo">Commission No.</FieldLabel>
+            <Input
+              id="commissionNo"
+              readOnly
+              tabIndex={-1}
+              className="cursor-default bg-locked text-muted-foreground"
+              value={commissionNo}
+            />
           </div>
 
-          <div className="flex h-full flex-col justify-end gap-2">
-            <FieldLabel htmlFor="commissionCategory" required>
-              Category
-            </FieldLabel>
-            <Select
-              value={draft.category}
-              onValueChange={(value) =>
-                setDraft((prev) => ({
-                  ...prev,
-                  category: value,
-                  subcategory: "",
-                }))
-              }
-              disabled={!draft.expenseType}
-            >
-              <SelectTrigger id="commissionCategory">
-                <SelectValue placeholder="Select Category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categoriesOf(draft.expenseType).map((category) => (
-                  <SelectItem key={category.name} value={category.name}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Fixed
+            id="commissionExpenseType"
+            label="Expense Type"
+            value={draft.expenseType}
+          />
+          <Fixed
+            id="commissionCategory"
+            label="Category"
+            value={draft.category}
+          />
 
           <div className="flex h-full flex-col justify-end gap-2">
             <FieldLabel htmlFor="commissionSubcategory" required>
@@ -612,6 +837,8 @@ export default function CommissionForm({
         </div>
         </>
         )}
+        </>
+        )}
 
         {/* The rule is not written on the form - it is what the Commission
             Amount field above is worked out by:
@@ -621,9 +848,16 @@ export default function CommissionForm({
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="button" onClick={save} disabled={!canSave}>
-            Submit Request
-          </Button>
+          {stage === "payment" ? (
+            <Button type="button" onClick={save} disabled={!canPay}>
+              Confirm Commission Payment
+            </Button>
+          ) : (
+            <Button type="button" onClick={saveAndContinue} disabled={!canSave}>
+              Save and Continue
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
