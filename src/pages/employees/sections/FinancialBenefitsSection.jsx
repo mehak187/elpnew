@@ -240,10 +240,12 @@ export default function FinancialBenefitsSection({
 
   // One heading at a time: a form that opens with its own heading - and its
   // own way back - takes this row's place instead of sitting under it.
-  // Commission's form has no heading of its own, and neither has the stepped
-  // salary form, which opens under the tabs; so those two rows stay.
+  // Commission's form has no heading of its own, and neither have the stepped
+  // salary and loan forms, which open under the tabs; so those rows stay.
   const inlineForm =
-    open === "commission" || (open === "salaries" && canEdit);
+    open === "commission" ||
+    open === "loans" ||
+    (open === "salaries" && canEdit);
   const formHasHeading = adding === open && !inlineForm;
 
   return (
@@ -318,6 +320,7 @@ export default function FinancialBenefitsSection({
 
       {open === "loans" && (
         <LoansSection
+          employee={employee}
           adding={adding === "loans"}
           onCloseAdd={() => setAdding(null)}
           canDecide={canEdit}

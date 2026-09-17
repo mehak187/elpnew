@@ -130,7 +130,7 @@ const DECISIONS = [
   {
     key: "full",
     title: "Full Approval",
-    note: (subject) => "Approve the requested " + subject + " amount",
+    note: (subject) => "Approve the " + subject + " as requested",
     mark: (
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-600 text-white">
         <Check className="h-5 w-5" />
@@ -141,7 +141,7 @@ const DECISIONS = [
   {
     key: "partial",
     title: "Partial Approval",
-    note: () => "Approve a different amount",
+    note: () => "Approve with amended terms",
     mark: (
       <span className="flex h-9 w-9 shrink-0 items-center justify-center text-blue-700">
         <PieChart className="h-8 w-8" />
@@ -169,13 +169,21 @@ const DECISIONS = [
  * says what it approves or declines. Only the office decides: where `disabled`
  * is set the cards show the decision and cannot change it.
  */
-export function DecisionChoice({ subject, value, onChange, disabled }) {
+export function DecisionChoice({
+  subject,
+  value,
+  onChange,
+  disabled,
+  // The stage's own heading, so a form that opens on this stage is not left
+  // with two headings or none.
+  title = "Management Decision",
+}) {
   return (
     <div className="space-y-3">
-      <h2 className="text-xl font-bold text-primary">Management Decision</h2>
+      <h3 className="text-base font-semibold text-primary">{title}</h3>
       <div
         role="radiogroup"
-        aria-label="Management Decision"
+        aria-label={title}
         className="grid grid-cols-1 gap-3 md:grid-cols-3"
       >
         {DECISIONS.map((decision) => {
@@ -195,13 +203,27 @@ export function DecisionChoice({ subject, value, onChange, disabled }) {
               )}
             >
               {decision.mark}
-              <span className="min-w-0">
+              <span className="min-w-0 flex-1">
                 <span className="block font-semibold text-primary">
                   {decision.title}
                 </span>
                 <span className="block text-xs text-muted-foreground">
                   {decision.note(subject)}
                 </span>
+              </span>
+
+              {/* Which one is chosen, said again on the right: three cards in
+                  a row are read across, and the ring is where the eye goes. */}
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2",
+                  chosen ? "border-primary" : "border-muted-foreground/40"
+                )}
+              >
+                {chosen && (
+                  <span className="h-2.5 w-2.5 rounded-full bg-primary" />
+                )}
               </span>
             </button>
           );
