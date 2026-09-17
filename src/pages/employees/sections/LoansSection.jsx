@@ -422,6 +422,11 @@ export default function LoansSection({
                 value={decision}
                 onChange={setDecision}
                 disabled={!canDecide}
+                // A loan is granted on terms, not only on an amount.
+                notes={{
+                  full: "Approve the loan as requested",
+                  partial: "Approve with amended terms",
+                }}
               />
 
               {/* The terms the loan runs on. They are what was asked for

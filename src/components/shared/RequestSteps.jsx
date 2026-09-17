@@ -130,7 +130,7 @@ const DECISIONS = [
   {
     key: "full",
     title: "Full Approval",
-    note: (subject) => "Approve the " + subject + " as requested",
+    note: (subject) => "Approve the requested " + subject + " amount",
     mark: (
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-600 text-white">
         <Check className="h-5 w-5" />
@@ -141,7 +141,7 @@ const DECISIONS = [
   {
     key: "partial",
     title: "Partial Approval",
-    note: () => "Approve with amended terms",
+    note: () => "Approve a different amount",
     mark: (
       <span className="flex h-9 w-9 shrink-0 items-center justify-center text-blue-700">
         <PieChart className="h-8 w-8" />
@@ -177,6 +177,9 @@ export function DecisionChoice({
   // The stage's own heading, so a form that opens on this stage is not left
   // with two headings or none.
   title = "Management Decision",
+  // What each card says, where a request needs its own words: a loan is
+  // approved on terms, not only on an amount.
+  notes = {},
 }) {
   return (
     <div className="space-y-3">
@@ -208,7 +211,7 @@ export function DecisionChoice({
                   {decision.title}
                 </span>
                 <span className="block text-xs text-muted-foreground">
-                  {decision.note(subject)}
+                  {notes[decision.key] || decision.note(subject)}
                 </span>
               </span>
 

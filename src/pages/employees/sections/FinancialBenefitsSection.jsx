@@ -245,6 +245,7 @@ export default function FinancialBenefitsSection({
   const inlineForm =
     open === "commission" ||
     open === "loans" ||
+    open === "assistance" ||
     (open === "salaries" && canEdit);
   const formHasHeading = adding === open && !inlineForm;
 
