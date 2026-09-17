@@ -18,6 +18,7 @@ import {
   AdvanceRequests,
 } from "./AdvanceSalarySection";
 import { Rial } from "@/components/shared/Rial";
+import { amountValue } from "@/lib/money";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { Save, FileCheck } from "lucide-react";
@@ -533,7 +534,8 @@ export default function SalariesSection({
                   id="pay-amount"
                   readOnly
                   tabIndex={-1}
-                  value={amount(payNet)}
+                  // The label already says OMR, so the figure does not.
+                  value={amountValue(payNet)}
                   className="cursor-default border-green-600/40 bg-green-50 font-semibold text-green-700"
                 />
               </div>

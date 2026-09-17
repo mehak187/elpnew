@@ -10,7 +10,7 @@ import {
   Td,
 } from "@/components/shared/RecordTable";
 import { cn } from "@/lib/utils";
-import { money } from "@/lib/money";
+import { money, amountValue } from "@/lib/money";
 import { smartSearch } from "@/lib/search/smartSearch";
 import {
   SALARY_STATUS_TONE,
@@ -89,11 +89,13 @@ export default function SalaryHistory({ history = salaryHistory }) {
                       what was added to it, and what came off. */}
                   <Td>
                     <span className="flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
-                      <Part label="Basic" value={money(row.basic)} />
+                      {/* Three figures in one cell: the currency is said once,
+                          on the net beside them. */}
+                      <Part label="Basic" value={amountValue(row.basic)} />
                       <span className="text-muted-foreground">/</span>
-                      <Part label="Allowances" value={money(row.allowances)} />
+                      <Part label="Allowances" value={amountValue(row.allowances)} />
                       <span className="text-muted-foreground">/</span>
-                      <Part label="Deductions" value={money(row.deductions)} />
+                      <Part label="Deductions" value={amountValue(row.deductions)} />
                     </span>
                   </Td>
 
