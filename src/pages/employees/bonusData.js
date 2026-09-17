@@ -21,11 +21,29 @@ export const BONUS_SUBCATEGORIES = [
   "Collection",
   "Business Development",
   "Annual Bonus",
+  "Exceptional Bonus",
   "Other",
 ];
 
 /** Anything that is not one of the reasons above has to say what it was. */
 export const OTHER_BONUS = "Other";
+
+/**
+ * Where a bonus has got to.
+ *
+ * Deciding a bonus is not paying it: it is recorded first and disbursed
+ * after, so the list says which of the two has happened.
+ */
+export const BONUS_PENDING = "Pending Disbursement";
+export const BONUS_DISBURSED = "Disbursed";
+
+export const BONUS_STATUS_CHIP = {
+  [BONUS_PENDING]: "bg-amber-100 text-amber-800",
+  [BONUS_DISBURSED]: "bg-green-100 text-green-800",
+};
+
+/** The day the bonus was entered, which is what the list reads it by. */
+export const bonusDate = (bonus) => bonus.recordedOn || bonus.paidOn;
 
 /** What the bonus was for, as it reads on a row: "Other" says which other. */
 export const bonusReason = (bonus) =>
@@ -37,7 +55,10 @@ export const bonusReason = (bonus) =>
 export const bonusesFor = (bonuses, name) =>
   bonuses
     .filter((bonus) => bonus.employee === name)
-    .sort((a, b) => b.paidOn.localeCompare(a.paidOn) || b.id - a.id);
+    .sort(
+      (a, b) =>
+        String(bonusDate(b)).localeCompare(String(bonusDate(a))) || b.id - a.id
+    );
 
 export const initialBonuses = [
   {
@@ -49,6 +70,7 @@ export const initialBonuses = [
     bonusType: "",
     amount: 1500,
     paidOn: dayOffset(-250),
+    status: BONUS_DISBURSED,
     notes: "Annual bonus for 2025.",
   },
   {
@@ -60,6 +82,7 @@ export const initialBonuses = [
     bonusType: "",
     amount: 600,
     paidOn: dayOffset(-60),
+    status: BONUS_DISBURSED,
     notes: "Two corporate clients brought to the firm.",
   },
   {
@@ -71,6 +94,7 @@ export const initialBonuses = [
     bonusType: "",
     amount: 350,
     paidOn: dayOffset(-35),
+    status: BONUS_DISBURSED,
     notes: "Execution file 21 closed in the firm's favour.",
   },
   {
@@ -82,6 +106,7 @@ export const initialBonuses = [
     bonusType: "",
     amount: 250,
     paidOn: dayOffset(-120),
+    status: BONUS_DISBURSED,
     notes: "",
   },
   {
@@ -93,6 +118,7 @@ export const initialBonuses = [
     bonusType: "",
     amount: 420,
     paidOn: dayOffset(-15),
+    status: BONUS_DISBURSED,
     notes: "Overdue fees collected on three files.",
   },
   {
@@ -104,6 +130,7 @@ export const initialBonuses = [
     bonusType: "Ramadan bonus",
     amount: 200,
     paidOn: dayOffset(-190),
+    status: BONUS_DISBURSED,
     notes: "Paid to everyone in the Muscat office.",
   },
 ];
