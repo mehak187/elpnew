@@ -88,6 +88,10 @@ export const nextLeaveNo = (leaves) =>
 /** What a reviewer can say about a request. */
 export const LEAVE_DECISIONS = ["Approve", "Reject"];
 
+/** A decision already taken, read back as what it did: "Approved". */
+export const decisionTaken = (decision) =>
+  decision === "Approve" ? "Approved" : decision === "Reject" ? "Rejected" : "";
+
 /**
  * The stage a request is waiting at, so opening it from the list picks up
  * where it was left. A decided request opens on the stage that decided it.

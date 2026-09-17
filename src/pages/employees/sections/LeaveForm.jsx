@@ -20,6 +20,7 @@ import {
   ABSENCE_CATEGORIES,
   LEAVE_STAGES,
   LEAVE_DECISIONS,
+  decisionTaken,
   typesIn,
   leaveDays,
   remainingBalance,
@@ -118,6 +119,11 @@ export default function LeaveForm({
     management: record?.status === "Approved" || record?.status === "Rejected",
   };
 
+  // The last stage answers the department rather than the employee, so it
+  // reads back what the department said and closes the request either way.
+  const finalising = stage === "management";
+  const stageTitle = LEAVE_STAGES.find((step) => step.key === stage)?.title || "";
+
   const period =
     record && record.from && record.to
       ? shortDate(record.from) + " – " + shortDate(record.to)
@@ -141,6 +147,10 @@ export default function LeaveForm({
 
         {stage !== "submit" ? (
           <>
+            {/* The stage being filled in, named above the fields that belong
+                to it. */}
+            <h3 className="text-base font-semibold text-primary">{stageTitle}</h3>
+
             {/* What is being decided, read off the request rather than asked
                 for again. */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
@@ -153,22 +163,69 @@ export default function LeaveForm({
                 value={days(leaveDays(record?.from, record?.to))}
               />
 
-              {stage === "department" && (
-                <Worked
-                  id="leave-review-department"
-                  label="Relevant Department"
-                  value={employee.department || ""}
-                />
+              {/* The department reviews on behalf of a department; management
+                  reviews what the department already answered. */}
+              {finalising ? (
+                <>
+                  <Worked
+                    id="leave-review-department-decision"
+                    label="Department Decision"
+                    value={decisionTaken(record?.departmentDecision)}
+                  />
+                  <Worked
+                    id="leave-review-department-reviewer"
+                    label="Department Reviewer"
+                    value={record?.reviewedBy || ""}
+                  />
+                  <Worked
+                    id="leave-review-by"
+                    label="Approved By"
+                    value={CURRENT_USER.name}
+                  />
+                </>
+              ) : (
+                <>
+                  <Worked
+                    id="leave-review-department"
+                    label="Relevant Department"
+                    value={employee.department || ""}
+                  />
+                  <Worked
+                    id="leave-review-by"
+                    label="Reviewed By"
+                    value={CURRENT_USER.name}
+                  />
+                </>
               )}
-              <Worked
-                id="leave-review-by"
-                label="Reviewed By"
-                value={CURRENT_USER.name}
-              />
+
+              {/* Management's answer sits next to the department's, where the
+                  two can be read together. */}
+              {finalising && (
+                <div className="space-y-2">
+                  <FieldLabel htmlFor="leave-review-decision" required>
+                    Management Decision
+                  </FieldLabel>
+                  <Select
+                    value={draft.decision}
+                    onValueChange={(value) => value && onChange("decision", value)}
+                  >
+                    <SelectTrigger id="leave-review-decision">
+                      <SelectValue placeholder="Select decision" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LEAVE_DECISIONS.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <FieldLabel htmlFor="leave-review-date" required>
-                  Review Date
+                  {finalising ? "Decision Date" : "Review Date"}
                 </FieldLabel>
                 <Input
                   id="leave-review-date"
@@ -178,9 +235,10 @@ export default function LeaveForm({
                 />
               </div>
 
+              {!finalising && (
               <div className="space-y-2">
                 <FieldLabel htmlFor="leave-review-decision" required>
-                  {stage === "department" ? "Department Decision" : "Management Decision"}
+                  Department Decision
                 </FieldLabel>
                 <Select
                   value={draft.decision}
@@ -198,10 +256,16 @@ export default function LeaveForm({
                   </SelectContent>
                 </Select>
               </div>
+              )}
 
-              <div className="space-y-2 sm:col-span-2 lg:col-span-4">
+              <div
+                className={cn(
+                  "space-y-2 sm:col-span-2",
+                  finalising ? "lg:col-span-3" : "lg:col-span-4"
+                )}
+              >
                 <FieldLabel htmlFor="leave-review-comments">
-                  {stage === "department" ? "Department Comments" : "Management Comments"}
+                  {finalising ? "Management Comments" : "Department Comments"}
                 </FieldLabel>
                 <Textarea
                   id="leave-review-comments"
@@ -210,9 +274,9 @@ export default function LeaveForm({
                   value={draft.comments}
                   onChange={(e) => onChange("comments", e.target.value)}
                   placeholder={
-                    stage === "department"
-                      ? "Enter the department's comments on the leave request"
-                      : "Enter management's comments on the leave request"
+                    finalising
+                      ? "Enter management comments on the leave request"
+                      : "Enter the department's comments on the leave request"
                   }
                 />
               </div>
@@ -227,7 +291,7 @@ export default function LeaveForm({
                 onClick={onDecide}
                 disabled={!draft.decision || !draft.reviewDate}
               >
-                Save &amp; Submit Decision
+                {finalising ? "Save & Finalize Decision" : "Save & Submit Decision"}
               </Button>
             </div>
           </>
