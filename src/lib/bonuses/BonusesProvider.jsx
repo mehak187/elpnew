@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { BonusesContext } from "./context";
-import { initialBonuses } from "@/pages/employees/bonusData";
+import { initialBonuses, BONUS_PENDING } from "@/pages/employees/bonusData";
 
 /**
  * Every bonus the firm has paid, in one place - so one recorded on an
@@ -21,11 +21,25 @@ export default function BonusesProvider({ children }) {
     () => ({
       bonuses,
 
+      /**
+       * A bonus the firm has decided on. Deciding it is not paying it, so it
+       * waits for the disbursement that follows.
+       */
       addBonus: (record) =>
         setBonuses((prev) => [
           ...prev,
-          { ...record, id: prev.reduce((max, bonus) => Math.max(max, bonus.id), 0) + 1 },
+          {
+            ...record,
+            id: prev.reduce((max, bonus) => Math.max(max, bonus.id), 0) + 1,
+            status: BONUS_PENDING,
+          },
         ]),
+
+      /** The disbursement, once the money has actually gone out. */
+      updateBonus: (id, patch) =>
+        setBonuses((prev) =>
+          prev.map((bonus) => (bonus.id === id ? { ...bonus, ...patch } : bonus))
+        ),
     }),
     [bonuses]
   );

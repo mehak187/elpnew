@@ -63,6 +63,12 @@ export const MONTH_NAMES = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
+/** The twelve months written out, as a salary period names them. */
+export const MONTH_FULL = PAYMENT_MONTHS.slice(0, 12).map((month) => month.label);
+
+/** A salary is paid for a month, never for a quarter. */
+export const SALARY_MONTHS = PAYMENT_MONTHS.slice(0, 12);
+
 export const PAYMENT_YEARS = ["2024", "2025", "2026", "2027"];
 
 /** Where the money leaves from. Cash is listed with the banks, not apart. */
@@ -237,13 +243,34 @@ export const SALARY_LOAN = { principal: 7560, installment: 120, count: 63 };
  * and a stored total could disagree with them.
  */
 export const salaryHistory = [
-  { id: 1, month: 4, year: 2026, basic: 2500, allowances: 580, loanDeducted: 0, administrative: 175, administrativeReason: "Social insurance contribution", bank: "Bank Muscat", accountNo: "0312 5567 8891 0024", paymentDate: "2026-04-30" },
-  { id: 2, month: 5, year: 2026, basic: 2500, allowances: 580, loanDeducted: 80, administrative: 175, administrativeReason: "Social insurance contribution", bank: "Bank Muscat", accountNo: "0312 5567 8891 0024", paymentDate: "2026-05-31" },
-  { id: 3, month: 6, year: 2026, basic: 2500, allowances: 580, loanDeducted: 120, administrative: 175, administrativeReason: "Social insurance contribution", bank: "Bank Muscat", accountNo: "0312 5567 8891 0024", paymentDate: "2026-06-30" },
-  { id: 4, month: 7, year: 2026, basic: 2500, allowances: 580, loanDeducted: 120, administrative: 175, administrativeReason: "Social insurance contribution", bank: "Bank Muscat", accountNo: "0312 5567 8891 0024", paymentDate: "2026-07-30" },
-  { id: 5, month: 8, year: 2026, basic: 2500, allowances: 580, loanDeducted: 120, administrative: 175, administrativeReason: "Social insurance and unpaid leave (1 day)", bank: "Bank Muscat", accountNo: "0312 5567 8891 0024", paymentDate: "2026-08-31" },
-  { id: 6, month: 9, year: 2026, basic: 2500, allowances: 580, loanDeducted: 120, administrative: 175, administrativeReason: "Social insurance contribution", bank: "Bank Muscat", accountNo: "0312 5567 8891 0024", paymentDate: "2026-09-28" },
+  { id: 1, salaryNo: "SAL-001", month: 4, year: 2026, basic: 2500, allowances: 580, loanDeducted: 0, administrative: 175, administrativeReason: "Social insurance contribution", method: "Bank Transfer", bank: "Bank Muscat", accountNo: "0312 5567 8891 0024", reference: "TRX-2026-00412", status: "Transferred", paymentDate: "2026-04-30" },
+  { id: 2, salaryNo: "SAL-002", month: 5, year: 2026, basic: 2500, allowances: 580, loanDeducted: 80, administrative: 175, administrativeReason: "Social insurance contribution", method: "Bank Transfer", bank: "Bank Muscat", accountNo: "0312 5567 8891 0024", reference: "TRX-2026-00537", status: "Transferred", paymentDate: "2026-05-31" },
+  { id: 3, salaryNo: "SAL-003", month: 6, year: 2026, basic: 2500, allowances: 580, loanDeducted: 120, administrative: 175, administrativeReason: "Social insurance contribution", method: "Bank Transfer", bank: "Bank Muscat", accountNo: "0312 5567 8891 0024", reference: "TRX-2026-00648", status: "Transferred", paymentDate: "2026-06-30" },
+  { id: 4, salaryNo: "SAL-004", month: 7, year: 2026, basic: 2500, allowances: 580, loanDeducted: 120, administrative: 175, administrativeReason: "Social insurance contribution", method: "Bank Transfer", bank: "Bank Muscat", accountNo: "0312 5567 8891 0024", reference: "TRX-2026-00759", status: "Transferred", paymentDate: "2026-07-30" },
+  { id: 5, salaryNo: "SAL-005", month: 8, year: 2026, basic: 2500, allowances: 580, loanDeducted: 120, administrative: 175, administrativeReason: "Social insurance and unpaid leave (1 day)", method: "Bank Transfer", bank: "Bank Muscat", accountNo: "0312 5567 8891 0024", reference: "TRX-2026-00870", status: "Transferred", paymentDate: "2026-08-31" },
+  { id: 6, salaryNo: "SAL-006", month: 9, year: 2026, basic: 2500, allowances: 580, loanDeducted: 120, administrative: 175, administrativeReason: "Social insurance contribution", method: "Bank Transfer", bank: "Bank Muscat", accountNo: "0312 5567 8891 0024", reference: "TRX-2026-00981", status: "Transferred", paymentDate: "2026-09-28" },
 ];
+
+/** "SAL-001", counted across the record so a number is never reused. */
+export const nextSalaryNo = (history) =>
+  "SAL-" +
+  String(
+    history.reduce(
+      (max, row) =>
+        Math.max(max, Number(String(row.salaryNo || "").replace(/\D/g, "")) || 0),
+      0
+    ) + 1
+  ).padStart(3, "0");
+
+/** Where a salary stands once it has been worked out. */
+export const SALARY_STATUS_TONE = {
+  Transferred: "bg-green-100 text-green-800",
+  "Pending Transfer": "bg-amber-100 text-amber-800",
+};
+
+/** The month a salary is for, written out: "September 2026". */
+export const salaryPeriod = (record) =>
+  (MONTH_FULL[record.month - 1] || "") + " " + record.year;
 
 /**
  * The history with everything that can be worked out, worked out.
@@ -268,6 +295,10 @@ export function salaryHistoryRows(history = salaryHistory, loan = SALARY_LOAN) {
       return {
         ...record,
         gross: record.basic + record.allowances,
+        // Everything held back from the month, as the summary reads it: the
+        // loan installment and the administrative deduction are one figure to
+        // whoever is checking what was transferred.
+        deductions: record.loanDeducted + record.administrative,
         net: record.basic + record.allowances - record.loanDeducted - record.administrative,
         loan: {
           due,

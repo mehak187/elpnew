@@ -9,7 +9,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/panels";
-import { Plus, CheckCircle2, Clock, XCircle } from "lucide-react";
+import FormHeading from "@/components/shared/FormHeading";
+import {
+  RecordTable,
+  HeadRow,
+  Th,
+  Row,
+  Td,
+} from "@/components/shared/RecordTable";
+import { Plus, CalendarCheck, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/pages/firm/firmData";
 import LeaveForm from "./LeaveForm";
@@ -23,7 +31,14 @@ import {
   leaveYear,
   leavesFor,
   leaveYearsFor,
+  remainingBalance,
+  stageOf,
+  workflowLabel,
 } from "../leaveData";
+import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
+
+/** Today, as the review date starts from. */
+const thisDay = () => new Date().toISOString().slice(0, 10);
 
 const STATUS_ICON = {
   Pending: Clock,
@@ -50,12 +65,18 @@ const emptyDraft = () => ({
  * The decision is management's, and stays blank until one is made, so nothing
  * on the row can suggest an answer that has not been given.
  */
-export default function LeavesSection({ employee }) {
+export default function LeavesSection({ employee, canReview = true }) {
   // Shared with every other page that reads leave, so a request asked for here
   // is still there after the page moves away and back.
-  const { leaves, addLeave } = useLeaves();
+  const { leaves, addLeave, updateLeave } = useLeaves();
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState(emptyDraft);
+  // A request opened from the list to be reviewed, and the stage of it shown.
+  const [openId, setOpenId] = useState(null);
+  const [stage, setStage] = useState("department");
+  const [review, setReview] = useState({ reviewDate: "", decision: "", comments: "" });
+
+  const open = leaves.find((leave) => leave.id === openId) || null;
 
   const mine = leavesFor(leaves, employee.name);
   const years = [
@@ -83,12 +104,16 @@ export default function LeavesSection({ employee }) {
   const shownCategory = adding ? draft.category : "";
   const filteredBy = shownType || shownCategory;
 
-  const rows = mine.filter(
-    (leave) =>
-      chargedYear(leave) === year &&
-      (!shownCategory || leave.category === shownCategory) &&
-      (!shownType || leave.type === shownType)
-  );
+  // Newest first: the latest request is the one most likely being looked for.
+  const rows = mine
+    .filter(
+      (leave) =>
+        chargedYear(leave) === year &&
+        (!shownCategory || leave.category === shownCategory) &&
+        (!shownType || leave.type === shownType)
+    )
+    // The newest request first: the one just made is the one being looked for.
+    .sort((a, b) => b.id - a.id);
 
   /** A type belongs to one category, so changing the category clears it. */
   const chooseCategory = (value) =>
@@ -119,6 +144,64 @@ export default function LeavesSection({ employee }) {
   const close = () => {
     setAdding(false);
     setDraft(emptyDraft());
+    setOpenId(null);
+    setReview({ reviewDate: "", decision: "", comments: "" });
+  };
+
+  /** A request opens at the stage it is waiting at. */
+  const openReview = (leave) => {
+    setAdding(false);
+    setOpenId(leave.id);
+    setStage(stageOf(leave));
+    setReview({
+      reviewDate: thisDay(),
+      decision: leave.status === "Pending" ? "" : leave.status === "Approved" ? "Approve" : "Reject",
+      comments: leave.comments || "",
+    });
+  };
+
+  const setReviewField = (name, value) =>
+    setReview((prev) => ({ ...prev, [name]: value }));
+
+  /**
+   * A department that approves passes the request up to management; one that
+   * refuses ends it there. Management's answer is the final one either way.
+   */
+  const decide = () => {
+    if (!open || !review.decision || !review.reviewDate) return;
+    const approved = review.decision === "Approve";
+
+    if (stage === "department") {
+      updateLeave(open.id, {
+        department: employee.department || "",
+        reviewedBy: CURRENT_USER.name,
+        reviewDate: review.reviewDate,
+        departmentDecision: review.decision,
+        departmentComments: review.comments.trim(),
+        comments: review.comments.trim(),
+        stage: approved ? "management" : "department",
+        status: approved ? "Pending" : "Rejected",
+        decidedAt: approved ? "" : review.reviewDate,
+      });
+      if (approved) {
+        setStage("management");
+        setReview({ reviewDate: thisDay(), decision: "", comments: "" });
+        return;
+      }
+      close();
+      return;
+    }
+
+    updateLeave(open.id, {
+      managementDecidedBy: CURRENT_USER.name,
+      managementDecisionDate: review.reviewDate,
+      managementDecision: review.decision,
+      managementComments: review.comments.trim(),
+      comments: review.comments.trim(),
+      status: approved ? "Approved" : "Rejected",
+      decidedAt: review.reviewDate,
+    });
+    close();
   };
 
   const save = () => {
@@ -131,51 +214,59 @@ export default function LeavesSection({ employee }) {
 
   return (
     <div className="space-y-6">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-        {/* No heading here: the page above is already called Leaves. */}
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Leave is granted a year at a time, so the year is a choice rather
-              than a column repeated down every row. */}
-          {/* Empty values are ignored: Radix keeps a hidden native select and
-              reports "" whenever the list it was built from changes - and the
-              list grows the moment a leave is charged to another year. */}
-          <Select value={year} onValueChange={(value) => value && setYear(value)}>
-            <SelectTrigger className="h-8 w-28" aria-label="Leave year">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {years.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {/* One heading at a time: the section's row - heading on the left, the
+          way to add on the right - gives way to the form's own heading while
+          a request is being written. */}
+      {adding || open ? (
+        <FormHeading
+          icon={CalendarCheck}
+          title={open ? "Leave Request " + (open.leaveNo || "") : "Add New Leave"}
+          note={open ? "Review and decide this request" : "Submit a new leave request"}
+          onBack={close}
+        />
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <FormHeading icon={CalendarCheck} title="Leave Requests History" />
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            {/* Leave is granted a year at a time, so the year is a choice
+                rather than a column repeated down every row. Empty values are
+                ignored: Radix reports "" whenever its list changes. */}
+            <Select value={year} onValueChange={(value) => value && setYear(value)}>
+              <SelectTrigger className="w-28" aria-label="Leave year">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {years.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Button type="button" onClick={() => setAdding(true)}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              Add New Leave
+            </Button>
+          </div>
         </div>
+      )}
 
-        {/* ml-auto keeps it right once it wraps below the year. */}
-        <Button
-          type="button"
-          className="ml-auto"
-          onClick={() => setAdding(true)}
-          disabled={adding}
-        >
-          <Plus className="mr-1.5 h-4 w-4" />
-          Add New Leave
-        </Button>
-      </div>
-
-      {adding && (
+      {(adding || open) && (
         <LeaveForm
           employee={employee}
           leaves={leaves}
-          draft={draft}
+          draft={open ? review : draft}
           years={requestYears}
           advanceYear={nextYear}
-          onChange={setField}
+          onChange={open ? setReviewField : setField}
           onCategory={chooseCategory}
           onSubmit={save}
           onCancel={close}
+          record={open}
+          stage={open ? stage : "submit"}
+          onStage={setStage}
+          onDecide={decide}
         />
       )}
 
@@ -197,74 +288,88 @@ export default function LeavesSection({ employee }) {
               </EmptyState>
             </div>
           ) : (
-            <table className="w-full min-w-[960px] border text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "20%" }}>
-                    Leave Type
-                  </th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "12%" }}>
-                    From Date
-                  </th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "12%" }}>
-                    To Date
-                  </th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "11%" }}>
-                    Number of Days
-                  </th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "21%" }}>
-                    Reason
-                  </th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "12%" }}>
-                    Request Status
-                  </th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "12%" }}>
-                    Decision Date
-                  </th>
-                </tr>
-              </thead>
+            <RecordTable minWidth={1040}>
+              <HeadRow>
+                <Th width="10%">Leave No.</Th>
+                <Th width="18%">Leave Details</Th>
+                <Th width="22%">Leave Period</Th>
+                <Th width="20%">Approval Workflow</Th>
+                <Th width="15%">Balance</Th>
+                <Th width="15%">Status</Th>
+              </HeadRow>
               <tbody>
                 {rows.map((leave) => {
                   const Icon = STATUS_ICON[leave.status];
                   const days = leaveDays(leave.from, leave.to);
+                  // What was left before this request, and what it leaves
+                  // behind - both counted off the record, never stored.
+                  const balance = remainingBalance(
+                    leaves,
+                    employee.name,
+                    leave.type,
+                    chargedYear(leave)
+                  );
 
                   return (
-                    <tr
-                      key={leave.id}
-                      className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"
-                    >
-                      <td className="border-r last:border-r-0 p-3">
-                        {/* An advance is annual leave charged to another year,
-                            so the row says which year it came out of. */}
-                        <p className="font-semibold text-primary">
-                          {leaveTypeLabel(leave)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {leave.category}
-                        </p>
-                      </td>
-                      <td className="border-r last:border-r-0 whitespace-nowrap p-3">
-                        {formatDate(leave.from)}
-                      </td>
-                      <td className="border-r last:border-r-0 whitespace-nowrap p-3">
-                        {formatDate(leave.to)}
-                      </td>
-                      {/* Counted from the two dates beside it, never stored */}
-                      <td className="border-r last:border-r-0 p-3 font-medium">
-                        {days} {days === 1 ? "Day" : "Days"}
-                      </td>
-                      <td className="border-r last:border-r-0 p-3">
-                        <p>{leave.reason || "-"}</p>
-                        {/* Who is covering, with the request it belongs
-                            to rather than in a column of its own. */}
-                        {leave.replacement && (
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            Covered by {leave.replacement}
-                          </p>
+                    <Row key={leave.id}>
+                      {/* The number opens the request at the stage it is
+                          waiting at, for whoever has to decide it. */}
+                      <Td className="whitespace-nowrap">
+                        {canReview ? (
+                          <button
+                            type="button"
+                            onClick={() => openReview(leave)}
+                            className="rounded font-bold text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                          >
+                            {leave.leaveNo || "-"}
+                          </button>
+                        ) : (
+                          <span className="font-bold text-primary">
+                            {leave.leaveNo || "-"}
+                          </span>
                         )}
-                      </td>
+                      </Td>
 
-                      <td className="border-r last:border-r-0 p-3">
+                      {/* An advance is annual leave charged to another year,
+                          so the row says which year it came out of. */}
+                      <Td>
+                        <span className="block font-semibold text-primary">
+                          {leave.category}
+                        </span>
+                        <span className="block text-xs text-muted-foreground">
+                          {leaveTypeLabel(leave)}
+                        </span>
+                      </Td>
+
+                      {/* The two dates and what they come to, as one period. */}
+                      <Td className="whitespace-nowrap">
+                        {formatDate(leave.from)} – {formatDate(leave.to)}
+                        <span className="px-1.5 text-muted-foreground">/</span>
+                        {days} {days === 1 ? "Day" : "Days"}
+                      </Td>
+
+                      <Td>
+                        {workflowLabel(leave)}
+                        {/* Management's note sits with the decision it
+                            explains, rather than in a column of its own. */}
+                        {leave.comments && (
+                          <span className="mt-1 block text-xs text-muted-foreground">
+                            {leave.comments}
+                          </span>
+                        )}
+                      </Td>
+
+                      <Td className="whitespace-nowrap">
+                        {balance && !balance.expired
+                          ? balance.allowance -
+                            (balance.allowance - balance.remaining) +
+                            " Days / " +
+                            Math.max(balance.remaining - days, 0) +
+                            " Days"
+                          : "-"}
+                      </Td>
+
+                      <Td className="text-center">
                         <span
                           className={cn(
                             "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
@@ -274,25 +379,12 @@ export default function LeavesSection({ employee }) {
                           <Icon className="h-3.5 w-3.5 shrink-0" />
                           {leave.status}
                         </span>
-                        {/* Management's note sits with the decision it
-                            explains, rather than in a column of its own. */}
-                        {leave.comments && (
-                          <p className="mt-1.5 text-xs text-muted-foreground">
-                            {leave.comments}
-                          </p>
-                        )}
-                      </td>
-
-                      {/* Blank until a decision is made, so nothing suggests
-                          an answer that has not been given. */}
-                      <td className="border-r last:border-r-0 whitespace-nowrap p-3">
-                        {leave.decidedAt ? formatDate(leave.decidedAt) : "-"}
-                      </td>
-                    </tr>
+                      </Td>
+                    </Row>
                   );
                 })}
               </tbody>
-            </table>
+            </RecordTable>
           )}
         </CardContent>
       </Card>

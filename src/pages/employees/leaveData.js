@@ -64,6 +64,52 @@ export function entitlementOf(type) {
 
 export const LEAVE_STATUSES = ["Pending", "Approved", "Rejected"];
 
+/**
+ * The three stages a request goes through: the employee asks, the department
+ * reviews, and management decides. A request sits at one of them until it is
+ * approved or refused.
+ */
+export const LEAVE_STAGES = [
+  { key: "submit", title: "Submit Request", note: "Leave request details" },
+  { key: "department", title: "Relevant Department Approval", note: "Department review and approval" },
+  { key: "management", title: "Management Approval", note: "Final management decision" },
+];
+
+/** "LEV-001", counted across the firm so a number is never reused. */
+export const nextLeaveNo = (leaves) =>
+  "LEV-" +
+  String(
+    leaves.reduce(
+      (max, l) => Math.max(max, Number(String(l.leaveNo || "").replace(/\D/g, "")) || 0),
+      0
+    ) + 1
+  ).padStart(3, "0");
+
+/** What a reviewer can say about a request. */
+export const LEAVE_DECISIONS = ["Approve", "Reject"];
+
+/** A decision already taken, read back as what it did: "Approved". */
+export const decisionTaken = (decision) =>
+  decision === "Approve" ? "Approved" : decision === "Reject" ? "Rejected" : "";
+
+/**
+ * The stage a request is waiting at, so opening it from the list picks up
+ * where it was left. A decided request opens on the stage that decided it.
+ */
+export const stageOf = (leave) => {
+  if (leave.status !== "Pending") return "management";
+  return leave.stage === "management" ? "management" : "department";
+};
+
+/** Where the request stands, as the workflow column reads it. */
+export const workflowLabel = (leave) => {
+  if (leave.status === "Approved") return "Approved by Management";
+  if (leave.status === "Rejected") return "Rejected";
+  return leave.stage === "management"
+    ? "Pending Management Approval"
+    : "Pending Department Approval";
+};
+
 /** How a status is dressed wherever it is shown. */
 export const LEAVE_STATUS_TONE = {
   Pending: "bg-amber-100 text-amber-800",
@@ -108,6 +154,7 @@ export const leaveTypeLabel = (leave) =>
 export const initialLeaves = [
   {
     id: 1,
+    leaveNo: "LEV-001",
     employee: "Mohammed Al Yahyaei",
     category: "Regular Leave",
     type: "Annual Leave",
@@ -120,6 +167,7 @@ export const initialLeaves = [
   },
   {
     id: 2,
+    leaveNo: "LEV-002",
     employee: "Mohammed Al Yahyaei",
     category: "Regular Leave",
     type: "Sick Leave",
@@ -132,6 +180,7 @@ export const initialLeaves = [
   },
   {
     id: 3,
+    leaveNo: "LEV-003",
     employee: "Mohammed Al Yahyaei",
     category: "Family Leave",
     type: "Maternity Leave",
@@ -144,6 +193,7 @@ export const initialLeaves = [
   },
   {
     id: 4,
+    leaveNo: "LEV-004",
     employee: "Mohammed Al Yahyaei",
     category: "Special Leave",
     type: "Hajj Leave",
@@ -156,6 +206,7 @@ export const initialLeaves = [
   },
   {
     id: 5,
+    leaveNo: "LEV-005",
     employee: "Fatima Al Rashdi",
     category: "Regular Leave",
     type: "Annual Leave",
@@ -168,6 +219,7 @@ export const initialLeaves = [
   },
   {
     id: 6,
+    leaveNo: "LEV-006",
     employee: "Fatima Al Rashdi",
     category: "Family Leave",
     type: "Marriage Leave",
@@ -181,6 +233,7 @@ export const initialLeaves = [
   // Someone the list says is on leave right now, so the record shows why.
   {
     id: 7,
+    leaveNo: "LEV-007",
     employee: "Ahmed Al Balushi",
     category: "Regular Leave",
     type: "Sick Leave",
@@ -193,6 +246,7 @@ export const initialLeaves = [
   },
   {
     id: 8,
+    leaveNo: "LEV-008",
     employee: "Ahmed Al Balushi",
     category: "Regular Leave",
     type: "Annual Leave",
@@ -205,6 +259,7 @@ export const initialLeaves = [
   },
   {
     id: 9,
+    leaveNo: "LEV-009",
     employee: "Sarah Al Lawati",
     category: "Regular Leave",
     type: "Annual Leave",
@@ -217,6 +272,7 @@ export const initialLeaves = [
   },
   {
     id: 10,
+    leaveNo: "LEV-010",
     employee: "Sarah Al Lawati",
     category: "Family Leave",
     type: "Paternity Leave",
@@ -229,6 +285,7 @@ export const initialLeaves = [
   },
   {
     id: 11,
+    leaveNo: "LEV-011",
     employee: "Khalid Al Hinai",
     category: "Special Leave",
     type: "Hajj Leave",
@@ -243,6 +300,7 @@ export const initialLeaves = [
   // against next year possible at all.
   {
     id: 12,
+    leaveNo: "LEV-012",
     employee: "Aisha Al Kindi",
     category: "Regular Leave",
     type: "Annual Leave",
@@ -255,6 +313,7 @@ export const initialLeaves = [
   },
   {
     id: 15,
+    leaveNo: "LEV-015",
     employee: "Aisha Al Kindi",
     category: "Regular Leave",
     type: "Annual Leave",
@@ -267,6 +326,7 @@ export const initialLeaves = [
   },
   {
     id: 13,
+    leaveNo: "LEV-013",
     employee: "Omar Al Maskari",
     category: "Regular Leave",
     type: "Annual Leave",
@@ -279,6 +339,7 @@ export const initialLeaves = [
   },
   {
     id: 14,
+    leaveNo: "LEV-014",
     employee: "Layla Al Habsi",
     category: "Special Leave",
     type: "Study / Examination Leave",

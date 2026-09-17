@@ -142,7 +142,9 @@ export default function ClientManagementSection() {
   return (
     <div className="space-y-6">
       {/* The section's own heading, so the way to add to it sits on the
-          same line rather than costing a row of its own. */}
+          same line rather than costing a row of its own. While a team is open
+          the form's heading stands in its place: one heading at a time. */}
+      {!mode && (
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
         {/* Named as the sidebar names it: the page is already one client's. */}
         <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">Team</h2>
@@ -157,6 +159,7 @@ export default function ClientManagementSection() {
           Add Client Team
         </Button>
       </div>
+      )}
 
       {/* The form opens above the table, never in place of it: the list of
           branch teams is the page, and it should not vanish to make room. */}
@@ -165,6 +168,7 @@ export default function ClientManagementSection() {
           <CardContent className="space-y-6 p-4 sm:p-6">
             <FormHeading
               icon={UserCog}
+              onBack={close}
               title={mode === "add"
                   ? "Add Client Team"
                   : "Client Team - " +

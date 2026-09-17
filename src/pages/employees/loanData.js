@@ -20,6 +20,9 @@ export const LOAN_INCREASE = "Loan Amount Increase";
  */
 export const LOAN_EXPENSE_TYPE = "Employee Expenses";
 
+/** The one category a loan is booked under, whichever kind of loan it is. */
+export const LOAN_CATEGORY = "Loan";
+
 /* ------------------------------------------------------ where a request is */
 
 /**
@@ -33,12 +36,46 @@ export const LOAN_APPROVED = "Approved";
 export const LOAN_REJECTED = "Rejected";
 export const LOAN_CANCELLED = "Cancelled";
 
+/**
+ * How management answered a request.
+ *
+ * A full approval grants what was asked for; a partial one grants amended
+ * terms. Both are money in hand, so both count as approved.
+ */
+export const LOAN_FULL_APPROVAL = "Full Approval";
+export const LOAN_PARTIAL_APPROVAL = "Partial Approval";
+
+/** The answer a decision on the form turns into on the record. */
+export const LOAN_DECISION_STATUS = {
+  full: LOAN_FULL_APPROVAL,
+  partial: LOAN_PARTIAL_APPROVAL,
+  rejected: LOAN_REJECTED,
+};
+
 export const LOAN_STATUS_TONE = {
   [LOAN_PENDING]: "text-amber-600",
   [LOAN_APPROVED]: "text-green-700",
+  [LOAN_FULL_APPROVAL]: "text-green-700",
+  [LOAN_PARTIAL_APPROVAL]: "text-blue-700",
   [LOAN_REJECTED]: "text-destructive",
   [LOAN_CANCELLED]: "text-muted-foreground",
 };
+
+/** The same statuses as a chip, where the table shows one. */
+export const LOAN_STATUS_CHIP = {
+  [LOAN_PENDING]: "bg-amber-100 text-amber-800",
+  [LOAN_APPROVED]: "bg-green-100 text-green-800",
+  [LOAN_FULL_APPROVAL]: "bg-green-100 text-green-800",
+  [LOAN_PARTIAL_APPROVAL]: "bg-blue-100 text-blue-800",
+  [LOAN_REJECTED]: "bg-red-100 text-red-800",
+  [LOAN_CANCELLED]: "bg-muted text-muted-foreground",
+};
+
+/** Granted, whether in full or on amended terms. */
+export const isApprovedLoan = (record) =>
+  record.status === LOAN_APPROVED ||
+  record.status === LOAN_FULL_APPROVAL ||
+  record.status === LOAN_PARTIAL_APPROVAL;
 
 /** A request that was turned down or withdrawn counts for nothing. */
 export const isLiveLoan = (record) =>
@@ -61,7 +98,7 @@ export const outstandingOf = (record) =>
 export const outstandingTotal = (records) =>
   Number(
     records
-      .filter((record) => record.status === LOAN_APPROVED)
+      .filter(isApprovedLoan)
       .reduce((sum, record) => sum + outstandingOf(record), 0)
       .toFixed(3)
   );

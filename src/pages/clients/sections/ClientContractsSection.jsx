@@ -201,7 +201,9 @@ export default function ClientContractsSection() {
   return (
     <div className="space-y-6">
       {/* The section's own heading, so the way to add to it sits on the
-          same line rather than costing a row of its own. */}
+          same line rather than costing a row of its own. While a contract is
+          being added the form's heading stands in its place. */}
+      {!adding && (
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
         {/* Named as the sidebar names it: the page is already one client's. */}
         <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">Contracts</h2>
@@ -216,6 +218,7 @@ export default function ClientContractsSection() {
           Add Contract
         </Button>
       </div>
+      )}
 
       {/* The form takes the place of the list while it is being filled in:
           a page is one thing at a time, either the contracts on file or the
@@ -226,6 +229,7 @@ export default function ClientContractsSection() {
           <FormHeading
             icon={FileSignature}
             title="Add Contract"
+            onBack={closeForm}
           />
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -365,6 +369,8 @@ export default function ClientContractsSection() {
       <DataTable
         columns={columns}
         data={rows}
+        // Already newest first by start date, with spent contracts under them.
+        keepOrder
         searchPlaceholder="Search contracts..."
         enableColumnSearch={false}
         currentPage={currentPage}

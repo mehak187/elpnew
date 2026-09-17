@@ -10,8 +10,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import FormHeading from "@/components/shared/FormHeading";
-import Panel from "@/components/shared/Panel";
+import AiSearch from "@/components/shared/AiSearch";
+import UploadIcon from "@/components/shared/UploadIcon";
+import { RequestSteps } from "@/components/shared/RequestSteps";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/panels";
 import {
@@ -22,14 +23,22 @@ import {
   Td,
 } from "@/components/shared/RecordTable";
 import { Rial } from "@/components/shared/Rial";
-import { Gift, ClipboardList } from "lucide-react";
+import { ArrowRight, FileCheck } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { amountValue } from "@/lib/money";
+import { smartSearch } from "@/lib/search/smartSearch";
 import { useBonuses } from "@/lib/bonuses/context";
-import { amount, formatDate } from "../loanData";
+import { formatDate } from "../loanData";
+import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
+import { PAYMENT_SOURCES, DEFAULT_BANK } from "../payrollData";
 import {
   BONUS_EXPENSE_TYPE,
   BONUS_CATEGORY,
   BONUS_SUBCATEGORIES,
+  BONUS_DISBURSED,
+  BONUS_STATUS_CHIP,
   OTHER_BONUS,
+  bonusDate,
   bonusReason,
   bonusesFor,
 } from "../bonusData";
@@ -42,7 +51,16 @@ const emptyDraft = () => ({
   subcategory: "",
   bonusType: "",
   amount: "",
+  notes: "",
+});
+
+/** How the bonus actually reached the employee, once it is paid out. */
+const emptyPayment = () => ({
+  method: "",
+  bank: DEFAULT_BANK,
+  accountNo: "",
   paidOn: todayIso(),
+  reference: "",
   notes: "",
 });
 
@@ -56,6 +74,164 @@ function FieldLabel({ htmlFor, required, children }) {
   );
 }
 
+/** A fact the disbursement reads back rather than asks for again. */
+function Locked({ id, label, value, highlight }) {
+  return (
+    <div className="space-y-2">
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <Input
+        id={id}
+        readOnly
+        tabIndex={-1}
+        value={value}
+        className={cn(
+          "cursor-default bg-locked text-muted-foreground",
+          highlight && "border-green-600/40 font-semibold text-green-700"
+        )}
+      />
+    </div>
+  );
+}
+
+/**
+ * How the bonus actually reached the employee.
+ *
+ * The figure is not asked for again: it is what the first stage settled, and
+ * a typed one could disagree with the bonus it pays.
+ */
+function BonusDisbursement({
+  employee,
+  reason,
+  amount: figure,
+  payment,
+  onChange,
+  receipt,
+  onReceipt,
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+      <Locked id="bonus-pay-employee" label="Employee" value={employee} />
+      <Locked id="bonus-pay-reason" label="Bonus Type" value={reason} />
+      <Locked
+        id="bonus-pay-amount"
+        label="Bonus Amount (OMR)"
+        value={figure}
+        highlight
+      />
+
+      <div className="space-y-2">
+        <FieldLabel htmlFor="bonus-pay-method" required>
+          Payment Method
+        </FieldLabel>
+        <Select
+          value={payment.method}
+          onValueChange={(value) => value && onChange("method", value)}
+        >
+          <SelectTrigger id="bonus-pay-method">
+            <SelectValue placeholder="Select method" />
+          </SelectTrigger>
+          <SelectContent>
+            {PAYMENT_METHODS.map((method) => (
+              <SelectItem key={method} value={method}>
+                {method}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <FieldLabel htmlFor="bonus-pay-bank">Bank</FieldLabel>
+        <Select
+          value={payment.bank}
+          onValueChange={(value) => value && onChange("bank", value)}
+        >
+          <SelectTrigger id="bonus-pay-bank">
+            <SelectValue placeholder="Select bank or cash" />
+          </SelectTrigger>
+          <SelectContent>
+            {PAYMENT_SOURCES.map((source) => (
+              <SelectItem key={source} value={source}>
+                {source}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <FieldLabel htmlFor="bonus-pay-account">Account No.</FieldLabel>
+        <Input
+          id="bonus-pay-account"
+          value={payment.accountNo}
+          onChange={(e) => onChange("accountNo", e.target.value)}
+          placeholder="Enter the account the bonus goes to"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <FieldLabel htmlFor="bonus-pay-date" required>
+          Payment Date
+        </FieldLabel>
+        <Input
+          id="bonus-pay-date"
+          type="date"
+          value={payment.paidOn}
+          onChange={(e) => onChange("paidOn", e.target.value)}
+        />
+      </div>
+
+      {/* What the bank called the payment, and the proof of it. */}
+      <div className="space-y-2 sm:col-span-1 lg:col-span-2">
+        <FieldLabel htmlFor="bonus-pay-reference">Payment Reference</FieldLabel>
+        <div className="flex gap-2">
+          <Input
+            id="bonus-pay-reference"
+            value={payment.reference}
+            onChange={(e) => onChange("reference", e.target.value)}
+            placeholder="TRX-0000-00000"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            asChild
+            title={receipt ? receipt.name + " attached" : "Attach payment receipt"}
+            className={cn("shrink-0", receipt && "border-green-600 text-green-600")}
+          >
+            <label htmlFor="bonus-pay-receipt" className="cursor-pointer">
+              {receipt ? (
+                <FileCheck className="h-4 w-4" />
+              ) : (
+                <UploadIcon className="h-4 w-4" />
+              )}
+              <span className="sr-only">Attach payment receipt</span>
+            </label>
+          </Button>
+          <Input
+            id="bonus-pay-receipt"
+            type="file"
+            className="hidden"
+            onChange={(e) => e.target.files[0] && onReceipt(e.target.files[0])}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2 sm:col-span-2">
+        <FieldLabel htmlFor="bonus-pay-notes">Notes</FieldLabel>
+        <Textarea
+          id="bonus-pay-notes"
+          rows={3}
+          maxLength={NOTES_LIMIT}
+          value={payment.notes}
+          onChange={(e) => onChange("notes", e.target.value)}
+          placeholder="Enter payment notes"
+        />
+      </div>
+    </div>
+  );
+}
+
 /**
  * The bonuses paid to one employee, and the form that records another.
  *
@@ -65,26 +241,45 @@ function FieldLabel({ htmlFor, required, children }) {
  * asked for.
  */
 export default function BonusSection({ employee, adding, onCloseAdd }) {
-  const { bonuses, addBonus } = useBonuses();
+  const { bonuses, addBonus, updateBonus } = useBonuses();
   const [draft, setDraft] = useState(emptyDraft);
+  const [query, setQuery] = useState("");
+  // Which half of the bonus is open - what it is, and then how it was paid -
+  // and the bonus that has been entered and is now waiting to be paid.
+  const [stage, setStage] = useState("entry");
+  const [openId, setOpenId] = useState(null);
+  const [payment, setPayment] = useState(emptyPayment);
+  const [receipt, setReceipt] = useState(null);
 
-  const mine = bonusesFor(bonuses, employee?.name);
+  const mine = smartSearch(bonusesFor(bonuses, employee?.name), query);
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
+  const setPay = (name, value) =>
+    setPayment((prev) => ({ ...prev, [name]: value }));
   const isOther = draft.subcategory === OTHER_BONUS;
 
   const canSave =
     draft.subcategory &&
     (!isOther || draft.bonusType.trim()) &&
-    Number(draft.amount) > 0 &&
-    draft.paidOn;
+    Number(draft.amount) > 0;
+
+  const canPay = canSave && payment.method && payment.paidOn;
 
   const close = () => {
     setDraft(emptyDraft());
+    setPayment(emptyPayment());
+    setReceipt(null);
+    setStage("entry");
+    setOpenId(null);
     onCloseAdd();
   };
 
+  /**
+   * The bonus entered. Deciding it is not paying it, so it is on record
+   * waiting for the disbursement that the next stage records.
+   */
   const save = () => {
     if (!canSave) return;
+    const id = bonuses.reduce((max, bonus) => Math.max(max, bonus.id), 0) + 1;
     addBonus({
       employee: employee.name,
       expenseType: BONUS_EXPENSE_TYPE,
@@ -92,8 +287,26 @@ export default function BonusSection({ employee, adding, onCloseAdd }) {
       subcategory: draft.subcategory,
       bonusType: isOther ? draft.bonusType.trim() : "",
       amount: Number(draft.amount),
-      paidOn: draft.paidOn,
+      recordedOn: todayIso(),
+      paidOn: "",
       notes: draft.notes.trim(),
+    });
+    setOpenId(id);
+    setStage("disbursement");
+  };
+
+  /** Paid out: the bonus is disbursed, and says how. */
+  const disburse = () => {
+    if (!canPay || !openId) return;
+    updateBonus(openId, {
+      status: BONUS_DISBURSED,
+      method: payment.method,
+      bank: payment.bank,
+      accountNo: payment.accountNo,
+      paidOn: payment.paidOn,
+      reference: payment.reference.trim(),
+      receipt: receipt?.name || "",
+      paymentNotes: payment.notes.trim(),
     });
     close();
   };
@@ -102,15 +315,51 @@ export default function BonusSection({ employee, adding, onCloseAdd }) {
   // none of it helps while another bonus is being entered.
   if (adding) {
     return (
-      <div className="space-y-6">
-        <FormHeading
-          icon={Gift}
-          title="Add Bonus"
-          note="Record a bonus paid to this employee."
-          onBack={close}
+      <div className="space-y-6 rounded-lg border p-4 sm:p-6">
+        {/* The two halves of a bonus: what it is for, and then how it was
+            paid out. Either header opens its own half. */}
+        <RequestSteps
+          active={stage}
+          onChange={setStage}
+          steps={[
+            {
+              key: "entry",
+              title: "Data Entry",
+              note: "Enter exceptional bonus details",
+              done: Boolean(canSave),
+            },
+            {
+              key: "disbursement",
+              title: "Disbursement",
+              note: "Payment and bank transfer details",
+              done: Boolean(canPay),
+              // Nothing can be paid out until there is a bonus to pay.
+              disabled: !canSave,
+            },
+          ]}
         />
 
-        <Panel title="Bonus Information" icon={Gift}>
+        {/* The stage's own heading. On the first one the bonus names itself:
+            what it is for is the heading over what it comes to. */}
+        <h3 className="text-base font-semibold text-primary">
+          {stage === "disbursement"
+            ? "Disbursement"
+            : draft.subcategory || "Data Entry"}
+        </h3>
+
+        {stage === "disbursement" ? (
+          <BonusDisbursement
+            employee={employee?.name || ""}
+            reason={draft.subcategory}
+            // The label already says OMR, so the figure does not.
+            amount={amountValue(Number(draft.amount))}
+            payment={payment}
+            onChange={setPay}
+            receipt={receipt}
+            onReceipt={setReceipt}
+          />
+        ) : (
+        <>
           {/* Every field the same width: nothing here takes more room than
               the rest, so the row reads as one set of boxes. */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
@@ -190,46 +439,39 @@ export default function BonusSection({ employee, adding, onCloseAdd }) {
               />
             </div>
 
-            <div className="space-y-2">
-              <FieldLabel htmlFor="bonus-paid-on" required>
-                Payment Date
-              </FieldLabel>
-              <Input
-                id="bonus-paid-on"
-                type="date"
-                max={todayIso()}
-                value={draft.paidOn}
-                onChange={(e) => set("paidOn", e.target.value)}
+            <div className="space-y-2 sm:col-span-2 lg:col-span-4">
+              <FieldLabel htmlFor="bonus-notes">Reason / Notes</FieldLabel>
+              <Textarea
+                id="bonus-notes"
+                rows={4}
+                maxLength={NOTES_LIMIT}
+                value={draft.notes}
+                onChange={(e) => set("notes", e.target.value)}
+                placeholder="Anything worth recording about this bonus..."
               />
+              <p className="text-right text-xs text-muted-foreground">
+                {draft.notes.length} / {NOTES_LIMIT}
+              </p>
             </div>
           </div>
-        </Panel>
-
-        <Panel title="Bonus Details" icon={ClipboardList}>
-          <div className="space-y-2">
-            <FieldLabel htmlFor="bonus-notes">Notes</FieldLabel>
-            <Textarea
-              id="bonus-notes"
-              rows={4}
-              maxLength={NOTES_LIMIT}
-              value={draft.notes}
-              onChange={(e) => set("notes", e.target.value)}
-              placeholder="Anything worth recording about this bonus..."
-            />
-            <p className="text-right text-xs text-muted-foreground">
-              {draft.notes.length} / {NOTES_LIMIT}
-            </p>
-          </div>
-        </Panel>
+        </>
+        )}
 
         <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-4">
           {/* A plain button: this form sits inside the employee form. */}
           <Button type="button" variant="outline" onClick={close}>
             Cancel
           </Button>
-          <Button type="button" onClick={save} disabled={!canSave}>
-            Save
-          </Button>
+          {stage === "disbursement" ? (
+            <Button type="button" onClick={disburse} disabled={!canPay}>
+              Confirm Disbursement
+            </Button>
+          ) : (
+            <Button type="button" onClick={save} disabled={!canSave}>
+              Save and Continue
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
     );
@@ -237,40 +479,63 @@ export default function BonusSection({ employee, adding, onCloseAdd }) {
 
   return (
     <Card>
-      <CardContent className="p-4 sm:p-6">
+      <CardContent className="space-y-4 p-4 sm:p-6">
+        {/* The search on the left, where every list in the system has it, and
+            the name of the list on the right. */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <AiSearch
+            value={query}
+            onChange={setQuery}
+            placeholder="Ask about bonuses..."
+          />
+          <h3 className="ml-auto text-lg font-bold text-primary">
+            Bonus History
+          </h3>
+        </div>
+
         {mine.length === 0 ? (
           <EmptyState>No bonus has been paid to this employee yet.</EmptyState>
         ) : (
-          <RecordTable minWidth={860}>
+          <RecordTable minWidth={900}>
             <HeadRow>
               <Th width="6%">No.</Th>
-              <Th width="14%">Payment Date</Th>
-              <Th width="30%" note="Category / Reason">
-                Bonus Details
-              </Th>
-              {/* No unit in the heading: every figure below carries it. */}
+              <Th width="14%">Bonus Date</Th>
+              <Th width="26%">Bonus Details</Th>
+              {/* The unit is said once, in the heading, so the figures under
+                  it can be read against each other. */}
               <Th width="16%" className="text-right">
-                Bonus Amount
+                Bonus Amount (OMR)
               </Th>
-              <Th width="34%">Notes</Th>
+              <Th width="16%">Status</Th>
+              <Th width="22%">Notes</Th>
             </HeadRow>
             <tbody>
               {mine.map((bonus, index) => (
                 <Row key={bonus.id}>
                   <Td className="font-medium text-primary">{index + 1}</Td>
                   <Td className="whitespace-nowrap text-primary">
-                    {formatDate(bonus.paidOn)}
+                    {formatDate(bonusDate(bonus))}
                   </Td>
                   <Td className="text-left">
                     <span className="block font-semibold text-primary">
                       {bonusReason(bonus)}
                     </span>
                     <span className="block text-xs text-muted-foreground">
-                      {bonus.expenseType} · {bonus.category}
+                      {bonus.expenseType} &rarr; {bonus.category}
                     </span>
                   </Td>
                   <Td className="whitespace-nowrap text-right font-bold text-green-700">
-                    {amount(bonus.amount)}
+                    {amountValue(bonus.amount)}
+                  </Td>
+                  <Td className="text-center">
+                    <span
+                      className={cn(
+                        "inline-block rounded-md px-3 py-1 text-xs font-semibold",
+                        BONUS_STATUS_CHIP[bonus.status]
+                      )}
+                    >
+                      {bonus.status}
+                    </span>
                   </Td>
                   <Td className="text-left text-muted-foreground">
                     {bonus.notes || "-"}

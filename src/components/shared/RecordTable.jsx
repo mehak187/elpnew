@@ -36,24 +36,18 @@ export function HeadRow({ children }) {
 }
 
 /**
- * One column heading.
+ * One column heading: the title and nothing else.
  *
- * `note` is what the column is made of, kept on the same line and in brackets
- * rather than stacked underneath as a second header row.
+ * What a column is made of is plain from the cells under it, so no bracketed
+ * explanation follows the title. A `note` passed in is not shown.
  */
-export function Th({ width, note, className, children }) {
+export function Th({ width, className, children }) {
   return (
     <th
       style={width ? { width } : undefined}
       className={cn("border-r p-3 font-semibold last:border-r-0", className)}
     >
       {children}
-      {note && (
-        <>
-          {" "}
-          <span className="font-normal text-muted-foreground">({note})</span>
-        </>
-      )}
     </th>
   );
 }

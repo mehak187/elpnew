@@ -123,7 +123,11 @@ export default function LitigationList() {
   const [currentPage, setCurrentPage] = useState(1);
   const { active, apply, clear } = useListFilter(FILTERS);
 
-  const visibleCases = apply(cases);
+  // Newest case first, read off the case number itself ("2024/015" is year
+  // then sequence) - a case entered late for an old year stays with its year.
+  const visibleCases = [...apply(cases)].sort((a, b) =>
+    String(b.case_no).localeCompare(String(a.case_no), undefined, { numeric: true })
+  );
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -159,6 +163,7 @@ export default function LitigationList() {
           <DataTable
             columns={columns}
             data={visibleCases}
+            keepOrder
             // A closed case is kept, under the ones still running.
             endedRow={(row) => isEndedStatus(row.status)}
             searchPlaceholder="Search cases..."

@@ -303,7 +303,8 @@ export default function DocumentsSection({ canEdit }) {
                 </tr>
               </thead>
               <tbody>
-                {documents.map((document) => {
+                {/* The paper filed most recently at the top. */}
+                {[...documents].sort((a, b) => b.id - a.id).map((document) => {
 
                   return (
                     <tr

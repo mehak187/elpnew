@@ -49,26 +49,14 @@ function SortMark({ direction }) {
 }
 
 /**
- * A column's heading, on one line.
+ * A column's heading: the title and nothing else.
  *
- * What the column holds, and beside it in lighter type what makes it up.
- * Stacked over two lines the second line reads as another header row, which is
- * what the heading of a single column must not look like.
+ * What a column is made of is plain from the cells under it, so the bracketed
+ * explanation that used to follow the title only lengthened the header row.
+ * Columns may still carry a `subHeader` - it is simply not shown.
  */
-function ColumnHeading({ header, subHeader }) {
-  if (!subHeader) return header;
-  // Details are read as an aside, so they are bracketed - unless they say so
-  // themselves already.
-  const detail =
-    typeof subHeader === "string" && !subHeader.startsWith("(")
-      ? "(" + subHeader + ")"
-      : subHeader;
-
-  return (
-    <>
-      {header} <span className="font-normal text-muted-foreground">{detail}</span>
-    </>
-  );
+function ColumnHeading({ header }) {
+  return header;
 }
 
 export default function DataTable({
@@ -93,6 +81,9 @@ export default function DataTable({
   // Says whether a row's record has ended - cancelled, inactive, expired.
   // Those are kept, but they belong under the live ones.
   endedRow,
+  // The data already arrives in the order it should be read in (a schedule,
+  // or a list sorted by its own date), so the table leaves it alone.
+  keepOrder = false,
 }) {
   const [searchValue, setSearchValue] = useState("");
   const [columnFilters, setColumnFilters] = useState({});
@@ -150,8 +141,20 @@ export default function DataTable({
     return row[column.key];
   };
 
+  /**
+   * Newest first, until somebody sorts a column.
+   *
+   * Every record is numbered as it is created, so the highest id is the most
+   * recent - and the most recent is what a list is opened to find. Rows
+   * without a numeric id keep the order they came in.
+   */
+  const newestFirst =
+    keepOrder || !filteredData.every((row) => typeof row.id === "number")
+      ? filteredData
+      : [...filteredData].sort((a, b) => b.id - a.id);
+
   const sortedData = (() => {
-    if (!sort) return filteredData;
+    if (!sort) return newestFirst;
     const column = columns.find((c) => c.key === sort.key);
     if (!column) return filteredData;
     const direction = sort.direction === "asc" ? 1 : -1;

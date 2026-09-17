@@ -205,7 +205,7 @@ export function StatusDot({ status, isGood }) {
 const LIVE = /^(active|open|valid|running|current|in progress)$/i;
 
 /** A record that has come to an end, and is therefore listed last. */
-const ENDED = /^(cancelled|canceled|inactive|expired|closed|disposed|terminated|left)$/i;
+const ENDED = /^(cancelled|canceled|inactive|expired|closed|disposed|terminated|left|merged)$/i;
 
 /** Whether a record has come to an end, wherever a list needs to know. */
 export const isEndedStatus = (status) => Boolean(status) && ENDED.test(String(status).trim());
@@ -233,7 +233,7 @@ export function IdStatusDot({ status }) {
   if (!word || LIVE.test(word)) return null;
 
   const tone = ENDED.test(word)
-    ? /^(inactive|closed|disposed|left)$/i.test(word)
+    ? /^(inactive|closed|disposed|left|merged)$/i.test(word)
       ? QUIET_TONE
       : ENDED_TONE
     : WARNING_TONE;
