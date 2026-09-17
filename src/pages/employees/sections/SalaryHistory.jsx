@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Eye, EyeOff } from "lucide-react";
 import AiSearch from "@/components/shared/AiSearch";
 import { EmptyState } from "@/components/shared/panels";
 import {
@@ -36,7 +38,13 @@ function Part({ label, value }) {
  * The net is not stored - it is the three figures beside it, and a stored total
  * could disagree with them.
  */
-export default function SalaryHistory({ history = salaryHistory }) {
+export default function SalaryHistory({
+  history = salaryHistory,
+  // The salary breakdown above this list is opened from here, beside the
+  // search - the row that used to hold the month and the year.
+  detailsOpen = false,
+  onToggleDetails = null,
+}) {
   const [query, setQuery] = useState("");
 
   // Newest first, and each row carrying the period it is for so the search
@@ -59,9 +67,28 @@ export default function SalaryHistory({ history = salaryHistory }) {
             onChange={setQuery}
             placeholder="Ask about salaries..."
           />
-          <h3 className="ml-auto text-lg font-bold text-primary">
-            Salary History
-          </h3>
+
+          {/* The section above already names this list, so the row's other
+              end carries what acts on it instead of saying so twice. The
+              words say what a click will do, and to what. */}
+          {onToggleDetails && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="ml-auto"
+              aria-expanded={detailsOpen}
+              aria-controls="salary-details"
+              onClick={onToggleDetails}
+            >
+              {detailsOpen ? (
+                <EyeOff className="mr-1.5 h-4 w-4" />
+              ) : (
+                <Eye className="mr-1.5 h-4 w-4" />
+              )}
+              {detailsOpen ? "Hide Salary Details" : "View Salary Details"}
+            </Button>
+          )}
         </div>
 
         {shown.length === 0 ? (

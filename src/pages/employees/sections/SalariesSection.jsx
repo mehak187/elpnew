@@ -240,8 +240,10 @@ export default function SalariesSection({
   adding,
   onCloseAdd,
   onSave,
-  // Whether the salary breakdown is open. The history under it is always shown.
+  // Whether the salary breakdown is open. The history under it is always
+  // shown, and carries the control that opens the breakdown.
   detailsOpen = true,
+  onToggleDetails = null,
   // The firm sets the salary; on My Profile the payslip is only read.
   canEdit = true,
   // My Profile, where the employee cannot record a payment to themselves but
@@ -730,7 +732,11 @@ export default function SalariesSection({
       {advance && <AdvanceRequests employee={employee} />}
 
       {/* What has been paid, month by month */}
-      <SalaryHistory history={history} />
+      <SalaryHistory
+        history={history}
+        detailsOpen={detailsOpen}
+        onToggleDetails={onToggleDetails}
+      />
     </div>
   );
 }

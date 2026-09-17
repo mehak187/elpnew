@@ -272,26 +272,6 @@ export default function FinancialBenefitsSection({
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
           <TabBar options={tabs} value={open} onChange={onTabChange} />
 
-          {/* The words say what a click will do, and to what: "Show" on its
-              own leaves the salary breakdown unnamed. */}
-          {showsDetailsToggle && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              aria-expanded={salaryDetailsOpen}
-              aria-controls="salary-details"
-              onClick={() => setSalaryDetailsOpen((open) => !open)}
-            >
-              {salaryDetailsOpen ? (
-                <EyeOff className="mr-1.5 h-4 w-4" />
-              ) : (
-                <Eye className="mr-1.5 h-4 w-4" />
-              )}
-              {salaryDetailsOpen ? "Hide Salary Details" : "View Salary Details"}
-            </Button>
-          )}
-
           {showsAdd && (
             <Button
               type="button"
@@ -313,6 +293,11 @@ export default function FinancialBenefitsSection({
           onCloseAdd={() => setAdding(null)}
           onSave={onSaveSalary}
           detailsOpen={salaryDetailsOpen}
+          // The breakdown is opened from the row above the history, where the
+          // month and the year used to be chosen.
+          onToggleDetails={
+            showsDetailsToggle ? () => setSalaryDetailsOpen((o) => !o) : null
+          }
           canEdit={canEdit}
           advance={!canEdit}
         />
