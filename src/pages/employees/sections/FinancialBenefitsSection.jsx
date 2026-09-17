@@ -240,8 +240,11 @@ export default function FinancialBenefitsSection({
 
   // One heading at a time: a form that opens with its own heading - and its
   // own way back - takes this row's place instead of sitting under it.
-  // Commission's form has no heading of its own, so its row stays.
-  const formHasHeading = adding === open && open !== "commission";
+  // Commission's form has no heading of its own, and neither has the stepped
+  // salary form, which opens under the tabs; so those two rows stay.
+  const inlineForm =
+    open === "commission" || (open === "salaries" && canEdit);
+  const formHasHeading = adding === open && !inlineForm;
 
   return (
     <div className="space-y-6">

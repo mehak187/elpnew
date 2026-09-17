@@ -2,7 +2,7 @@ import {
   useState } from "react";
 import UploadIcon from "@/components/shared/UploadIcon";
 import { Button } from "@/components/ui/button";
-import FormHeading from "@/components/shared/FormHeading";
+import { RequestSteps } from "@/components/shared/RequestSteps";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -17,32 +17,22 @@ import {
   AdvanceSalaryForm,
   AdvanceRequests,
 } from "./AdvanceSalarySection";
-import { EmptyState } from "@/components/shared/panels";
 import { Rial } from "@/components/shared/Rial";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { Save,
-  Users,
-  ChevronsRight,
-  FileCheck,
-  Wallet,
-} from "lucide-react";
+import { FileCheck } from "lucide-react";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
 import {
   ALLOWANCES,
   DEDUCTIONS,
-  PAYMENT_MONTHS,
+  SALARY_MONTHS,
+  MONTH_FULL,
   PAYMENT_YEARS,
   PAYMENT_SOURCES,
   DEFAULT_BANK,
-  SOURCE_SHORT,
-  PAYROLL_BOOKING,
   DEFAULT_BOOKING,
-  entersAmount,
-  hasPeriod,
-  MONTH_NAMES,
-  categoriesOf,
-  subcategoriesOf,
-  salaryRecords,
+  salaryHistory,
+  nextSalaryNo,
   totalEarnings,
   totalDeductions,
   netSalary,
@@ -69,15 +59,20 @@ function fromEmployee(employee) {
   return payslip;
 }
 
+// The three figures start as null rather than "": null means untouched, so
+// they open on what the employee is actually paid and can still be cleared.
 const emptyPayment = {
   ...DEFAULT_BOOKING,
   month: "",
   year: "",
-  periodFrom: "",
-  periodTo: "",
-  amount: "",
+  basic: null,
+  allowances: null,
+  deductions: null,
   method: "",
   source: DEFAULT_BANK,
+  accountNo: "",
+  reference: "",
+  notes: "",
   paymentDate: "",
 };
 
@@ -153,6 +148,40 @@ function PayLine({ label, tone, className, children }) {
   );
 }
 
+/** A booking the form does not ask about: it is what a salary is filed as. */
+function Locked({ id, label, value }) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Input
+        id={id}
+        readOnly
+        tabIndex={-1}
+        value={value}
+        className="cursor-default bg-locked text-muted-foreground"
+      />
+    </div>
+  );
+}
+
+/** A figure typed into the salary being recorded. The label says (OMR). */
+function Typed({ id, label, value, onChange }) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>
+        {label} (<Rial />)
+      </Label>
+      <Input
+        id={id}
+        inputMode="decimal"
+        placeholder="0.000"
+        value={value}
+        onChange={(e) => onChange(e.target.value.replace(/[^\d.]/g, ""))}
+      />
+    </div>
+  );
+}
+
 /** A settled figure inside the payment form's summary. */
 function Figure({ label, value }) {
   return (
@@ -220,12 +249,15 @@ export default function SalariesSection({
 }) {
   // Opened on what the employee is already paid, so the page shows the salary
   // in force rather than a blank form somebody has to fill in from memory.
-  // What has been recorded through this form. The monthly history beside it
-  // is the payroll run; this is the list of payments entered here.
-  const [, setRecords] = useState(salaryRecords);
+  // Every salary on record, so a month entered through this form is in the
+  // history below it rather than somewhere of its own.
+  const [history, setHistory] = useState(salaryHistory);
   const [payslip, setPayslip] = useState(() => fromEmployee(employee));
   const [payment, setPayment] = useState(emptyPayment);
   const [receipt, setReceipt] = useState(null);
+  // Which half of the salary being recorded is open: what it comes to, and
+  // then how it was transferred.
+  const [payStage, setPayStage] = useState("salary");
 
   const set = (name, value) =>
     setPayslip((prev) => ({ ...prev, [name]: value }));
@@ -238,17 +270,26 @@ export default function SalariesSection({
   const net = netSalary(payslip);
   const allowances = earnings - Number(payslip.basic || 0);
 
-  // A bonus and a settlement are worked out elsewhere, so they bring their
-  // own figure; everything else is a month of the salary above.
-  const entersOwnAmount = entersAmount(payment.subcategory);
-  const showsPeriod = hasPeriod(payment.subcategory);
-  // What is being asked for, so the heading of the form still names it -
-  // a bonus is not a salary, and saying so is the last chance to notice the
-  // wrong subcategory before it is sent.
-  const requestLabel =
-    entersOwnAmount && !showsPeriod
-      ? payment.subcategory
-      : "Salary / Bonus";
+  // The month being recorded opens on the salary in force, and can be edited
+  // where that month differed from it. Untouched (null) means the figure above.
+  const entered = (key, fallback) =>
+    payment[key] === null ? String(fallback) : payment[key];
+  const payBasic = entered("basic", Number(payslip.basic) || 0);
+  const payAllowances = entered("allowances", allowances);
+  const payDeductions = entered("deductions", deductions);
+  const payNet =
+    Number(payBasic || 0) + Number(payAllowances || 0) - Number(payDeductions || 0);
+
+  // The number the salary will carry, and the month it is for, as the transfer
+  // stage reads them back.
+  const salaryNo = nextSalaryNo(history);
+  const monthNumber = SALARY_MONTHS.findIndex((m) => m.value === payment.month) + 1;
+  const period = monthNumber
+    ? MONTH_FULL[monthNumber - 1] + " " + payment.year
+    : "";
+  // The account the last salary went to, unless this one goes elsewhere.
+  const lastAccount = history[history.length - 1]?.accountNo || "";
+  const accountNo = payment.accountNo || lastAccount;
 
   const savePayslip = () => {
     if (!(Number(payslip.basic) > 0)) return;
@@ -262,47 +303,46 @@ export default function SalariesSection({
   const closeAdd = () => {
     setPayment(emptyPayment);
     setReceipt(null);
+    setPayStage("salary");
     onCloseAdd();
   };
 
-  const canPay =
-    payment.expenseType &&
-    payment.category &&
-    payment.subcategory &&
-    payment.method &&
-    payment.paymentDate &&
-    (entersOwnAmount
-      ? Number(payment.amount) > 0 &&
-        (!showsPeriod || (payment.periodFrom && payment.periodTo))
-      : payment.month && payment.year);
+  // What the month came to has to be settled before how it was transferred.
+  const canSaveSalary = payment.month && payment.year && Number(payBasic) > 0;
+  const canPay = canSaveSalary && payment.method && payment.paymentDate;
 
+  /** The first stage saved: the transfer details are what is left to enter. */
+  const saveSalary = () => {
+    if (!canSaveSalary) return;
+    setPayStage("transfer");
+  };
+
+  /** Confirmed: the salary is on record, and it has been transferred. */
   const savePayment = () => {
     if (!canPay) return;
-    // A month of salary is written down as its parts; anything else is
-    // written down as the one figure it was.
-    const figures = entersOwnAmount
-      ? { amount: Number(payment.amount) }
-      : {
-          basic: Number(payslip.basic) || 0,
-          allowances,
-          deductions,
-        };
-    const [year, month] = payment.paymentDate.split("-");
-    setRecords((prev) => [
+    setHistory((prev) => [
+      ...prev,
       {
         id: prev.reduce((max, r) => Math.max(max, r.id), 0) + 1,
-        paymentDate: payment.paymentDate,
-        month: payment.month || MONTH_NAMES[Number(month) - 1],
-        year: payment.year || year,
-        periodFrom: payment.periodFrom,
-        periodTo: payment.periodTo,
-        ...figures,
+        salaryNo: nextSalaryNo(prev),
+        month: monthNumber,
+        year: Number(payment.year),
+        basic: Number(payBasic) || 0,
+        allowances: Number(payAllowances) || 0,
+        // What came off this month was entered as one figure, so it is the
+        // whole of the deduction and none of it is a loan installment.
+        loanDeducted: 0,
+        administrative: Number(payDeductions) || 0,
+        administrativeReason: "",
         method: payment.method,
-        source: payment.source,
+        bank: payment.source,
+        accountNo,
+        reference: payment.reference.trim(),
         receipt: receipt?.name || "",
-        notes: payment.subcategory,
+        notes: payment.notes.trim(),
+        status: "Transferred",
+        paymentDate: payment.paymentDate,
       },
-      ...prev,
     ]);
     closeAdd();
   };
@@ -320,263 +360,265 @@ export default function SalariesSection({
   if (adding) {
     return (
       <div className="space-y-6 rounded-lg border p-4 sm:p-6">
-        {/* The way back out of the form, in the same place and with the
-            same mark as on every page that opens over another. */}
-        <FormHeading
-          icon={Wallet}
-          title={"Add " + requestLabel}
-          onBack={closeAdd}
+        {/* The two halves of recording a month's pay: what it came to, and
+            then how it was transferred. Either header opens its own half. */}
+        <RequestSteps
+          active={payStage}
+          onChange={setPayStage}
+          steps={[
+            {
+              key: "salary",
+              title: "Add Salary",
+              note: "Salary calculation and period",
+              done: Boolean(canSaveSalary),
+            },
+            {
+              key: "transfer",
+              title: "Salary Transfer",
+              note: "Payment and bank transfer details",
+              done: Boolean(canPay),
+              // Nothing can be transferred until there is a figure to transfer.
+              disabled: !canSaveSalary,
+            },
+          ]}
         />
 
-        {/* Where the payment lands in the accounts. Choosing at one level
-            clears the levels below it, so a category can never be left
-            hanging under a type it does not belong to. */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
-          <div className="space-y-2">
-            <Label htmlFor="pay-type">Expense Type</Label>
-            <Select
-              value={payment.expenseType}
-              onValueChange={(value) =>
-                setPayment((prev) => ({
-                  ...prev,
-                  expenseType: value,
-                  category: "",
-                  subcategory: "",
-                }))
-              }
-            >
-              <SelectTrigger id="pay-type">
-                {/* Laid out inline rather than by class: the trigger clamps
-                    every span child to one line with display:-webkit-box,
-                    which would beat a flex utility and stack these two. */}
-                <span
-                  style={{ display: "flex" }}
-                  className="min-w-0 items-center gap-2"
-                >
-                  <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <SelectValue placeholder="Select expense type" />
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                {PAYROLL_BOOKING.map((type) => (
-                  <SelectItem key={type.name} value={type.name}>
-                    {type.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <h3 className="text-base font-semibold text-primary">
+          {payStage === "salary" ? "Add Salary" : "Salary Transfer"}
+        </h3>
 
-          <Choice
-            id="pay-category"
-            label="Category"
-            value={payment.category}
-            onChange={(value) =>
-              setPayment((prev) => ({ ...prev, category: value, subcategory: "" }))
-            }
-            placeholder="Select category"
-            options={categoriesOf(payment.expenseType).map((c) => c.name)}
-          />
-
-          <Choice
-            id="pay-subcategory"
-            label="Subcategory"
-            value={payment.subcategory}
-            onChange={(value) => setPay("subcategory", value)}
-            placeholder="Select subcategory"
-            options={subcategoriesOf(payment.expenseType, payment.category)}
-          />
-        </div>
-
-        {/* A settlement is not a month's pay: it covers a span of service and
-            its amount is worked out elsewhere, so it is entered rather than
-            read off the payslip. */}
-        {entersOwnAmount ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
-            {showsPeriod && (
-            <div className="space-y-2">
-              <Label htmlFor="pay-from">Period From</Label>
-              <Input
-                id="pay-from"
-                type="date"
-                value={payment.periodFrom}
-                onChange={(e) => setPay("periodFrom", e.target.value)}
-              />
-            </div>
-            )}
-
-            {showsPeriod && (
-            <div className="space-y-2">
-              <Label htmlFor="pay-to">Period To</Label>
-              <Input
-                id="pay-to"
-                type="date"
-                value={payment.periodTo}
-                onChange={(e) => setPay("periodTo", e.target.value)}
-              />
-            </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="pay-amount" className="text-green-700">
-                Net Amount Payable
-              </Label>
-              <div className="relative">
-                <Input
-                  id="pay-amount"
-                  type="number"
-                  min="0"
-                  step="0.001"
-                  placeholder="0.000"
-                  className="h-14 border-green-600 pr-12 text-2xl font-bold text-green-700"
-                  value={payment.amount}
-                  onChange={(e) => setPay("amount", e.target.value)}
-                />
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                  <Rial />
-                </span>
-              </div>
-              <p className="text-sm text-green-700">
-                Net amount after deductions (if any).
-              </p>
-            </div>
-          </div>
-        ) : (
+        {payStage === "salary" ? (
           <>
-            {/* What is being paid, and what it comes to */}
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
-              <div className="rounded-lg border bg-muted/40 p-4">
-                <p className="mb-4 font-semibold text-primary">Amount Summary</p>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  <Figure label="Basic Salary" value={payslip.basic} />
-                  <Figure label="Total Allowances" value={allowances} />
-                  <Figure label="Total Deductions" value={deductions} />
-                </div>
-              </div>
-
-              <ChevronsRight
-                aria-hidden="true"
-                className="mx-auto hidden h-6 w-6 text-muted-foreground lg:block"
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+              {/* Where a salary lands in the accounts is not a choice: it is
+                  what a salary is, and the page for bonuses is its own. */}
+              <Locked id="pay-type" label="Expense Type" value={payment.expenseType} />
+              <Locked id="pay-category" label="Category" value={payment.category} />
+              <Locked
+                id="pay-subcategory"
+                label="Subcategory"
+                value={payment.subcategory}
               />
 
-              <div className="rounded-lg border border-green-600/40 bg-green-50 p-4">
-                <p className="mb-3 font-semibold text-green-700">
-                  Net Salary Payable
-                </p>
-                <Input
-                  readOnly
-                  tabIndex={-1}
-                  className="h-14 border-green-600 bg-white text-2xl font-bold text-green-700"
-                  value={amount(net)}
-                />
-                <p className="mt-3 text-sm text-green-700">
-                  Net amount after adding allowances and deducting deductions.
-                </p>
-              </div>
-            </div>
-
-            <div className="border-b" />
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
               <Choice
                 id="pay-month"
                 label="Month"
                 value={payment.month}
-                onChange={(value) => setPay("month", value)}
+                onChange={(value) => value && setPay("month", value)}
                 placeholder="Select month"
-                options={PAYMENT_MONTHS}
+                options={SALARY_MONTHS}
               />
+
               <Choice
                 id="pay-year"
                 label="Year"
                 value={payment.year}
-                onChange={(value) => setPay("year", value)}
+                onChange={(value) => value && setPay("year", value)}
                 placeholder="Select year"
                 options={PAYMENT_YEARS}
               />
+
+              {/* Opened on the salary in force, and edited only where this
+                  month differed from it. */}
+              <Typed
+                id="pay-basic"
+                label="Basic Salary"
+                value={payBasic}
+                onChange={(value) => setPay("basic", value)}
+              />
+              <Typed
+                id="pay-allowances"
+                label="Total Allowances"
+                value={payAllowances}
+                onChange={(value) => setPay("allowances", value)}
+              />
+              <Typed
+                id="pay-deductions"
+                label="Total Deductions"
+                value={payDeductions}
+                onChange={(value) => setPay("deductions", value)}
+              />
+            </div>
+
+            {/* The one figure the whole form is for, worked out from the three
+                above rather than asked for. */}
+            <div className="rounded-lg border border-green-600/40 bg-green-50 p-4">
+              <p className="font-semibold text-green-700">Net Salary Payable</p>
+              {/* The figure arrives with the currency already on it. */}
+              <p className="mt-1 text-3xl font-bold text-green-700">
+                {amount(payNet)}
+              </p>
+              <p className="mt-1 text-sm text-green-700">
+                Basic salary plus allowances minus total deductions.
+              </p>
+            </div>
+
+            {/* Plain buttons: this form sits inside the employee form, which
+                either would otherwise submit. */}
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={closeAdd}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={saveSalary} disabled={!canSaveSalary}>
+                <Save className="mr-2 h-4 w-4" />
+                Save Salary
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* What is being transferred, read off the salary just saved
+                rather than asked for again. */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+              <Locked id="pay-no" label="Salary No." value={salaryNo} />
+              <Locked id="pay-period" label="Salary Period" value={period} />
+              <Locked
+                id="pay-employee"
+                label="Employee Name"
+                value={employee?.name || ""}
+              />
+              <Locked
+                id="pay-net"
+                label="Net Salary Payable"
+                value={amount(payNet)}
+              />
+
+              <Choice
+                id="pay-method"
+                label="Payment Method"
+                value={payment.method}
+                onChange={(value) => value && setPay("method", value)}
+                placeholder="Select method"
+                options={PAYMENT_METHODS}
+              />
+
+              <Choice
+                id="pay-bank"
+                label="Bank"
+                value={payment.source}
+                onChange={(value) => value && setPay("source", value)}
+                placeholder="Select bank or cash"
+                options={PAYMENT_SOURCES}
+              />
+
+              <div className="space-y-2">
+                <Label htmlFor="pay-account">Account No.</Label>
+                <Input
+                  id="pay-account"
+                  value={accountNo}
+                  onChange={(e) => setPay("accountNo", e.target.value)}
+                  placeholder="Enter the account the salary goes to"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="pay-date">
+                  Payment Date
+                  <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
+                </Label>
+                <Input
+                  id="pay-date"
+                  type="date"
+                  value={payment.paymentDate}
+                  onChange={(e) => setPay("paymentDate", e.target.value)}
+                />
+              </div>
+
+              {/* The figure being transferred is the one settled on the stage
+                  before, so it is shown rather than typed again. */}
+              <div className="space-y-2">
+                <Label htmlFor="pay-amount">
+                  Transfer Amount (<Rial />)
+                </Label>
+                <Input
+                  id="pay-amount"
+                  readOnly
+                  tabIndex={-1}
+                  value={amount(payNet)}
+                  className="cursor-default border-green-600/40 bg-green-50 font-semibold text-green-700"
+                />
+              </div>
+
+              {/* What the bank called the transfer, and the proof of it: the
+                  file name lives in the tooltip, so the control stays
+                  icon-sized either way. */}
+              <div className="space-y-2">
+                <Label htmlFor="pay-reference">Payment Reference</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="pay-reference"
+                    value={payment.reference}
+                    onChange={(e) => setPay("reference", e.target.value)}
+                    placeholder="TRX-0000-00000"
+                  />
+                  {receipt ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="shrink-0 border-green-600 text-green-600 hover:text-destructive"
+                      title={receipt.name + " - click to remove"}
+                      onClick={() => setReceipt(null)}
+                    >
+                      <FileCheck className="h-4 w-4" />
+                      <span className="sr-only">
+                        {receipt.name} attached. Remove it.
+                      </span>
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="shrink-0"
+                      title="Upload transfer receipt"
+                      asChild
+                    >
+                      <label className="cursor-pointer">
+                        <UploadIcon className="h-4 w-4" />
+                        <span className="sr-only">Upload transfer receipt</span>
+                        <Input
+                          type="file"
+                          className="hidden"
+                          onChange={(e) =>
+                            e.target.files[0] && setReceipt(e.target.files[0])
+                          }
+                        />
+                      </label>
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="pay-notes">Notes</Label>
+                <Textarea
+                  id="pay-notes"
+                  rows={3}
+                  value={payment.notes}
+                  onChange={(e) => setPay("notes", e.target.value)}
+                  placeholder="Enter transfer notes"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setPayStage("salary")}
+              >
+                Previous
+              </Button>
+              <Button type="button" variant="outline" onClick={closeAdd}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={savePayment} disabled={!canPay}>
+                Confirm Salary Transfer
+              </Button>
             </div>
           </>
         )}
-
-        <div className="border-b" />
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end sm:gap-6">
-          <Choice
-            id="pay-method"
-            label="Payment Method"
-            value={payment.method}
-            onChange={(value) => setPay("method", value)}
-            placeholder="Select method"
-            options={PAYMENT_METHODS}
-          />
-
-          <Choice
-            id="pay-bank"
-            label="Bank"
-            value={payment.source}
-            onChange={(value) => setPay("source", value)}
-            placeholder="Select bank or cash"
-            options={PAYMENT_SOURCES}
-          />
-
-          <div className="space-y-2">
-            <Label htmlFor="pay-date">Payment Date</Label>
-            <Input
-              id="pay-date"
-              type="date"
-              value={payment.paymentDate}
-              onChange={(e) => setPay("paymentDate", e.target.value)}
-            />
-          </div>
-
-          {/* The file name lives in the tooltip, so the control stays
-              icon-sized either way. */}
-          {receipt ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="shrink-0 border-green-600 text-green-600 hover:text-destructive"
-              title={receipt.name + " - click to remove"}
-              onClick={() => setReceipt(null)}
-            >
-              <FileCheck className="h-4 w-4" />
-              <span className="sr-only">{receipt.name} attached. Remove it.</span>
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="shrink-0"
-              title="Upload payment receipt"
-              asChild
-            >
-              <label className="cursor-pointer">
-                <UploadIcon className="h-4 w-4" />
-                <span className="sr-only">Upload payment receipt</span>
-                <Input
-                  type="file"
-                  className="hidden"
-                  onChange={(e) => e.target.files[0] && setReceipt(e.target.files[0])}
-                />
-              </label>
-            </Button>
-          )}
-        </div>
-
-        {/* Recording a salary is not a request, so it is saved rather than
-            submitted. Both buttons are plain buttons: this form sits inside
-            the employee form, which either would otherwise submit. */}
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={closeAdd}>
-            Cancel
-          </Button>
-          <Button type="button" onClick={savePayment} disabled={!canPay}>
-            <Save className="mr-2 h-4 w-4" />
-            Save
-          </Button>
-        </div>
       </div>
     );
   }
@@ -687,7 +729,7 @@ export default function SalariesSection({
       {advance && <AdvanceRequests employee={employee} />}
 
       {/* What has been paid, month by month */}
-      <SalaryHistory />
+      <SalaryHistory history={history} />
     </div>
   );
 }
