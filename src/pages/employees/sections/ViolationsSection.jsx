@@ -63,6 +63,7 @@ const draftFrom = (record) => ({
   decisionReasons: record?.decisionReasons || "",
   decisionDocument: record?.decisionDocument || "",
   penaltyDate: record?.penaltyDate || "",
+  appealDate: record?.appealDate || today(),
   appealGrounds: record?.appealGrounds || "",
   appealDocument: record?.appealDocument || "",
   appealOutcome: record?.appealOutcome || "",
@@ -98,6 +99,22 @@ function Choice({ id, label, required, value, onChange, placeholder, options }) 
           ))}
         </SelectContent>
       </Select>
+    </div>
+  );
+}
+
+/** A fact already settled at an earlier stage: shown, never asked for again. */
+function Settled({ id, label, value }) {
+  return (
+    <div className="space-y-2">
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <Input
+        id={id}
+        readOnly
+        tabIndex={-1}
+        value={value || ""}
+        className="cursor-default bg-locked text-muted-foreground"
+      />
     </div>
   );
 }
@@ -301,8 +318,9 @@ export default function ViolationsSection({ employee, canEdit = true }) {
   };
 
   const saveAppeal = () => {
-    if (!record || !draft.appealGrounds.trim()) return;
+    if (!record || !draft.appealGrounds.trim() || !draft.appealDate) return;
     updateViolation(record.id, {
+      appealDate: draft.appealDate,
       appealGrounds: draft.appealGrounds.trim(),
       appealDocument: draft.appealDocument,
       status: "Under Appeal",
@@ -484,6 +502,22 @@ export default function ViolationsSection({ employee, canEdit = true }) {
     appeal: (
       <>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+          {/* What is being appealed against, read off the decision rather than
+              asked for again. */}
+          <Settled id="violation-appeal-no" label="Violation No." value={record?.violationNo} />
+          <Settled id="violation-appeal-penalty" label="Penalty Type" value={record?.penaltyType} />
+          <Settled
+            id="violation-appeal-decision-date"
+            label="Decision Date"
+            value={record?.penaltyDate && formatDate(record.penaltyDate)}
+          />
+          <DateField
+            id="violation-appeal-date"
+            label="Appeal Date"
+            required
+            value={draft.appealDate}
+            onChange={(v) => set("appealDate", v)}
+          />
           <LongText
             id="violation-appeal"
             label="Appeal Grounds"
@@ -491,11 +525,21 @@ export default function ViolationsSection({ employee, canEdit = true }) {
             className="sm:col-span-2 lg:col-span-3"
             value={draft.appealGrounds}
             onChange={(v) => set("appealGrounds", v)}
-            placeholder="Enter the grounds of the appeal"
+            placeholder="Enter the detailed grounds for appealing the decision"
           />
-          <FileField id="violation-appeal-document" label="Appeal Documents" value={draft.appealDocument} onChange={(v) => set("appealDocument", v)} />
+          <FileField
+            id="violation-appeal-document"
+            label="Supporting Documents"
+            value={draft.appealDocument}
+            onChange={(v) => set("appealDocument", v)}
+          />
         </div>
-        {footer("Save", saveAppeal, Boolean(draft.appealGrounds.trim()), "decision")}
+        {footer(
+          "Save & Submit Appeal",
+          saveAppeal,
+          Boolean(draft.appealGrounds.trim() && draft.appealDate),
+          "decision"
+        )}
       </>
     ),
 

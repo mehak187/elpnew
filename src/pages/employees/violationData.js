@@ -113,6 +113,7 @@ export const initialViolations = [
     penaltyDate: "2026-09-20",
     approvedBy: "Mohammed Al Yahyaei",
     approvalDate: "2026-09-20",
+    appealDate: "",
     appealGrounds: "",
     appealDocument: "",
     appealOutcome: "",
