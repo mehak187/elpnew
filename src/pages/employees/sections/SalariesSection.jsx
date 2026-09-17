@@ -20,7 +20,7 @@ import {
 import { Rial } from "@/components/shared/Rial";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { FileCheck } from "lucide-react";
+import { Save, FileCheck } from "lucide-react";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
 import {
   ALLOWANCES,
@@ -460,7 +460,6 @@ export default function SalariesSection({
                 Cancel
               </Button>
               <Button type="button" onClick={saveSalary} disabled={!canSaveSalary}>
-                <Save className="mr-2 h-4 w-4" />
                 Save Salary
               </Button>
             </div>
