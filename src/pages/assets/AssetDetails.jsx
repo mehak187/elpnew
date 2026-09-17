@@ -294,9 +294,9 @@ function AssetExpensesTable({ expenses }) {
             <th className="border-r last:border-r-0 p-3 font-semibold">Invoice Date / Number</th>
             <th className="border-r last:border-r-0 p-3 font-semibold">Expense Details</th>
             <th className="border-r last:border-r-0 p-3 font-semibold">Payee</th>
-            <th className="border-r last:border-r-0 p-3 text-right font-semibold">Before VAT (OMR)</th>
-            <th className="border-r last:border-r-0 p-3 text-right font-semibold">VAT (OMR)</th>
-            <th className="border-r last:border-r-0 p-3 text-right font-semibold">Total (OMR)</th>
+            <th className="border-r last:border-r-0 p-3 text-right font-semibold">Before VAT</th>
+            <th className="border-r last:border-r-0 p-3 text-right font-semibold">VAT</th>
+            <th className="border-r last:border-r-0 p-3 text-right font-semibold">Total</th>
           </tr>
         </thead>
         <tbody>

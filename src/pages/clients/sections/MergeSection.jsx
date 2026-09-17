@@ -77,7 +77,10 @@ export default function MergeSection({ client }) {
   const [result, setResult] = useState(null);
 
   const other = clients.find((c) => String(c.id) === otherId) || null;
-  const absorbed = mergedInto(clients, client);
+  // The most recent merge at the top of the history.
+  const absorbed = [...mergedInto(clients, client)].sort((a, b) =>
+    String(b.mergedOn || "").localeCompare(String(a.mergedOn || ""))
+  );
 
   // A client already folded into somewhere cannot be folded in again, and a
   // client this one was folded into cannot be pulled back the other way.

@@ -160,7 +160,7 @@ export default function EmployeeCircularsSection({ employee }) {
           ) : (
             <table className="w-full min-w-[880px] border text-sm">
               <thead>
-                <tr className="border-b bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <tr className="border-b bg-secondary/60 text-left text-primary">
                   <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "12%" }}>
                     Circular No.
                   </th>

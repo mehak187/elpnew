@@ -365,6 +365,8 @@ export default function ClientContractsSection() {
       <DataTable
         columns={columns}
         data={rows}
+        // Already newest first by start date, with spent contracts under them.
+        keepOrder
         searchPlaceholder="Search contracts..."
         enableColumnSearch={false}
         currentPage={currentPage}

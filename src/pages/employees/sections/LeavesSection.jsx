@@ -83,12 +83,15 @@ export default function LeavesSection({ employee }) {
   const shownCategory = adding ? draft.category : "";
   const filteredBy = shownType || shownCategory;
 
-  const rows = mine.filter(
-    (leave) =>
-      chargedYear(leave) === year &&
-      (!shownCategory || leave.category === shownCategory) &&
-      (!shownType || leave.type === shownType)
-  );
+  // Newest first: the latest request is the one most likely being looked for.
+  const rows = mine
+    .filter(
+      (leave) =>
+        chargedYear(leave) === year &&
+        (!shownCategory || leave.category === shownCategory) &&
+        (!shownType || leave.type === shownType)
+    )
+    .sort((a, b) => String(b.from).localeCompare(String(a.from)) || b.id - a.id);
 
   /** A type belongs to one category, so changing the category clears it. */
   const chooseCategory = (value) =>
@@ -199,7 +202,7 @@ export default function LeavesSection({ employee }) {
           ) : (
             <table className="w-full min-w-[960px] border text-sm">
               <thead>
-                <tr className="border-b bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <tr className="border-b bg-secondary/60 text-left text-primary">
                   <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "20%" }}>
                     Leave Type
                   </th>

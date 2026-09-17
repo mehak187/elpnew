@@ -123,10 +123,16 @@ export default function AssistanceSection({ employee, adding, onCloseAdd }) {
     }
   };
 
-  const totalPages = Math.max(1, Math.ceil(records.length / PAGE_SIZE));
+  // Newest request first, read off the date it was made.
+  const ordered = [...records].sort(
+    (a, b) =>
+      String(b.requestDate).localeCompare(String(a.requestDate)) || b.id - a.id
+  );
+
+  const totalPages = Math.max(1, Math.ceil(ordered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const start = (currentPage - 1) * PAGE_SIZE;
-  const shown = records.slice(start, start + PAGE_SIZE);
+  const shown = ordered.slice(start, start + PAGE_SIZE);
 
   // Adding takes over the section: the list describes assistance already
   // given, and none of it helps while a new request is being written.

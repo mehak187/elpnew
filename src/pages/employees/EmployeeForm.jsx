@@ -36,7 +36,16 @@ import {
   Mail,
   FileCheck,
   FileImage,
+  X,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/shared/panels";
 import {
@@ -392,6 +401,21 @@ export default function EmployeeForm({ self }) {
     if (doc.fileUrl) window.open(doc.fileUrl, "_blank", "noopener,noreferrer");
   };
 
+  // The paper waiting to be taken off the record, while that is confirmed.
+  const [removingDoc, setRemovingDoc] = useState(null);
+
+  const removeDocument = () => {
+    if (!removingDoc) return;
+    setDocuments((prev) => prev.filter((d) => d.id !== removingDoc.id));
+    setRemovingDoc(null);
+  };
+
+  // Newest paper first, and numbered so: the most recent carries the highest
+  // number, so a number means the same paper however long the list grows.
+  const orderedDocuments = [...documents].sort(
+    (a, b) => String(b.uploadedAt).localeCompare(String(a.uploadedAt)) || b.id - a.id
+  );
+
   const set = (name, value) => setFormData((prev) => ({ ...prev, [name]: value }));
   const onChange = (e) => set(e.target.name, e.target.value);
 
@@ -543,7 +567,34 @@ export default function EmployeeForm({ self }) {
                     this record was opened from, and it is a field below. */}
                 <SectionCard title="Employee Information">
                   <div className="space-y-6">
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-5">
+                      {/* Where the employee stands comes first: it decides
+                          what else the record has to say. It is the firm's
+                          business, so My Profile does not show it. */}
+                      {!self && (
+                        <div className="space-y-2">
+                          <Label htmlFor="status">
+                            Status
+                            <Required show={asksFor} />
+                          </Label>
+                          <Select
+                            value={formData.status}
+                            onValueChange={(value) => set("status", value)}
+                          >
+                            <SelectTrigger id="status">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {EMPLOYEE_STATUSES.map((status) => (
+                                <SelectItem key={status} value={status}>
+                                  {status}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
                       {/* Given by the system, so it is shown and not asked for */}
                       <div className="space-y-2">
                         <Label htmlFor="employeeNo">
@@ -664,147 +715,119 @@ export default function EmployeeForm({ self }) {
                           placeholder="Enter civil ID or resident card number"
                         />
                       </div>
-                    </div>
-                  </div>
-                </SectionCard>
 
-                {/* When somebody joined, where they stand and what they do:
-                    the firm's own view of the employment, so it is kept to the
-                    Employees page and not shown on My Profile. */}
-                {!self && (
-                <SectionCard title="Employment & Job Information">
-                  <div className="space-y-6">
+                      {/* When somebody joined and what they do: the firm's own
+                          view of the employment, kept off My Profile. */}
+                      {!self && (
+                        <>
+                          <div className="space-y-2">
+                            <Label htmlFor="dateOfJoining">
+                              Date of Joining
+                              <Required show={asksFor} />
+                            </Label>
+                            <Input
+                              id="dateOfJoining"
+                              name="dateOfJoining"
+                              type="date"
+                              value={formData.dateOfJoining}
+                              onChange={onChange}
+                              required
+                            />
+                          </div>
 
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="dateOfJoining">
-                          Date of Joining
-                          <Required show={asksFor} />
-                        </Label>
-                        <Input
-                          id="dateOfJoining"
-                          name="dateOfJoining"
-                          type="date"
-                          value={formData.dateOfJoining}
-                          onChange={onChange}
-                          required
-                        />
-                      </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="category">
+                              Category / Role
+                              <Required show={asksFor} />
+                            </Label>
+                            <Select
+                              value={formData.category}
+                              onValueChange={(value) => set("category", value)}
+                            >
+                              <SelectTrigger id="category">
+                                <SelectValue placeholder="Select Category / Role" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {EMPLOYEE_CATEGORIES.map((option) => (
+                                  <SelectItem key={option} value={option}>
+                                    {option}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="status">
-                          Status
-                          <Required show={asksFor} />
-                        </Label>
-                        <Select
-                          value={formData.status}
-                          onValueChange={(value) => set("status", value)}
-                        >
-                          <SelectTrigger id="status">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {EMPLOYEE_STATUSES.map((status) => (
-                              <SelectItem key={status} value={status}>
-                                {status}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="jobLevel">
+                              Job Level
+                              <Required show={asksFor} />
+                            </Label>
+                            <Select
+                              value={formData.jobLevel}
+                              onValueChange={(value) => set("jobLevel", value)}
+                            >
+                              <SelectTrigger id="jobLevel">
+                                <SelectValue placeholder="Select Job Level" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {JOB_LEVELS.map((option) => (
+                                  <SelectItem key={option} value={option}>
+                                    {option}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="category">
-                          Category / Role
-                          <Required show={asksFor} />
-                        </Label>
-                        <Select
-                          value={formData.category}
-                          onValueChange={(value) => set("category", value)}
-                        >
-                          <SelectTrigger id="category">
-                            <SelectValue placeholder="Select Category / Role" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {EMPLOYEE_CATEGORIES.map((option) => (
-                              <SelectItem key={option} value={option}>
-                                {option}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="department">
+                              Department / Division
+                              <Required show={asksFor} />
+                            </Label>
+                            <Select
+                              value={formData.department}
+                              onValueChange={(value) => set("department", value)}
+                            >
+                              <SelectTrigger id="department">
+                                <SelectValue placeholder="Select Department / Division" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {DEPARTMENTS.map((option) => (
+                                  <SelectItem key={option} value={option}>
+                                    {option}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="jobLevel">
-                          Job Level
-                          <Required show={asksFor} />
-                        </Label>
-                        <Select
-                          value={formData.jobLevel}
-                          onValueChange={(value) => set("jobLevel", value)}
-                        >
-                          <SelectTrigger id="jobLevel">
-                            <SelectValue placeholder="Select Job Level" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {JOB_LEVELS.map((option) => (
-                              <SelectItem key={option} value={option}>
-                                {option}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="department">
-                          Department / Division
-                          <Required show={asksFor} />
-                        </Label>
-                        <Select
-                          value={formData.department}
-                          onValueChange={(value) => set("department", value)}
-                        >
-                          <SelectTrigger id="department">
-                            <SelectValue placeholder="Select Department / Division" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {DEPARTMENTS.map((option) => (
-                              <SelectItem key={option} value={option}>
-                                {option}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="occupation">
-                          Profession / Occupation
-                          <Required show={asksFor} />
-                        </Label>
-                        <Select
-                          value={formData.occupation}
-                          onValueChange={(value) => set("occupation", value)}
-                        >
-                          <SelectTrigger id="occupation">
-                            <SelectValue placeholder="Select Profession / Occupation" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {OCCUPATIONS.map((option) => (
-                              <SelectItem key={option} value={option}>
-                                {option}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
+                          <div className="space-y-2">
+                            <Label htmlFor="occupation">
+                              Profession / Occupation
+                              <Required show={asksFor} />
+                            </Label>
+                            <Select
+                              value={formData.occupation}
+                              onValueChange={(value) => set("occupation", value)}
+                            >
+                              <SelectTrigger id="occupation">
+                                <SelectValue placeholder="Select Profession / Occupation" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {OCCUPATIONS.map((option) => (
+                                  <SelectItem key={option} value={option}>
+                                    {option}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     {/* Asked for only once the status says somebody has left */}
-                    {hasLeft && (
+                    {!self && hasLeft && (
                       <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
                         <p className="flex items-start gap-2 text-xs text-muted-foreground">
                           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -853,7 +876,6 @@ export default function EmployeeForm({ self }) {
                     )}
                   </div>
                 </SectionCard>
-                )}
 
                 <SectionCard title="Contact &amp; Address Information">
                   <div className="space-y-6">
@@ -1124,7 +1146,7 @@ export default function EmployeeForm({ self }) {
                         <div className="overflow-x-auto p-4 pt-0">
                           <table className="mt-4 w-full min-w-[720px] border text-sm">
                             <thead>
-                              <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
+                              <tr className="border-b bg-secondary/60 text-left text-primary">
                                 <th className="border-r last:border-r-0 p-3 font-semibold">No.</th>
                                 <th className="border-r last:border-r-0 p-3 font-semibold">
                                   Upload Date
@@ -1136,7 +1158,7 @@ export default function EmployeeForm({ self }) {
                               </tr>
                             </thead>
                             <tbody>
-                              {documents.map((document, index) => {
+                              {orderedDocuments.map((document, index) => {
                                 const Icon = fileIcon(document.fileName);
                                 return (
                                   <tr
@@ -1150,7 +1172,7 @@ export default function EmployeeForm({ self }) {
                                         onClick={() => openDocument(document)}
                                         className="rounded font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
                                       >
-                                        {index + 1}
+                                        {orderedDocuments.length - index}
                                       </button>
                                     </td>
                                     <td className="border-r last:border-r-0 whitespace-nowrap p-3 align-top">
@@ -1177,7 +1199,24 @@ export default function EmployeeForm({ self }) {
                                       </button>
                                     </td>
                                     <td className="border-r last:border-r-0 p-3 align-top text-muted-foreground">
-                                      {document.notes || "-"}
+                                      <div className="flex items-start justify-between gap-3">
+                                        <span>{document.notes || "-"}</span>
+                                        {/* Taken off the record by the firm, never
+                                            from My Profile, which only reads. */}
+                                        {!readOnly && (
+                                          <button
+                                            type="button"
+                                            onClick={() => setRemovingDoc(document)}
+                                            title={"Delete " + document.fileName}
+                                            className="shrink-0 rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus:outline-none focus:ring-2 focus:ring-ring"
+                                          >
+                                            <X className="h-4 w-4" />
+                                            <span className="sr-only">
+                                              Delete {document.fileName}
+                                            </span>
+                                          </button>
+                                        )}
+                                      </div>
                                     </td>
                                   </tr>
                                 );
@@ -1187,6 +1226,39 @@ export default function EmployeeForm({ self }) {
                         </div>
                       )}
                     </div>
+
+                    {/* A deleted paper cannot be brought back, so the X asks
+                        once before it takes one off the record. */}
+                    <Dialog
+                      open={Boolean(removingDoc)}
+                      onOpenChange={(open) => !open && setRemovingDoc(null)}
+                    >
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Delete document</DialogTitle>
+                          <DialogDescription>
+                            {removingDoc?.type} - {removingDoc?.fileName} will be
+                            removed from this employee's documents.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setRemovingDoc(null)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            onClick={removeDocument}
+                          >
+                            Delete
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                   </CardContent>
                   </Card>

@@ -383,22 +383,25 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
   };
 
   const search = query.trim().toLowerCase();
-  const listed = bankAccounts.filter((account) => {
-    if (selectedBank !== ALL_BANKS && String(account.id) !== selectedBank) {
-      return false;
-    }
-    if (!search) return true;
-    return [
-      account.bankName,
-      account.accountName,
-      account.accountNumber,
-      account.iban,
-      account.swift,
-      account.bankBranch,
-    ]
-      .filter(Boolean)
-      .some((value) => String(value).toLowerCase().includes(search));
-  });
+  const listed = bankAccounts
+    .filter((account) => {
+      if (selectedBank !== ALL_BANKS && String(account.id) !== selectedBank) {
+        return false;
+      }
+      if (!search) return true;
+      return [
+        account.bankName,
+        account.accountName,
+        account.accountNumber,
+        account.iban,
+        account.swift,
+        account.bankBranch,
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(search));
+    })
+    // The account added most recently at the top.
+    .sort((a, b) => b.id - a.id);
 
   const totalPages = Math.max(1, Math.ceil(listed.length / pageSize));
   const currentPage = Math.min(page, totalPages);

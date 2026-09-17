@@ -259,7 +259,7 @@ export default function BranchesSection({ canEdit }) {
         <CardContent className="overflow-x-auto p-0">
           <table className="w-full min-w-[720px] border text-sm">
             <thead>
-              <tr className="border-b bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <tr className="border-b bg-secondary/60 text-left text-primary">
                 <th className="border-r last:border-r-0 p-3 font-semibold">Branch No.</th>
                 <th className="border-r last:border-r-0 p-3 font-semibold">Branch Name</th>
                 <th className="border-r last:border-r-0 p-3 font-semibold">Address</th>
@@ -267,9 +267,14 @@ export default function BranchesSection({ canEdit }) {
               </tr>
             </thead>
             <tbody>
-              {/* Open branches first, closed ones under them. */}
+              {/* Open branches first, closed ones under them; within each,
+                  the newest branch at the top. */}
               {[...branches]
-                .sort((a, b) => Number(b.active) - Number(a.active))
+                .sort(
+                  (a, b) =>
+                    Number(b.active) - Number(a.active) ||
+                    Number(b.branchNumber) - Number(a.branchNumber)
+                )
                 .map((branch) => (
                 <tr
                   key={branch.id}
