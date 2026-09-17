@@ -13,6 +13,7 @@ import TaxesProvider from "@/lib/taxes/TaxesProvider";
 import LeavesProvider from "@/lib/leaves/LeavesProvider";
 import BonusesProvider from "@/lib/bonuses/BonusesProvider";
 import AdvancesProvider from "@/lib/advances/AdvancesProvider";
+import ViolationsProvider from "@/lib/violations/ViolationsProvider";
 
 // Root Pages
 import Dashboard from "@/pages/Dashboard";
@@ -92,6 +93,7 @@ function App() {
           <LeavesProvider>
           <BonusesProvider>
           <AdvancesProvider>
+          <ViolationsProvider>
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<MainLayout />}>
@@ -188,6 +190,7 @@ function App() {
             </Route>
           </Routes>
         </BrowserRouter>
+          </ViolationsProvider>
           </AdvancesProvider>
           </BonusesProvider>
           </LeavesProvider>

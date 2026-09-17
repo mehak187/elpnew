@@ -238,12 +238,18 @@ export default function FinancialBenefitsSection({
     : current.selfAdd || (firmDecides ? "" : current.add);
   const showsAdd = Boolean(addLabel);
 
+  // One heading at a time: a form that opens with its own heading - and its
+  // own way back - takes this row's place instead of sitting under it.
+  // Commission's form has no heading of its own, so its row stays.
+  const formHasHeading = adding === open && open !== "commission";
+
   return (
     <div className="space-y-6">
       {/* One row for the whole section: the open tab's name on the left, and
           on the right the tabs and the buttons that act on what is open. A
           heading above the tabs would only name the tab that is already
           highlighted. */}
+      {!formHasHeading && (
       <div className="flex flex-wrap items-center justify-between gap-3">
         <FormHeading title={current.label} note={current.note} icon={current.icon} />
 
@@ -285,6 +291,7 @@ export default function FinancialBenefitsSection({
           )}
         </div>
       </div>
+      )}
 
       {open === "salaries" && (
         <SalariesSection

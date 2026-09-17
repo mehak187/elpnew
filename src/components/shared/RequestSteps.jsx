@@ -9,9 +9,53 @@ import { cn } from "@/lib/utils";
  * was decided, the office to decide it. The open stage is filled in; a stage
  * that is done carries a tick instead of its number.
  *
- * `steps` is [{ key, title, note, done }].
+ * `steps` is [{ key, title, note, done, disabled }]. A disabled stage cannot
+ * be opened yet - there is nothing in it until an earlier stage is saved.
  */
-export function RequestSteps({ steps, active, onChange }) {
+export function RequestSteps({ steps, active, onChange, compact = false }) {
+  // Many stages to a row leave no room for a numbered circle beside each
+  // title, so the number goes in front of the title instead.
+  if (compact) {
+    return (
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none">
+        {steps.map((step, index) => {
+          const open = step.key === active;
+          return (
+            <button
+              key={step.key}
+              type="button"
+              onClick={() => onChange(step.key)}
+              disabled={step.disabled}
+              aria-current={open ? "step" : undefined}
+              className={cn(
+                "rounded-md px-3 py-2.5 text-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                open
+                  ? "bg-primary text-primary-foreground"
+                  : "border border-primary/15 bg-secondary text-primary hover:bg-secondary/70",
+                step.disabled && "cursor-not-allowed opacity-60 hover:bg-secondary"
+              )}
+            >
+              <span className="flex items-center justify-center gap-1.5 font-semibold">
+                {step.done && !open && (
+                  <Check className="h-4 w-4 shrink-0 text-green-600" aria-label="Done" />
+                )}
+                {index + 1}. {step.title}
+              </span>
+              <span
+                className={cn(
+                  "block text-xs",
+                  open ? "text-primary-foreground/80" : "text-muted-foreground"
+                )}
+              >
+                {step.note}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:gap-0">
       {steps.map((step, index) => {
@@ -24,6 +68,7 @@ export function RequestSteps({ steps, active, onChange }) {
             key={step.key}
             type="button"
             onClick={() => onChange(step.key)}
+            disabled={step.disabled}
             aria-current={open ? "step" : undefined}
             // Side by side, each header points into the next: every one but
             // the last ends in an arrow, and every one but the first takes the
@@ -37,7 +82,8 @@ export function RequestSteps({ steps, active, onChange }) {
               last && !first && "sm:[clip-path:polygon(0_0,100%_0,100%_100%,0_100%,20px_50%)]",
               open
                 ? "bg-primary text-primary-foreground"
-                : "bg-secondary text-primary hover:bg-secondary/70"
+                : "bg-secondary text-primary hover:bg-secondary/70",
+              step.disabled && "cursor-not-allowed opacity-60 hover:bg-secondary"
             )}
           >
             <span

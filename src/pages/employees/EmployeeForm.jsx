@@ -37,6 +37,7 @@ import {
   FileCheck,
   FileImage,
   X,
+  Gavel,
 } from "lucide-react";
 import {
   Dialog,
@@ -67,6 +68,7 @@ import FinancialBenefitsSection from "./sections/FinancialBenefitsSection";
 
 import DailyActivitiesSection from "./sections/DailyActivitiesSection";
 import PerformanceSection from "./sections/PerformanceSection";
+import ViolationsSection from "./sections/ViolationsSection";
 import EmployeeCircularsSection from "./sections/CircularsSection";
 import LeavesSection from "./sections/LeavesSection";
 import GeneralRequestSection from "./sections/GeneralRequestSection";
@@ -151,6 +153,14 @@ const SECTIONS = [
     label: "Performance Evaluation",
     icon: Gauge,
     note: "Statistics collected by the system from recorded activity",
+  },
+  {
+    // Recorded by the firm; on My Profile the history is only read.
+    noSave: true,
+    key: "violations",
+    label: "Violations & Penalties",
+    icon: Gavel,
+    note: "Violations recorded and the penalties that followed",
   },
   {
     // What one employee may see and change. Set for someone by whoever
@@ -1283,6 +1293,10 @@ export default function EmployeeForm({ self }) {
                 )}
 
                 {activeSection === "performance" && <PerformanceSection />}
+
+                {activeSection === "violations" && (
+                  <ViolationsSection employee={formData} canEdit={!readOnly} />
+                )}
 
                 {activeSection === "leaves" && (
                   <LeavesSection employee={formData} />
