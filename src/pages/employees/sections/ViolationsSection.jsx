@@ -29,10 +29,14 @@ import { useViolations } from "@/lib/violations/context";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 import { employeeRecords } from "../employeeData";
 import { formatDate } from "../loanData";
+import { Rial } from "@/components/shared/Rial";
 import {
   VIOLATION_STAGES,
   VIOLATION_TYPES,
+  INVESTIGATION_RESULTS,
   PENALTY_TYPES,
+  DEDUCTION_PENALTY,
+  NO_PENALTY,
   APPEAL_OUTCOMES,
   VIOLATION_STATUS_TONE,
   stagesDone,
@@ -53,8 +57,12 @@ const draftFrom = (record) => ({
   investigationStart: record?.investigationStart || "",
   response: record?.response || "",
   responseDocument: record?.responseDocument || "",
+  investigationResult: record?.investigationResult || "",
   penaltyType: record?.penaltyType || "",
-  penaltyDate: record?.penaltyDate || today(),
+  deductionAmount: record?.deductionAmount || "",
+  decisionReasons: record?.decisionReasons || "",
+  decisionDocument: record?.decisionDocument || "",
+  penaltyDate: record?.penaltyDate || "",
   appealGrounds: record?.appealGrounds || "",
   appealDocument: record?.appealDocument || "",
   appealOutcome: record?.appealOutcome || "",
@@ -257,22 +265,39 @@ export default function ViolationsSection({ employee, canEdit = true }) {
     setStage("decision");
   };
 
+  // A decision needs its result, the penalty, the day it takes effect and the
+  // reasons behind it - and an amount where the penalty is a deduction.
+  const noPenalty = draft.penaltyType === NO_PENALTY;
+  const canDecide =
+    draft.investigationResult &&
+    draft.penaltyType &&
+    draft.penaltyDate &&
+    draft.decisionReasons.trim() &&
+    (draft.penaltyType !== DEDUCTION_PENALTY || Number(draft.deductionAmount) > 0);
+
   const saveDecision = () => {
-    if (!record || !draft.penaltyType || !draft.penaltyDate) return;
-    // The penalty is approved here, which is when the violation is numbered.
+    if (!record || !canDecide) return;
+    // The penalty is issued here, which is when the violation is numbered -
+    // unless the decision was that no penalty follows, which issues nothing.
     updateViolation(
       record.id,
       {
+        investigationResult: draft.investigationResult,
         penaltyType: draft.penaltyType,
+        deductionAmount: draft.penaltyType === DEDUCTION_PENALTY ? draft.deductionAmount : "",
+        decisionReasons: draft.decisionReasons.trim(),
+        decisionDocument: draft.decisionDocument,
         penaltyDate: draft.penaltyDate,
         investigationStatus: "Investigation Completed",
         approvedBy: CURRENT_USER.name,
-        approvalDate: draft.penaltyDate,
-        status: "Penalty Issued",
+        // The employee is notified the day the decision is sent.
+        approvalDate: today(),
+        status: noPenalty ? "Closed" : "Penalty Issued",
       },
-      { number: true }
+      { number: !noPenalty }
     );
-    setStage("appeal");
+    if (noPenalty) close();
+    else setStage("appeal");
   };
 
   const saveAppeal = () => {
@@ -305,11 +330,21 @@ export default function ViolationsSection({ employee, canEdit = true }) {
     disabled: s.key !== "violation" && !record,
   }));
 
-  const footer = (label, onSave, enabled) => (
+  /**
+   * The two buttons under a stage: the way back, and the way on.
+   *
+   * The first stage has nothing behind it, so its way back leaves the form;
+   * every stage after it steps back to the one before.
+   */
+  const footer = (label, onSave, enabled, previous) => (
     <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-4">
       {/* Plain buttons: this form sits inside the employee form. */}
-      <Button type="button" variant="outline" onClick={close}>
-        Cancel
+      <Button
+        type="button"
+        variant="outline"
+        onClick={previous ? () => setStage(previous) : close}
+      >
+        {previous ? "Previous" : "Cancel"}
       </Button>
       <Button type="button" onClick={onSave} disabled={!enabled}>
         {label}
@@ -378,7 +413,7 @@ export default function ViolationsSection({ employee, canEdit = true }) {
           />
           <FileField id="violation-response-document" label="Supporting Documents" value={draft.responseDocument} onChange={(v) => set("responseDocument", v)} />
         </div>
-        {footer("Save", saveResponse, Boolean(draft.response.trim()))}
+        {footer("Save", saveResponse, Boolean(draft.response.trim()), "violation")}
       </>
     ),
 
@@ -386,17 +421,63 @@ export default function ViolationsSection({ employee, canEdit = true }) {
       <>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
           <Choice
+            id="violation-result"
+            label="Investigation Result"
+            required
+            value={draft.investigationResult}
+            onChange={(v) => set("investigationResult", v)}
+            placeholder="Select result"
+            options={INVESTIGATION_RESULTS}
+          />
+          <Choice
             id="violation-penalty"
-            label="Penalty"
+            label="Penalty Type"
             required
             value={draft.penaltyType}
             onChange={(v) => set("penaltyType", v)}
-            placeholder="Select penalty"
+            placeholder="Select penalty type"
             options={PENALTY_TYPES}
           />
-          <DateField id="violation-penalty-date" label="Decision Date" required value={draft.penaltyDate} onChange={(v) => set("penaltyDate", v)} />
+          {/* Only a deduction has an amount to it. */}
+          {draft.penaltyType === DEDUCTION_PENALTY && (
+            <div className="space-y-2">
+              <FieldLabel htmlFor="violation-deduction" required>
+                Deduction Amount (<Rial />)
+              </FieldLabel>
+              <Input
+                id="violation-deduction"
+                inputMode="decimal"
+                className="text-right"
+                value={draft.deductionAmount}
+                onChange={(e) => set("deductionAmount", e.target.value.replace(/[^\d.]/g, ""))}
+                placeholder="0.000"
+              />
+            </div>
+          )}
+          <DateField
+            id="violation-effective-date"
+            label="Effective Date"
+            required
+            value={draft.penaltyDate}
+            onChange={(v) => set("penaltyDate", v)}
+          />
+          <LongText
+            id="violation-reasons"
+            label="Decision Reasons"
+            required
+            className="sm:col-span-2 lg:col-span-3"
+            value={draft.decisionReasons}
+            onChange={(v) => set("decisionReasons", v)}
+            placeholder="Enter the reasons for the decision"
+          />
+          <FileField
+            id="violation-decision-document"
+            label="Decision Document"
+            value={draft.decisionDocument}
+            onChange={(v) => set("decisionDocument", v)}
+          />
         </div>
-        {footer("Issue Penalty", saveDecision, Boolean(draft.penaltyType && draft.penaltyDate))}
+        {footer("Save & Send Decision", saveDecision, canDecide, "response")}
       </>
     ),
 
@@ -414,7 +495,7 @@ export default function ViolationsSection({ employee, canEdit = true }) {
           />
           <FileField id="violation-appeal-document" label="Appeal Documents" value={draft.appealDocument} onChange={(v) => set("appealDocument", v)} />
         </div>
-        {footer("Save", saveAppeal, Boolean(draft.appealGrounds.trim()))}
+        {footer("Save", saveAppeal, Boolean(draft.appealGrounds.trim()), "decision")}
       </>
     ),
 
@@ -444,7 +525,8 @@ export default function ViolationsSection({ employee, canEdit = true }) {
         {footer(
           "Save",
           saveOutcome,
-          Boolean(draft.appealOutcome && draft.outcomeApprovedBy && draft.outcomeDate)
+          Boolean(draft.appealOutcome && draft.outcomeApprovedBy && draft.outcomeDate),
+          "appeal"
         )}
       </>
     ),

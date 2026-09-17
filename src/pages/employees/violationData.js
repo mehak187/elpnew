@@ -30,13 +30,23 @@ export const VIOLATION_TYPES = [
   "Other",
 ];
 
+export const INVESTIGATION_RESULTS = ["Guilty", "Not Guilty"];
+
 export const PENALTY_TYPES = [
-  "Verbal Warning",
+  "Written Notice",
   "Written Warning",
   "Final Warning",
-  "Salary Deduction",
-  "Suspension",
+  "Financial Deduction",
+  "Suspension from Work",
+  "Termination of Employment",
+  "No Penalty",
 ];
+
+/** The one penalty that takes an amount with it. */
+export const DEDUCTION_PENALTY = "Financial Deduction";
+
+/** A case that ends in no penalty is never numbered: nothing was issued. */
+export const NO_PENALTY = "No Penalty";
 
 export const APPEAL_OUTCOMES = ["Penalty Upheld", "Penalty Reduced", "Penalty Cancelled"];
 
@@ -95,7 +105,11 @@ export const initialViolations = [
     investigator: "Ahmed Al Balushi",
     response: "",
     responseDocument: "",
+    investigationResult: "",
     penaltyType: "Written Warning",
+    deductionAmount: "",
+    decisionReasons: "",
+    decisionDocument: "",
     penaltyDate: "2026-09-20",
     approvedBy: "Mohammed Al Yahyaei",
     approvalDate: "2026-09-20",
