@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { LeavesContext } from "./context";
-import { initialLeaves } from "@/pages/employees/leaveData";
+import { initialLeaves, nextLeaveNo } from "@/pages/employees/leaveData";
 
 /**
  * Every leave request in the firm, in one place.
@@ -25,13 +25,18 @@ export default function LeavesProvider({ children }) {
     () => ({
       leaves,
 
-      /** A new request, which nobody has decided on yet. */
+      /**
+       * A new request, which nobody has decided on yet: it is numbered as it
+       * is submitted and waits on the department that has to review it.
+       */
       addLeave: (record) =>
         setLeaves((prev) => [
           ...prev,
           {
             ...record,
             id: prev.reduce((max, leave) => Math.max(max, leave.id), 0) + 1,
+            leaveNo: nextLeaveNo(prev),
+            stage: "department",
             status: "Pending",
             decidedAt: "",
             comments: "",

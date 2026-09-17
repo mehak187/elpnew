@@ -1,4 +1,4 @@
-import { Info, CalendarCheck } from "lucide-react";
+import { Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,13 +11,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import FormHeading from "@/components/shared/FormHeading";
+import { RequestSteps } from "@/components/shared/RequestSteps";
 import { cn } from "@/lib/utils";
 import { employeeRecords } from "../employeeData";
 import {
   ABSENCE_CATEGORIES,
+  LEAVE_STAGES,
   typesIn,
-  entitlementOf,
   leaveDays,
   remainingBalance,
 } from "../leaveData";
@@ -25,32 +25,42 @@ import {
 /** A reason has to fit on the request, so the form says how much room. */
 const NOTES_LIMIT = 500;
 
-/** A numbered step, so a long form reads as two short ones. */
-function Step({ number, title, note, children }) {
+/** A label with its required mark, so the asterisk is coloured everywhere. */
+function FieldLabel({ htmlFor, required, children }) {
   return (
-    <Card>
-      <CardContent className="space-y-6 p-4 sm:p-6">
-        <div className="flex items-start gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
-            {number}
-          </span>
-          <div>
-            <p className="font-semibold text-primary">{title}</p>
-            <p className="text-xs text-muted-foreground">{note}</p>
-          </div>
-        </div>
-        {children}
-      </CardContent>
-    </Card>
+    <Label htmlFor={htmlFor}>
+      {children}
+      {required && <span className="whitespace-nowrap text-destructive">&nbsp;*</span>}
+    </Label>
   );
 }
+
+/** A figure worked out from the rest of the form: shown, never asked for. */
+function Worked({ id, label, value }) {
+  return (
+    <div className="space-y-2">
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <Input
+        id={id}
+        readOnly
+        tabIndex={-1}
+        value={value}
+        className="cursor-default bg-locked text-muted-foreground"
+      />
+    </div>
+  );
+}
+
+/** "5 Days", "1 Day", or nothing at all until there is something to count. */
+const days = (count) => (count > 0 ? count + (count === 1 ? " Day" : " Days") : "");
 
 /**
  * A new leave request.
  *
- * Asked for in two steps: what kind of leave, then when and why. The balance
- * is shown as soon as the type is chosen, because how much is left is the one
- * thing that decides whether the rest of the form is worth filling in.
+ * The three stages of the request are along the top: the employee fills in the
+ * first, and the two approvals that follow are not theirs to fill in. The
+ * balance is worked out as the dates are typed, because how much is left is
+ * what decides whether the request can be made at all.
  */
 export default function LeaveForm({
   employee,
@@ -68,17 +78,11 @@ export default function LeaveForm({
   // Days taken now against next year: the kind of leave is settled by that
   // choice, so neither the category nor the type is asked for again.
   const advance = Boolean(advanceYear) && draft.year === advanceYear;
-  const days = leaveDays(draft.from, draft.to);
-  const entitlement = entitlementOf(draft.type);
-  const balance = remainingBalance(
-    leaves,
-    employee.name,
-    draft.type,
-    draft.year
-  );
+  const asked = leaveDays(draft.from, draft.to);
+  const balance = remainingBalance(leaves, employee.name, draft.type, draft.year);
   // What would be left of it once this request is taken - 14 left less 5
   // asked for is 9. Below zero says the request is more than is left.
-  const afterRequest = balance ? balance.remaining - Math.max(days, 0) : null;
+  const afterRequest = balance ? balance.remaining - Math.max(asked, 0) : null;
   // A type counted in days cannot be asked for beyond what is left. One whose
   // length depends on the case (Sick, Bereavement, Widowhood) has no count to
   // exceed, so nothing is blocked there.
@@ -91,338 +95,228 @@ export default function LeaveForm({
     draft.to &&
     draft.year &&
     draft.reason.trim() &&
-    days > 0 &&
+    asked > 0 &&
     !exceeded;
 
-  return (
-    <div className="space-y-6">
-      <div className="border-b pb-3">
-        <FormHeading
-          icon={CalendarCheck}
-          title="Add New Leave"
-          note="Submit a new leave request"
-        />
-      </div>
+  const colleagues = employeeRecords
+    .filter((person) => person.name !== employee.name)
+    .map((person) => person.name);
 
-      <Step
-        number="1"
-        title="Leave Category and Type"
-        note="Select the leave category and type to see your remaining balance"
-      >
-        {/* The year first: a balance belongs to a year, so it is chosen
-            before the leave it will be counted against. */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+  return (
+    <Card>
+      <CardContent className="space-y-6 p-4 sm:p-6">
+        {/* Where the request stands. Only the first stage is the employee's;
+            the two approvals are filled in by whoever gives them. */}
+        <RequestSteps
+          active="submit"
+          onChange={() => {}}
+          steps={LEAVE_STAGES.map((stage) => ({
+            ...stage,
+            done: false,
+            disabled: stage.key !== "submit",
+          }))}
+        />
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+          {/* The year first: a balance belongs to a year, and asking for next
+              year's days is what makes a request an advance. */}
           <div className="space-y-2">
-            <Label htmlFor="leaveYearField">
-              Year<span className="whitespace-nowrap text-destructive">&nbsp;*</span>
-            </Label>
+            <FieldLabel htmlFor="leave-year" required>
+              Year
+            </FieldLabel>
             <Select
               value={draft.year}
               onValueChange={(value) => value && onChange("year", value)}
             >
-              <SelectTrigger id="leaveYearField">
+              <SelectTrigger id="leave-year">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {years.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
+                {years.map((year) => (
+                  <SelectItem key={year} value={year}>
+                    {year}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             {advance && (
-              <p className="text-xs text-muted-foreground">
+              <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                 Advance leave: taken now, charged to {advanceYear}
               </p>
             )}
           </div>
 
+          {/* An advance is annual leave by definition, so neither of these is
+              a choice once next year is picked. */}
           <div className="space-y-2">
-            <Label htmlFor="leaveCategory">
-              Leave Category<span className="whitespace-nowrap text-destructive">&nbsp;*</span>
-            </Label>
-            {/* Empty values are ignored: inside the employee's form Radix keeps a
-                hidden native select, which reports "" whenever the list it was
-                built from changes - and would wipe a choice just made. Nobody
-                can pick "nothing" from the list itself. */}
-            {advance ? (
-              <Input
-                id="leaveCategory"
-                readOnly
-                tabIndex={-1}
-                className="cursor-default bg-locked font-semibold text-primary"
-                value={draft.category}
-              />
-            ) : (
-              <Select
-                value={draft.category}
-                onValueChange={(value) => value && onCategory(value)}
-              >
-                <SelectTrigger id="leaveCategory">
-                  <SelectValue placeholder="Select Leave Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ABSENCE_CATEGORIES.map((category) => (
-                    <SelectItem key={category.name} value={category.name}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            <FieldLabel htmlFor="leave-category" required>
+              Leave Category
+            </FieldLabel>
+            <Select
+              value={draft.category}
+              onValueChange={(value) => value && onCategory(value)}
+              disabled={advance}
+            >
+              <SelectTrigger id="leave-category">
+                <SelectValue placeholder="Select Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {ABSENCE_CATEGORIES.map((category) => (
+                  <SelectItem key={category.name} value={category.name}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="leaveType">
-              Leave Type<span className="whitespace-nowrap text-destructive">&nbsp;*</span>
-            </Label>
-            {advance ? (
-              <Input
-                id="leaveType"
-                readOnly
-                tabIndex={-1}
-                className="cursor-default bg-locked font-semibold text-primary"
-                value={draft.type + " — " + entitlementOf(draft.type)}
-              />
-            ) : (
-              <Select
-                value={draft.type}
-                onValueChange={(value) => value && onChange("type", value)}
-                disabled={!draft.category}
-              >
-                <SelectTrigger id="leaveType">
-                  <SelectValue
-                    placeholder={
-                      draft.category
-                        ? "Select Leave Type"
-                        : "Select a category first"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {typesIn(draft.category).map((type) => (
-                    <SelectItem key={type.name} value={type.name}>
-                      {type.name}
-                      {/* Opacity rather than a colour, so it stays readable
-                          against the highlighted row. */}
-                      <span className="opacity-70"> &mdash; {type.entitlement}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            <FieldLabel htmlFor="leave-type" required>
+              Leave Type
+            </FieldLabel>
+            <Select
+              value={draft.type}
+              onValueChange={(value) => value && onChange("type", value)}
+              disabled={advance || !draft.category}
+            >
+              <SelectTrigger id="leave-type">
+                <SelectValue
+                  placeholder={
+                    draft.category ? "Select Type" : "Select a category first"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {typesIn(draft.category).map((type) => (
+                  <SelectItem key={type.name} value={type.name}>
+                    {type.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* What is left of the chosen type this year: the entitlement less
-              the approved days already taken - 30 less 16 taken is 14. Counted
-              off the approved requests every time, never stored: a balance
-              held as a number is a second copy of the leave already taken.
-              A type whose length depends on the case (Sick, Bereavement,
-              Widowhood) has no count to take away from, so its entitlement is
-              shown as it stands. */}
+          {/* Worked off the approved requests every time, never stored: a
+              balance that disagrees with the leave behind it is worthless. */}
+          <Worked
+            id="leave-balance"
+            label="Remaining Leave Balance"
+            value={
+              !balance
+                ? ""
+                : balance.expired
+                  ? "Expired"
+                  : days(balance.remaining) || "0 Days"
+            }
+          />
+
           <div className="space-y-2">
-            <Label htmlFor="leaveBalance">Remaining Leave Balance</Label>
+            <FieldLabel htmlFor="leave-from" required>
+              From Date
+            </FieldLabel>
             <Input
-              id="leaveBalance"
-              readOnly
-              tabIndex={-1}
-              className="cursor-default bg-locked font-semibold text-primary"
-              placeholder="Auto calculated"
-              value={
-                !draft.type
-                  ? ""
-                  : balance
-                    ? balance.remaining +
-                      (balance.remaining === 1 ? " Day" : " Days")
-                    : entitlement
-              }
-            />
-            {draft.type && (
-              <p className="text-xs text-muted-foreground">
-                {balance
-                  ? balance.expired
-                    ? "The balance for " + draft.year + " expired at the end of that year"
-                    : balance.allowance +
-                      " days entitlement - " +
-                      balance.used +
-                      " taken in " +
-                      draft.year
-                  : "Settled when the request is decided"}
-              </p>
-            )}
-          </div>
-        </div>
-      </Step>
-
-      <Step
-        number="2"
-        title="Leave Period and Details"
-        note="Specify the leave period and provide additional details"
-      >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-          <div className="space-y-2">
-            <Label htmlFor="leaveFrom">
-              From Date<span className="whitespace-nowrap text-destructive">&nbsp;*</span>
-            </Label>
-            <Input
-              id="leaveFrom"
+              id="leave-from"
               type="date"
               value={draft.from}
-              max={draft.to || undefined}
               onChange={(e) => onChange("from", e.target.value)}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="leaveTo">
-              To Date<span className="whitespace-nowrap text-destructive">&nbsp;*</span>
-            </Label>
+            <FieldLabel htmlFor="leave-to" required>
+              To Date
+            </FieldLabel>
             <Input
-              id="leaveTo"
+              id="leave-to"
               type="date"
-              value={draft.to}
               min={draft.from || undefined}
+              value={draft.to}
               onChange={(e) => onChange("to", e.target.value)}
             />
           </div>
 
-          {/* Counted from the two dates beside it: leaving on the 1st and
-              returning on the 5th is five days away, not four. */}
-          <div className="space-y-2">
-            <Label htmlFor="leaveDays">Number of Days</Label>
-            <Input
-              id="leaveDays"
-              readOnly
-              tabIndex={-1}
-              className="cursor-default bg-locked text-muted-foreground"
-              value={days > 0 ? days + (days === 1 ? " Day" : " Days") : ""}
-              placeholder="Auto calculated"
-            />
-          </div>
+          <Worked id="leave-days" label="Number of Days" value={days(asked)} />
 
-          {/* The balance again, now less the days on this request, so the
-              effect of the dates is seen beside them. Worked out, never
-              stored. A type with no fixed count shows its entitlement. */}
           <div className="space-y-2">
-            <Label htmlFor="leaveBalanceAfter">Remaining Leave Balance</Label>
+            <FieldLabel htmlFor="leave-after">Balance After Request</FieldLabel>
             <Input
-              id="leaveBalanceAfter"
+              id="leave-after"
               readOnly
               tabIndex={-1}
-              className={cn(
-                "cursor-default bg-locked font-semibold",
-                afterRequest !== null && afterRequest < 0
-                  ? "text-destructive"
-                  : "text-primary"
-              )}
-              placeholder="Auto calculated"
               value={
-                !draft.type
-                  ? ""
-                  : balance
-                    ? afterRequest + (Math.abs(afterRequest) === 1 ? " Day" : " Days")
-                    : entitlement
+                afterRequest === null ? "" : days(Math.max(afterRequest, 0)) || "0 Days"
               }
+              className={cn(
+                "cursor-default text-muted-foreground",
+                exceeded ? "border-destructive bg-destructive/5" : "bg-locked"
+              )}
             />
-            {balance && days > 0 && !exceeded && (
-              <p className="text-xs text-muted-foreground">
-                {balance.remaining} left - {days} on this request
-              </p>
-            )}
-
-            {/* Asking for more than is left is not a request management can be
-                sent: it is said here, beside the figure that says why, and the
-                request cannot be submitted until the dates are changed. The
-                dot pulses so the message is noticed where the eye already is. */}
+            {/* Blocked, and said so where the figure went wrong - a request
+                for more days than are left cannot be submitted. */}
             {exceeded && (
               <p
                 role="alert"
-                className="flex items-center gap-2 text-xs font-medium text-destructive"
+                className="flex items-center gap-2 text-xs font-semibold text-destructive"
               >
-                <span
-                  aria-hidden="true"
-                  className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-destructive"
-                />
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-destructive" />
+                </span>
                 Duration exceeded, please adjust your dates
               </p>
             )}
           </div>
 
-          {/* Who covers the work. Optional, because plenty of leave
-              needs no cover - but naming someone is what lets the firm
-              approve it without stopping to ask. */}
+          {/* Who covers the work. Not every absence needs one, so it is asked
+              for but not required. */}
           <div className="space-y-2">
-            <Label htmlFor="leaveReplacement">
-              Replacement Employee
-              <span className="ml-1 font-normal text-muted-foreground">
-                (Optional)
-              </span>
-              <Info
-                className="ml-1 inline h-3.5 w-3.5 align-text-top text-muted-foreground"
-                aria-hidden="true"
-              />
-            </Label>
+            <FieldLabel htmlFor="leave-replacement">
+              Replacement Employee{" "}
+              <span className="font-normal text-muted-foreground">(Optional)</span>
+            </FieldLabel>
             <Select
               value={draft.replacement}
               onValueChange={(value) => value && onChange("replacement", value)}
             >
-              <SelectTrigger
-                id="leaveReplacement"
-                title="Who covers the work while they are away"
-              >
+              <SelectTrigger id="leave-replacement">
                 <SelectValue placeholder="Select Employee" />
               </SelectTrigger>
               <SelectContent className="max-h-72">
-                {/* Nobody covers for themselves. */}
-                {employeeRecords
-                  .filter((person) => person.name !== employee.name)
-                  .map((person) => (
-                    <SelectItem key={person.id} value={person.name}>
-                      {person.name}
-                      <span className="opacity-70">
-                        {" "}
-                        &mdash; {person.designation}
-                      </span>
-                    </SelectItem>
-                  ))}
+                {colleagues.map((name) => (
+                  <SelectItem key={name} value={name}>
+                    {name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-2 sm:col-span-2 lg:col-span-4">
-            <Label htmlFor="leaveReason">
-              Reason / Notes<span className="whitespace-nowrap text-destructive">&nbsp;*</span>
-            </Label>
+          <div className="space-y-2 sm:col-span-2 lg:col-span-3">
+            <FieldLabel htmlFor="leave-reason" required>
+              Reason / Notes
+            </FieldLabel>
             <Textarea
-              id="leaveReason"
+              id="leave-reason"
               rows={3}
               maxLength={NOTES_LIMIT}
               value={draft.reason}
               onChange={(e) => onChange("reason", e.target.value)}
-              placeholder="Enter the reason for your leave request..."
+              placeholder="Enter the reason for your leave request"
             />
-            <p className="-mt-1 text-right text-xs text-muted-foreground">
-              {draft.reason.length} / {NOTES_LIMIT}
-            </p>
           </div>
         </div>
 
-        {/* No warning about asking for more than is left: the balance beside
-            the dates already turns red and shows how far past it the request
-            goes, and management decides either way. */}
-
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          {/* type="button": the leave form sits inside the employee record's
-              own form, and a plain button there would submit the whole record. */}
+        <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-4">
+          {/* Plain buttons: this form sits inside the employee form. */}
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
           <Button type="button" onClick={onSubmit} disabled={!canSave}>
-            Submit Request
+            Submit Leave Request
           </Button>
         </div>
-      </Step>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

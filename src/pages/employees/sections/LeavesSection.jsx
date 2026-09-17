@@ -9,7 +9,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/panels";
-import { Plus, CheckCircle2, Clock, XCircle } from "lucide-react";
+import FormHeading from "@/components/shared/FormHeading";
+import {
+  RecordTable,
+  HeadRow,
+  Th,
+  Row,
+  Td,
+} from "@/components/shared/RecordTable";
+import { Plus, CalendarCheck, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/pages/firm/firmData";
 import LeaveForm from "./LeaveForm";
@@ -23,6 +31,8 @@ import {
   leaveYear,
   leavesFor,
   leaveYearsFor,
+  remainingBalance,
+  workflowLabel,
 } from "../leaveData";
 
 const STATUS_ICON = {
@@ -91,7 +101,8 @@ export default function LeavesSection({ employee }) {
         (!shownCategory || leave.category === shownCategory) &&
         (!shownType || leave.type === shownType)
     )
-    .sort((a, b) => String(b.from).localeCompare(String(a.from)) || b.id - a.id);
+    // The newest request first: the one just made is the one being looked for.
+    .sort((a, b) => b.id - a.id);
 
   /** A type belongs to one category, so changing the category clears it. */
   const chooseCategory = (value) =>
@@ -134,39 +145,43 @@ export default function LeavesSection({ employee }) {
 
   return (
     <div className="space-y-6">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-        {/* No heading here: the page above is already called Leaves. */}
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Leave is granted a year at a time, so the year is a choice rather
-              than a column repeated down every row. */}
-          {/* Empty values are ignored: Radix keeps a hidden native select and
-              reports "" whenever the list it was built from changes - and the
-              list grows the moment a leave is charged to another year. */}
-          <Select value={year} onValueChange={(value) => value && setYear(value)}>
-            <SelectTrigger className="h-8 w-28" aria-label="Leave year">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {years.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      {/* One heading at a time: the section's row - heading on the left, the
+          way to add on the right - gives way to the form's own heading while
+          a request is being written. */}
+      {adding ? (
+        <FormHeading
+          icon={CalendarCheck}
+          title="Add New Leave"
+          note="Submit a new leave request"
+          onBack={close}
+        />
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <FormHeading icon={CalendarCheck} title="Leave Requests History" />
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            {/* Leave is granted a year at a time, so the year is a choice
+                rather than a column repeated down every row. Empty values are
+                ignored: Radix reports "" whenever its list changes. */}
+            <Select value={year} onValueChange={(value) => value && setYear(value)}>
+              <SelectTrigger className="w-28" aria-label="Leave year">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {years.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-        {/* ml-auto keeps it right once it wraps below the year. */}
-        <Button
-          type="button"
-          className="ml-auto"
-          onClick={() => setAdding(true)}
-          disabled={adding}
-        >
-          <Plus className="mr-1.5 h-4 w-4" />
-          Add New Leave
-        </Button>
-      </div>
+            <Button type="button" onClick={() => setAdding(true)}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              Add New Leave
+            </Button>
+          </div>
+        </div>
+      )}
 
       {adding && (
         <LeaveForm
@@ -200,74 +215,74 @@ export default function LeavesSection({ employee }) {
               </EmptyState>
             </div>
           ) : (
-            <table className="w-full min-w-[960px] border text-sm">
-              <thead>
-                <tr className="border-b bg-secondary/60 text-left text-primary">
-                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "20%" }}>
-                    Leave Type
-                  </th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "12%" }}>
-                    From Date
-                  </th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "12%" }}>
-                    To Date
-                  </th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "11%" }}>
-                    Number of Days
-                  </th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "21%" }}>
-                    Reason
-                  </th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "12%" }}>
-                    Request Status
-                  </th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "12%" }}>
-                    Decision Date
-                  </th>
-                </tr>
-              </thead>
+            <RecordTable minWidth={1040}>
+              <HeadRow>
+                <Th width="10%">Leave No.</Th>
+                <Th width="18%">Leave Details</Th>
+                <Th width="22%">Leave Period</Th>
+                <Th width="20%">Approval Workflow</Th>
+                <Th width="15%">Balance</Th>
+                <Th width="15%">Status</Th>
+              </HeadRow>
               <tbody>
                 {rows.map((leave) => {
                   const Icon = STATUS_ICON[leave.status];
                   const days = leaveDays(leave.from, leave.to);
+                  // What was left before this request, and what it leaves
+                  // behind - both counted off the record, never stored.
+                  const balance = remainingBalance(
+                    leaves,
+                    employee.name,
+                    leave.type,
+                    chargedYear(leave)
+                  );
 
                   return (
-                    <tr
-                      key={leave.id}
-                      className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"
-                    >
-                      <td className="border-r last:border-r-0 p-3">
-                        {/* An advance is annual leave charged to another year,
-                            so the row says which year it came out of. */}
-                        <p className="font-semibold text-primary">
-                          {leaveTypeLabel(leave)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {leave.category}
-                        </p>
-                      </td>
-                      <td className="border-r last:border-r-0 whitespace-nowrap p-3">
-                        {formatDate(leave.from)}
-                      </td>
-                      <td className="border-r last:border-r-0 whitespace-nowrap p-3">
-                        {formatDate(leave.to)}
-                      </td>
-                      {/* Counted from the two dates beside it, never stored */}
-                      <td className="border-r last:border-r-0 p-3 font-medium">
-                        {days} {days === 1 ? "Day" : "Days"}
-                      </td>
-                      <td className="border-r last:border-r-0 p-3">
-                        <p>{leave.reason || "-"}</p>
-                        {/* Who is covering, with the request it belongs
-                            to rather than in a column of its own. */}
-                        {leave.replacement && (
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            Covered by {leave.replacement}
-                          </p>
-                        )}
-                      </td>
+                    <Row key={leave.id}>
+                      <Td className="whitespace-nowrap font-bold text-primary">
+                        {leave.leaveNo || "-"}
+                      </Td>
 
-                      <td className="border-r last:border-r-0 p-3">
+                      {/* An advance is annual leave charged to another year,
+                          so the row says which year it came out of. */}
+                      <Td>
+                        <span className="block font-semibold text-primary">
+                          {leave.category}
+                        </span>
+                        <span className="block text-xs text-muted-foreground">
+                          {leaveTypeLabel(leave)}
+                        </span>
+                      </Td>
+
+                      {/* The two dates and what they come to, as one period. */}
+                      <Td className="whitespace-nowrap">
+                        {formatDate(leave.from)} – {formatDate(leave.to)}
+                        <span className="px-1.5 text-muted-foreground">/</span>
+                        {days} {days === 1 ? "Day" : "Days"}
+                      </Td>
+
+                      <Td>
+                        {workflowLabel(leave)}
+                        {/* Management's note sits with the decision it
+                            explains, rather than in a column of its own. */}
+                        {leave.comments && (
+                          <span className="mt-1 block text-xs text-muted-foreground">
+                            {leave.comments}
+                          </span>
+                        )}
+                      </Td>
+
+                      <Td className="whitespace-nowrap">
+                        {balance && !balance.expired
+                          ? balance.allowance -
+                            (balance.allowance - balance.remaining) +
+                            " Days / " +
+                            Math.max(balance.remaining - days, 0) +
+                            " Days"
+                          : "-"}
+                      </Td>
+
+                      <Td className="text-center">
                         <span
                           className={cn(
                             "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
@@ -277,25 +292,12 @@ export default function LeavesSection({ employee }) {
                           <Icon className="h-3.5 w-3.5 shrink-0" />
                           {leave.status}
                         </span>
-                        {/* Management's note sits with the decision it
-                            explains, rather than in a column of its own. */}
-                        {leave.comments && (
-                          <p className="mt-1.5 text-xs text-muted-foreground">
-                            {leave.comments}
-                          </p>
-                        )}
-                      </td>
-
-                      {/* Blank until a decision is made, so nothing suggests
-                          an answer that has not been given. */}
-                      <td className="border-r last:border-r-0 whitespace-nowrap p-3">
-                        {leave.decidedAt ? formatDate(leave.decidedAt) : "-"}
-                      </td>
-                    </tr>
+                      </Td>
+                    </Row>
                   );
                 })}
               </tbody>
-            </table>
+            </RecordTable>
           )}
         </CardContent>
       </Card>
