@@ -14,6 +14,7 @@ import {
   } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/panels";
 import Panel from "@/components/shared/Panel";
+import { RequestSteps, DecisionChoice } from "@/components/shared/RequestSteps";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   RecordTable,
@@ -75,11 +76,20 @@ const isImage = (name) =>
  * Cash has no account to choose, so choosing it settles the account field
  * rather than leaving a bank picker open over a payment that never touched one.
  */
-export default function AssistanceSection({ employee, adding, onCloseAdd }) {
+export default function AssistanceSection({
+  employee,
+  adding,
+  onCloseAdd,
+  // Management decides a request; on My Profile the decision is only read.
+  canDecide = true,
+}) {
   const [records, setRecords] = useState(assistanceRecords);
   const [draft, setDraft] = useState(emptyDraft);
   const [proof, setProof] = useState(null);
   const [page, setPage] = useState(1);
+  // Which stage of the request is open, and what management decided.
+  const [stage, setStage] = useState("request");
+  const [decision, setDecision] = useState("");
 
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
 
@@ -114,6 +124,13 @@ export default function AssistanceSection({ employee, adding, onCloseAdd }) {
     setDraft(emptyDraft);
     setProof(null);
     setPage(1);
+    closeForm();
+  };
+
+  /** Leaving the form, by any way out, starts the next request afresh. */
+  const closeForm = () => {
+    setStage("request");
+    setDecision("");
     onCloseAdd();
   };
 
@@ -143,9 +160,38 @@ export default function AssistanceSection({ employee, adding, onCloseAdd }) {
           icon={HandHeart}
           title="Add Assistance Request"
           note="Submit a request for financial assistance. Your request will be reviewed and processed by the office."
-          onBack={onCloseAdd}
+          onBack={closeForm}
         />
 
+        {/* The two stages of the request. Either header opens its stage. */}
+        <RequestSteps
+          active={stage}
+          onChange={setStage}
+          steps={[
+            {
+              key: "request",
+              title: "Assistance Request",
+              note: "Submit assistance details and supporting documents",
+              done: Boolean(canSave),
+            },
+            {
+              key: "decision",
+              title: "Management Decision",
+              note: "Review and approval decision",
+              done: Boolean(decision),
+            },
+          ]}
+        />
+
+        {stage === "decision" ? (
+          <DecisionChoice
+            subject="assistance"
+            value={decision}
+            onChange={setDecision}
+            disabled={!canDecide}
+          />
+        ) : (
+        <>
         <Panel title="Assistance Information" icon={HandHeart}>
           {/* Four fields across the row, with Subcategory given the extra room
               its upload button takes. */}
@@ -284,10 +330,12 @@ export default function AssistanceSection({ employee, adding, onCloseAdd }) {
             </p>
           </div>
         </Panel>
+        </>
+        )}
 
         <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-4">
           {/* A plain button: this form sits inside the employee form. */}
-          <Button type="button" variant="outline" onClick={onCloseAdd}>
+          <Button type="button" variant="outline" onClick={closeForm}>
             Cancel
           </Button>
           <Button type="button" onClick={saveRecord} disabled={!canSave}>

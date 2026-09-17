@@ -24,6 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Rial } from "@/components/shared/Rial";
 import Panel from "@/components/shared/Panel";
+import { RequestSteps, DecisionChoice } from "@/components/shared/RequestSteps";
 import {
   Users,
   HandCoins,
@@ -230,9 +231,17 @@ function Derived({ id, label, value, hint }) {
  * everything borrowed before, so a new loan cannot be entered against a figure
  * that disagrees with the loans already on the list.
  */
-export default function LoansSection({ adding, onCloseAdd }) {
+export default function LoansSection({
+  adding,
+  onCloseAdd,
+  // Management decides a request; on My Profile the decision is only read.
+  canDecide = true,
+}) {
   const [records, setRecords] = useState(loanRecords);
   const [draft, setDraft] = useState(emptyDraft);
+  // Which stage of the request is open, and what management decided.
+  const [stage, setStage] = useState("request");
+  const [decision, setDecision] = useState("");
 
   // Which loans have been folded away. Absent means open: a loan says very
   // little without the schedule that repays it.
@@ -297,6 +306,8 @@ export default function LoansSection({ adding, onCloseAdd }) {
 
   const closeAdd = () => {
     setDraft(emptyDraft);
+    setStage("request");
+    setDecision("");
     onCloseAdd();
   };
 
@@ -363,6 +374,37 @@ export default function LoansSection({ adding, onCloseAdd }) {
           onBack={closeAdd}
         />
 
+        {/* The two stages of the request. Either header opens its stage. */}
+        <RequestSteps
+          active={stage}
+          onChange={setStage}
+          steps={[
+            {
+              key: "request",
+              title: "Loan Request",
+              note: "Submit loan details and repayment plan",
+              done: Boolean(canSave),
+            },
+            {
+              key: "decision",
+              title: "Management Decision",
+              note: "Review and approval decision",
+              done: Boolean(decision),
+            },
+          ]}
+        />
+
+        {stage === "decision" && (
+          <DecisionChoice
+            subject="loan"
+            value={decision}
+            onChange={setDecision}
+            disabled={!canDecide}
+          />
+        )}
+
+        {stage === "request" && (
+        <>
         {/* Where the loan lands in the accounts. Neither field is a question:
             a loan is always an employee expense, and which category it falls
             under is read off what is still owed. */}
@@ -478,6 +520,8 @@ export default function LoansSection({ adding, onCloseAdd }) {
             />
           </div>
         </Panel>
+        </>
+        )}
 
         <div className="flex flex-wrap items-center justify-between gap-2">
           {/* Plain buttons: this form sits inside the employee form, which a
@@ -492,6 +536,7 @@ export default function LoansSection({ adding, onCloseAdd }) {
 
         {/* The repayment plan, worked out as the figures above are typed, so
             the request is signed off against the schedule it creates. */}
+        {stage === "request" && (
         <div className="overflow-hidden rounded-lg border">
           <div className="flex flex-wrap items-center justify-between gap-4 border-b bg-secondary/60 px-4 py-3">
             <p className="text-base font-bold text-primary">
@@ -557,6 +602,7 @@ export default function LoansSection({ adding, onCloseAdd }) {
             </div>
           )}
         </div>
+        )}
       </div>
     );
   }

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import FormHeading from "@/components/shared/FormHeading";
 import Panel from "@/components/shared/Panel";
+import { RequestSteps, DecisionChoice } from "@/components/shared/RequestSteps";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/panels";
 import {
@@ -60,9 +61,18 @@ function FieldLabel({ htmlFor, required, children }) {
  * it. What the employee settles is how much, which month it comes out of, and
  * why.
  */
-export function AdvanceSalaryForm({ employee, net, onClose }) {
+export function AdvanceSalaryForm({
+  employee,
+  net,
+  onClose,
+  // An advance is asked for on My Profile, where the decision is only read.
+  canDecide = false,
+}) {
   const { addAdvance } = useAdvances();
   const [draft, setDraft] = useState(emptyDraft);
+  // Which stage of the request is open, and what management decided.
+  const [stage, setStage] = useState("request");
+  const [decision, setDecision] = useState("");
 
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
 
@@ -95,6 +105,35 @@ export function AdvanceSalaryForm({ employee, net, onClose }) {
         onBack={onClose}
       />
 
+      {/* The two stages of the request. Either header opens its stage. */}
+      <RequestSteps
+        active={stage}
+        onChange={setStage}
+        steps={[
+          {
+            key: "request",
+            title: "Salary Advance Request",
+            note: "Submit advance details and the month it is deducted from",
+            done: Boolean(canSubmit),
+          },
+          {
+            key: "decision",
+            title: "Management Decision",
+            note: "Review and approval decision",
+            done: Boolean(decision),
+          },
+        ]}
+      />
+
+      {stage === "decision" ? (
+        <DecisionChoice
+          subject="salary advance"
+          value={decision}
+          onChange={setDecision}
+          disabled={!canDecide}
+        />
+      ) : (
+      <>
       <Panel title="Advance Salary Application" icon={CalendarClock}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
           {/* Read off the salary above rather than asked for again, so the
@@ -190,6 +229,8 @@ export function AdvanceSalaryForm({ employee, net, onClose }) {
           </p>
         </div>
       </Panel>
+      </>
+      )}
 
       <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-4">
         {/* Plain buttons: this form sits inside the employee form. */}

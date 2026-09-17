@@ -310,6 +310,7 @@ export default function FinancialBenefitsSection({
         <LoansSection
           adding={adding === "loans"}
           onCloseAdd={() => setAdding(null)}
+          canDecide={canEdit}
         />
       )}
 
@@ -318,6 +319,7 @@ export default function FinancialBenefitsSection({
           employee={employee}
           adding={adding === "assistance"}
           onCloseAdd={() => setAdding(null)}
+          canDecide={canEdit}
         />
       )}
 
