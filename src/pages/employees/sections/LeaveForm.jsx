@@ -13,10 +13,13 @@ import {
 } from "@/components/ui/select";
 import { RequestSteps } from "@/components/shared/RequestSteps";
 import { cn } from "@/lib/utils";
+import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
+import { formatDate as shortDate } from "@/pages/firm/firmData";
 import { employeeRecords } from "../employeeData";
 import {
   ABSENCE_CATEGORIES,
   LEAVE_STAGES,
+  LEAVE_DECISIONS,
   typesIn,
   leaveDays,
   remainingBalance,
@@ -74,6 +77,12 @@ export default function LeaveForm({
   // The year an advance would be charged to, offered only when this year's
   // annual leave is gone.
   advanceYear,
+  // An existing request being reviewed, the stage of it that is open, and the
+  // way to move between the stages. A new request has none of these.
+  record = null,
+  stage = "submit",
+  onStage = () => {},
+  onDecide = () => {},
 }) {
   // Days taken now against next year: the kind of leave is settled by that
   // choice, so neither the category nor the type is asked for again.
@@ -102,21 +111,128 @@ export default function LeaveForm({
     .filter((person) => person.name !== employee.name)
     .map((person) => person.name);
 
+  // A request that exists has been submitted; the two approvals follow it.
+  const done = {
+    submit: Boolean(record),
+    department: Boolean(record?.departmentDecision),
+    management: record?.status === "Approved" || record?.status === "Rejected",
+  };
+
+  const period =
+    record && record.from && record.to
+      ? shortDate(record.from) + " – " + shortDate(record.to)
+      : "";
+
   return (
     <Card>
       <CardContent className="space-y-6 p-4 sm:p-6">
-        {/* Where the request stands. Only the first stage is the employee's;
-            the two approvals are filled in by whoever gives them. */}
+        {/* Where the request stands. The first stage is the employee's; the
+            two approvals are filled in by whoever gives them. */}
         <RequestSteps
-          active="submit"
-          onChange={() => {}}
-          steps={LEAVE_STAGES.map((stage) => ({
-            ...stage,
-            done: false,
-            disabled: stage.key !== "submit",
+          active={stage}
+          onChange={onStage}
+          steps={LEAVE_STAGES.map((step) => ({
+            ...step,
+            done: done[step.key],
+            // Nothing can be reviewed until the request has been made.
+            disabled: step.key !== "submit" && !record,
           }))}
         />
 
+        {stage !== "submit" ? (
+          <>
+            {/* What is being decided, read off the request rather than asked
+                for again. */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+              <Worked id="leave-review-no" label="Leave No." value={record?.leaveNo || ""} />
+              <Worked id="leave-review-employee" label="Employee Name" value={employee.name} />
+              <Worked id="leave-review-period" label="Leave Period" value={period} />
+              <Worked
+                id="leave-review-days"
+                label="Number of Days"
+                value={days(leaveDays(record?.from, record?.to))}
+              />
+
+              {stage === "department" && (
+                <Worked
+                  id="leave-review-department"
+                  label="Relevant Department"
+                  value={employee.department || ""}
+                />
+              )}
+              <Worked
+                id="leave-review-by"
+                label="Reviewed By"
+                value={CURRENT_USER.name}
+              />
+
+              <div className="space-y-2">
+                <FieldLabel htmlFor="leave-review-date" required>
+                  Review Date
+                </FieldLabel>
+                <Input
+                  id="leave-review-date"
+                  type="date"
+                  value={draft.reviewDate}
+                  onChange={(e) => onChange("reviewDate", e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FieldLabel htmlFor="leave-review-decision" required>
+                  {stage === "department" ? "Department Decision" : "Management Decision"}
+                </FieldLabel>
+                <Select
+                  value={draft.decision}
+                  onValueChange={(value) => value && onChange("decision", value)}
+                >
+                  <SelectTrigger id="leave-review-decision">
+                    <SelectValue placeholder="Select decision" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LEAVE_DECISIONS.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2 sm:col-span-2 lg:col-span-4">
+                <FieldLabel htmlFor="leave-review-comments">
+                  {stage === "department" ? "Department Comments" : "Management Comments"}
+                </FieldLabel>
+                <Textarea
+                  id="leave-review-comments"
+                  rows={3}
+                  maxLength={NOTES_LIMIT}
+                  value={draft.comments}
+                  onChange={(e) => onChange("comments", e.target.value)}
+                  placeholder={
+                    stage === "department"
+                      ? "Enter the department's comments on the leave request"
+                      : "Enter management's comments on the leave request"
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-4">
+              <Button type="button" variant="outline" onClick={onCancel}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={onDecide}
+                disabled={!draft.decision || !draft.reviewDate}
+              >
+                Save &amp; Submit Decision
+              </Button>
+            </div>
+          </>
+        ) : (
+        <>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
           {/* The year first: a balance belongs to a year, and asking for next
               year's days is what makes a request an advance. */}
@@ -316,6 +432,8 @@ export default function LeaveForm({
             Submit Leave Request
           </Button>
         </div>
+        </>
+        )}
       </CardContent>
     </Card>
   );

@@ -42,6 +42,12 @@ export default function LeavesProvider({ children }) {
             comments: "",
           },
         ]),
+
+      /** One stage's part of a request: a review, or the decision on it. */
+      updateLeave: (id, patch) =>
+        setLeaves((prev) =>
+          prev.map((leave) => (leave.id === id ? { ...leave, ...patch } : leave))
+        ),
     }),
     [leaves]
   );

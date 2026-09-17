@@ -85,6 +85,18 @@ export const nextLeaveNo = (leaves) =>
     ) + 1
   ).padStart(3, "0");
 
+/** What a reviewer can say about a request. */
+export const LEAVE_DECISIONS = ["Approve", "Reject"];
+
+/**
+ * The stage a request is waiting at, so opening it from the list picks up
+ * where it was left. A decided request opens on the stage that decided it.
+ */
+export const stageOf = (leave) => {
+  if (leave.status !== "Pending") return "management";
+  return leave.stage === "management" ? "management" : "department";
+};
+
 /** Where the request stands, as the workflow column reads it. */
 export const workflowLabel = (leave) => {
   if (leave.status === "Approved") return "Approved by Management";
