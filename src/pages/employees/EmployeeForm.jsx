@@ -36,6 +36,7 @@ import {
   Mail,
   FileCheck,
   FileImage,
+  FileSpreadsheet,
   Trash2,
   Briefcase,
   Users,
@@ -65,6 +66,7 @@ import {
   EMERGENCY_RELATIONSHIPS,
 } from "@/lib/constants";
 import FinancialBenefitsSection from "./sections/FinancialBenefitsSection";
+import EntitlementsSection from "./sections/EntitlementsSection";
 
 
 import DailyActivitiesSection from "./sections/DailyActivitiesSection";
@@ -128,6 +130,15 @@ const SECTIONS = [
     icon: Wallet,
     noSave: true,
     note: "Salaries, bonuses, loans, assistance and commission",
+  },
+  {
+    // Allowances on top of the pay, and the sums the law requires when
+    // somebody leaves. Nine lists, one page, a tab each.
+    key: "entitlements",
+    label: "Employee Entitlements",
+    icon: FileSpreadsheet,
+    noSave: true,
+    note: "Employee allowances and statutory entitlements",
   },
   {
     // Anything asked of the administration that has no form of its own - a
@@ -1412,6 +1423,13 @@ export default function EmployeeForm({ self }) {
                     onSaveSalary={(payslip) =>
                       setFormData((prev) => ({ ...prev, ...payslip }))
                     }
+                  />
+                )}
+
+                {activeSection === "entitlements" && (
+                  <EntitlementsSection
+                    employee={formData}
+                    canEdit={!readOnly}
                   />
                 )}
 

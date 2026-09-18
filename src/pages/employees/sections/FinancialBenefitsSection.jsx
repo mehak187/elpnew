@@ -15,6 +15,19 @@ import TabBar from "@/components/shared/TabBar";
 import { Plus, Eye, EyeOff } from "lucide-react";
 import { withRial } from "@/lib/money";
 import { smartSearch } from "@/lib/search/smartSearch";
+import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  nextRequestNo,
+  REQUEST_PENDING,
+  REQUEST_REJECTED,
+  REQUEST_STATUS_CHIP,
+} from "../requestFlow";
 import { formatDate } from "@/pages/firm/firmData";
 import {
   commissionRecords,
@@ -31,6 +44,14 @@ import BonusSection from "./BonusSection";
 import LoansSection from "./LoansSection";
 import AssistanceSection from "./AssistanceSection";
 import { BENEFIT_TABS } from "./benefitTabs";
+
+/** A commission that has been paid is settled; anything else is a request. */
+const COMMISSION_PAID = "Paid";
+
+const COMMISSION_STATUS_CHIP = {
+  ...REQUEST_STATUS_CHIP,
+  [COMMISSION_PAID]: "bg-green-100 text-green-800",
+};
 
 /** The day the commission was recorded, however far back it goes. */
 const commissionDate = (record) =>
@@ -53,9 +74,12 @@ const money = (amount) =>
  * with one difference: the person it is paid to is this employee, so the two
  * questions about who it is for are answered before it opens.
  */
-function CommissionTab({ employee, adding, onCloseAdd }) {
+function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd }) {
   const { clients } = useClients();
   const [records, setRecords] = useState(() => commissionsFor(employee.name));
+  // The commission on the list the form is open on, if any.
+  const [openId, setOpenId] = useState(null);
+  const open = records.find((record) => record.id === openId) || null;
 
   // The client chosen on the open form, if any. While a commission is being
   // written for a client, the list shows only what is already agreed with that
@@ -75,33 +99,101 @@ function CommissionTab({ employee, adding, onCloseAdd }) {
   /** Closing the form, by either button, puts the whole list back. */
   const close = () => {
     setClientFilter("");
+    setOpenId(null);
     onCloseAdd();
   };
 
-  /** The form settles what was agreed; the list gives it its number. */
-  const save = (record) => {
+  /**
+   * What was agreed, on the list straight away under a temporary number and
+   * waiting on the payment that settles it.
+   */
+  const submit = (record) => {
+    if (openId) {
+      setRecords((prev) =>
+        prev.map((row) => (row.id === openId ? { ...row, ...record } : row))
+      );
+      return;
+    }
+    const id = records.reduce((max, r) => Math.max(max, r.id), 0) + 1;
     setRecords((prev) => [
-      ...prev,
       {
         ...record,
-        id: prev.reduce((max, r) => Math.max(max, r.id), 0) + 1,
-        commissionNo: nextCommissionNo(commissionRecords.concat(prev)),
+        id,
+        requestNo: nextRequestNo(prev),
+        commissionNo: "",
+        status: REQUEST_PENDING,
+        date: new Date().toISOString().slice(0, 10),
       },
+      ...prev,
     ]);
+    setOpenId(id);
+  };
+
+  /** Paid: the commission takes the list's own number and is settled. */
+  const save = (record) => {
+    setRecords((prev) =>
+      prev.map((row) =>
+        row.id === openId
+          ? {
+              ...row,
+              ...record,
+              commissionNo:
+                row.commissionNo || nextCommissionNo(commissionRecords.concat(prev)),
+              status: COMMISSION_PAID,
+              rejectionReason: "",
+            }
+          : row
+      )
+    );
     close();
+  };
+
+  /** Refused: the commission keeps its temporary number and says why. */
+  const reject = (why) => {
+    setRecords((prev) =>
+      prev.map((row) =>
+        row.id === openId
+          ? { ...row, status: REQUEST_REJECTED, rejectionReason: why }
+          : row
+      )
+    );
+    close();
+  };
+
+  /** A commission opened back off the list, to be followed or decided. */
+  const track = (record) => {
+    setOpenId(record.id);
+    onOpenAdd?.();
   };
 
   return (
     <div className="space-y-6">
-      {adding && (
-        <CommissionForm
-          employee={employee}
-          commissionNo={nextCommissionNo(commissionRecords.concat(records))}
-          onCancel={close}
-          onSave={save}
-          onClientChange={setClientFilter}
-        />
-      )}
+      {/* Opened over the page, so the list it is filed into stays behind. */}
+      <Dialog open={Boolean(adding)} onOpenChange={(o) => !o && close()}>
+        <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {open
+                ? "Commission " + (open.commissionNo || open.requestNo || "")
+                : "Add Commission"}
+            </DialogTitle>
+          </DialogHeader>
+          <CommissionForm
+            key={openId || "new"}
+            employee={employee}
+            initial={open}
+            commissionNo={
+              open?.commissionNo ||
+              nextCommissionNo(commissionRecords.concat(records))
+            }
+            onCancel={close}
+            onSubmit={submit}
+            onSave={save}
+            onReject={reject}
+            onClientChange={setClientFilter}
+          />
+        </DialogContent>
+      </Dialog>
 
       {filtering && (
         <p className="text-sm text-muted-foreground">
@@ -142,13 +234,26 @@ function CommissionTab({ employee, adding, onCloseAdd }) {
                 <Th width="18%">Client Name</Th>
                 <Th width="18%">Payee</Th>
                 <Th width="22%">Legal Fees &amp; Commission</Th>
+                <Th width="10%">Status</Th>
                 <Th width="16%">Notes</Th>
               </HeadRow>
               <tbody>
                 {found.map((record) => (
                   <Row key={record.id}>
+                    {/* A commission waiting on payment carries its temporary
+                        number and opens back into the form. */}
                     <Td className="whitespace-nowrap font-medium text-primary">
-                      {record.commissionNo}
+                      {record.commissionNo ? (
+                        record.commissionNo
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => track(record)}
+                          className="rounded font-bold text-primary underline underline-offset-2 hover:no-underline focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                          {record.requestNo}
+                        </button>
+                      )}
                     </Td>
                     <Td className="whitespace-nowrap text-primary">
                       {commissionDate(record)}
@@ -176,6 +281,17 @@ function CommissionTab({ employee, adding, onCloseAdd }) {
                           Paid Commission:{" "}
                         </span>
                         {money(commissionOn(record))}
+                      </span>
+                    </Td>
+
+                    <Td className="text-center">
+                      <span
+                        className={cn(
+                          "inline-block rounded-md px-3 py-1 text-xs font-semibold",
+                          COMMISSION_STATUS_CHIP[record.status || COMMISSION_PAID]
+                        )}
+                      >
+                        {record.status || COMMISSION_PAID}
                       </span>
                     </Td>
 
@@ -319,6 +435,7 @@ export default function FinancialBenefitsSection({
           employee={employee}
           adding={adding === "bonus"}
           onCloseAdd={() => setAdding(null)}
+          onOpenAdd={() => setAdding("bonus")}
         />
       )}
 
@@ -327,6 +444,7 @@ export default function FinancialBenefitsSection({
           employee={employee}
           adding={adding === "loans"}
           onCloseAdd={() => setAdding(null)}
+          onOpenAdd={() => setAdding("loans")}
           canDecide={canEdit}
         />
       )}
@@ -336,6 +454,7 @@ export default function FinancialBenefitsSection({
           employee={employee}
           adding={adding === "assistance"}
           onCloseAdd={() => setAdding(null)}
+          onOpenAdd={() => setAdding("assistance")}
           canDecide={canEdit}
         />
       )}
@@ -345,6 +464,7 @@ export default function FinancialBenefitsSection({
           employee={employee}
           adding={adding === "commission"}
           onCloseAdd={() => setAdding(null)}
+          onOpenAdd={() => setAdding("commission")}
         />
       )}
     </div>

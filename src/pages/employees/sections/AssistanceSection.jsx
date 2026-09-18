@@ -15,6 +15,13 @@ import {
 import { EmptyState } from "@/components/shared/panels";
 import { smartSearch } from "@/lib/search/smartSearch";
 import { amountValue } from "@/lib/money";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { nextRequestNo } from "../requestFlow";
 import { RequestSteps, DecisionChoice } from "@/components/shared/RequestSteps";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -114,6 +121,9 @@ export default function AssistanceSection({
   employee,
   adding,
   onCloseAdd,
+  // Opening a request from the list puts the section back into adding, so
+  // the window over the page is the one that shows it.
+  onOpenAdd,
   // Management decides a request; on My Profile the decision is only read.
   canDecide = true,
 }) {
@@ -167,6 +177,9 @@ export default function AssistanceSection({
     setRecords((prev) => [
       {
         id,
+        // On the list straight away, under a temporary number, waiting on a
+        // decision.
+        requestNo: nextRequestNo(records),
         requestDate: new Date().toISOString().slice(0, 10),
         decision: "Pending",
         paymentDate: "",
@@ -207,6 +220,7 @@ export default function AssistanceSection({
           ? {
               ...record,
               decision: granted ? "Approved" : "Rejected",
+              rejectionReason: granted ? "" : review.notes.trim(),
               amount:
                 decision === "partial" ? Number(review.approved) : record.amount,
               method: granted ? review.method : "",
@@ -221,6 +235,33 @@ export default function AssistanceSection({
       )
     );
     closeForm();
+  };
+
+  /** A request opened back off the list, to be followed or decided. */
+  const track = (record) => {
+    setOpenId(record.id);
+    setStage("decision");
+    const status = statusOf(record);
+    setDecision(
+      status === "Rejected" ? "rejected" : status === "Pending" ? "" : "full"
+    );
+    setDraft({
+      ...emptyDraft,
+      subcategory: record.subcategory,
+      beneficiary: record.beneficiary,
+      amount: String(record.amount),
+      notes: record.purpose || record.notes || "",
+    });
+    setReview({
+      approved: String(record.amount),
+      method: record.method || "",
+      bank: record.bank || DEFAULT_BANK,
+      accountNo: record.accountNo || "",
+      paymentDate: record.disbursementDate || record.paymentDate || "",
+      reference: record.reference || "",
+      notes: record.paymentNotes || "",
+    });
+    onOpenAdd?.();
   };
 
   /** Leaving the form, by any way out, starts the next request afresh. */
@@ -256,9 +297,10 @@ export default function AssistanceSection({
 
   // Adding takes over the section: the list describes assistance already
   // given, and none of it helps while a new request is being written.
-  if (adding) {
-    return (
-      <div className="space-y-6 rounded-lg border p-4 sm:p-6">
+  // The form opens over the page rather than pushing it down: the list it is
+  // filed into stays where it was, behind it.
+  const form = (
+      <div className="space-y-6">
         {/* The two stages of the request. Either header opens its stage. */}
         <RequestSteps
           active={stage}
@@ -654,12 +696,25 @@ export default function AssistanceSection({
           )}
         </div>
       </div>
-    );
-  }
+  );
 
   return (
     <Card>
       <CardContent className="space-y-4 p-4 sm:p-6">
+      {/* Opened over the page, so the list it is filed into stays behind. */}
+      <Dialog open={Boolean(adding)} onOpenChange={(o) => !o && closeForm()}>
+        <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {open
+                ? "Assistance " + (open.requestNo || "")
+                : "Add Assistance Request"}
+            </DialogTitle>
+          </DialogHeader>
+          {form}
+        </DialogContent>
+      </Dialog>
+
       {/* The search on the left, where every list in the system has it, and
           the name of the list on the right. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -702,10 +757,20 @@ export default function AssistanceSection({
 
                   return (
                     <Row key={record.id}>
-                      {/* The row number opens the document the request was
-                          made with, when one was attached. */}
-                      <Td className="font-medium text-primary">
-                        {record.proof ? (
+                      {/* A request waiting on a decision carries its
+                          temporary number and opens back into the form; a
+                          decided one takes its place in the run and opens the
+                          document it was made with. */}
+                      <Td className="whitespace-nowrap font-medium text-primary">
+                        {status === "Pending" || status === "Rejected" ? (
+                          <button
+                            type="button"
+                            onClick={() => track(record)}
+                            className="rounded font-bold text-primary underline underline-offset-2 hover:no-underline focus:outline-none focus:ring-2 focus:ring-ring"
+                          >
+                            {record.requestNo || start + index + 1}
+                          </button>
+                        ) : record.proof ? (
                           <button
                             type="button"
                             onClick={() => openProof(record)}
