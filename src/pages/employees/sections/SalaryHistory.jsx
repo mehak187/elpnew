@@ -19,6 +19,8 @@ import {
   salaryHistory,
   salaryHistoryRows,
   salaryPeriod,
+  salaryRef,
+  isSalaryRequest,
 } from "../payrollData";
 
 /** One figure of the summary: what it is, then how much it was. */
@@ -44,6 +46,8 @@ export default function SalaryHistory({
   // search - the row that used to hold the month and the year.
   detailsOpen = false,
   onToggleDetails = null,
+  // What to do when a request's temporary number is clicked.
+  onOpenRequest = null,
 }) {
   const [query, setQuery] = useState("");
 
@@ -106,8 +110,20 @@ export default function SalaryHistory({
             <tbody>
               {shown.map((row) => (
                 <Row key={row.id}>
+                  {/* A request that has not been approved opens back into
+                      the form: to be followed, corrected, or decided. */}
                   <Td className="whitespace-nowrap font-bold text-primary">
-                    {row.salaryNo}
+                    {isSalaryRequest(row) && onOpenRequest ? (
+                      <button
+                        type="button"
+                        onClick={() => onOpenRequest(row)}
+                        className="rounded font-bold text-primary underline underline-offset-2 hover:no-underline focus:outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        {salaryRef(row)}
+                      </button>
+                    ) : (
+                      salaryRef(row)
+                    )}
                   </Td>
 
                   <Td className="whitespace-nowrap">{row.period}</Td>

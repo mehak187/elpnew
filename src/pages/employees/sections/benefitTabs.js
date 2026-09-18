@@ -17,7 +17,7 @@ import { Wallet, Gift, HandCoins, HandHeart, Percent } from "lucide-react";
 export const BENEFIT_TABS = [
   {
     key: "salaries",
-    label: "Salaries / Allowances",
+    label: "Salaries",
     icon: Wallet,
     note: "View your salary payments and allowances",
     // Salary is recorded here, not asked for: the form enters a salary
@@ -33,7 +33,7 @@ export const BENEFIT_TABS = [
     // The firm decides a bonus and records it once paid, so it is kept to the
     // employee's own page - nobody reads their bonuses on My Profile.
     key: "bonus",
-    label: "Bonus Disbursement",
+    label: "Bonus",
     icon: Gift,
     note: "Bonuses paid to this employee",
     add: "Add Bonus",

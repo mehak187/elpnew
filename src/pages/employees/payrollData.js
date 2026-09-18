@@ -262,11 +262,39 @@ export const nextSalaryNo = (history) =>
     ) + 1
   ).padStart(3, "0");
 
-/** Where a salary stands once it has been worked out. */
+/**
+ * Where a salary stands.
+ *
+ * A salary starts as a request: it is on the list straight away, under a
+ * temporary number, until it is either approved - when it takes the next
+ * salary number - or refused.
+ */
+export const SALARY_PENDING = "Pending";
+export const SALARY_REJECTED = "Rejected";
+export const SALARY_TRANSFERRED = "Transferred";
+
 export const SALARY_STATUS_TONE = {
-  Transferred: "bg-green-100 text-green-800",
-  "Pending Transfer": "bg-amber-100 text-amber-800",
+  [SALARY_TRANSFERRED]: "bg-green-100 text-green-800",
+  [SALARY_PENDING]: "bg-amber-100 text-amber-800",
+  [SALARY_REJECTED]: "bg-red-100 text-red-800",
 };
+
+/** "REQ-001", the temporary number a salary carries until it is approved. */
+export const nextRequestNo = (history) =>
+  "REQ-" +
+  String(
+    history.reduce(
+      (max, row) =>
+        Math.max(max, Number(String(row.requestNo || "").replace(/\D/g, "")) || 0),
+      0
+    ) + 1
+  ).padStart(3, "0");
+
+/** What the list calls a salary: its number, or the request's until it has one. */
+export const salaryRef = (record) => record.salaryNo || record.requestNo || "-";
+
+/** A salary nobody has approved yet is still a request. */
+export const isSalaryRequest = (record) => !record.salaryNo;
 
 /** The month a salary is for, written out: "September 2026". */
 export const salaryPeriod = (record) =>
@@ -320,6 +348,12 @@ export function salaryHistoryRows(history = salaryHistory, loan = SALARY_LOAN) {
       };
     });
 
-  // Newest first to read, though the sums were run oldest first.
-  return rows.reverse();
+  // Newest first to read, though the sums were run oldest first - and a
+  // request nobody has decided sits above them all, because it is the one
+  // waiting on somebody.
+  rows.reverse();
+  return [
+    ...rows.filter((row) => !row.salaryNo),
+    ...rows.filter((row) => row.salaryNo),
+  ];
 }

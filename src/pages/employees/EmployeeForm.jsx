@@ -127,7 +127,7 @@ const SECTIONS = [
     label: "Financial Benefits",
     icon: Wallet,
     noSave: true,
-    note: "Salaries, loans, assistance and commission",
+    note: "Salaries, bonuses, loans, assistance and commission",
   },
   {
     // Anything asked of the administration that has no form of its own - a

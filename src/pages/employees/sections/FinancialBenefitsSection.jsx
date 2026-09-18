@@ -301,6 +301,7 @@ export default function FinancialBenefitsSection({
           employee={employee}
           adding={adding === "salaries"}
           onCloseAdd={() => setAdding(null)}
+          onOpenAdd={() => setAdding("salaries")}
           onSave={onSaveSalary}
           detailsOpen={salaryDetailsOpen}
           // The breakdown is opened from the row above the history, where the
