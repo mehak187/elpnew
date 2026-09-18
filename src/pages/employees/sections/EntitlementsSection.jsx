@@ -5,15 +5,19 @@ import { EmptyState } from "@/components/shared/panels";
 import AiSearch from "@/components/shared/AiSearch";
 import FormHeading from "@/components/shared/FormHeading";
 import TabBar from "@/components/shared/TabBar";
-import { Plus, FileText } from "lucide-react";
+import { Plus, FileSpreadsheet } from "lucide-react";
 import { ENTITLEMENT_TABS } from "../entitlementTabs";
+import { initialEntitlements } from "../entitlementData";
+import LeaveEncashmentTab from "./LeaveEncashmentTab";
 
 /**
  * What the firm owes an employee beyond their salary.
  *
  * Nine lists in one page rather than nine entries in the menu: an allowance
  * and an end-of-service payment answer the same question - what this person is
- * entitled to and why - and the tab says which of them is open.
+ * entitled to and why - and the tab says which of them is open. Each list is
+ * claimed the same way: a window over the page, a temporary number while it
+ * waits, and the list's own number once it is granted.
  */
 export default function EntitlementsSection({
   employee,
@@ -22,6 +26,16 @@ export default function EntitlementsSection({
 }) {
   const [tab, setTab] = useState(ENTITLEMENT_TABS[0].key);
   const [query, setQuery] = useState("");
+  const [records, setRecords] = useState(initialEntitlements);
+  // Whether the window is open, and on which tab it was opened.
+  const [adding, setAdding] = useState(null);
+
+  // Moving to another tab closes what was open on the last one.
+  const [openTab, setOpenTab] = useState(tab);
+  if (openTab !== tab) {
+    setOpenTab(tab);
+    setAdding(null);
+  }
 
   const current = ENTITLEMENT_TABS.find((option) => option.key === tab);
 
@@ -31,7 +45,7 @@ export default function EntitlementsSection({
           that say which entitlement is open on the right. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <FormHeading
-          icon={FileText}
+          icon={FileSpreadsheet}
           title="Employee Entitlements"
           note="Manage employee allowances and end-of-service entitlements"
         />
@@ -42,25 +56,37 @@ export default function EntitlementsSection({
 
       {/* What is searched, and the way to add to it. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <AiSearch
-          value={query}
-          onChange={setQuery}
-          placeholder="Search..."
-        />
-        {canEdit && (
-          <Button type="button" className="ml-auto">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Entitlement
-          </Button>
-        )}
+        <AiSearch value={query} onChange={setQuery} placeholder="Search..." />
+        <Button
+          type="button"
+          className="ml-auto"
+          onClick={() => setAdding(tab)}
+          disabled={adding === tab}
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Add Entitlement
+        </Button>
       </div>
 
       <Card>
         <CardContent className="p-4 sm:p-6">
-          <EmptyState>
-            No {current.label.toLowerCase()} has been recorded for{" "}
-            {employee?.name || "this employee"}.
-          </EmptyState>
+          {tab === "leaveEncashment" ? (
+            <LeaveEncashmentTab
+              employee={employee}
+              records={records}
+              onRecords={setRecords}
+              query={query}
+              adding={adding === tab}
+              onCloseAdd={() => setAdding(null)}
+              onOpenAdd={() => setAdding(tab)}
+              canDecide={canEdit}
+            />
+          ) : (
+            <EmptyState>
+              No {current.label.toLowerCase()} has been recorded for{" "}
+              {employee?.name || "this employee"}.
+            </EmptyState>
+          )}
         </CardContent>
       </Card>
     </div>
