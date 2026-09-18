@@ -57,28 +57,27 @@ export default function SupplierPaymentsSection({ supplier }) {
     <div className="space-y-6">
       {/* The count and the total sit with the title: a total on its own cannot
           tell one large expense from twenty small ones. */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
-            Supplier Payments
-          </h2>
-          <span className="text-sm text-muted-foreground">
-            {rows.length} {rows.length === 1 ? "expense" : "expenses"}
-          </span>
-          <span className="text-sm font-bold text-primary">{omr(total)}</span>
-        </div>
+      {/* One heading at a time: this row gives way to the form's own heading
+          while a request is being written. */}
+      {!adding && (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+          <div className="flex flex-wrap items-baseline gap-3">
+            <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
+              Supplier Payments
+            </h2>
+            <span className="text-sm text-muted-foreground">
+              {rows.length} {rows.length === 1 ? "expense" : "expenses"}
+            </span>
+            <span className="text-sm font-bold text-primary">{omr(total)}</span>
+          </div>
 
-        {/* ml-auto keeps it right once it wraps below the heading. */}
-        <Button
-          type="button"
-          className="ml-auto"
-          onClick={() => setAdding(true)}
-          disabled={adding}
-        >
-          <Plus className="mr-1.5 h-4 w-4" />
-          Add Expense Request
-        </Button>
-      </div>
+          {/* ml-auto keeps it right once it wraps below the heading. */}
+          <Button type="button" className="ml-auto" onClick={() => setAdding(true)}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Add Expense Request
+          </Button>
+        </div>
+      )}
 
       {/* No card of the supplier's details here: they are on Supplier
           Information, one click away, and repeating them only pushed the

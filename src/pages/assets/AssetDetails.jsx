@@ -370,6 +370,14 @@ export default function AssetDetails() {
     setAddingExpense(false);
   }
 
+  // Leaving a section closes what was open in it: a form left open would
+  // still be open on the way back.
+  const [openSection, setOpenSection] = useState(section);
+  if (openSection !== section) {
+    setOpenSection(section);
+    setAddingExpense(false);
+  }
+
   if (!asset || !draft) {
     return (
       <Card>
@@ -395,9 +403,6 @@ export default function AssetDetails() {
   };
   const cost = assetCost(asset);
   const inUse = fullYearsBetween(draft.purchaseDate, todayIso());
-  const straightLine = draft.depreciationMethod === DEPRECIATION_METHODS[0];
-  // How long the rate takes to use the whole cost up, straight-line.
-  const writtenOffIn = Number(draft.rate) > 0 ? Math.round((1000 / Number(draft.rate))) / 10 : 0;
 
   const addDocument = () => {
     if (!documentName.trim() || !documentFile) return;
@@ -768,11 +773,6 @@ export default function AssetDetails() {
                       value={draft.rate}
                       onChange={(value) => set("rate", decimal(value))}
                       placeholder="e.g. 20"
-                      hint={
-                        straightLine && writtenOffIn
-                          ? "At this rate the cost is written off in " + writtenOffIn + " years"
-                          : ""
-                      }
                     />
                     <TextField
                       id="assetUsefulLife"
@@ -799,11 +799,6 @@ export default function AssetDetails() {
                       value={cost > 0 ? omr(netBookValue(preview)) : ""}
                     />
                   </div>
-                  {cost === 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      The cost comes from the purchase invoices recorded under Asset Expenses.
-                    </p>
-                  )}
                 </div>
               )}
             </CardContent>

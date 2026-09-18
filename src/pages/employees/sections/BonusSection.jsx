@@ -27,6 +27,13 @@ import { ArrowRight, FileCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { amountValue } from "@/lib/money";
 import { smartSearch } from "@/lib/search/smartSearch";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { nextRequestNo, REQUEST_REJECTED, REQUEST_STATUS_CHIP } from "../requestFlow";
 import { useBonuses } from "@/lib/bonuses/context";
 import { formatDate } from "../loanData";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
@@ -240,7 +247,14 @@ function BonusDisbursement({
  * one is booked to Employee Expenses under Bonus, which is shown rather than
  * asked for.
  */
-export default function BonusSection({ employee, adding, onCloseAdd }) {
+export default function BonusSection({
+  employee,
+  adding,
+  onCloseAdd,
+  // Opening a request from the list puts the section back into adding, so
+  // the window over the page is the one that shows it.
+  onOpenAdd,
+}) {
   const { bonuses, addBonus, updateBonus } = useBonuses();
   const [draft, setDraft] = useState(emptyDraft);
   const [query, setQuery] = useState("");
@@ -250,6 +264,13 @@ export default function BonusSection({ employee, adding, onCloseAdd }) {
   const [openId, setOpenId] = useState(null);
   const [payment, setPayment] = useState(emptyPayment);
   const [receipt, setReceipt] = useState(null);
+  // Refusing asks for a reason before it takes one.
+  const [rejecting, setRejecting] = useState(false);
+  const [reason, setReason] = useState("");
+
+  const open = bonuses.find((bonus) => bonus.id === openId) || null;
+  const settled = open?.status === BONUS_DISBURSED;
+  const refused = open?.status === REQUEST_REJECTED;
 
   const mine = smartSearch(bonusesFor(bonuses, employee?.name), query);
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
@@ -270,6 +291,8 @@ export default function BonusSection({ employee, adding, onCloseAdd }) {
     setReceipt(null);
     setStage("entry");
     setOpenId(null);
+    setRejecting(false);
+    setReason("");
     onCloseAdd();
   };
 
@@ -279,19 +302,30 @@ export default function BonusSection({ employee, adding, onCloseAdd }) {
    */
   const save = () => {
     if (!canSave) return;
-    const id = bonuses.reduce((max, bonus) => Math.max(max, bonus.id), 0) + 1;
-    addBonus({
-      employee: employee.name,
-      expenseType: BONUS_EXPENSE_TYPE,
-      category: BONUS_CATEGORY,
+    const details = {
       subcategory: draft.subcategory,
       bonusType: isOther ? draft.bonusType.trim() : "",
       amount: Number(draft.amount),
-      recordedOn: todayIso(),
-      paidOn: "",
       notes: draft.notes.trim(),
-    });
-    setOpenId(id);
+    };
+
+    if (open) {
+      updateBonus(open.id, details);
+    } else {
+      const id = bonuses.reduce((max, bonus) => Math.max(max, bonus.id), 0) + 1;
+      addBonus({
+        employee: employee.name,
+        expenseType: BONUS_EXPENSE_TYPE,
+        category: BONUS_CATEGORY,
+        // On the list straight away, under a temporary number, waiting on the
+        // disbursement that settles it.
+        requestNo: nextRequestNo(bonuses),
+        recordedOn: todayIso(),
+        paidOn: "",
+        ...details,
+      });
+      setOpenId(id);
+    }
     setStage("disbursement");
   };
 
@@ -300,6 +334,7 @@ export default function BonusSection({ employee, adding, onCloseAdd }) {
     if (!canPay || !openId) return;
     updateBonus(openId, {
       status: BONUS_DISBURSED,
+      rejectionReason: "",
       method: payment.method,
       bank: payment.bank,
       accountNo: payment.accountNo,
@@ -311,11 +346,45 @@ export default function BonusSection({ employee, adding, onCloseAdd }) {
     close();
   };
 
-  // Adding takes over the section: the list is what has already been paid, and
-  // none of it helps while another bonus is being entered.
-  if (adding) {
-    return (
-      <div className="space-y-6 rounded-lg border p-4 sm:p-6">
+  /** Refused: the bonus keeps its temporary number and says why. */
+  const reject = () => {
+    if (!openId || !reason.trim()) return;
+    updateBonus(openId, {
+      status: REQUEST_REJECTED,
+      rejectionReason: reason.trim(),
+    });
+    close();
+  };
+
+  /** A request opened back off the list, to be followed or decided. */
+  const track = (bonus) => {
+    setOpenId(bonus.id);
+    setStage("disbursement");
+    setRejecting(false);
+    setReason("");
+    setReceipt(null);
+    setDraft({
+      subcategory: bonus.subcategory,
+      bonusType: bonus.bonusType || "",
+      amount: String(bonus.amount),
+      notes: bonus.notes || "",
+    });
+    setPayment({
+      ...emptyPayment(),
+      method: bonus.method || "",
+      bank: bonus.bank || DEFAULT_BANK,
+      accountNo: bonus.accountNo || "",
+      paidOn: bonus.paidOn || todayIso(),
+      reference: bonus.reference || "",
+      notes: bonus.paymentNotes || "",
+    });
+    onOpenAdd?.();
+  };
+
+  // The form opens over the page rather than pushing it down: the list it is
+  // filed into stays where it was, behind it.
+  const form = (
+      <div className="space-y-6">
         {/* The two halves of a bonus: what it is for, and then how it was
             paid out. Either header opens its own half. */}
         <RequestSteps
@@ -348,16 +417,50 @@ export default function BonusSection({ employee, adding, onCloseAdd }) {
         </h3>
 
         {stage === "disbursement" ? (
-          <BonusDisbursement
-            employee={employee?.name || ""}
-            reason={draft.subcategory}
-            // The label already says OMR, so the figure does not.
-            amount={amountValue(Number(draft.amount))}
-            payment={payment}
-            onChange={setPay}
-            receipt={receipt}
-            onReceipt={setReceipt}
-          />
+          <>
+            <BonusDisbursement
+              employee={employee?.name || ""}
+              reason={draft.subcategory}
+              // The label already says OMR, so the figure does not.
+              amount={amountValue(Number(draft.amount))}
+              payment={payment}
+              onChange={setPay}
+              receipt={receipt}
+              onReceipt={setReceipt}
+            />
+
+            {/* A refused bonus says why, and stays as it is. */}
+            {refused && (
+              <div className="space-y-2">
+                <FieldLabel htmlFor="bonus-refused">
+                  Reason for Rejection
+                </FieldLabel>
+                <Textarea
+                  id="bonus-refused"
+                  readOnly
+                  tabIndex={-1}
+                  rows={2}
+                  className="cursor-default border-destructive/40 bg-destructive/5 text-destructive"
+                  value={open?.rejectionReason || ""}
+                />
+              </div>
+            )}
+
+            {rejecting && (
+              <div className="space-y-2">
+                <FieldLabel htmlFor="bonus-reason" required>
+                  Reason for Rejection
+                </FieldLabel>
+                <Textarea
+                  id="bonus-reason"
+                  rows={2}
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="Say why this bonus is refused"
+                />
+              </div>
+            )}
+          </>
         ) : (
         <>
           {/* Every field the same width: nothing here takes more room than
@@ -462,10 +565,40 @@ export default function BonusSection({ employee, adding, onCloseAdd }) {
           <Button type="button" variant="outline" onClick={close}>
             Cancel
           </Button>
+
+          {/* A bonus already paid out is only being looked at. */}
+          {stage === "disbursement" && !settled && !refused && (
+            rejecting ? (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={reject}
+                disabled={!reason.trim()}
+              >
+                Confirm Rejection
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                className="border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setRejecting(true)}
+              >
+                Reject Request
+              </Button>
+            )
+          )}
+
           {stage === "disbursement" ? (
-            <Button type="button" onClick={disburse} disabled={!canPay}>
-              Confirm Disbursement
-            </Button>
+            !refused && (
+              <Button
+                type="button"
+                onClick={disburse}
+                disabled={!canPay || rejecting}
+              >
+                Confirm Disbursement
+              </Button>
+            )
           ) : (
             <Button type="button" onClick={save} disabled={!canSave}>
               Save and Continue
@@ -474,12 +607,25 @@ export default function BonusSection({ employee, adding, onCloseAdd }) {
           )}
         </div>
       </div>
-    );
-  }
+  );
 
   return (
     <Card>
       <CardContent className="space-y-4 p-4 sm:p-6">
+        {/* Opened over the page, so the list it is filed into stays behind. */}
+        <Dialog open={Boolean(adding)} onOpenChange={(o) => !o && close()}>
+          <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {open
+                  ? "Bonus " + (open.requestNo || "")
+                  : "Add Bonus"}
+              </DialogTitle>
+            </DialogHeader>
+            {form}
+          </DialogContent>
+        </Dialog>
+
         {/* The search on the left, where every list in the system has it, and
             the name of the list on the right. */}
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -512,7 +658,22 @@ export default function BonusSection({ employee, adding, onCloseAdd }) {
             <tbody>
               {mine.map((bonus, index) => (
                 <Row key={bonus.id}>
-                  <Td className="font-medium text-primary">{index + 1}</Td>
+                  {/* A bonus waiting on a decision carries its temporary
+                      number and opens back into the form; one already paid
+                      out simply takes its place in the run. */}
+                  <Td className="whitespace-nowrap font-medium text-primary">
+                    {bonus.status === BONUS_DISBURSED ? (
+                      index + 1
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => track(bonus)}
+                        className="rounded font-bold text-primary underline underline-offset-2 hover:no-underline focus:outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        {bonus.requestNo || index + 1}
+                      </button>
+                    )}
+                  </Td>
                   <Td className="whitespace-nowrap text-primary">
                     {formatDate(bonusDate(bonus))}
                   </Td>
@@ -531,7 +692,8 @@ export default function BonusSection({ employee, adding, onCloseAdd }) {
                     <span
                       className={cn(
                         "inline-block rounded-md px-3 py-1 text-xs font-semibold",
-                        BONUS_STATUS_CHIP[bonus.status]
+                        BONUS_STATUS_CHIP[bonus.status] ||
+                          REQUEST_STATUS_CHIP[bonus.status]
                       )}
                     >
                       {bonus.status}

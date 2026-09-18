@@ -374,7 +374,11 @@ export default function SupplierForm() {
 
       {/* The supplier's papers, under the details they back. Only once the
           supplier exists: there is nobody to file a paper against before. */}
-      {isEdit && <SupplierDocumentsSection supplier={existing} />}
+      {/* Keyed on the supplier: moving to another one starts its papers - and
+          anything half-written over them - afresh. */}
+      {isEdit && (
+        <SupplierDocumentsSection key={existing?.id} supplier={existing} />
+      )}
       </div>
           )}
         </div>

@@ -363,10 +363,13 @@ export default function IncomeTaxPage() {
             <p className="text-xs text-primary/75 sm:text-sm">Corporate income tax returns and payments</p>
           </div>
         </div>
-        <Button type="button" onClick={() => setEditing("new")} disabled={editing !== null}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Tax Return
-        </Button>
+        {/* The way to add gives way to the form it opens. */}
+        {editing === null && (
+          <Button type="button" onClick={() => setEditing("new")}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Tax Return
+          </Button>
+        )}
       </div>
 
       <SummaryStrip

@@ -62,6 +62,15 @@ export default function Execution() {  const { id } = useParams();
     notes: "",
   });
 
+  // Moving to another case without unmounting: a form left open would still
+  // be open over somebody else's file, with the last one's answers in it.
+  const [loadedId, setLoadedId] = useState(id);
+  if (id !== loadedId) {
+    setLoadedId(id);
+    setShowForm(false);
+    setFormData({ date: "", action: "", status: "", amount: "", notes: "" });
+  }
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));

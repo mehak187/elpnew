@@ -27,6 +27,13 @@ import { cn } from "@/lib/utils";
 import { Rial } from "@/components/shared/Rial";
 import { amountValue } from "@/lib/money";
 import { smartSearch } from "@/lib/search/smartSearch";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { nextRequestNo } from "../requestFlow";
 import { RequestSteps, DecisionChoice } from "@/components/shared/RequestSteps";
 import {
   Users,
@@ -41,6 +48,7 @@ import {
   LOAN_CATEGORY,
   LOAN_INCREASE,
   LOAN_PENDING,
+  LOAN_REJECTED,
   LOAN_DECISION_STATUS,
   LOAN_STATUS_CHIP,
   loanCategoryFor,
@@ -189,6 +197,9 @@ export default function LoansSection({
   employee,
   adding,
   onCloseAdd,
+  // Opening a request from the list puts the section back into adding, so
+  // the window over the page is the one that shows it.
+  onOpenAdd,
   // Management decides a request; on My Profile the decision is only read.
   canDecide = true,
 }) {
@@ -279,7 +290,9 @@ export default function LoansSection({
         id,
         employee: borrower,
         kind: category,
-        // Asked for, not granted: the office decides it from its own side.
+        // On the list straight away, under a temporary number, waiting on a
+        // decision. Asked for, not granted.
+        requestNo: nextRequestNo(records),
         status: LOAN_PENDING,
         loanAmount: requested,
         merged: isIncrease ? outstanding : 0,
@@ -338,6 +351,31 @@ export default function LoansSection({
     onCloseAdd();
   };
 
+  /** A request opened back off the list, to be followed or decided. */
+  const track = (record) => {
+    setOpenId(record.id);
+    setStage("decision");
+    setDecision(
+      Object.keys(LOAN_DECISION_STATUS).find(
+        (key) => LOAN_DECISION_STATUS[key] === record.status
+      ) || ""
+    );
+    setDraft({
+      requested: String(record.loanAmount),
+      extraRequested: String(record.loanAmount),
+      monthly: String(record.monthly),
+      firstDate: record.firstDue,
+      employee: record.employee,
+    });
+    setReview({
+      approved: String(record.loanAmount),
+      monthly: String(record.monthly),
+      firstDate: record.firstDue,
+      notes: record.managementNotes || "",
+    });
+    onOpenAdd?.();
+  };
+
   const toggle = (id) =>
     setCollapsed((prev) => ({ ...prev, [id]: !prev[id] }));
 
@@ -356,9 +394,10 @@ export default function LoansSection({
 
   // Nothing can be asked for while a request is still being decided: a second
   // one would be asking for the same money twice.
-  if (adding && waiting && stage === "request") {
-    return (
-      <div className="space-y-6 rounded-lg border p-4 sm:p-6">
+  const blocked = adding && waiting && stage === "request";
+
+  const form = blocked ? (
+      <div className="space-y-6">
         <div
           role="alert"
           className="flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive"
@@ -384,13 +423,8 @@ export default function LoansSection({
           </Button>
         </div>
       </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      {adding && (
-        <div className="space-y-6 rounded-lg border p-4 sm:p-6">
+  ) : (
+        <div className="space-y-6">
           {/* The two stages of the request. Either header opens its stage. */}
           <RequestSteps
             active={stage}
@@ -672,7 +706,24 @@ export default function LoansSection({
             )}
           </div>
         </div>
-      )}
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* Opened over the page, so the list it is filed into stays behind. */}
+      <Dialog open={Boolean(adding)} onOpenChange={(o) => !o && closeAdd()}>
+        <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {openId
+                ? "Loan " +
+                  (records.find((r) => r.id === openId)?.requestNo || "")
+                : "Add Loan Request"}
+            </DialogTitle>
+          </DialogHeader>
+          {form}
+        </DialogContent>
+      </Dialog>
 
       {/* ----------------------------------------- the loans already running */}
 
@@ -753,7 +804,22 @@ export default function LoansSection({
                       {/* The loan itself. Nothing in the instalment columns
                           belongs to it, so nothing is put there. */}
                       <Row className="bg-green-50/70">
-                        <Td className="font-bold text-primary">{index + 1}</Td>
+                        {/* A request waiting on a decision carries its
+                            temporary number and opens back into the form. */}
+                        <Td className="whitespace-nowrap font-bold text-primary">
+                          {record.status === LOAN_PENDING ||
+                          record.status === LOAN_REJECTED ? (
+                            <button
+                              type="button"
+                              onClick={() => track(record)}
+                              className="rounded font-bold text-primary underline underline-offset-2 hover:no-underline focus:outline-none focus:ring-2 focus:ring-ring"
+                            >
+                              {record.requestNo || index + 1}
+                            </button>
+                          ) : (
+                            index + 1
+                          )}
+                        </Td>
                         <Td className="text-left">
                           <span className="block font-bold text-primary">
                             {record.kind}

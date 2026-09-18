@@ -232,15 +232,31 @@ export const COUNTRY_DIAL_CODES = [
  * kept apart because a bar card belongs to a lawyer and a commercial
  * registration belongs to the company.
  */
-export const EMPLOYEE_DOCUMENT_TYPES = [
-  "ID Card",
-  "Passport",
-  "Bar Card",
+/**
+ * The papers on an employee's file.
+ *
+ * Which of them can be filed depends on the employee: an Omani carries an ID
+ * card where a foreigner carries a resident card and a passport, and only a
+ * lawyer has a bar card. The rest everybody has, so they are asked for
+ * whoever the employee is.
+ */
+export const OMANI_DOCUMENT_TYPES = ["ID Card"];
+export const NON_OMANI_DOCUMENT_TYPES = ["Resident Card", "Passport"];
+export const LAWYER_DOCUMENT_TYPE = "Lawyer Card (Bar Card)";
+
+export const COMMON_DOCUMENT_TYPES = [
   "Academic Qualification",
   "Experience Certificate",
-  "Decisions",
-  "Other Certificates",
+  "Administrative & Penal Decisions",
   "Other Documents",
+];
+
+/** Every type there is, for anything that has to list them all. */
+export const EMPLOYEE_DOCUMENT_TYPES = [
+  ...OMANI_DOCUMENT_TYPES,
+  ...NON_OMANI_DOCUMENT_TYPES,
+  LAWYER_DOCUMENT_TYPE,
+  ...COMMON_DOCUMENT_TYPES,
 ];
 
 /** The branches the firm's banks are held at. */

@@ -20,8 +20,14 @@ import {
 import { Rial } from "@/components/shared/Rial";
 import { amountValue } from "@/lib/money";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { Save, FileCheck } from "lucide-react";
+import { Save, FileCheck, ArrowRight } from "lucide-react";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
 import {
   ALLOWANCES,
@@ -34,6 +40,10 @@ import {
   DEFAULT_BOOKING,
   salaryHistory,
   nextSalaryNo,
+  nextRequestNo,
+  SALARY_PENDING,
+  SALARY_REJECTED,
+  SALARY_TRANSFERRED,
   totalEarnings,
   totalDeductions,
   netSalary,
@@ -165,8 +175,14 @@ function Locked({ id, label, value }) {
   );
 }
 
-/** A figure typed into the salary being recorded. The label says (OMR). */
-function Typed({ id, label, value, onChange }) {
+/**
+ * A figure typed into the salary being recorded. The label says (OMR).
+ *
+ * `held` marks money coming off the pay rather than going onto it, so any
+ * figure above zero is read in red - the one colour money held back wears
+ * everywhere in the system.
+ */
+function Typed({ id, label, value, onChange, held }) {
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>
@@ -176,6 +192,7 @@ function Typed({ id, label, value, onChange }) {
         id={id}
         inputMode="decimal"
         placeholder="0.000"
+        className={cn(held && Number(value) > 0 && "font-semibold text-destructive")}
         value={value}
         onChange={(e) => onChange(e.target.value.replace(/[^\d.]/g, ""))}
       />
@@ -239,6 +256,9 @@ export default function SalariesSection({
   employee,
   adding,
   onCloseAdd,
+  // Opening a request from the list puts the section back into adding, so
+  // the form over the page is the one that shows it.
+  onOpenAdd,
   onSave,
   // Whether the salary breakdown is open. The history under it is always
   // shown, and carries the control that opens the breakdown.
@@ -261,6 +281,15 @@ export default function SalariesSection({
   // Which half of the salary being recorded is open: what it comes to, and
   // then how it was transferred.
   const [payStage, setPayStage] = useState("salary");
+  // The request on the list that the form is open on, if any, and the reason
+  // being written for refusing it.
+  const [openId, setOpenId] = useState(null);
+  const [rejecting, setRejecting] = useState(false);
+  const [reason, setReason] = useState("");
+
+  const openRequest = history.find((row) => row.id === openId) || null;
+  const settled = Boolean(openRequest?.salaryNo);
+  const refused = openRequest?.status === SALARY_REJECTED;
 
   const set = (name, value) =>
     setPayslip((prev) => ({ ...prev, [name]: value }));
@@ -283,9 +312,11 @@ export default function SalariesSection({
   const payNet =
     Number(payBasic || 0) + Number(payAllowances || 0) - Number(payDeductions || 0);
 
-  // The number the salary will carry, and the month it is for, as the transfer
-  // stage reads them back.
-  const salaryNo = nextSalaryNo(history);
+  // What the salary is called while it waits: the request's own number until
+  // it is approved and takes the next salary number.
+  const salaryNo = openRequest
+    ? openRequest.salaryNo || openRequest.requestNo
+    : nextRequestNo(history);
   const monthNumber = SALARY_MONTHS.findIndex((m) => m.value === payment.month) + 1;
   const period = monthNumber
     ? MONTH_FULL[monthNumber - 1] + " " + payment.year
@@ -307,46 +338,124 @@ export default function SalariesSection({
     setPayment(emptyPayment);
     setReceipt(null);
     setPayStage("salary");
+    setOpenId(null);
+    setRejecting(false);
+    setReason("");
     onCloseAdd();
+  };
+
+  /** A request opened back off the list, to be followed, edited or decided. */
+  const trackRequest = (record) => {
+    setOpenId(record.id);
+    setPayStage(record.salaryNo ? "transfer" : "salary");
+    setRejecting(false);
+    setReason("");
+    setReceipt(null);
+    setPayment({
+      ...emptyPayment,
+      month: SALARY_MONTHS[record.month - 1]?.value || "",
+      year: String(record.year),
+      basic: String(record.basic),
+      allowances: String(record.allowances),
+      deductions: String(record.loanDeducted + record.administrative),
+      method: record.method || "",
+      source: record.bank || DEFAULT_BANK,
+      accountNo: record.accountNo || "",
+      reference: record.reference || "",
+      notes: record.notes || "",
+      paymentDate: record.paymentDate || "",
+    });
+    onOpenAdd?.();
   };
 
   // What the month came to has to be settled before how it was transferred.
   const canSaveSalary = payment.month && payment.year && Number(payBasic) > 0;
   const canPay = canSaveSalary && payment.method && payment.paymentDate;
 
-  /** The first stage saved: the transfer details are what is left to enter. */
+  /** What the month is worth, as the record keeps it. */
+  const figures = () => ({
+    month: monthNumber,
+    year: Number(payment.year),
+    basic: Number(payBasic) || 0,
+    allowances: Number(payAllowances) || 0,
+    // What came off this month was entered as one figure, so it is the whole
+    // of the deduction and none of it is a loan installment.
+    loanDeducted: 0,
+    administrative: Number(payDeductions) || 0,
+    administrativeReason: "",
+  });
+
+  /**
+   * The salary asked for. It goes on the list straight away, under a
+   * temporary number and waiting on a decision, and the form moves on to the
+   * transfer that settles it.
+   */
   const saveSalary = () => {
     if (!canSaveSalary) return;
+    if (openRequest) {
+      setHistory((prev) =>
+        prev.map((row) => (row.id === openId ? { ...row, ...figures() } : row))
+      );
+    } else {
+      const id = history.reduce((max, r) => Math.max(max, r.id), 0) + 1;
+      setHistory((prev) => [
+        ...prev,
+        {
+          id,
+          requestNo: nextRequestNo(prev),
+          salaryNo: "",
+          status: SALARY_PENDING,
+          ...figures(),
+          method: "",
+          bank: "",
+          accountNo: "",
+          reference: "",
+          receipt: "",
+          notes: "",
+          paymentDate: "",
+        },
+      ]);
+      setOpenId(id);
+    }
     setPayStage("transfer");
   };
 
-  /** Confirmed: the salary is on record, and it has been transferred. */
+  /** Approved: the request takes the next salary number and is transferred. */
   const savePayment = () => {
-    if (!canPay) return;
-    setHistory((prev) => [
-      ...prev,
-      {
-        id: prev.reduce((max, r) => Math.max(max, r.id), 0) + 1,
-        salaryNo: nextSalaryNo(prev),
-        month: monthNumber,
-        year: Number(payment.year),
-        basic: Number(payBasic) || 0,
-        allowances: Number(payAllowances) || 0,
-        // What came off this month was entered as one figure, so it is the
-        // whole of the deduction and none of it is a loan installment.
-        loanDeducted: 0,
-        administrative: Number(payDeductions) || 0,
-        administrativeReason: "",
-        method: payment.method,
-        bank: payment.source,
-        accountNo,
-        reference: payment.reference.trim(),
-        receipt: receipt?.name || "",
-        notes: payment.notes.trim(),
-        status: "Transferred",
-        paymentDate: payment.paymentDate,
-      },
-    ]);
+    if (!canPay || !openId) return;
+    setHistory((prev) =>
+      prev.map((row) =>
+        row.id === openId
+          ? {
+              ...row,
+              ...figures(),
+              salaryNo: row.salaryNo || nextSalaryNo(prev),
+              status: SALARY_TRANSFERRED,
+              rejectionReason: "",
+              method: payment.method,
+              bank: payment.source,
+              accountNo,
+              reference: payment.reference.trim(),
+              receipt: receipt?.name || "",
+              notes: payment.notes.trim(),
+              paymentDate: payment.paymentDate,
+            }
+          : row
+      )
+    );
+    closeAdd();
+  };
+
+  /** Refused: the request keeps its temporary number and says why. */
+  const rejectRequest = () => {
+    if (!openId || !reason.trim()) return;
+    setHistory((prev) =>
+      prev.map((row) =>
+        row.id === openId
+          ? { ...row, status: SALARY_REJECTED, rejectionReason: reason.trim() }
+          : row
+      )
+    );
     closeAdd();
   };
 
@@ -360,9 +469,10 @@ export default function SalariesSection({
     );
   }
 
-  if (adding) {
-    return (
-      <div className="space-y-6 rounded-lg border p-4 sm:p-6">
+  // The form opens over the page rather than pushing it down: the list it is
+  // filed into stays where it was, behind it.
+  const form = (
+      <div className="space-y-6">
         {/* The two halves of recording a month's pay: what it came to, and
             then how it was transferred. Either header opens its own half. */}
         <RequestSteps
@@ -438,6 +548,7 @@ export default function SalariesSection({
               <Typed
                 id="pay-deductions"
                 label="Total Deductions"
+                held
                 value={payDeductions}
                 onChange={(value) => setPay("deductions", value)}
               />
@@ -463,7 +574,8 @@ export default function SalariesSection({
                 Cancel
               </Button>
               <Button type="button" onClick={saveSalary} disabled={!canSaveSalary}>
-                Save Salary
+                Save and Continue
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           </>
@@ -605,7 +717,39 @@ export default function SalariesSection({
               </div>
             </div>
 
-            <div className="flex justify-end gap-2">
+            {/* A refused request says why, and stays as it is. */}
+            {refused && (
+              <div className="space-y-2">
+                <Label htmlFor="pay-refused">Reason for Rejection</Label>
+                <Textarea
+                  id="pay-refused"
+                  readOnly
+                  tabIndex={-1}
+                  rows={2}
+                  className="cursor-default border-destructive/40 bg-destructive/5 text-destructive"
+                  value={openRequest?.rejectionReason || ""}
+                />
+              </div>
+            )}
+
+            {/* Refusing asks for a reason before it takes one. */}
+            {rejecting && (
+              <div className="space-y-2">
+                <Label htmlFor="pay-reason">
+                  Reason for Rejection
+                  <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
+                </Label>
+                <Textarea
+                  id="pay-reason"
+                  rows={2}
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="Say why this salary is refused"
+                />
+              </div>
+            )}
+
+            <div className="flex flex-wrap justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
@@ -616,21 +760,64 @@ export default function SalariesSection({
               <Button type="button" variant="outline" onClick={closeAdd}>
                 Cancel
               </Button>
-              <Button type="button" onClick={savePayment} disabled={!canPay}>
-                Confirm Salary Transfer
-              </Button>
+
+              {/* A salary already transferred is only being looked at. */}
+              {!settled && !refused && (
+                rejecting ? (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={rejectRequest}
+                    disabled={!reason.trim()}
+                  >
+                    Confirm Rejection
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => setRejecting(true)}
+                  >
+                    Reject Request
+                  </Button>
+                )
+              )}
+
+              {!refused && (
+                <Button
+                  type="button"
+                  onClick={savePayment}
+                  disabled={!canPay || rejecting}
+                >
+                  Confirm Salary Transfer
+                </Button>
+              )}
             </div>
           </>
         )}
       </div>
-    );
-  }
+  );
 
   /* --------------------------------------------------------- the salary itself */
 
 
   return (
     <div className="space-y-6">
+      {/* Opened over the page, so the list it is filed into stays behind it. */}
+      <Dialog open={Boolean(adding)} onOpenChange={(open) => !open && closeAdd()}>
+        <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {openRequest
+                ? "Salary " + (openRequest.salaryNo || openRequest.requestNo)
+                : "Add Salary"}
+            </DialogTitle>
+          </DialogHeader>
+          {form}
+        </DialogContent>
+      </Dialog>
+
       {/* The breakdown is opened and closed from beside the heading, so that
           when it is closed the history below is all there is to read. */}
       {detailsOpen && (
@@ -736,6 +923,9 @@ export default function SalariesSection({
         history={history}
         detailsOpen={detailsOpen}
         onToggleDetails={onToggleDetails}
+        // A request that has not been approved opens back into the form, to
+        // be followed, corrected or decided.
+        onOpenRequest={canEdit ? trackRequest : null}
       />
     </div>
   );

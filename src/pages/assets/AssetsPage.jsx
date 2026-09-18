@@ -345,20 +345,19 @@ export default function AssetsPage() {
             <p className="text-xs text-primary/75 sm:text-sm">Fixed Asset Register</p>
           </div>
         </div>
-        <Button type="button" onClick={() => setAdding(true)} disabled={adding}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Asset
-        </Button>
+        {/* The way to add gives way to the form it opens. */}
+        {!adding && (
+          <Button type="button" onClick={() => setAdding(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Asset
+          </Button>
+        )}
       </div>
 
       {adding && (
         <Card>
           <CardContent className="space-y-6 p-4 sm:p-6">
-            <FormHeading
-              title="Add New Asset"
-              note="Enter the basic information to create the asset. You can complete the remaining details later."
-              icon={Box}
-            />
+            <FormHeading title="Add New Asset" icon={Box} />
 
             <Panel title="Invoice Data" icon={ReceiptText}>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1.25fr)_minmax(0,1fr)]">

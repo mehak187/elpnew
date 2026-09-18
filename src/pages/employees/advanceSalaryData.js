@@ -15,6 +15,16 @@ export const ADVANCE_STATUS_TONE = {
   Rejected: "text-destructive",
 };
 
+/** "SAR-0001", counted across the firm so a number is never reused. */
+export const nextAdvanceNo = (advances) =>
+  "SAR-" +
+  String(
+    advances.reduce(
+      (max, a) => Math.max(max, Number(String(a.requestNo || "").replace(/\D/g, "")) || 0),
+      0
+    ) + 1
+  ).padStart(4, "0");
+
 /** One person's requests, newest first. */
 export const advancesFor = (advances, name) =>
   advances
@@ -30,6 +40,7 @@ export const deductedFrom = (advance) =>
 export const initialAdvances = [
   {
     id: 1,
+    requestNo: "SAR-0001",
     employee: "Mohammed Al Yahyaei",
     requestedOn: "2026-03-04",
     amount: 500,

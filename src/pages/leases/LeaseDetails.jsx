@@ -299,6 +299,14 @@ export default function LeaseDetails() {
     setInstallmentNo(null);
   }
 
+  // Leaving a section closes what was open in it: a panel left open would
+  // still be open on the way back.
+  const [openSection, setOpenSection] = useState(section);
+  if (openSection !== section) {
+    setOpenSection(section);
+    setInstallmentNo(null);
+  }
+
   if (!lease || !draft) {
     return (
       <Card>
@@ -743,10 +751,7 @@ export default function LeaseDetails() {
                       numbers are left to be typed in. */}
                   {byCheque &&
                     (installments.length === 0 ? (
-                      <EmptyState>
-                        The installments appear once the contract dates, the rental
-                        value and the number of installments have been entered.
-                      </EmptyState>
+                      <EmptyState>No installments yet.</EmptyState>
                     ) : (
                       <div className="space-y-2">
                         <p className="text-sm font-semibold text-primary">
@@ -765,10 +770,7 @@ export default function LeaseDetails() {
 
               {section === "schedule" &&
                 (installments.length === 0 ? (
-                  <EmptyState>
-                    The schedule appears once the contract dates, the rental value
-                    and the number of installments have been entered.
-                  </EmptyState>
+                  <EmptyState>No schedule yet.</EmptyState>
                 ) : (
                   <div className="space-y-6">
                     {openRow && (

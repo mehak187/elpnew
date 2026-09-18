@@ -223,21 +223,20 @@ export default function SupplierDocumentsSection({ supplier }) {
     <div className="space-y-6">
       {/* The section's own heading, so the way to add to it sits on the same
           line rather than costing a row of its own. */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-        <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
-          Supplier Documents
-        </h2>
-        {/* ml-auto keeps it right once it wraps below the heading. */}
-        <Button
-          type="button"
-          className="ml-auto"
-          onClick={() => setAdding(true)}
-          disabled={adding}
-        >
-          <Plus className="mr-1.5 h-4 w-4" />
-          Add Document
-        </Button>
-      </div>
+      {/* One heading at a time: this row gives way to the form's own heading
+          while a paper is being filed. */}
+      {!adding && (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+          <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
+            Supplier Documents
+          </h2>
+          {/* ml-auto keeps it right once it wraps below the heading. */}
+          <Button type="button" className="ml-auto" onClick={() => setAdding(true)}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Add Document
+          </Button>
+        </div>
+      )}
 
       {adding && (
         <Card>

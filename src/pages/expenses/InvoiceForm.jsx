@@ -224,11 +224,6 @@ export default function InvoiceForm({ onCancel, onSubmit, forSupplier }) {
               </Button>
             </div>
 
-            {noInvoice && (
-              <p className="text-xs text-muted-foreground">
-                Raised without a supplier invoice.
-              </p>
-            )}
             {!noInvoice && invoiceFile && (
               <div className="flex h-8 items-center justify-between gap-2 rounded-md bg-muted/40 px-3">
                 <span className="truncate text-xs">{invoiceFile}</span>

@@ -319,12 +319,6 @@ export default function LeaveForm({
                 ))}
               </SelectContent>
             </Select>
-            {advance && (
-              <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
-                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                Advance leave: taken now, charged to {advanceYear}
-              </p>
-            )}
           </div>
 
           {/* An advance is annual leave by definition, so neither of these is

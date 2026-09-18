@@ -317,15 +317,7 @@ export default function TransactionsSection({
             </div>
           </CardContent>
         </Card>
-      ) : (
-        <div className="flex items-start gap-2 rounded-md border bg-muted/50 p-3 text-xs text-muted-foreground">
-          <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          <span>
-            Your role can view the transaction history but not record entries or
-            change balances.
-          </span>
-        </div>
-      )}
+      ) : null}
 
       {/* Everything that has moved through the account, and where it left it */}
       <Card>

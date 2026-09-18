@@ -32,6 +32,7 @@ import {
   ADVANCE_STATUS_TONE,
   advancesFor,
   deductedFrom,
+  nextAdvanceNo,
 } from "../advanceSalaryData";
 
 const REASON_LIMIT = 300;
@@ -53,6 +54,22 @@ function FieldLabel({ htmlFor, required, children }) {
   );
 }
 
+/** A fact the decision reads off the request rather than asking again. */
+function Settled({ id, label, value }) {
+  return (
+    <div className="space-y-2">
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <Input
+        id={id}
+        readOnly
+        tabIndex={-1}
+        value={value}
+        className="cursor-default bg-locked text-muted-foreground"
+      />
+    </div>
+  );
+}
+
 /**
  * Asking for part of next month's salary now.
  *
@@ -68,8 +85,10 @@ export function AdvanceSalaryForm({
   // An advance is asked for on My Profile, where the decision is only read.
   canDecide = false,
 }) {
-  const { addAdvance } = useAdvances();
+  const { advances, addAdvance } = useAdvances();
   const [draft, setDraft] = useState(emptyDraft);
+  // The number this request will carry, shown before it is saved.
+  const requestNo = nextAdvanceNo(advances);
   // Which stage of the request is open, and what management decided.
   const [stage, setStage] = useState("request");
   const [decision, setDecision] = useState("");
@@ -85,6 +104,7 @@ export function AdvanceSalaryForm({
   const submit = () => {
     if (!canSubmit) return;
     addAdvance({
+      requestNo,
       employee: employee?.name || "",
       requestedOn: new Date().toISOString().slice(0, 10),
       amount: Number(draft.amount),
@@ -101,7 +121,6 @@ export function AdvanceSalaryForm({
       <FormHeading
         icon={CalendarClock}
         title="Request Salary Advance"
-        note="Ask for part of your salary in advance. Your request will be reviewed and processed by the office."
         onBack={onClose}
       />
 
@@ -113,25 +132,70 @@ export function AdvanceSalaryForm({
           {
             key: "request",
             title: "Salary Advance Request",
-            note: "Submit advance details and the month it is deducted from",
+            note: "Submit request details",
             done: Boolean(canSubmit),
           },
           {
             key: "decision",
             title: "Management Decision",
-            note: "Review and approval decision",
+            note: "Review, approve and disburse",
             done: Boolean(decision),
           },
         ]}
       />
 
       {stage === "decision" ? (
-        <DecisionChoice
-          subject="salary advance"
-          value={decision}
-          onChange={setDecision}
-          disabled={!canDecide}
-        />
+        <>
+          {/* What is being decided, read off the request rather than asked
+              for again. */}
+          <div className="space-y-4">
+            <h3 className="text-base font-semibold text-primary">
+              Request Information
+            </h3>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+              <Settled id="advance-no" label="Request No." value={requestNo} />
+              <Settled
+                id="advance-date"
+                label="Request Date"
+                value={formatDate(new Date().toISOString().slice(0, 10))}
+              />
+              <Settled
+                id="advance-requested"
+                label="Requested Amount"
+                value={amount(Number(draft.amount || 0))}
+              />
+              <Settled
+                id="advance-deducted"
+                label="Deducted From"
+                value={
+                  draft.deductMonth
+                    ? draft.deductMonth + " " + draft.deductYear
+                    : ""
+                }
+              />
+
+              <div className="space-y-2 sm:col-span-2 lg:col-span-4">
+                <FieldLabel htmlFor="advance-details">Request Details</FieldLabel>
+                <Textarea
+                  id="advance-details"
+                  readOnly
+                  tabIndex={-1}
+                  rows={2}
+                  className="cursor-default bg-locked text-muted-foreground"
+                  value={draft.reason}
+                />
+              </div>
+            </div>
+          </div>
+
+          <DecisionChoice
+            subject="salary advance"
+            value={decision}
+            onChange={setDecision}
+            disabled={!canDecide}
+          />
+        </>
       ) : (
       <>
       <Panel title="Advance Salary Application" icon={CalendarClock}>

@@ -99,11 +99,6 @@ export default function AnalyticsSection() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <p className="text-sm text-muted-foreground">
-        Based on cases and transactions only. Invoices and payment status are
-        deliberately excluded.
-      </p>
-
       {/* Lifetime activity, each figure with what those files claim
           between them: the count says how busy the client is, the total
           says how much is riding on it. */}

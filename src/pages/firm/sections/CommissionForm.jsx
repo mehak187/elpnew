@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,6 +23,7 @@ import {
 } from "lucide-react";
 import UploadIcon from "@/components/shared/UploadIcon";
 import { RequestSteps } from "@/components/shared/RequestSteps";
+import { REQUEST_REJECTED } from "@/pages/employees/requestFlow";
 import { cn } from "@/lib/utils";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
 import { PAYMENT_SOURCES, DEFAULT_BANK } from "@/pages/employees/payrollData";
@@ -331,6 +331,13 @@ export default function CommissionForm({
   employee,
   onCancel,
   onSave,
+  // A commission already on the list, opened back into the form to be
+  // followed, corrected or decided.
+  initial = null,
+  // What the first stage does: the commission goes on the list straight away,
+  // waiting on the payment that settles it.
+  onSubmit,
+  onReject,
   // The number this commission will carry, handed down by whoever keeps the
   // list, so the form can show it before it is saved.
   commissionNo = "",
@@ -342,9 +349,25 @@ export default function CommissionForm({
 
   // Which half of the commission is open: what it comes to, and then how it
   // was paid.
-  const [stage, setStage] = useState("commission");
-  const [payment, setPayment] = useState(emptyPayment);
+  const [stage, setStage] = useState(initial ? "payment" : "commission");
+  const [payment, setPayment] = useState(() =>
+    initial
+      ? {
+          ...emptyPayment,
+          method: initial.method || "",
+          bank: initial.bank || DEFAULT_BANK,
+          accountNo: initial.accountNo || "",
+          paymentDate: initial.paymentDate || "",
+          reference: initial.reference || "",
+          notes: initial.paymentNotes || "",
+        }
+      : emptyPayment
+  );
   const [receipt, setReceipt] = useState(null);
+  // Refusing asks for a reason before it takes one.
+  const [rejecting, setRejecting] = useState(false);
+  const [reason, setReason] = useState("");
+  const refused = initial?.status === REQUEST_REJECTED;
   const setPay = (name, value) =>
     setPayment((prev) => ({ ...prev, [name]: value }));
 
@@ -352,11 +375,20 @@ export default function CommissionForm({
   // with - but only to start with. Commission can go to any member of the
   // office who brought in the client or the case, so both questions about who
   // it is for stay open to change.
-  const [draft, setDraft] = useState(() => ({
-    ...emptyDraft,
-    classification: employee ? classificationOf(employee.role) : "",
-    paidTo: employee ? employee.name : "",
-  }));
+  const [draft, setDraft] = useState(() =>
+    initial
+      ? {
+          ...emptyDraft,
+          ...initial,
+          subcategory: initial.type || initial.subcategory || "",
+          rate: String(initial.rate ?? ""),
+        }
+      : {
+          ...emptyDraft,
+          classification: employee ? classificationOf(employee.role) : "",
+          paidTo: employee ? employee.name : "",
+        }
+  );
 
   const setField = (name, value) =>
     setDraft((prev) => ({ ...prev, [name]: value }));
@@ -443,19 +475,46 @@ export default function CommissionForm({
     draft.paidTo &&
     Number(draft.rate) > 0;
 
-  // The commission has to be settled before how it was paid can be entered.
+  /** What was agreed, as the record keeps it. */
+  const agreed = () => {
+    const client = clients.find((c) => c.clientNo === draft.clientNo);
+    return {
+      ...draft,
+      // The subcategory is what kind of commission this is, so the record
+      // keeps it under the name the rest of the system reads it by.
+      type: draft.subcategory,
+      // Only one of the two was asked for, so only one is kept.
+      caseFileNo: isSpecific ? draft.caseFileNo : "",
+      invoiceNo: isSpecific ? draft.invoiceNo : "",
+      periodFrom: isSpecific ? "" : draft.periodFrom,
+      periodTo: isSpecific ? "" : draft.periodTo,
+      clientName: client?.clientName || "",
+      rate: Number(draft.rate),
+    };
+  };
+
+  /**
+   * The commission agreed. It goes on the list straight away, waiting on the
+   * payment that settles it, and the form moves on to that payment.
+   */
   const saveAndContinue = () => {
     if (!canSave) return;
+    onSubmit?.(agreed());
     setStage("payment");
   };
 
   const canPay = canSave && payment.method && payment.paymentDate;
 
+  /** Refused: the commission keeps its temporary number and says why. */
+  const reject = () => {
+    if (!reason.trim()) return;
+    onReject?.(reason.trim());
+  };
+
   const save = () => {
     if (!canPay) return;
-    const client = clients.find((c) => c.clientNo === draft.clientNo);
     onSave({
-      ...draft,
+      ...agreed(),
       // The day it was agreed, which is what the list reads it by.
       date: new Date().toISOString().slice(0, 10),
       method: payment.method,
@@ -465,23 +524,11 @@ export default function CommissionForm({
       reference: payment.reference.trim(),
       receipt: receipt?.name || "",
       paymentNotes: payment.notes.trim(),
-      // The subcategory is what kind of commission this is, so the record
-      // keeps it under the name the rest of the system reads it by.
-      type: draft.subcategory,
-      // Only one of the two was asked for, so only one is kept: a period
-      // on a case-file commission would be a figure nobody set.
-      caseFileNo: isSpecific ? draft.caseFileNo : "",
-      invoiceNo: isSpecific ? draft.invoiceNo : "",
-      periodFrom: isSpecific ? "" : draft.periodFrom,
-      periodTo: isSpecific ? "" : draft.periodTo,
-      clientName: client?.clientName || "",
-      rate: Number(draft.rate),
     });
   };
 
   return (
-    <Card>
-      <CardContent className="space-y-6 p-4 sm:p-6">
+    <div className="space-y-6">
         {/* The two halves of a commission: what it comes to, and then how it
             was paid. Either header opens its own half. */}
         <RequestSteps
@@ -844,14 +891,75 @@ export default function CommissionForm({
             Amount field above is worked out by:
             Legal Fees (Before VAT) x Commission Percentage = Commission Amount,
             counted only on fees the client has actually paid. */}
-        <div className="flex justify-end gap-2">
+        {/* A refused commission says why, and stays as it is. */}
+        {stage === "payment" && refused && (
+          <div className="space-y-2">
+            <FieldLabel htmlFor="commissionRefused">
+              Reason for Rejection
+            </FieldLabel>
+            <Textarea
+              id="commissionRefused"
+              readOnly
+              tabIndex={-1}
+              rows={2}
+              className="cursor-default border-destructive/40 bg-destructive/5 text-destructive"
+              value={initial?.rejectionReason || ""}
+            />
+          </div>
+        )}
+
+        {stage === "payment" && rejecting && (
+          <div className="space-y-2">
+            <FieldLabel htmlFor="commissionReason" required>
+              Reason for Rejection
+            </FieldLabel>
+            <Textarea
+              id="commissionReason"
+              rows={2}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Say why this commission is refused"
+            />
+          </div>
+        )}
+
+        <div className="flex flex-wrap justify-end gap-2">
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
+
+          {stage === "payment" && !refused && onReject && (
+            rejecting ? (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={reject}
+                disabled={!reason.trim()}
+              >
+                Confirm Rejection
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                className="border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setRejecting(true)}
+              >
+                Reject Request
+              </Button>
+            )
+          )}
+
           {stage === "payment" ? (
-            <Button type="button" onClick={save} disabled={!canPay}>
-              Confirm Commission Payment
-            </Button>
+            !refused && (
+              <Button
+                type="button"
+                onClick={save}
+                disabled={!canPay || rejecting}
+              >
+                Confirm Commission Payment
+              </Button>
+            )
           ) : (
             <Button type="button" onClick={saveAndContinue} disabled={!canSave}>
               Save and Continue
@@ -859,7 +967,6 @@ export default function CommissionForm({
             </Button>
           )}
         </div>
-      </CardContent>
-    </Card>
+    </div>
   );
 }
