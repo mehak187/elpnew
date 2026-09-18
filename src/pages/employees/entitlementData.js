@@ -37,6 +37,27 @@ export const ENTITLEMENT_STATUS_CHIP = {
 /** A month of pay, divided into days - what one day of leave is worth. */
 export const DAYS_IN_MONTH = 30;
 
+/** A working day, for turning a monthly salary into an hourly rate. */
+export const HOURS_IN_DAY = 8;
+
+/**
+ * What each tab asks for beyond the classification it shares with the rest.
+ *
+ * "leaveDays" counts days off a leave balance, "hours" counts overtime, and
+ * everything else is a sum the employee names. The amount follows from the
+ * choice, so no tab asks for a figure it can work out.
+ */
+export const ENTITLEMENT_MODE = {
+  leaveEncashment: "leaveDays",
+  overtime: "hours",
+};
+
+export const modeOf = (kind) => ENTITLEMENT_MODE[kind] || "amount";
+
+/** What one hour of overtime is worth. */
+export const hourlyRate = (salary) =>
+  Number((Number(salary || 0) / DAYS_IN_MONTH / HOURS_IN_DAY).toFixed(3));
+
 /**
  * What a run of leave days is worth in money.
  *
@@ -47,6 +68,10 @@ export const encashmentAmount = (salary, days) =>
   Number(
     ((Number(salary || 0) / DAYS_IN_MONTH) * Number(days || 0)).toFixed(3)
   );
+
+/** What overtime hours come to at the employee's own rate. */
+export const overtimeAmount = (salary, hours) =>
+  Number((hourlyRate(salary) * Number(hours || 0)).toFixed(3));
 
 /** Everything one employee has claimed, newest first. */
 export const entitlementsFor = (records, name, kind) =>

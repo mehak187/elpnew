@@ -8,7 +8,7 @@ import TabBar from "@/components/shared/TabBar";
 import { Plus, FileSpreadsheet } from "lucide-react";
 import { ENTITLEMENT_TABS } from "../entitlementTabs";
 import { initialEntitlements } from "../entitlementData";
-import LeaveEncashmentTab from "./LeaveEncashmentTab";
+import EntitlementTab from "./EntitlementTab";
 
 /**
  * What the firm owes an employee beyond their salary.
@@ -70,23 +70,22 @@ export default function EntitlementsSection({
 
       <Card>
         <CardContent className="p-4 sm:p-6">
-          {tab === "leaveEncashment" ? (
-            <LeaveEncashmentTab
-              employee={employee}
-              records={records}
-              onRecords={setRecords}
-              query={query}
-              adding={adding === tab}
-              onCloseAdd={() => setAdding(null)}
-              onOpenAdd={() => setAdding(tab)}
-              canDecide={canEdit}
-            />
-          ) : (
-            <EmptyState>
-              No {current.label.toLowerCase()} has been recorded for{" "}
-              {employee?.name || "this employee"}.
-            </EmptyState>
-          )}
+          {/* Every tab is the same page over a different entitlement, so one
+              component draws them all - keyed so opening another tab starts
+              its own form afresh. */}
+          <EntitlementTab
+            key={tab}
+            kind={tab}
+            label={current.label}
+            employee={employee}
+            records={records}
+            onRecords={setRecords}
+            query={query}
+            adding={adding === tab}
+            onCloseAdd={() => setAdding(null)}
+            onOpenAdd={() => setAdding(tab)}
+            canDecide={canEdit}
+          />
         </CardContent>
       </Card>
     </div>
