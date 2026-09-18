@@ -356,12 +356,9 @@ export default function MergeSection({ client }) {
               ))}
             </ul>
 
-            <p className="rounded-md border bg-muted/40 p-3 text-muted-foreground">
-              From {shortDate(mergeDate)} the two read as{" "}
-              <span className="font-medium text-foreground">
-                {resulting.english} — {other?.clientName} Previously
-              </span>
-              , so anything raised under the old name is still found by it.
+            {/* The name the two will read as from the merge date on. */}
+            <p className="rounded-md border bg-muted/40 p-3 font-medium text-foreground">
+              {resulting.english} — {other?.clientName} Previously
             </p>
           </div>
 

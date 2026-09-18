@@ -36,7 +36,9 @@ import {
   Mail,
   FileCheck,
   FileImage,
-  X,
+  Trash2,
+  Briefcase,
+  Users,
   Gavel,
 } from "lucide-react";
 import {
@@ -60,7 +62,6 @@ import {
   LEAVING_REASONS,
   DEFAULT_DIAL_CODE,
   COUNTRY_DIAL_CODES,
-  EMPLOYEE_DOCUMENT_TYPES,
   EMERGENCY_RELATIONSHIPS,
 } from "@/lib/constants";
 import FinancialBenefitsSection from "./sections/FinancialBenefitsSection";
@@ -73,10 +74,22 @@ import EmployeeCircularsSection from "./sections/CircularsSection";
 import LeavesSection from "./sections/LeavesSection";
 import GeneralRequestSection from "./sections/GeneralRequestSection";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
+import AiSearch from "@/components/shared/AiSearch";
+import {
+  RecordTable,
+  HeadRow,
+  Th,
+  Row,
+  Td,
+} from "@/components/shared/RecordTable";
+import { smartSearch } from "@/lib/search/smartSearch";
+import { formatDate } from "@/pages/firm/firmData";
 import {
   employeeRecords,
   nextEmployeeNo,
   employeeDocuments,
+  documentTypesFor,
+  documentStatus,
   formatUploadedAt,
 } from "./employeeData";
 
@@ -231,6 +244,9 @@ function IconField({ icon, id, label, ...props }) {
 /** How much of a note the field will take, shown as a count while typing. */
 const NOTES_LIMIT = 300;
 
+/** A blank paper: what is asked for before one is filed. */
+const emptyDocument = { type: "", expiry: "", notes: "" };
+
 /** The first field of the form a section's header button jumps to. */
 /** Sections where the header button opens a form instead of scrolling to one. */
 
@@ -319,6 +335,9 @@ const toFormData = (record) =>
         // Records written before the two addresses were told apart hold one
         // `email`, which was always the work one.
         workEmail: record.workEmail || record.email || "",
+        // Older records say what the person does in `designation`; the form
+        // calls it the profession, and the papers they can file follow it.
+        occupation: record.occupation || record.designation || record.role || "",
       }
     : emptyFormData;
 
@@ -359,52 +378,105 @@ export default function EmployeeForm({ self }) {
   // that opens it lives in the page header, above the section itself.
   const [formData, setFormData] = useState(() => toFormData(record));
 
+  // Papers are a list of their own, kept beside the fields rather than in them.
+  const [documents, setDocuments] = useState(employeeDocuments);
+  const [docDraft, setDocDraft] = useState(emptyDocument);
+  const [docFile, setDocFile] = useState(null);
+  const [docQuery, setDocQuery] = useState("");
+  // The page is the list of documents until someone asks to add to it.
+  const [addingDoc, setAddingDoc] = useState(false);
+  // The paper opened from the list to be corrected, if any.
+  const [editingDoc, setEditingDoc] = useState(null);
+
+  /** Back to the list, with nothing half-written left behind. */
+  const closeDocForm = () => {
+    setAddingDoc(false);
+    setEditingDoc(null);
+    setDocDraft(emptyDocument);
+    setDocFile(null);
+  };
+
+  /** A paper opened back into the form, to be replaced or corrected. */
+  const editDocument = (document) => {
+    setEditingDoc(document);
+    setAddingDoc(true);
+    setDocFile(null);
+    setDocDraft({
+      type: document.type,
+      expiry: document.expiry || "",
+      notes: document.notes || "",
+    });
+  };
+
   // Reload when the route moves to a different employee without unmounting.
   const [loadedId, setLoadedId] = useState(id);
   if (id !== loadedId) {
     setLoadedId(id);
     setFormData(toFormData(record));
     setActiveSection("information");
+    closeDocForm();
   }
 
-  // Papers are a list of their own, kept beside the fields rather than in them.
-  const [documents, setDocuments] = useState(employeeDocuments);
-  const [docDraft, setDocDraft] = useState({ type: "", notes: "" });
-  const [docFile, setDocFile] = useState(null);
-  // The page is the list of documents until someone asks to add to it.
-  const [addingDoc, setAddingDoc] = useState(false);
+  // Leaving a section closes what was open in it. A form left open would
+  // still be open on the way back - over another employee's papers, if the
+  // list was visited in between.
+  const [openSection, setOpenSection] = useState(activeSection);
+  if (openSection !== activeSection) {
+    setOpenSection(activeSection);
+    closeDocForm();
+  }
+
+  // A paper is saved with the file it was filed with; correcting one keeps
+  // that file unless a new one is attached over it.
+  const canSaveDocument =
+    docDraft.type && docDraft.expiry && (docFile || editingDoc);
 
   const addDocument = () => {
-    if (!docDraft.type || !docFile) return;
+    if (!canSaveDocument) return;
     const now = new Date();
     const pad = (n) => String(n).padStart(2, "0");
-    setDocuments((prev) => [
-      {
-        id: prev.reduce((max, d) => Math.max(max, d.id), 0) + 1,
-        uploadedAt:
-          now.getFullYear() +
-          "-" +
-          pad(now.getMonth() + 1) +
-          "-" +
-          pad(now.getDate()) +
-          "T" +
-          pad(now.getHours()) +
-          ":" +
-          pad(now.getMinutes()),
-        type: docDraft.type,
-        fileName: docFile.name,
-        fileUrl: URL.createObjectURL(docFile),
-        notes: docDraft.notes,
-      },
-      ...prev,
-    ]);
-    closeDocForm();
-  };
+    const uploadedAt =
+      now.getFullYear() +
+      "-" +
+      pad(now.getMonth() + 1) +
+      "-" +
+      pad(now.getDate()) +
+      "T" +
+      pad(now.getHours()) +
+      ":" +
+      pad(now.getMinutes());
+    const file = docFile
+      ? { fileName: docFile.name, fileUrl: URL.createObjectURL(docFile) }
+      : {};
 
-  const closeDocForm = () => {
-    setAddingDoc(false);
-    setDocDraft({ type: "", notes: "" });
-    setDocFile(null);
+    setDocuments((prev) =>
+      editingDoc
+        ? prev.map((document) =>
+            document.id === editingDoc.id
+              ? {
+                  ...document,
+                  ...file,
+                  type: docDraft.type,
+                  expiry: docDraft.expiry,
+                  notes: docDraft.notes,
+                  // A replaced file is filed on the day it replaced the old one.
+                  ...(docFile ? { uploadedAt } : {}),
+                }
+              : document
+          )
+        : [
+            {
+              id: prev.reduce((max, d) => Math.max(max, d.id), 0) + 1,
+              uploadedAt,
+              type: docDraft.type,
+              expiry: docDraft.expiry,
+              ...file,
+              notes: docDraft.notes,
+            },
+            ...prev,
+          ]
+    );
+    closeDocForm();
   };
 
   const openDocument = (doc) => {
@@ -425,6 +497,12 @@ export default function EmployeeForm({ self }) {
   const orderedDocuments = [...documents].sort(
     (a, b) => String(b.uploadedAt).localeCompare(String(a.uploadedAt)) || b.id - a.id
   );
+  const shownDocuments = smartSearch(orderedDocuments, docQuery);
+
+  // Which papers this employee can file at all, and what decides it.
+  const isOmani =
+    String(formData.nationality || "").trim().toLowerCase() === "omani";
+  const docTypes = documentTypesFor(formData);
 
   const set = (name, value) => setFormData((prev) => ({ ...prev, [name]: value }));
   const onChange = (e) => set(e.target.name, e.target.value);
@@ -560,16 +638,9 @@ export default function EmployeeForm({ self }) {
                         "[&_input:disabled]:bg-locked [&_input:disabled]:opacity-100 [&_textarea:disabled]:bg-locked [&_textarea:disabled]:opacity-100 [&_button:disabled]:bg-locked [&_button:disabled]:opacity-100 [&_button:disabled]:text-foreground"
                     )}
                   >
-                    {readOnly && (
-                      <p className="flex items-start gap-2 rounded-lg border border-primary/30 bg-secondary p-4 text-sm text-primary">
-                        <Lock className="mt-0.5 h-4 w-4 shrink-0" />
-                        <span>
-                          This is your own record, so it is shown here and
-                          not edited. Changes are made by the administration
-                          on the Employees page.
-                        </span>
-                      </p>
-                    )}
+                {/* A record that cannot be edited says so by being locked:
+                    every field wears the one locked background, and nothing
+                    explains that in words. */}
                 {/* Standing travels with the record - but only once there
                     is one. A new employee has not been created yet, so
                     there is nothing to be Active. */}
@@ -839,12 +910,6 @@ export default function EmployeeForm({ self }) {
                     {/* Asked for only once the status says somebody has left */}
                     {!self && hasLeft && (
                       <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
-                        <p className="flex items-start gap-2 text-xs text-muted-foreground">
-                          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                          A status of {formData.status} needs the reason and the
-                          last day worked on record.
-                        </p>
-
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
                           <div className="space-y-2">
                             <Label htmlFor="reasonForLeaving">
@@ -982,15 +1047,6 @@ export default function EmployeeForm({ self }) {
                         onChange={(e) => set("emergencyPhone", e.target.value)}
                       />
                     </div>
-
-                    <p className="flex items-start gap-2 rounded-lg border border-primary/30 bg-secondary p-4 text-sm text-primary">
-                      <Info className="mt-0.5 h-4 w-4 shrink-0" />
-                      <span>
-                        <span className="font-semibold">Note: </span>
-                        Please provide accurate contact details to ensure
-                        effective communication in case of emergencies.
-                      </span>
-                    </p>
                   </div>
                 </SectionCard>
                   </fieldset>
@@ -1009,13 +1065,11 @@ export default function EmployeeForm({ self }) {
                     {/* No heading: the page above is already called Documents.
                         The firm files the papers on an employee's record; on My
                         Profile they are read, not added to. */}
-                    {!readOnly && (
+                    {/* The way to add gives way to the form it opens: while
+                        one paper is being filed there is nothing to add. */}
+                    {!readOnly && !addingDoc && (
                       <div className="mb-6 flex justify-end border-b pb-3">
-                        <Button
-                          type="button"
-                          onClick={() => setAddingDoc(true)}
-                          disabled={addingDoc}
-                        >
+                        <Button type="button" onClick={() => setAddingDoc(true)}>
                           <Plus className="mr-2 h-4 w-4" />
                           Add Document
                         </Button>
@@ -1026,9 +1080,29 @@ export default function EmployeeForm({ self }) {
                     <div className="rounded-lg border p-4">
                       <div className="mb-4">
                         <FormHeading
-                          title="Add Document"
+                          title={editingDoc ? "Edit Document" : "Add Document"}
                           icon={FileText}
                         />
+                      </div>
+
+                      {/* What decides which papers can be filed: an Omani
+                          carries an ID card, a foreigner a resident card and
+                          a passport, and only a lawyer a bar card. */}
+                      <div className="mb-4 flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-2 rounded-md bg-secondary px-3 py-1.5 text-sm text-primary">
+                          <Users className="h-4 w-4 shrink-0 opacity-70" />
+                          Nationality:{" "}
+                          <span className="font-semibold">
+                            {isOmani ? "Omani" : "Non-Omani"}
+                          </span>
+                        </span>
+                        <span className="inline-flex items-center gap-2 rounded-md bg-secondary px-3 py-1.5 text-sm text-primary">
+                          <Briefcase className="h-4 w-4 shrink-0 opacity-70" />
+                          Profession / Occupation:{" "}
+                          <span className="font-semibold">
+                            {formData.occupation || "-"}
+                          </span>
+                        </span>
                       </div>
 
                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
@@ -1041,6 +1115,7 @@ export default function EmployeeForm({ self }) {
                             <Select
                               value={docDraft.type}
                               onValueChange={(value) =>
+                                value &&
                                 setDocDraft((prev) => ({ ...prev, type: value }))
                               }
                             >
@@ -1048,7 +1123,7 @@ export default function EmployeeForm({ self }) {
                                 <SelectValue placeholder="Select document type" />
                               </SelectTrigger>
                               <SelectContent>
-                                {EMPLOYEE_DOCUMENT_TYPES.map((type) => (
+                                {docTypes.map((type) => (
                                   <SelectItem key={type} value={type}>
                                     {type}
                                   </SelectItem>
@@ -1100,7 +1175,26 @@ export default function EmployeeForm({ self }) {
                           </div>
                         </div>
 
-                        <div className="space-y-2 sm:col-span-2">
+                        {/* A paper that runs out has to say when. */}
+                        <div className="space-y-2">
+                          <Label htmlFor="docExpiry">
+                            Expiry Date{" "}
+                            <span className="text-destructive">*</span>
+                          </Label>
+                          <Input
+                            id="docExpiry"
+                            type="date"
+                            value={docDraft.expiry}
+                            onChange={(e) =>
+                              setDocDraft((prev) => ({
+                                ...prev,
+                                expiry: e.target.value,
+                              }))
+                            }
+                          />
+                        </div>
+
+                        <div className="space-y-2">
                           <Label htmlFor="docNotes">Notes</Label>
                           <div className="relative">
                             <Input
@@ -1134,7 +1228,7 @@ export default function EmployeeForm({ self }) {
                         <Button
                           type="button"
                           onClick={addDocument}
-                          disabled={!docDraft.type || !docFile}
+                          disabled={!canSaveDocument}
                         >
                           Save Document
                         </Button>
@@ -1143,97 +1237,132 @@ export default function EmployeeForm({ self }) {
                     )}
 
                     {/* What is already on file */}
-                    <div className="rounded-lg border">
-                      <p className="border-b p-4 font-semibold text-primary">
-                        Uploaded Documents
-                      </p>
+                    <div className="space-y-4 rounded-lg border p-4">
+                      <FormHeading title="Uploaded Documents" icon={FileText} />
 
-                      {documents.length === 0 ? (
-                        <div className="p-6">
-                          <EmptyState>No documents uploaded yet.</EmptyState>
-                        </div>
+                      <AiSearch
+                        value={docQuery}
+                        onChange={setDocQuery}
+                        placeholder="Ask about documents..."
+                      />
+
+                      {shownDocuments.length === 0 ? (
+                        <EmptyState>No documents uploaded yet.</EmptyState>
                       ) : (
-                        <div className="overflow-x-auto p-4 pt-0">
-                          <table className="mt-4 w-full min-w-[720px] border text-sm">
-                            <thead>
-                              <tr className="border-b bg-secondary/60 text-left text-primary">
-                                <th className="border-r last:border-r-0 p-3 font-semibold">No.</th>
-                                <th className="border-r last:border-r-0 p-3 font-semibold">
-                                  Upload Date
-                                </th>
-                                <th className="border-r last:border-r-0 p-3 font-semibold">
-                                  Document Type &amp; Attachment
-                                </th>
-                                <th className="border-r last:border-r-0 p-3 font-semibold">Notes</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {orderedDocuments.map((document, index) => {
-                                const Icon = fileIcon(document.fileName);
-                                return (
-                                  <tr
-                                    key={document.id}
-                                    className="border-b transition-colors last:border-0 hover:bg-primary/10"
-                                  >
-                                    {/* The row number opens the paper it stands for */}
-                                    <td className="border-r last:border-r-0 p-3 align-top">
-                                      <button
-                                        type="button"
-                                        onClick={() => openDocument(document)}
-                                        className="rounded font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
-                                      >
-                                        {orderedDocuments.length - index}
-                                      </button>
-                                    </td>
-                                    <td className="border-r last:border-r-0 whitespace-nowrap p-3 align-top">
-                                      {formatUploadedAt(document.uploadedAt)}
-                                    </td>
-                                    <td className="border-r last:border-r-0 p-3 align-top">
-                                      <span className="block">
-                                        {document.type}
+                        <RecordTable minWidth={980}>
+                          <HeadRow>
+                            <Th width="8%">Serial No.</Th>
+                            <Th width="16%">Upload Date</Th>
+                            <Th width="26%">Document Type &amp; Attachment</Th>
+                            <Th width="16%">Expiry Date &amp; Status</Th>
+                            <Th width="26%">Notes</Th>
+                            <Th width="8%">Delete</Th>
+                          </HeadRow>
+                          <tbody>
+                            {shownDocuments.map((document, index) => {
+                              const Icon = fileIcon(document.fileName);
+                              const status = documentStatus(document);
+                              return (
+                                <Row key={document.id}>
+                                  {/* The serial number opens the paper back
+                                      into the form above, to be replaced or
+                                      corrected. */}
+                                  <Td className="align-top">
+                                    {readOnly ? (
+                                      <span className="font-medium text-primary">
+                                        {shownDocuments.length - index}
                                       </span>
+                                    ) : (
                                       <button
                                         type="button"
-                                        onClick={() => openDocument(document)}
-                                        className="mt-1 inline-flex items-center gap-1.5 rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                                        onClick={() => editDocument(document)}
+                                        className="rounded font-bold text-primary underline underline-offset-2 hover:no-underline focus:outline-none focus:ring-2 focus:ring-ring"
                                       >
-                                        <Icon
-                                          className={cn(
-                                            "h-4 w-4 shrink-0",
-                                            isImage(document.fileName)
-                                              ? "text-green-600"
-                                              : "text-red-600"
-                                          )}
-                                        />
-                                        {document.fileName}
+                                        {shownDocuments.length - index}
                                       </button>
-                                    </td>
-                                    <td className="border-r last:border-r-0 p-3 align-top text-muted-foreground">
-                                      <div className="flex items-start justify-between gap-3">
-                                        <span>{document.notes || "-"}</span>
-                                        {/* Taken off the record by the firm, never
-                                            from My Profile, which only reads. */}
-                                        {!readOnly && (
-                                          <button
-                                            type="button"
-                                            onClick={() => setRemovingDoc(document)}
-                                            title={"Delete " + document.fileName}
-                                            className="shrink-0 rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus:outline-none focus:ring-2 focus:ring-ring"
-                                          >
-                                            <X className="h-4 w-4" />
-                                            <span className="sr-only">
-                                              Delete {document.fileName}
-                                            </span>
-                                          </button>
+                                    )}
+                                  </Td>
+
+                                  <Td className="whitespace-nowrap align-top">
+                                    {formatUploadedAt(document.uploadedAt)}
+                                  </Td>
+
+                                  <Td className="align-top">
+                                    <span className="block">
+                                      {document.type}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => openDocument(document)}
+                                      className="mt-1 inline-flex items-center gap-1.5 rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                                    >
+                                      <Icon
+                                        className={cn(
+                                          "h-4 w-4 shrink-0",
+                                          isImage(document.fileName)
+                                            ? "text-green-600"
+                                            : "text-red-600"
                                         )}
-                                      </div>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
+                                      />
+                                      {document.fileName}
+                                    </button>
+                                  </Td>
+
+                                  {/* When it runs out, and whether it has. */}
+                                  <Td className="whitespace-nowrap align-top">
+                                    {document.expiry ? (
+                                      <>
+                                        <span className="block">
+                                          {formatDate(document.expiry)}
+                                        </span>
+                                        <span
+                                          className={cn(
+                                            "mt-1 inline-flex items-center gap-1.5 text-xs font-semibold",
+                                            status === "Active"
+                                              ? "text-green-700"
+                                              : "text-destructive"
+                                          )}
+                                        >
+                                          <span
+                                            aria-hidden="true"
+                                            className="h-2 w-2 shrink-0 rounded-full bg-current"
+                                          />
+                                          {status}
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <span className="text-muted-foreground">
+                                        -
+                                      </span>
+                                    )}
+                                  </Td>
+
+                                  <Td className="align-top text-muted-foreground">
+                                    {document.notes || "-"}
+                                  </Td>
+
+                                  {/* Taken off the record by the firm, never
+                                      from My Profile, which only reads. */}
+                                  <Td className="text-center align-top">
+                                    {!readOnly && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setRemovingDoc(document)}
+                                        title={"Delete " + document.fileName}
+                                        className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus:outline-none focus:ring-2 focus:ring-ring"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                        <span className="sr-only">
+                                          Delete {document.fileName}
+                                        </span>
+                                      </button>
+                                    )}
+                                  </Td>
+                                </Row>
+                              );
+                            })}
+                          </tbody>
+                        </RecordTable>
                       )}
                     </div>
 

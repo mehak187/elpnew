@@ -254,9 +254,6 @@ export function CaseFlowTrend() {
         </Select>
       }
     >
-      <p className="mb-4 text-xs text-muted-foreground">
-        Total cases received by the office.
-      </p>
       <BarTrendChart rows={rows} unit="case" />
     </SectionCard>
   );

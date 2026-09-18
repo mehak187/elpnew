@@ -949,15 +949,6 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                   </div>
                 </div>
 
-                <p className="flex items-start gap-2 rounded-lg border border-primary/30 bg-secondary p-4 text-sm text-primary">
-                  <Info className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>
-                    The transferred amount will be moved automatically from the
-                    source account to the destination account. Balances will be
-                    updated accordingly in both accounts.
-                  </span>
-                </p>
-
                 <div className="flex justify-end">
                   <Button onClick={saveTransfer} disabled={!canTransfer}>
                     Save Transfer

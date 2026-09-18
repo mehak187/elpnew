@@ -177,9 +177,6 @@ export default function DailyActivitiesSection() {
               className="bg-locked text-muted-foreground"
               value={formatDuration(officeMinutes)}
             />
-            <p className="text-xs text-muted-foreground">
-              Calculated from check-in and check-out
-            </p>
           </div>
 
           <div className="space-y-2">
@@ -191,9 +188,6 @@ export default function DailyActivitiesSection() {
               className="bg-locked text-muted-foreground"
               value={formatDuration(activeMinutes)}
             />
-            <p className="text-xs text-muted-foreground">
-              Recorded by YANDS - idle time is not counted
-            </p>
           </div>
         </div>
       </div>

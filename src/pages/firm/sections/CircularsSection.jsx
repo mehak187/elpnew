@@ -229,14 +229,6 @@ export default function CircularsSection({ canEdit }) {
             title={editing ? "Correct Circular" : "New Circular"}
           />
 
-          {editing && (
-            <p className="rounded-lg border border-primary/30 bg-secondary p-4 text-sm text-primary">
-              Saving issues a new circular ({circularNo}) with today's date.{" "}
-              {editing.circularNo} stays on record unchanged, marked as
-              superseded, and everyone must acknowledge the new version.
-            </p>
-          )}
-
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
             <div className="space-y-2">
               <Label htmlFor="circularNo">Circular Number</Label>
@@ -376,11 +368,6 @@ export default function CircularsSection({ canEdit }) {
             </p>
           </div>
 
-
-          <p className="rounded-lg border border-primary/30 bg-secondary p-4 text-sm text-primary">
-            Once issued, everyone in {draft.targetGroup} is stopped at sign-in
-            until they acknowledge this circular.
-          </p>
 
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Button variant="outline" onClick={close}>

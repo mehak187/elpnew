@@ -209,13 +209,7 @@ export default function PerformanceSection() {
     <div className="space-y-6">
       {/* What is being reported on */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4">
-        <div>
-          <p className="font-semibold text-primary">Performance Statistics</p>
-          <p className="text-xs text-muted-foreground">
-            Collected by the system from recorded activity. Compared only against
-            this employee's own earlier work.
-          </p>
-        </div>
+        <p className="font-semibold text-primary">Performance Statistics</p>
         <Select value={periodKey} onValueChange={setPeriodKey}>
           <SelectTrigger className="w-56">
             <SelectValue />

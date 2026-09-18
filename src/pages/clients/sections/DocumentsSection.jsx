@@ -496,15 +496,6 @@ export default function DocumentsSection({ formData, onChange }) {
         onPageSizeChange={setPageSize}
       />
 
-      <p className="flex items-start gap-2 rounded-md border-l-4 border-l-amber-500 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-        <span>
-          <span className="font-semibold">Important:</span> When adding or
-          uploading a document, the field &ldquo;Upload Date&rdquo; is now shown
-          as &ldquo;Document Date&rdquo;. Please enter the actual date of the
-          document, not the upload date.
-        </span>
-      </p>
     </div>
   );
 }

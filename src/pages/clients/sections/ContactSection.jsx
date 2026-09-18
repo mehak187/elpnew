@@ -128,28 +128,8 @@ export default function ContactSection({ formData, onChange, onSelectChange }) {
         onChange={(value) => onSelectChange("emailNotification", value)}
       />
 
-      {/* Switching a channel on does not put the client on every save. Only
-          an event the firm has marked as the client's business is sent, and
-          an internal one never is - so say exactly that, here, where the
-          switch is turned on. */}
-      {(formData.whatsappNotification === "Yes" ||
-        formData.emailNotification === "Yes") && (
-        <div className="sm:col-span-2 lg:col-span-4">
-          <p className="rounded-md border-l-4 border-l-blue-500 bg-blue-50 px-3 py-2 text-xs text-blue-900">
-            Sent by
-            {formData.whatsappNotification === "Yes" &&
-            formData.emailNotification === "Yes"
-              ? " WhatsApp and email"
-              : formData.whatsappNotification === "Yes"
-                ? " WhatsApp"
-                : " email"}
-            , but only for events marked{" "}
-            <span className="font-semibold">Client Notification: Yes</span>{" "}
-            &mdash; Case, Hearing, Judgment, Financial, Document or Contract.
-            Internal events are never sent to the client.
-          </p>
-        </div>
-      )}
+      {/* Which events actually reach the client is decided by the event
+          itself, not explained here: the page carries no prose. */}
     </div>
   );
 }

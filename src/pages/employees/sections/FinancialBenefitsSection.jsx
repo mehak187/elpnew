@@ -215,6 +215,15 @@ export default function FinancialBenefitsSection({
   // Which tab's form is open, if any.
   const [adding, setAdding] = useState(null);
 
+  // Moving to another tab closes what was open on the last one. A form left
+  // open would still be open on the way back, over records it was never
+  // started from.
+  const [openTab, setOpenTab] = useState(tab);
+  if (openTab !== tab) {
+    setOpenTab(tab);
+    setAdding(null);
+  }
+
   // Whether the salary breakdown above the history is open. Closed to start:
   // the history is what is looked at most, and the breakdown is a long form
   // that would push it off the screen every time the tab is opened.

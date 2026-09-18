@@ -101,7 +101,6 @@ export function AdvanceSalaryForm({
       <FormHeading
         icon={CalendarClock}
         title="Request Salary Advance"
-        note="Ask for part of your salary in advance. Your request will be reviewed and processed by the office."
         onBack={onClose}
       />
 
