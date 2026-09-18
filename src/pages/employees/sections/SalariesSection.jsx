@@ -27,7 +27,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { Save, FileCheck } from "lucide-react";
+import { Save, FileCheck, ArrowRight } from "lucide-react";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
 import {
   ALLOWANCES,
@@ -175,8 +175,14 @@ function Locked({ id, label, value }) {
   );
 }
 
-/** A figure typed into the salary being recorded. The label says (OMR). */
-function Typed({ id, label, value, onChange }) {
+/**
+ * A figure typed into the salary being recorded. The label says (OMR).
+ *
+ * `held` marks money coming off the pay rather than going onto it, so any
+ * figure above zero is read in red - the one colour money held back wears
+ * everywhere in the system.
+ */
+function Typed({ id, label, value, onChange, held }) {
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>
@@ -186,6 +192,7 @@ function Typed({ id, label, value, onChange }) {
         id={id}
         inputMode="decimal"
         placeholder="0.000"
+        className={cn(held && Number(value) > 0 && "font-semibold text-destructive")}
         value={value}
         onChange={(e) => onChange(e.target.value.replace(/[^\d.]/g, ""))}
       />
@@ -541,6 +548,7 @@ export default function SalariesSection({
               <Typed
                 id="pay-deductions"
                 label="Total Deductions"
+                held
                 value={payDeductions}
                 onChange={(value) => setPay("deductions", value)}
               />
@@ -566,7 +574,8 @@ export default function SalariesSection({
                 Cancel
               </Button>
               <Button type="button" onClick={saveSalary} disabled={!canSaveSalary}>
-                Save Salary
+                Save and Continue
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           </>
