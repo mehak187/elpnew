@@ -299,6 +299,14 @@ export default function LeaseDetails() {
     setInstallmentNo(null);
   }
 
+  // Leaving a section closes what was open in it: a panel left open would
+  // still be open on the way back.
+  const [openSection, setOpenSection] = useState(section);
+  if (openSection !== section) {
+    setOpenSection(section);
+    setInstallmentNo(null);
+  }
+
   if (!lease || !draft) {
     return (
       <Card>

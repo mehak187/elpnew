@@ -306,10 +306,13 @@ export default function LeasesPage() {
             </p>
           </div>
         </div>
-        <Button type="button" onClick={() => setAdding(true)} disabled={adding}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add New Lease
-        </Button>
+        {/* The way to add gives way to the form it opens. */}
+        {!adding && (
+          <Button type="button" onClick={() => setAdding(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add New Lease
+          </Button>
+        )}
       </div>
 
       {adding && (

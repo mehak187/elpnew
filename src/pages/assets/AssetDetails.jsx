@@ -370,6 +370,14 @@ export default function AssetDetails() {
     setAddingExpense(false);
   }
 
+  // Leaving a section closes what was open in it: a form left open would
+  // still be open on the way back.
+  const [openSection, setOpenSection] = useState(section);
+  if (openSection !== section) {
+    setOpenSection(section);
+    setAddingExpense(false);
+  }
+
   if (!asset || !draft) {
     return (
       <Card>

@@ -141,19 +141,21 @@ export default function DocumentsSection({ canEdit }) {
     <div className="space-y-6">
       {/* The section's own heading, so the way to add to it sits on the
           same line rather than costing a row of its own. */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-        <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">Documents</h2>
-        {canEdit && (
-          <Button
-            type="button"
-            onClick={() => setAdding(true)}
-            disabled={adding}
-          >
-            <Plus className="mr-1.5 h-4 w-4" />
-            Add Document
-          </Button>
-        )}
-      </div>
+      {/* One heading at a time: this row gives way to the form's own heading
+          while a paper is being filed. */}
+      {!adding && (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+          <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
+            Documents
+          </h2>
+          {canEdit && (
+            <Button type="button" onClick={() => setAdding(true)}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              Add Document
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* The form takes the place of the list while it is being filled in:
           a page is one thing at a time, either the documents on file or the
