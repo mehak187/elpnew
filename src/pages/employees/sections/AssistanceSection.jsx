@@ -40,9 +40,6 @@ import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
 import { PAYMENT_SOURCES, DEFAULT_BANK } from "../payrollData";
 import {
   DEFAULT_ASSISTANCE_BOOKING,
-  ASSISTANCE_BENEFICIARIES,
-  DEFAULT_BENEFICIARY,
-  documentFor,
   subcategoriesOf,
   assistanceRecords,
   statusOf,
@@ -54,7 +51,6 @@ const PAGE_SIZE = 10;
 
 const emptyDraft = {
   ...DEFAULT_ASSISTANCE_BOOKING,
-  beneficiary: DEFAULT_BENEFICIARY,
   amount: "",
   method: "",
   account: "",
@@ -164,10 +160,7 @@ export default function AssistanceSection({
   // What a request needs: what it is for, who it is for, how much, and why.
   // How it will be paid is the office's business once the request is granted.
   const canSave =
-    draft.subcategory &&
-    draft.beneficiary &&
-    Number(draft.amount) > 0 &&
-    draft.notes.trim();
+    draft.subcategory && Number(draft.amount) > 0 && draft.notes.trim();
 
   /**
    * The request submitted. It is on record straight away, waiting for a
@@ -346,12 +339,6 @@ export default function AssistanceSection({
                 label="Assistance Type"
                 value={open?.subcategory || ""}
               />
-              <Locked
-                id="decision-beneficiary"
-                label="Beneficiary"
-                value={open?.beneficiary || ""}
-              />
-
               <div className="space-y-2">
                 <FieldLabel htmlFor="decision-approved" required>
                   Approved Amount (<Rial />)
@@ -565,63 +552,22 @@ export default function AssistanceSection({
             </Select>
           </div>
 
-          {/* The request is the employee's; who the help is for need not be.
-              A bereavement is a parent's, school fees are a child's. */}
+          {/* The paper that backs the request travels with what it is for,
+              rather than costing a field of its own. */}
           <div className="space-y-2">
-            <FieldLabel htmlFor="assistance-beneficiary" required>
-              Beneficiary
-            </FieldLabel>
-            <Select
-              value={draft.beneficiary}
-              onValueChange={(value) => value && set("beneficiary", value)}
-            >
-              <SelectTrigger id="assistance-beneficiary">
-                <SelectValue placeholder="Select Beneficiary" />
-              </SelectTrigger>
-              <SelectContent>
-                {ASSISTANCE_BENEFICIARIES.map((who) => (
-                  <SelectItem key={who} value={who}>
-                    {who}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* The two share the row evenly: half to the figure, half to the
-              document that backs it. */}
-          <div className="space-y-2 sm:col-span-1 lg:col-span-2">
             <FieldLabel htmlFor="assistance-amount" required>
               Requested Amount (<Rial />)
             </FieldLabel>
-            <Input
-              id="assistance-amount"
-              inputMode="decimal"
-              value={draft.amount}
-              onChange={(e) =>
-                set("amount", e.target.value.replace(/[^\d.]/g, ""))
-              }
-              placeholder="0.000"
-            />
-          </div>
-
-          {/* Whatever backs the request - a bill, a letter, a report. The box
-              names the file that is attached; the button is what attaches it. */}
-          <div className="space-y-2 sm:col-span-1 lg:col-span-2">
-            <FieldLabel htmlFor="assistance-proof-name">
-              Supporting Document
-            </FieldLabel>
             <div className="flex w-full min-w-0 items-center gap-2">
               <Input
-                id="assistance-proof-name"
-                readOnly
-                tabIndex={-1}
-                value={proof ? proof.name : ""}
-                placeholder="No file selected"
-                className={cn(
-                  "min-w-0 flex-1 cursor-default",
-                  proof && "border-green-600 text-green-700"
-                )}
+                id="assistance-amount"
+                inputMode="decimal"
+                className="min-w-0 flex-1"
+                value={draft.amount}
+                onChange={(e) =>
+                  set("amount", e.target.value.replace(/[^\d.]/g, ""))
+                }
+                placeholder="0.000"
               />
               <Button
                 variant="outline"
@@ -651,12 +597,6 @@ export default function AssistanceSection({
                 onChange={(e) => e.target.files[0] && setProof(e.target.files[0])}
               />
             </div>
-            {/* What the office will ask to see, so it comes with the request. */}
-            {!proof && documentFor(draft.subcategory) && (
-              <p className="text-xs text-muted-foreground">
-                Attach: {documentFor(draft.subcategory)}
-              </p>
-            )}
           </div>
 
           <div className="space-y-2 sm:col-span-2 lg:col-span-4">
@@ -822,9 +762,6 @@ export default function AssistanceSection({
                               </span>
                             </button>
                           )}
-                        </span>
-                        <span className="block text-xs text-muted-foreground">
-                          For: {record.beneficiary}
                         </span>
                         <span className="block text-xs text-muted-foreground">
                           {record.purpose}
