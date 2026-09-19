@@ -1160,7 +1160,7 @@ export default function EmployeeForm({ self }) {
                             Document Type{" "}
                             <span className="text-destructive">*</span>
                           </Label>
-                          <div className="flex gap-2">
+                          <div className="flex w-full min-w-0 items-center gap-2">
                             <Select
                               value={docDraft.type}
                               onValueChange={(value) =>
@@ -1168,7 +1168,7 @@ export default function EmployeeForm({ self }) {
                                 setDocDraft((prev) => ({ ...prev, type: value }))
                               }
                             >
-                              <SelectTrigger id="docType" className="flex-1">
+                              <SelectTrigger id="docType" className="min-w-0 flex-1">
                                 <SelectValue placeholder="Select document type" />
                               </SelectTrigger>
                               <SelectContent>

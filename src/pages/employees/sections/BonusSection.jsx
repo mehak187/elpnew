@@ -68,7 +68,6 @@ const emptyPayment = () => ({
   accountNo: "",
   paidOn: todayIso(),
   reference: "",
-  notes: "",
 });
 
 /** A label with its required mark, so the asterisk is coloured everywhere. */
@@ -188,12 +187,14 @@ function BonusDisbursement({
         />
       </div>
 
-      {/* What the bank called the payment, and the proof of it. */}
-      <div className="space-y-2 sm:col-span-1 lg:col-span-2">
+      {/* What the bank called the payment, and the proof of it - on the same
+          row as the rest of the transfer. */}
+      <div className="space-y-2">
         <FieldLabel htmlFor="bonus-pay-reference">Payment Reference</FieldLabel>
-        <div className="flex gap-2">
+        <div className="flex w-full min-w-0 items-center gap-2">
           <Input
             id="bonus-pay-reference"
+            className="min-w-0 flex-1"
             value={payment.reference}
             onChange={(e) => onChange("reference", e.target.value)}
             placeholder="TRX-0000-00000"
@@ -224,17 +225,6 @@ function BonusDisbursement({
         </div>
       </div>
 
-      <div className="space-y-2 sm:col-span-2">
-        <FieldLabel htmlFor="bonus-pay-notes">Notes</FieldLabel>
-        <Textarea
-          id="bonus-pay-notes"
-          rows={3}
-          maxLength={NOTES_LIMIT}
-          value={payment.notes}
-          onChange={(e) => onChange("notes", e.target.value)}
-          placeholder="Enter payment notes"
-        />
-      </div>
     </div>
   );
 }
@@ -343,7 +333,6 @@ export default function BonusSection({
       paidOn: payment.paidOn,
       reference: payment.reference.trim(),
       receipt: receipt?.name || "",
-      paymentNotes: payment.notes.trim(),
     });
     close();
   };
@@ -378,7 +367,6 @@ export default function BonusSection({
       accountNo: bonus.accountNo || "",
       paidOn: bonus.paidOn || todayIso(),
       reference: bonus.reference || "",
-      notes: bonus.paymentNotes || "",
     });
     onOpenAdd?.();
   };

@@ -254,7 +254,7 @@ function Tile({ icon, title, note, value, tone }) {
             tone === "held" ? "text-destructive" : "text-primary"
           )}
         />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="font-semibold text-primary">{title}</p>
           <p className="text-xs text-muted-foreground">{note}</p>
         </div>
@@ -771,9 +771,10 @@ export default function SalariesSection({
                   icon-sized either way. */}
               <div className="space-y-2">
                 <Label htmlFor="pay-reference">Payment Reference</Label>
-                <div className="flex items-center gap-2">
+                <div className="flex w-full min-w-0 items-center gap-2">
                   <Input
                     id="pay-reference"
+                    className="min-w-0 flex-1"
                     value={payment.reference}
                     onChange={(e) => setPay("reference", e.target.value)}
                     placeholder="TRX-0000-00000"

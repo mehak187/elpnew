@@ -450,9 +450,10 @@ export default function AssistanceSection({
                     <FieldLabel htmlFor="decision-reference">
                       Payment Reference
                     </FieldLabel>
-                    <div className="flex gap-2">
+                    <div className="flex w-full min-w-0 items-center gap-2">
                       <Input
                         id="decision-reference"
+                        className="min-w-0 flex-1"
                         value={review.reference}
                         onChange={(e) => setReviewField("reference", e.target.value)}
                         placeholder="AST-0000-00000"
@@ -610,7 +611,7 @@ export default function AssistanceSection({
             <FieldLabel htmlFor="assistance-proof-name">
               Supporting Document
             </FieldLabel>
-            <div className="flex gap-2">
+            <div className="flex w-full min-w-0 items-center gap-2">
               <Input
                 id="assistance-proof-name"
                 readOnly
@@ -618,7 +619,7 @@ export default function AssistanceSection({
                 value={proof ? proof.name : ""}
                 placeholder="No file selected"
                 className={cn(
-                  "flex-1 cursor-default",
+                  "min-w-0 flex-1 cursor-default",
                   proof && "border-green-600 text-green-700"
                 )}
               />
