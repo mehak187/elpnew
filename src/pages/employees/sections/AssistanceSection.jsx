@@ -765,8 +765,9 @@ export default function AssistanceSection({
                     <Row key={record.id}>
                       {/* A request waiting on a decision carries its
                           temporary number and opens back into the form; a
-                          decided one takes its place in the run and opens the
-                          document it was made with. */}
+                          decided one simply takes its place in the run. The
+                          paper it was made with is beside what it is for,
+                          not beside the number. */}
                       <Td className="whitespace-nowrap font-medium text-primary">
                         {status === "Pending" || status === "Rejected" ? (
                           <button
@@ -775,20 +776,6 @@ export default function AssistanceSection({
                             className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                           >
                             {record.requestNo || start + index + 1}
-                          </button>
-                        ) : record.proof ? (
-                          <button
-                            type="button"
-                            onClick={() => openProof(record)}
-                            title={record.proof}
-                            className="inline-flex items-center gap-1.5 rounded focus:outline-none focus:ring-2 focus:ring-ring"
-                          >
-                            {start + index + 1}
-                            {isImage(record.proof) ? (
-                              <FileImage className="h-4 w-4 shrink-0 text-green-600" />
-                            ) : (
-                              <FileText className="h-4 w-4 shrink-0 text-red-600" />
-                            )}
                           </button>
                         ) : (
                           start + index + 1
@@ -812,8 +799,29 @@ export default function AssistanceSection({
                       {/* What was asked for, who for, and why. Where it has
                           got to is said under its number. */}
                       <Td className="text-left">
-                        <span className="block font-semibold text-primary">
-                          {record.subcategory}
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold text-primary">
+                            {record.subcategory}
+                          </span>
+                          {/* The paper the request was made with, beside what
+                              it was made for. */}
+                          {record.proof && (
+                            <button
+                              type="button"
+                              onClick={() => openProof(record)}
+                              title={record.proof}
+                              className="rounded focus:outline-none focus:ring-2 focus:ring-ring"
+                            >
+                              {isImage(record.proof) ? (
+                                <FileImage className="h-4 w-4 shrink-0 text-green-600" />
+                              ) : (
+                                <FileText className="h-4 w-4 shrink-0 text-red-600" />
+                              )}
+                              <span className="sr-only">
+                                Open {record.proof}
+                              </span>
+                            </button>
+                          )}
                         </span>
                         <span className="block text-xs text-muted-foreground">
                           For: {record.beneficiary}

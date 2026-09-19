@@ -558,14 +558,12 @@ export default function LoansSection({
                   id="decision-last-date"
                   label="Last Installment Date"
                   value={reviewLastDue ? formatDate(reviewLastDue) : ""}
-                  className="sm:col-span-1 lg:col-span-2"
                 />
 
                 <Derived
                   id="decision-last-amount"
                   label="Last Installment Amount (OMR)"
                   value={reviewPlan.months ? amountValue(reviewPlan.last) : ""}
-                  className="sm:col-span-1 lg:col-span-2"
                 />
 
                 <div className="space-y-2 sm:col-span-2 lg:col-span-4">
@@ -676,14 +674,12 @@ export default function LoansSection({
                 id="loan-last-date"
                 label="Last Installment Date"
                 value={lastDue ? formatDate(lastDue) : ""}
-                className="sm:col-span-1 lg:col-span-2"
               />
 
               <Derived
                 id="loan-last-amount"
                 label="Last Installment Amount (OMR)"
                 value={plan.months ? amountValue(plan.last) : ""}
-                className="sm:col-span-1 lg:col-span-2"
               />
             </div>
           )}
