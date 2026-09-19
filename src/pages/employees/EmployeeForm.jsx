@@ -1342,7 +1342,7 @@ export default function EmployeeForm({ self }) {
                                       <button
                                         type="button"
                                         onClick={() => editDocument(document)}
-                                        className="rounded font-bold text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                                        className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                                       >
                                         {shownDocuments.length - index}
                                       </button>
@@ -1360,7 +1360,7 @@ export default function EmployeeForm({ self }) {
                                     <button
                                       type="button"
                                       onClick={() => openDocument(document)}
-                                      className="mt-1 inline-flex items-center gap-1.5 rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                                      className="mt-1 inline-flex items-center gap-1.5 rounded text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                                     >
                                       <Icon
                                         className={cn(

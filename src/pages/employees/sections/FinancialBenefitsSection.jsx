@@ -236,9 +236,8 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd }) {
                 <Th width="13%">Commission Date</Th>
                 <Th width="18%">Client Name</Th>
                 <Th width="18%">Payee</Th>
-                <Th width="22%">Legal Fees &amp; Commission</Th>
-                <Th width="10%">Status</Th>
-                <Th width="16%">Notes</Th>
+                <Th width="24%">Legal Fees &amp; Commission</Th>
+                <Th width="18%">Notes</Th>
               </HeadRow>
               <tbody>
                 {found.map((record) => (
@@ -252,11 +251,21 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd }) {
                         <button
                           type="button"
                           onClick={() => track(record)}
-                          className="rounded font-bold text-primary underline underline-offset-2 hover:no-underline focus:outline-none focus:ring-2 focus:ring-ring"
+                          className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                         >
                           {record.requestNo}
                         </button>
                       )}
+
+                      {/* Where it stands, under the number it belongs to. */}
+                      <span
+                        className={cn(
+                          "mt-1 block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold",
+                          COMMISSION_STATUS_CHIP[record.status || COMMISSION_PAID]
+                        )}
+                      >
+                        {record.status || COMMISSION_PAID}
+                      </span>
                     </Td>
                     <Td className="whitespace-nowrap text-primary">
                       {commissionDate(record)}
@@ -284,17 +293,6 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd }) {
                           Paid Commission:{" "}
                         </span>
                         {money(commissionOn(record))}
-                      </span>
-                    </Td>
-
-                    <Td className="text-center">
-                      <span
-                        className={cn(
-                          "inline-block rounded-md px-3 py-1 text-xs font-semibold",
-                          COMMISSION_STATUS_CHIP[record.status || COMMISSION_PAID]
-                        )}
-                      >
-                        {record.status || COMMISSION_PAID}
                       </span>
                     </Td>
 

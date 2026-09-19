@@ -376,7 +376,7 @@ export default function TransactionsSection({
                           <a
                             href={row.reference}
                             onClick={(event) => event.preventDefault()}
-                            className="mt-1 inline-flex items-center gap-1.5 rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                            className="mt-1 inline-flex items-center gap-1.5 rounded text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                           >
                             <FileText className="h-3.5 w-3.5 shrink-0" />
                             {row.documentAction}

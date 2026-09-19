@@ -319,7 +319,7 @@ export default function LeavesSection({ employee, canReview = true }) {
                           <button
                             type="button"
                             onClick={() => openReview(leave)}
-                            className="rounded font-bold text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                            className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                           >
                             {leave.leaveNo || "-"}
                           </button>

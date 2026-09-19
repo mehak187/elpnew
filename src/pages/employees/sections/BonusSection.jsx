@@ -637,23 +637,23 @@ export default function BonusSection({
         ) : (
           <RecordTable minWidth={900}>
             <HeadRow>
-              <Th width="6%">No.</Th>
+              <Th width="10%">No.</Th>
               <Th width="14%">Bonus Date</Th>
-              <Th width="26%">Bonus Details</Th>
+              <Th width="30%">Bonus Details</Th>
               {/* The unit is said once, in the heading, so the figures under
                   it can be read against each other. */}
-              <Th width="16%" className="text-right">
+              <Th width="18%" className="text-right">
                 Bonus Amount (OMR)
               </Th>
-              <Th width="16%">Status</Th>
-              <Th width="22%">Notes</Th>
+              <Th width="28%">Notes</Th>
             </HeadRow>
             <tbody>
               {mine.map((bonus, index) => (
                 <Row key={bonus.id}>
                   {/* A bonus waiting on a decision carries its temporary
                       number and opens back into the form; one already paid
-                      out simply takes its place in the run. */}
+                      out simply takes its place in the run. Where it stands
+                      is said under its number rather than in a column. */}
                   <Td className="whitespace-nowrap font-medium text-primary">
                     {bonus.status === BONUS_DISBURSED ? (
                       index + 1
@@ -661,11 +661,20 @@ export default function BonusSection({
                       <button
                         type="button"
                         onClick={() => track(bonus)}
-                        className="rounded font-bold text-primary underline underline-offset-2 hover:no-underline focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                       >
                         {bonus.requestNo || index + 1}
                       </button>
                     )}
+                    <span
+                      className={cn(
+                        "mt-1 block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold",
+                        BONUS_STATUS_CHIP[bonus.status] ||
+                          REQUEST_STATUS_CHIP[bonus.status]
+                      )}
+                    >
+                      {bonus.status}
+                    </span>
                   </Td>
                   <Td className="whitespace-nowrap text-primary">
                     {formatDate(bonusDate(bonus))}
@@ -680,17 +689,6 @@ export default function BonusSection({
                   </Td>
                   <Td className="whitespace-nowrap text-right font-bold text-green-700">
                     {amountValue(bonus.amount)}
-                  </Td>
-                  <Td className="text-center">
-                    <span
-                      className={cn(
-                        "inline-block rounded-md px-3 py-1 text-xs font-semibold",
-                        BONUS_STATUS_CHIP[bonus.status] ||
-                          REQUEST_STATUS_CHIP[bonus.status]
-                      )}
-                    >
-                      {bonus.status}
-                    </span>
                   </Td>
                   <Td className="text-left text-muted-foreground">
                     {bonus.notes || "-"}

@@ -501,7 +501,7 @@ export default function CircularsSection({ canEdit }) {
                           <button
                             type="button"
                             onClick={() => startEdit(circular)}
-                            className="rounded font-semibold text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                            className="rounded font-semibold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                           >
                             {circular.circularNo}
                           </button>
@@ -538,7 +538,7 @@ export default function CircularsSection({ canEdit }) {
                         <button
                           type="button"
                           onClick={() => setDetailsFor(circular)}
-                          className="rounded text-xs text-primary underline underline-offset-2 focus:outline-none focus:ring-2 focus:ring-ring"
+                          className="rounded text-xs text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                         >
                           View Details
                         </button>
@@ -562,7 +562,7 @@ export default function CircularsSection({ canEdit }) {
                             onClick={() =>
                               cancelCircular(circular.id, CURRENT_USER.name)
                             }
-                            className="mt-1 flex items-center gap-1 rounded text-xs text-muted-foreground underline-offset-2 hover:text-destructive hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                            className="mt-1 flex items-center gap-1 rounded text-xs text-muted-foreground hover:text-destructive focus:outline-none focus:ring-2 focus:ring-ring"
                           >
                             <Ban className="h-3 w-3 shrink-0" />
                             Cancel circular
@@ -582,7 +582,7 @@ export default function CircularsSection({ canEdit }) {
                                 "noopener,noreferrer"
                               )
                             }
-                            className="mt-1 flex items-center gap-1 rounded text-xs text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                            className="mt-1 flex items-center gap-1 rounded text-xs text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                           >
                             <FileText className="h-3 w-3 shrink-0" />
                             View document
@@ -640,7 +640,7 @@ export default function CircularsSection({ canEdit }) {
         <button
           type="button"
           onClick={() => setShowAudit((open) => !open)}
-          className="rounded text-sm font-semibold text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+          className="rounded text-sm font-semibold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
         >
           {showAudit ? "Hide" : "Show"} audit trail ({audit.length})
         </button>

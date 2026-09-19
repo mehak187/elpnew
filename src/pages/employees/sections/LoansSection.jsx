@@ -818,13 +818,25 @@ export default function LoansSection({
                             <button
                               type="button"
                               onClick={() => track(record)}
-                              className="rounded font-bold text-primary underline underline-offset-2 hover:no-underline focus:outline-none focus:ring-2 focus:ring-ring"
+                              className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                             >
                               {record.requestNo || index + 1}
                             </button>
                           ) : (
                             index + 1
                           )}
+
+                          {/* Where it stands, under the number it belongs
+                              to - the Installment Status column is the
+                              instalments', not the loan's. */}
+                          <span
+                            className={cn(
+                              "mt-1 block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold",
+                              LOAN_STATUS_CHIP[record.status]
+                            )}
+                          >
+                            {record.status}
+                          </span>
                         </Td>
                         <Td className="text-left">
                           <span className="block font-bold text-primary">
@@ -860,18 +872,8 @@ export default function LoansSection({
                         <Td className="text-right text-muted-foreground">-</Td>
                         <Td className="text-right text-muted-foreground">-</Td>
                         {/* The instalment columns say nothing about the loan
-                            itself, but where the request got to belongs on its
-                            row: it decides what may be asked for next. */}
-                        <Td className="text-center">
-                          <span
-                            className={cn(
-                              "inline-block rounded-md px-3 py-1 text-xs font-semibold",
-                              LOAN_STATUS_CHIP[record.status]
-                            )}
-                          >
-                            {record.status}
-                          </span>
-                        </Td>
+                            itself, so nothing is put in them. */}
+                        <Td className="text-center text-muted-foreground">-</Td>
                         <Td className="text-right text-muted-foreground">-</Td>
                         <Td className="text-center">
                           <button

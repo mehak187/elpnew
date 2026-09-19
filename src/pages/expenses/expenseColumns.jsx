@@ -129,7 +129,7 @@ export function expenseColumns({ accountFor, includeSupplier = true }) {
                   href={row.invoiceFile}
                   onClick={(event) => event.preventDefault()}
                   title={row.invoiceFile}
-                  className="text-primary underline-offset-2 hover:underline"
+                  className="text-primary"
                 >
                   Click to view invoice
                 </a>
@@ -191,7 +191,7 @@ export function expenseColumns({ accountFor, includeSupplier = true }) {
                       href={payment.document}
                       onClick={(event) => event.preventDefault()}
                       title={payment.document}
-                      className="text-primary underline-offset-2 hover:underline"
+                      className="text-primary"
                     >
                       Click to view proof
                     </a>

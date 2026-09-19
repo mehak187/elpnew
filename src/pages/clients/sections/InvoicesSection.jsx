@@ -157,7 +157,7 @@ export default function InvoicesSection() {
           <button
             type="button"
             onClick={() => setOpenInvoice(row)}
-            className="block rounded font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+            className="block rounded font-medium text-primary focus:outline-none focus:ring-2 focus:ring-ring"
           >
             {value}
           </button>

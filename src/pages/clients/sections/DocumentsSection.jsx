@@ -224,7 +224,7 @@ export default function DocumentsSection({ formData, onChange }) {
             setAdding(false);
             setOpenId(row.id === openId ? null : row.id);
           }}
-          className="rounded font-semibold text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+          className="rounded font-semibold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
         >
           {value}
         </button>
@@ -264,7 +264,7 @@ export default function DocumentsSection({ formData, onChange }) {
         <button
           type="button"
           onClick={() => openFile(row)}
-          className="flex items-start gap-2 rounded text-left text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+          className="flex items-start gap-2 rounded text-left text-primary focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <FileText className="mt-0.5 h-4 w-4 shrink-0" />
           {value}
@@ -468,7 +468,7 @@ export default function DocumentsSection({ formData, onChange }) {
                 <button
                   type="button"
                   onClick={() => openFile(opened)}
-                  className="flex items-center gap-2 rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="flex items-center gap-2 rounded text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   <FileText className="h-4 w-4 shrink-0" />
                   {opened.fileName}

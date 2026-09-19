@@ -772,7 +772,7 @@ export default function AssistanceSection({
                           <button
                             type="button"
                             onClick={() => track(record)}
-                            className="rounded font-bold text-primary underline underline-offset-2 hover:no-underline focus:outline-none focus:ring-2 focus:ring-ring"
+                            className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                           >
                             {record.requestNo || start + index + 1}
                           </button>
@@ -781,7 +781,7 @@ export default function AssistanceSection({
                             type="button"
                             onClick={() => openProof(record)}
                             title={record.proof}
-                            className="inline-flex items-center gap-1.5 rounded underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                            className="inline-flex items-center gap-1.5 rounded focus:outline-none focus:ring-2 focus:ring-ring"
                           >
                             {start + index + 1}
                             {isImage(record.proof) ? (
@@ -793,27 +793,27 @@ export default function AssistanceSection({
                         ) : (
                           start + index + 1
                         )}
+
+                        {/* Where it stands, under the number it belongs to. */}
+                        <span
+                          className={cn(
+                            "mt-1 block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold",
+                            STATUS_CHIP[status]
+                          )}
+                        >
+                          {status}
+                        </span>
                       </Td>
 
                       <Td className="whitespace-nowrap text-primary">
                         {formatDate(record.requestDate)}
                       </Td>
 
-                      {/* What was asked for, who for, why - and where it has
-                          got to, beside the name it belongs to. */}
+                      {/* What was asked for, who for, and why. Where it has
+                          got to is said under its number. */}
                       <Td className="text-left">
-                        <span className="flex flex-wrap items-center gap-2">
-                          <span className="font-semibold text-primary">
-                            {record.subcategory}
-                          </span>
-                          <span
-                            className={cn(
-                              "inline-block rounded-md px-2.5 py-0.5 text-xs font-semibold",
-                              STATUS_CHIP[status]
-                            )}
-                          >
-                            {status}
-                          </span>
+                        <span className="block font-semibold text-primary">
+                          {record.subcategory}
                         </span>
                         <span className="block text-xs text-muted-foreground">
                           For: {record.beneficiary}

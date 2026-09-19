@@ -86,29 +86,43 @@ export default function SalaryHistory({
           <RecordTable minWidth={1040}>
             <HeadRow>
               <Th width="10%">Salary No.</Th>
-              <Th width="14%">Salary Period</Th>
-              <Th width="32%">Salary Summary</Th>
-              <Th width="14%">Net Salary</Th>
-              <Th width="18%">Transfer Details</Th>
-              <Th width="12%">Status</Th>
+              <Th width="16%">Salary Period</Th>
+              <Th width="36%">Salary Summary</Th>
+              <Th width="16%">Net Salary</Th>
+              <Th width="22%">Transfer Details</Th>
             </HeadRow>
             <tbody>
               {shown.map((row) => (
                 <Row key={row.id}>
                   {/* A request that has not been approved opens back into
-                      the form: to be followed, corrected, or decided. */}
+                      the form: to be followed, corrected, or decided. Where
+                      it stands is said under its own number rather than in a
+                      column of its own. */}
                   <Td className="whitespace-nowrap font-bold text-primary">
                     {isSalaryRequest(row) && onOpenRequest ? (
                       <button
                         type="button"
                         onClick={() => onOpenRequest(row)}
-                        className="rounded font-bold text-primary underline underline-offset-2 hover:no-underline focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                       >
                         {salaryRef(row)}
                       </button>
                     ) : (
                       salaryRef(row)
                     )}
+                    <span
+                      className={cn(
+                        "mt-1 flex w-fit items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
+                        SALARY_STATUS_TONE[row.status] ||
+                          "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="h-1.5 w-1.5 shrink-0 rounded-full bg-current"
+                      />
+                      {row.status}
+                    </span>
                   </Td>
 
                   <Td className="whitespace-nowrap">{row.period}</Td>
@@ -141,22 +155,6 @@ export default function SalaryHistory({
                         {row.reference}
                       </>
                     )}
-                  </Td>
-
-                  <Td className="text-center">
-                    <span
-                      className={cn(
-                        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
-                        SALARY_STATUS_TONE[row.status] ||
-                          "bg-muted text-muted-foreground"
-                      )}
-                    >
-                      <span
-                        aria-hidden="true"
-                        className="h-1.5 w-1.5 shrink-0 rounded-full bg-current"
-                      />
-                      {row.status}
-                    </span>
                   </Td>
                 </Row>
               ))}

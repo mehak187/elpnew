@@ -666,7 +666,7 @@ export default function ViolationsSection({ employee, canEdit = true }) {
                           <button
                             type="button"
                             onClick={() => openRecord(violation)}
-                            className="rounded font-bold text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                            className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                           >
                             {violation.violationNo || "Pending"}
                           </button>

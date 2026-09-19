@@ -27,7 +27,7 @@ export default function SuppliersPage() {
           <button
             type="button"
             onClick={() => navigate("/suppliers/" + row.id)}
-            className="rounded font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+            className="rounded font-medium text-primary focus:outline-none focus:ring-2 focus:ring-ring"
           >
             {value}
           </button>

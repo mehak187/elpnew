@@ -120,7 +120,7 @@ export default function ClientContractsSection() {
           <button
             type="button"
             onClick={() => setEditing({ ...row })}
-            className="rounded font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+            className="rounded font-medium text-primary focus:outline-none focus:ring-2 focus:ring-ring"
           >
             {value}
           </button>
@@ -178,7 +178,7 @@ export default function ClientContractsSection() {
           onClick={() =>
             window.open(row.fileUrl, "_blank", "noopener,noreferrer")
           }
-          className="flex items-start gap-2 rounded text-left text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+          className="flex items-start gap-2 rounded text-left text-primary focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <FileText className="h-4 w-4 shrink-0" />
           {value}
@@ -500,7 +500,7 @@ export default function ClientContractsSection() {
                   onClick={() =>
                     window.open(editing.fileUrl, "_blank", "noopener,noreferrer")
                   }
-                  className="flex h-9 w-full items-center gap-2 rounded-md border bg-muted/40 px-3 text-left text-sm text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="flex h-9 w-full items-center gap-2 rounded-md border bg-muted/40 px-3 text-left text-sm text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   <FileText className="h-4 w-4 shrink-0" />
                   <span className="truncate">{editing.fileName}</span>

@@ -292,7 +292,7 @@ export default function BranchesSection({ canEdit }) {
                       <button
                         type="button"
                         onClick={() => setEditing({ ...branch })}
-                        className="rounded font-semibold text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="rounded font-semibold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                       >
                         {branch.branchNumber}
                       </button>
