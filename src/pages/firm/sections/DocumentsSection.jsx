@@ -148,12 +148,6 @@ export default function DocumentsSection({ canEdit }) {
           <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
             Documents
           </h2>
-          {canEdit && (
-            <Button type="button" onClick={() => setAdding(true)}>
-              <Plus className="mr-1.5 h-4 w-4" />
-              Add Document
-            </Button>
-          )}
         </div>
       )}
 
@@ -283,6 +277,16 @@ export default function DocumentsSection({ canEdit }) {
         </Card>
       )}
 
+      {/* The way to add, on the row above the list it adds to. */}
+      {canEdit && !adding && (
+        <div className="flex justify-end">
+          <Button type="button" onClick={() => setAdding(true)}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Add Document
+          </Button>
+        </div>
+      )}
+
       {/* The list stays under the form rather than making way for it: a
           new record is judged against the ones already there. */}
       <Card>
@@ -318,7 +322,7 @@ export default function DocumentsSection({ canEdit }) {
                         <button
                           type="button"
                           onClick={() => setEditing({ ...document })}
-                          className="rounded font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                          className="rounded font-medium text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                         >
                           {document.docId}
                         </button>
@@ -331,7 +335,7 @@ export default function DocumentsSection({ canEdit }) {
                         <button
                           type="button"
                           onClick={() => open(document)}
-                          className="inline-flex items-center gap-1.5 rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                          className="inline-flex items-center gap-1.5 rounded text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                         >
                           <FileText className="h-3.5 w-3.5 shrink-0" />
                           {document.fileName}
@@ -434,7 +438,7 @@ export default function DocumentsSection({ canEdit }) {
                 <button
                   type="button"
                   onClick={() => open(editing)}
-                  className="flex h-9 w-full items-center gap-2 rounded-md border bg-muted/40 px-3 text-left text-sm text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="flex h-9 w-full items-center gap-2 rounded-md border bg-muted/40 px-3 text-left text-sm text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   <FileText className="h-4 w-4 shrink-0" />
                   <span className="truncate">{editing.fileName}</span>

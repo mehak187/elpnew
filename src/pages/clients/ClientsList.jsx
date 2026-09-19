@@ -134,7 +134,7 @@ export default function ClientsList() {
               e.stopPropagation();
               navigate(`/clients/${row.id}`);
             }}
-            className="rounded font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+            className="rounded font-medium text-primary focus:outline-none focus:ring-2 focus:ring-ring"
           >
             {value}
           </button>
@@ -208,10 +208,6 @@ export default function ClientsList() {
             </p>
           </div>
         </div>
-        <Button onClick={() => navigate('/clients/create')}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Client
-        </Button>
       </div>
 
       <ActiveFilters
@@ -229,6 +225,8 @@ export default function ClientsList() {
             endedRow={(row) => isEndedStatus(row.status)}
             searchPlaceholder="Ask anything..."
             enableColumnSearch={false}
+            onAdd={() => navigate("/clients/create")}
+            addLabel="Add Client"
             currentPage={currentPage}
             totalPages={Math.ceil(processedClients.length / pageSize)}
             pageSize={pageSize}

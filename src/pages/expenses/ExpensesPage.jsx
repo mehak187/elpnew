@@ -124,10 +124,6 @@ export default function ExpensesPage() {
             </p>
           </div>
         </div>
-        <Button onClick={() => navigate("/expenses/create")}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Expense
-        </Button>
       </div>
 
       {/* Each cell is also the filter for the table below it */}
@@ -157,6 +153,8 @@ export default function ExpensesPage() {
             exportFileName="expenses.csv"
             enableColumnSearch={false}
             itemLabel="expenses"
+            onAdd={() => navigate("/expenses/create")}
+            addLabel="Add Expense"
             currentPage={currentPage}
             totalPages={Math.ceil(rows.length / pageSize)}
             pageSize={pageSize}

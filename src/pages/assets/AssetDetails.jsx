@@ -528,22 +528,9 @@ export default function AssetDetails() {
         <div className="w-full min-w-0 flex-1">
           <Card>
             <CardContent className="space-y-6 p-4 sm:p-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <FormHeading title={current.label} note={current.note} icon={current.icon} />
-                {section === "expenses" && !addingExpense && (
-                  // ml-auto: on a narrow screen this drops below the heading,
-                  // and a wrapped line is laid out on its own - without it the
-                  // button would go back to the left edge.
-                  <Button
-                    type="button"
-                    className="ml-auto"
-                    onClick={() => setAddingExpense(true)}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Expense
-                  </Button>
-                )}
-              </div>
+              {/* The way to add is not here: it sits on the row above the
+                  table it adds to, where every list in the system has it. */}
+              <FormHeading title={current.label} note={current.note} icon={current.icon} />
 
               {error && current.editable && <p className="text-sm text-destructive">{error}</p>}
 
@@ -751,6 +738,20 @@ export default function AssetDetails() {
                       }}
                     />
                   )}
+
+                  {/* The way to add, on the row above the list. */}
+                  {!addingExpense && (
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        onClick={() => setAddingExpense(true)}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Expense
+                      </Button>
+                    </div>
+                  )}
+
                   <AssetExpensesTable expenses={asset.expenses || []} />
                 </div>
               )}

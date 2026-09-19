@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff } from "lucide-react";
+import { Plus } from "lucide-react";
 import AiSearch from "@/components/shared/AiSearch";
 import { EmptyState } from "@/components/shared/panels";
 import {
@@ -42,12 +42,11 @@ function Part({ label, value }) {
  */
 export default function SalaryHistory({
   history = salaryHistory,
-  // The salary breakdown above this list is opened from here, beside the
-  // search - the row that used to hold the month and the year.
-  detailsOpen = false,
-  onToggleDetails = null,
   // What to do when a request's temporary number is clicked.
   onOpenRequest = null,
+  // The way to add, on the row above the list it adds to.
+  onAdd = null,
+  addLabel = "Add Salary",
 }) {
   const [query, setQuery] = useState("");
 
@@ -65,32 +64,18 @@ export default function SalaryHistory({
       <CardContent className="space-y-4 p-4 sm:p-6">
         {/* The search on the left, where every list in the system has it, and
             the name of what is being searched on the right. */}
+        {/* The search on the left, where every list in the system has it,
+            and the way to add on the right. */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <AiSearch
             value={query}
             onChange={setQuery}
             placeholder="Ask about salaries..."
           />
-
-          {/* The section above already names this list, so the row's other
-              end carries what acts on it instead of saying so twice. The
-              words say what a click will do, and to what. */}
-          {onToggleDetails && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="ml-auto"
-              aria-expanded={detailsOpen}
-              aria-controls="salary-details"
-              onClick={onToggleDetails}
-            >
-              {detailsOpen ? (
-                <EyeOff className="mr-1.5 h-4 w-4" />
-              ) : (
-                <Eye className="mr-1.5 h-4 w-4" />
-              )}
-              {detailsOpen ? "Hide Salary Details" : "View Salary Details"}
+          {onAdd && (
+            <Button type="button" className="ml-auto" onClick={onAdd}>
+              <Plus className="mr-2 h-4 w-4" />
+              {addLabel}
             </Button>
           )}
         </div>
@@ -101,29 +86,43 @@ export default function SalaryHistory({
           <RecordTable minWidth={1040}>
             <HeadRow>
               <Th width="10%">Salary No.</Th>
-              <Th width="14%">Salary Period</Th>
-              <Th width="32%">Salary Summary</Th>
-              <Th width="14%">Net Salary</Th>
-              <Th width="18%">Transfer Details</Th>
-              <Th width="12%">Status</Th>
+              <Th width="16%">Salary Period</Th>
+              <Th width="36%">Salary Summary</Th>
+              <Th width="16%">Net Salary</Th>
+              <Th width="22%">Transfer Details</Th>
             </HeadRow>
             <tbody>
               {shown.map((row) => (
                 <Row key={row.id}>
                   {/* A request that has not been approved opens back into
-                      the form: to be followed, corrected, or decided. */}
+                      the form: to be followed, corrected, or decided. Where
+                      it stands is said under its own number rather than in a
+                      column of its own. */}
                   <Td className="whitespace-nowrap font-bold text-primary">
                     {isSalaryRequest(row) && onOpenRequest ? (
                       <button
                         type="button"
                         onClick={() => onOpenRequest(row)}
-                        className="rounded font-bold text-primary underline underline-offset-2 hover:no-underline focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                       >
                         {salaryRef(row)}
                       </button>
                     ) : (
                       salaryRef(row)
                     )}
+                    <span
+                      className={cn(
+                        "mt-1 flex w-fit items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
+                        SALARY_STATUS_TONE[row.status] ||
+                          "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="h-1.5 w-1.5 shrink-0 rounded-full bg-current"
+                      />
+                      {row.status}
+                    </span>
                   </Td>
 
                   <Td className="whitespace-nowrap">{row.period}</Td>
@@ -156,22 +155,6 @@ export default function SalaryHistory({
                         {row.reference}
                       </>
                     )}
-                  </Td>
-
-                  <Td className="text-center">
-                    <span
-                      className={cn(
-                        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
-                        SALARY_STATUS_TONE[row.status] ||
-                          "bg-muted text-muted-foreground"
-                      )}
-                    >
-                      <span
-                        aria-hidden="true"
-                        className="h-1.5 w-1.5 shrink-0 rounded-full bg-current"
-                      />
-                      {row.status}
-                    </span>
                   </Td>
                 </Row>
               ))}

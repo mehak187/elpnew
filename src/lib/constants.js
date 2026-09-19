@@ -60,6 +60,9 @@ export const DEPARTMENTS = [
 ];
 
 /** What somebody actually does, which is not the same as their level. */
+/** How a person is engaged, rather than what they are engaged to do. */
+export const EMPLOYMENT_TYPES = ["Full-Time", "Part-Time", "Temporary"];
+
 export const OCCUPATIONS = [
   "Legal Consultant",
   "Lawyer",

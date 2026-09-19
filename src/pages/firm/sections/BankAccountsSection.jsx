@@ -549,12 +549,6 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
             ))}
           </div>
 
-          {canEdit && (
-            <Button onClick={openAddBank}>
-              <Plus className="mr-1.5 h-4 w-4" />
-              Add New Bank
-            </Button>
-          )}
         </div>
       </div>
 
@@ -615,6 +609,13 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                   <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" />
                   Export to Excel
                 </Button>
+                {/* The way to add, at the end of the row above the list. */}
+                {canEdit && (
+                  <Button type="button" onClick={openAddBank}>
+                    <Plus className="mr-1.5 h-4 w-4" />
+                    Add New Bank
+                  </Button>
+                )}
               </div>
 
               {listed.length === 0 ? (
@@ -647,7 +648,7 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                                 onClick={() =>
                                   navigate("/settings/bank/" + account.id)
                                 }
-                                className="rounded font-semibold text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                                className="rounded font-semibold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                               >
                                 {account.bankName}
                               </button>
@@ -688,7 +689,7 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                                 <button
                                   type="button"
                                   onClick={() => choose(String(account.id))}
-                                  className="rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                                  className="rounded text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                                 >
                                   Account Activity
                                 </button>
@@ -700,7 +701,7 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                                     <button
                                       type="button"
                                       onClick={() => transferFrom(account)}
-                                      className="rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                                      className="rounded text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                                     >
                                       Transfer
                                     </button>

@@ -363,13 +363,6 @@ export default function IncomeTaxPage() {
             <p className="text-xs text-primary/75 sm:text-sm">Corporate income tax returns and payments</p>
           </div>
         </div>
-        {/* The way to add gives way to the form it opens. */}
-        {editing === null && (
-          <Button type="button" onClick={() => setEditing("new")}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Tax Return
-          </Button>
-        )}
       </div>
 
       <SummaryStrip
@@ -418,6 +411,8 @@ export default function IncomeTaxPage() {
             exportFileName="income-tax-returns.csv"
             enableColumnSearch={false}
             enableSorting
+            onAdd={editing === null ? () => setEditing("new") : null}
+            addLabel="Add Tax Return"
             currentPage={currentPage}
             totalPages={Math.ceil(rows.length / pageSize)}
             pageSize={pageSize}

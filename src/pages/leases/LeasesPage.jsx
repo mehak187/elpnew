@@ -158,7 +158,7 @@ export default function LeasesPage() {
             type="button"
             onClick={() => navigate("/leases/" + row.id)}
             title={"Open " + (row.contractNo || "this lease")}
-            className="rounded font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+            className="rounded font-medium text-primary focus:outline-none focus:ring-2 focus:ring-ring"
           >
             {value}
           </button>
@@ -306,13 +306,6 @@ export default function LeasesPage() {
             </p>
           </div>
         </div>
-        {/* The way to add gives way to the form it opens. */}
-        {!adding && (
-          <Button type="button" onClick={() => setAdding(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add New Lease
-          </Button>
-        )}
       </div>
 
       {adding && (
@@ -386,6 +379,8 @@ export default function LeasesPage() {
             searchPlaceholder="Ask about leases..."
             exportFileName="leases.csv"
             enableColumnSearch={false}
+            onAdd={adding ? null : () => setAdding(true)}
+            addLabel="Add New Lease"
             currentPage={currentPage}
             totalPages={Math.ceil(rows.length / pageSize)}
             pageSize={pageSize}

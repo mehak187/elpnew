@@ -217,19 +217,13 @@ export default function CourtHearing() {  const { id } = useParams();
       {/* Hearings List */}
       <Card>
         <CardContent className="p-4 sm:p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-semibold text-primary">Hearing History</h3>
-            {!showForm && (
-              <Button size="sm" onClick={() => setShowForm(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Hearing
-              </Button>
-            )}
-          </div>
+          <h3 className="mb-4 font-semibold text-primary">Hearing History</h3>
           <DataTable
             columns={columns}
             data={hearings}
             searchPlaceholder="Search hearings..."
+            onAdd={showForm ? null : () => setShowForm(true)}
+            addLabel="Add Hearing"
             currentPage={currentPage}
             totalPages={Math.ceil(hearings.length / pageSize)}
             pageSize={pageSize}

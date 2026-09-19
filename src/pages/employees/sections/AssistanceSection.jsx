@@ -34,15 +34,12 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { Rial } from "@/components/shared/Rial";
-import { FileText, FileImage, FileCheck } from "lucide-react";
+import { FileText, FileImage, FileCheck, Plus } from "lucide-react";
 import { formatDate } from "../loanData";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
 import { PAYMENT_SOURCES, DEFAULT_BANK } from "../payrollData";
 import {
   DEFAULT_ASSISTANCE_BOOKING,
-  ASSISTANCE_BENEFICIARIES,
-  DEFAULT_BENEFICIARY,
-  documentFor,
   subcategoriesOf,
   assistanceRecords,
   statusOf,
@@ -54,7 +51,6 @@ const PAGE_SIZE = 10;
 
 const emptyDraft = {
   ...DEFAULT_ASSISTANCE_BOOKING,
-  beneficiary: DEFAULT_BENEFICIARY,
   amount: "",
   method: "",
   account: "",
@@ -124,6 +120,8 @@ export default function AssistanceSection({
   // Opening a request from the list puts the section back into adding, so
   // the window over the page is the one that shows it.
   onOpenAdd,
+  // The words on the button that opens the form, over the list it adds to.
+  addLabel = "Add Assistance",
   // Management decides a request; on My Profile the decision is only read.
   canDecide = true,
 }) {
@@ -162,10 +160,7 @@ export default function AssistanceSection({
   // What a request needs: what it is for, who it is for, how much, and why.
   // How it will be paid is the office's business once the request is granted.
   const canSave =
-    draft.subcategory &&
-    draft.beneficiary &&
-    Number(draft.amount) > 0 &&
-    draft.notes.trim();
+    draft.subcategory && Number(draft.amount) > 0 && draft.notes.trim();
 
   /**
    * The request submitted. It is on record straight away, waiting for a
@@ -186,8 +181,7 @@ export default function AssistanceSection({
         expenseType: draft.expenseType,
         category: draft.category,
         subcategory: draft.subcategory,
-        // Who the help is for, and whose record it was asked from.
-        beneficiary: draft.beneficiary,
+        // Whose record it was asked from.
         employee: employee?.name || "",
         purpose: draft.notes.trim(),
         amount: Number(draft.amount),
@@ -248,7 +242,6 @@ export default function AssistanceSection({
     setDraft({
       ...emptyDraft,
       subcategory: record.subcategory,
-      beneficiary: record.beneficiary,
       amount: String(record.amount),
       notes: record.purpose || record.notes || "",
     });
@@ -344,12 +337,6 @@ export default function AssistanceSection({
                 label="Assistance Type"
                 value={open?.subcategory || ""}
               />
-              <Locked
-                id="decision-beneficiary"
-                label="Beneficiary"
-                value={open?.beneficiary || ""}
-              />
-
               <div className="space-y-2">
                 <FieldLabel htmlFor="decision-approved" required>
                   Approved Amount (<Rial />)
@@ -448,9 +435,10 @@ export default function AssistanceSection({
                     <FieldLabel htmlFor="decision-reference">
                       Payment Reference
                     </FieldLabel>
-                    <div className="flex gap-2">
+                    <div className="flex w-full min-w-0 items-center gap-2">
                       <Input
                         id="decision-reference"
+                        className="min-w-0 flex-1"
                         value={review.reference}
                         onChange={(e) => setReviewField("reference", e.target.value)}
                         placeholder="AST-0000-00000"
@@ -562,63 +550,22 @@ export default function AssistanceSection({
             </Select>
           </div>
 
-          {/* The request is the employee's; who the help is for need not be.
-              A bereavement is a parent's, school fees are a child's. */}
+          {/* The paper that backs the request travels with what it is for,
+              rather than costing a field of its own. */}
           <div className="space-y-2">
-            <FieldLabel htmlFor="assistance-beneficiary" required>
-              Beneficiary
-            </FieldLabel>
-            <Select
-              value={draft.beneficiary}
-              onValueChange={(value) => value && set("beneficiary", value)}
-            >
-              <SelectTrigger id="assistance-beneficiary">
-                <SelectValue placeholder="Select Beneficiary" />
-              </SelectTrigger>
-              <SelectContent>
-                {ASSISTANCE_BENEFICIARIES.map((who) => (
-                  <SelectItem key={who} value={who}>
-                    {who}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* The two share the row evenly: half to the figure, half to the
-              document that backs it. */}
-          <div className="space-y-2 sm:col-span-1 lg:col-span-2">
             <FieldLabel htmlFor="assistance-amount" required>
               Requested Amount (<Rial />)
             </FieldLabel>
-            <Input
-              id="assistance-amount"
-              inputMode="decimal"
-              value={draft.amount}
-              onChange={(e) =>
-                set("amount", e.target.value.replace(/[^\d.]/g, ""))
-              }
-              placeholder="0.000"
-            />
-          </div>
-
-          {/* Whatever backs the request - a bill, a letter, a report. The box
-              names the file that is attached; the button is what attaches it. */}
-          <div className="space-y-2 sm:col-span-1 lg:col-span-2">
-            <FieldLabel htmlFor="assistance-proof-name">
-              Supporting Document
-            </FieldLabel>
-            <div className="flex gap-2">
+            <div className="flex w-full min-w-0 items-center gap-2">
               <Input
-                id="assistance-proof-name"
-                readOnly
-                tabIndex={-1}
-                value={proof ? proof.name : ""}
-                placeholder="No file selected"
-                className={cn(
-                  "flex-1 cursor-default",
-                  proof && "border-green-600 text-green-700"
-                )}
+                id="assistance-amount"
+                inputMode="decimal"
+                className="min-w-0 flex-1"
+                value={draft.amount}
+                onChange={(e) =>
+                  set("amount", e.target.value.replace(/[^\d.]/g, ""))
+                }
+                placeholder="0.000"
               />
               <Button
                 variant="outline"
@@ -648,12 +595,6 @@ export default function AssistanceSection({
                 onChange={(e) => e.target.files[0] && setProof(e.target.files[0])}
               />
             </div>
-            {/* What the office will ask to see, so it comes with the request. */}
-            {!proof && documentFor(draft.subcategory) && (
-              <p className="text-xs text-muted-foreground">
-                Attach: {documentFor(draft.subcategory)}
-              </p>
-            )}
           </div>
 
           <div className="space-y-2 sm:col-span-2 lg:col-span-4">
@@ -716,7 +657,7 @@ export default function AssistanceSection({
       </Dialog>
 
       {/* The search on the left, where every list in the system has it, and
-          the name of the list on the right. */}
+          the way to add on the right. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <AiSearch
           value={query}
@@ -726,9 +667,12 @@ export default function AssistanceSection({
           }}
           placeholder="Ask about assistance..."
         />
-        <h3 className="ml-auto text-lg font-bold text-primary">
-          Assistance History
-        </h3>
+        {addLabel && !adding && (
+          <Button type="button" className="ml-auto" onClick={onOpenAdd}>
+            <Plus className="mr-2 h-4 w-4" />
+            {addLabel}
+          </Button>
+        )}
       </div>
 
       {ordered.length === 0 ? (
@@ -759,58 +703,63 @@ export default function AssistanceSection({
                     <Row key={record.id}>
                       {/* A request waiting on a decision carries its
                           temporary number and opens back into the form; a
-                          decided one takes its place in the run and opens the
-                          document it was made with. */}
+                          decided one simply takes its place in the run. The
+                          paper it was made with is beside what it is for,
+                          not beside the number. */}
                       <Td className="whitespace-nowrap font-medium text-primary">
                         {status === "Pending" || status === "Rejected" ? (
                           <button
                             type="button"
                             onClick={() => track(record)}
-                            className="rounded font-bold text-primary underline underline-offset-2 hover:no-underline focus:outline-none focus:ring-2 focus:ring-ring"
+                            className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                           >
                             {record.requestNo || start + index + 1}
-                          </button>
-                        ) : record.proof ? (
-                          <button
-                            type="button"
-                            onClick={() => openProof(record)}
-                            title={record.proof}
-                            className="inline-flex items-center gap-1.5 rounded underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
-                          >
-                            {start + index + 1}
-                            {isImage(record.proof) ? (
-                              <FileImage className="h-4 w-4 shrink-0 text-green-600" />
-                            ) : (
-                              <FileText className="h-4 w-4 shrink-0 text-red-600" />
-                            )}
                           </button>
                         ) : (
                           start + index + 1
                         )}
+
+                        {/* Where it stands, under the number it belongs to. */}
+                        <span
+                          className={cn(
+                            "mt-1 block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold",
+                            STATUS_CHIP[status]
+                          )}
+                        >
+                          {status}
+                        </span>
                       </Td>
 
                       <Td className="whitespace-nowrap text-primary">
                         {formatDate(record.requestDate)}
                       </Td>
 
-                      {/* What was asked for, who for, why - and where it has
-                          got to, beside the name it belongs to. */}
+                      {/* What was asked for, who for, and why. Where it has
+                          got to is said under its number. */}
                       <Td className="text-left">
                         <span className="flex flex-wrap items-center gap-2">
                           <span className="font-semibold text-primary">
                             {record.subcategory}
                           </span>
-                          <span
-                            className={cn(
-                              "inline-block rounded-md px-2.5 py-0.5 text-xs font-semibold",
-                              STATUS_CHIP[status]
-                            )}
-                          >
-                            {status}
-                          </span>
-                        </span>
-                        <span className="block text-xs text-muted-foreground">
-                          For: {record.beneficiary}
+                          {/* The paper the request was made with, beside what
+                              it was made for. */}
+                          {record.proof && (
+                            <button
+                              type="button"
+                              onClick={() => openProof(record)}
+                              title={record.proof}
+                              className="rounded focus:outline-none focus:ring-2 focus:ring-ring"
+                            >
+                              {isImage(record.proof) ? (
+                                <FileImage className="h-4 w-4 shrink-0 text-green-600" />
+                              ) : (
+                                <FileText className="h-4 w-4 shrink-0 text-red-600" />
+                              )}
+                              <span className="sr-only">
+                                Open {record.proof}
+                              </span>
+                            </button>
+                          )}
                         </span>
                         <span className="block text-xs text-muted-foreground">
                           {record.purpose}

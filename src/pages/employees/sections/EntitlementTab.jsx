@@ -839,14 +839,13 @@ export default function EntitlementTab({
       ) : (
         <RecordTable minWidth={900}>
           <HeadRow>
-            <Th width="10%">No.</Th>
-            <Th width="14%">Request Date</Th>
-            <Th width="28%">Request Details</Th>
-            <Th width="12%">Quantity</Th>
-            <Th width="16%" className="text-right">
+            <Th width="12%">No.</Th>
+            <Th width="16%">Request Date</Th>
+            <Th width="34%">Request Details</Th>
+            <Th width="14%">Quantity</Th>
+            <Th width="24%" className="text-right">
               Amount (OMR)
             </Th>
-            <Th width="20%">Status</Th>
           </HeadRow>
           <tbody>
             {mine.map((record, index) => (
@@ -860,11 +859,21 @@ export default function EntitlementTab({
                     <button
                       type="button"
                       onClick={() => track(record)}
-                      className="rounded font-bold text-primary underline underline-offset-2 hover:no-underline focus:outline-none focus:ring-2 focus:ring-ring"
+                      className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                     >
                       {record.requestNo || index + 1}
                     </button>
                   )}
+
+                  {/* Where it stands, under the number it belongs to. */}
+                  <span
+                    className={cn(
+                      "mt-1 block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold",
+                      ENTITLEMENT_STATUS_CHIP[record.status]
+                    )}
+                  >
+                    {record.status}
+                  </span>
                 </Td>
 
                 <Td className="whitespace-nowrap">
@@ -886,17 +895,6 @@ export default function EntitlementTab({
 
                 <Td className="whitespace-nowrap text-right font-bold text-green-700">
                   {amountValue(record.amount)}
-                </Td>
-
-                <Td className="text-center">
-                  <span
-                    className={cn(
-                      "inline-block rounded-md px-3 py-1 text-xs font-semibold",
-                      ENTITLEMENT_STATUS_CHIP[record.status]
-                    )}
-                  >
-                    {record.status}
-                  </span>
                 </Td>
               </Row>
             ))}

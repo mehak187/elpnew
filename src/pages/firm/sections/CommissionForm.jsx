@@ -247,9 +247,10 @@ function CommissionPayment({
       {/* What the bank called the payment, and the proof of it. */}
       <div className="flex h-full flex-col justify-end gap-2 sm:col-span-1 lg:col-span-2">
         <FieldLabel htmlFor="payReference">Payment Reference</FieldLabel>
-        <div className="flex gap-2">
+        <div className="flex w-full min-w-0 items-center gap-2">
           <Input
             id="payReference"
+            className="min-w-0 flex-1"
             value={payment.reference}
             onChange={(e) => onChange("reference", e.target.value)}
             placeholder="TRX-0000-00000"

@@ -213,9 +213,12 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd }) {
               onChange={setQuery}
               placeholder="Ask about commission..."
             />
-            <h3 className="ml-auto text-lg font-bold text-primary">
-              Commission History
-            </h3>
+            {!adding && (
+              <Button type="button" className="ml-auto" onClick={onOpenAdd}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Commission
+              </Button>
+            )}
           </div>
 
           {found.length === 0 ? (
@@ -233,9 +236,8 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd }) {
                 <Th width="13%">Commission Date</Th>
                 <Th width="18%">Client Name</Th>
                 <Th width="18%">Payee</Th>
-                <Th width="22%">Legal Fees &amp; Commission</Th>
-                <Th width="10%">Status</Th>
-                <Th width="16%">Notes</Th>
+                <Th width="24%">Legal Fees &amp; Commission</Th>
+                <Th width="18%">Notes</Th>
               </HeadRow>
               <tbody>
                 {found.map((record) => (
@@ -249,11 +251,21 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd }) {
                         <button
                           type="button"
                           onClick={() => track(record)}
-                          className="rounded font-bold text-primary underline underline-offset-2 hover:no-underline focus:outline-none focus:ring-2 focus:ring-ring"
+                          className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                         >
                           {record.requestNo}
                         </button>
                       )}
+
+                      {/* Where it stands, under the number it belongs to. */}
+                      <span
+                        className={cn(
+                          "mt-1 block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold",
+                          COMMISSION_STATUS_CHIP[record.status || COMMISSION_PAID]
+                        )}
+                      >
+                        {record.status || COMMISSION_PAID}
+                      </span>
                     </Td>
                     <Td className="whitespace-nowrap text-primary">
                       {commissionDate(record)}
@@ -281,17 +293,6 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd }) {
                           Paid Commission:{" "}
                         </span>
                         {money(commissionOn(record))}
-                      </span>
-                    </Td>
-
-                    <Td className="text-center">
-                      <span
-                        className={cn(
-                          "inline-block rounded-md px-3 py-1 text-xs font-semibold",
-                          COMMISSION_STATUS_CHIP[record.status || COMMISSION_PAID]
-                        )}
-                      >
-                        {record.status || COMMISSION_PAID}
                       </span>
                     </Td>
 
@@ -340,10 +341,8 @@ export default function FinancialBenefitsSection({
     setAdding(null);
   }
 
-  // Whether the salary breakdown above the history is open. Closed to start:
-  // the history is what is looked at most, and the breakdown is a long form
-  // that would push it off the screen every time the tab is opened.
-  const [salaryDetailsOpen, setSalaryDetailsOpen] = useState(false);
+  // The salary breakdown is what the Salaries tab is: opening the tab shows
+  // what the employee is paid, with the history of payments under it.
 
   // My Profile shows what the employee is paid. What the office keeps its own
   // record of - the bonuses it decided on - is not shown there at all, so the
@@ -354,8 +353,6 @@ export default function FinancialBenefitsSection({
 
   const current = tabs.find((option) => option.key === tab) || tabs[0];
   const open = current.key;
-
-  const showsDetailsToggle = open === "salaries" && adding !== "salaries";
 
   // Salary and commission are what the firm decides to pay; a loan and
   // assistance are what the employee asks for. So on My Profile the first two
@@ -392,22 +389,13 @@ export default function FinancialBenefitsSection({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <FormHeading title={current.label} note={current.note} icon={current.icon} />
 
-        {/* ml-auto keeps these to the right even when they wrap onto a line of
-            their own: a wrapped line is laid out on its own, so justify-between
-            above would otherwise drop them back to the left. */}
-        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+        {/* ml-auto keeps the tabs to the right even when they wrap onto a
+            line of their own: a wrapped line is laid out on its own, so
+            justify-between above would otherwise drop them back to the left. */}
+        {/* No Add up here: every list carries it on the row above its own
+            table, opposite the search. */}
+        <div className="ml-auto">
           <TabBar options={tabs} value={open} onChange={onTabChange} />
-
-          {showsAdd && (
-            <Button
-              type="button"
-              onClick={() => setAdding(open)}
-              disabled={adding === open}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              {addLabel}
-            </Button>
-          )}
         </div>
       </div>
       )}
@@ -419,12 +407,7 @@ export default function FinancialBenefitsSection({
           onCloseAdd={() => setAdding(null)}
           onOpenAdd={() => setAdding("salaries")}
           onSave={onSaveSalary}
-          detailsOpen={salaryDetailsOpen}
-          // The breakdown is opened from the row above the history, where the
-          // month and the year used to be chosen.
-          onToggleDetails={
-            showsDetailsToggle ? () => setSalaryDetailsOpen((o) => !o) : null
-          }
+          addLabel={showsAdd ? addLabel : ""}
           canEdit={canEdit}
           advance={!canEdit}
         />
@@ -436,6 +419,7 @@ export default function FinancialBenefitsSection({
           adding={adding === "bonus"}
           onCloseAdd={() => setAdding(null)}
           onOpenAdd={() => setAdding("bonus")}
+          addLabel={showsAdd ? addLabel : ""}
         />
       )}
 
@@ -445,6 +429,7 @@ export default function FinancialBenefitsSection({
           adding={adding === "loans"}
           onCloseAdd={() => setAdding(null)}
           onOpenAdd={() => setAdding("loans")}
+          addLabel={showsAdd ? addLabel : ""}
           canDecide={canEdit}
         />
       )}
@@ -455,6 +440,7 @@ export default function FinancialBenefitsSection({
           adding={adding === "assistance"}
           onCloseAdd={() => setAdding(null)}
           onOpenAdd={() => setAdding("assistance")}
+          addLabel={showsAdd ? addLabel : ""}
           canDecide={canEdit}
         />
       )}

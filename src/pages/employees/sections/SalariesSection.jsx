@@ -27,7 +27,33 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { Save, FileCheck, ArrowRight } from "lucide-react";
+import {
+  Save,
+  FileCheck,
+  ArrowRight,
+  Landmark,
+  ShieldCheck,
+  Wallet,
+  PieChart,
+  BarChart3,
+  Receipt,
+} from "lucide-react";
+import Panel from "@/components/shared/Panel";
+import {
+  RecordTable,
+  HeadRow,
+  Th,
+  Row,
+  Td,
+} from "@/components/shared/RecordTable";
+import { useViolations } from "@/lib/violations/context";
+import { DEDUCTION_PENALTY } from "../violationData";
+import {
+  loanRecords,
+  loanTotal,
+  schedule,
+  isApprovedLoan,
+} from "../loanData";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
 import {
   ALLOWANCES,
@@ -45,10 +71,11 @@ import {
   SALARY_REJECTED,
   SALARY_TRANSFERRED,
   totalEarnings,
-  totalDeductions,
-  netSalary,
   amount,
 } from "../payrollData";
+
+/** The allowances the salary card asks for. */
+const SHOWN_KEYS = ["special", "housing", "transport"];
 
 const PAYSLIP_KEYS = [
   "special",
@@ -200,6 +227,50 @@ function Typed({ id, label, value, onChange, held }) {
   );
 }
 
+/** Two digits, the way an installment is counted: "03 / 12". */
+const pad = (n) => String(n).padStart(2, "0");
+
+/**
+ * One figure of the salary, as a tile.
+ *
+ * `tone` says what kind of figure it is: money held back is read in red, and
+ * the one figure the whole page is for is lit.
+ */
+function Tile({ icon, title, note, value, tone }) {
+  const Icon = icon;
+  return (
+    <div
+      className={cn(
+        "rounded-lg border p-4",
+        tone === "held" && "border-destructive/30 bg-destructive/5",
+        tone === "payable" && "border-primary/40 bg-primary/5"
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <Icon
+          aria-hidden="true"
+          className={cn(
+            "mt-0.5 h-5 w-5 shrink-0",
+            tone === "held" ? "text-destructive" : "text-primary"
+          )}
+        />
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-primary">{title}</p>
+          <p className="text-xs text-muted-foreground">{note}</p>
+        </div>
+      </div>
+      <p
+        className={cn(
+          "mt-3 text-2xl font-bold",
+          tone === "held" ? "text-destructive" : "text-primary"
+        )}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
 /** A settled figure inside the payment form's summary. */
 function Figure({ label, value }) {
   return (
@@ -260,10 +331,8 @@ export default function SalariesSection({
   // the form over the page is the one that shows it.
   onOpenAdd,
   onSave,
-  // Whether the salary breakdown is open. The history under it is always
-  // shown, and carries the control that opens the breakdown.
-  detailsOpen = true,
-  onToggleDetails = null,
+  // The words on the button that opens the form, shown over the history.
+  addLabel = "Add Salary",
   // The firm sets the salary; on My Profile the payslip is only read.
   canEdit = true,
   // My Profile, where the employee cannot record a payment to themselves but
@@ -274,6 +343,7 @@ export default function SalariesSection({
   // in force rather than a blank form somebody has to fill in from memory.
   // Every salary on record, so a month entered through this form is in the
   // history below it rather than somewhere of its own.
+  const { violations } = useViolations();
   const [history, setHistory] = useState(salaryHistory);
   const [payslip, setPayslip] = useState(() => fromEmployee(employee));
   const [payment, setPayment] = useState(emptyPayment);
@@ -291,16 +361,57 @@ export default function SalariesSection({
   const settled = Boolean(openRequest?.salaryNo);
   const refused = openRequest?.status === SALARY_REJECTED;
 
-  const set = (name, value) =>
-    setPayslip((prev) => ({ ...prev, [name]: value }));
-  const onAmount = (name) => (e) => set(name, e.target.value);
+  const onAmount = (name) => (e) =>
+    setPayslip((prev) => ({ ...prev, [name]: e.target.value }));
   const setPay = (name, value) =>
     setPayment((prev) => ({ ...prev, [name]: value }));
 
   const earnings = totalEarnings(payslip);
-  const deductions = totalDeductions(payslip);
-  const net = netSalary(payslip);
   const allowances = earnings - Number(payslip.basic || 0);
+
+  // What comes off the pay is not typed: it is the loans still being repaid
+  // and the penalties on record, added up.
+  const debts = loanRecords.filter(isApprovedLoan).map((loan) => {
+    const plan = schedule(loanTotal(loan), loan.monthly);
+    const taken = (loan.payments || []).filter((p) => Number(p.amount) > 0).length;
+    return {
+      id: loan.id,
+      type: "Employee Loan",
+      number: Math.min(taken + 1, plan.months || 1),
+      of: plan.months || 0,
+      monthly: loan.monthly,
+    };
+  });
+  const loanDue = debts.reduce((sum, debt) => sum + Number(debt.monthly || 0), 0);
+
+  // Penalties that took money, gathered into the month they fell in.
+  const penalties = Object.values(
+    violations
+      .filter(
+        (violation) =>
+          violation.employee === employee?.name &&
+          violation.penaltyType === DEDUCTION_PENALTY &&
+          Number(violation.deductionAmount) > 0 &&
+          violation.penaltyDate
+      )
+      .reduce((months, violation) => {
+        const [year, month] = violation.penaltyDate.split("-");
+        const key = year + "-" + month;
+        const found = months[key] || {
+          key,
+          month: MONTH_FULL[Number(month) - 1] || "",
+          year,
+          total: 0,
+        };
+        found.total += Number(violation.deductionAmount);
+        months[key] = found;
+        return months;
+      }, {})
+  );
+  const penaltyDue = penalties.reduce((sum, row) => sum + row.total, 0);
+
+  const deductions = Number((loanDue + penaltyDue).toFixed(3));
+  const net = Number((earnings - deductions).toFixed(3));
 
   // The month being recorded opens on the salary in force, and can be edited
   // where that month differed from it. Untouched (null) means the figure above.
@@ -325,13 +436,14 @@ export default function SalariesSection({
   const lastAccount = history[history.length - 1]?.accountNo || "";
   const accountNo = payment.accountNo || lastAccount;
 
+  /** The salary in force, saved onto the employee's record. */
   const savePayslip = () => {
     if (!(Number(payslip.basic) > 0)) return;
     const saved = { salary: String(Number(payslip.basic)) };
     PAYSLIP_KEYS.forEach((key) => {
       saved[key] = Number(payslip[key]) || 0;
     });
-    onSave(saved);
+    onSave?.(saved);
   };
 
   const closeAdd = () => {
@@ -659,9 +771,10 @@ export default function SalariesSection({
                   icon-sized either way. */}
               <div className="space-y-2">
                 <Label htmlFor="pay-reference">Payment Reference</Label>
-                <div className="flex items-center gap-2">
+                <div className="flex w-full min-w-0 items-center gap-2">
                   <Input
                     id="pay-reference"
+                    className="min-w-0 flex-1"
                     value={payment.reference}
                     onChange={(e) => setPay("reference", e.target.value)}
                     placeholder="TRX-0000-00000"
@@ -818,14 +931,10 @@ export default function SalariesSection({
         </DialogContent>
       </Dialog>
 
-      {/* The breakdown is opened and closed from beside the heading, so that
-          when it is closed the history below is all there is to read. */}
-      {detailsOpen && (
-      <fieldset
-        id="salary-details"
-        disabled={!canEdit}
-        className="space-y-6 rounded-lg border p-4 sm:p-6"
-      >
+      {/* What the employee is paid: opening the tab is what shows it, with
+          the history of payments under it. Shown, not asked for - a salary is
+          changed by recording one, which is what Add Salary is for. */}
+      <div id="salary-details" className="space-y-6 rounded-lg border p-4 sm:p-6">
         <Group title="Salary & Allowances">
           <Amount
             id="salary-basic"
@@ -834,7 +943,7 @@ export default function SalariesSection({
             value={payslip.basic}
             onChange={onAmount("basic")}
           />
-          {ALLOWANCES.map((allowance) => (
+          {ALLOWANCES.filter((a) => SHOWN_KEYS.includes(a.key)).map((allowance) => (
             <Amount
               key={allowance.key}
               id={"salary-" + allowance.key}
@@ -845,60 +954,98 @@ export default function SalariesSection({
           ))}
         </Group>
 
-        <Group title="Deductions">
-          {DEDUCTIONS.map((deduction) => (
-            <Amount
-              key={deduction.key}
-              id={"salary-" + deduction.key}
-              label={deduction.label}
-              value={payslip[deduction.key]}
-              onChange={onAmount(deduction.key)}
-            />
-          ))}
-          <Amount
-            id="salary-total-deductions"
-            label="Total Deductions from Salary"
-            value={amount(deductions)}
-            readOnly
-          />
-        </Group>
+        {/* What comes off the pay is not typed here: it is what the loans
+            and the penalties on record say it is. */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+          <Panel title="Debt Installments" icon={Landmark}>
+            <RecordTable minWidth={320}>
+              <HeadRow>
+                <Th width="40%">Debt Type</Th>
+                <Th width="28%">Installment No.</Th>
+                <Th width="32%">Installment Amount</Th>
+              </HeadRow>
+              <tbody>
+                {debts.length === 0 ? (
+                  <Row>
+                    <Td className="text-muted-foreground" colSpan={3}>
+                      No debt is being repaid.
+                    </Td>
+                  </Row>
+                ) : (
+                  debts.map((debt) => (
+                    <Row key={debt.id}>
+                      <Td>{debt.type}</Td>
+                      <Td className="whitespace-nowrap">
+                        {pad(debt.number)} / {pad(debt.of)}
+                      </Td>
+                      <Td className="whitespace-nowrap">{amount(debt.monthly)}</Td>
+                    </Row>
+                  ))
+                )}
+              </tbody>
+            </RecordTable>
+          </Panel>
 
-        <div className="space-y-4">
-          <p className="text-sm font-semibold text-primary">
-            Total Payable Amounts
-          </p>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-            <Amount
-              id="salary-earnings"
-              label="Total Earnings (Salary + Allowances)"
-              value={amount(earnings)}
-              readOnly
-            />
-            <Amount
-              id="salary-deductions-total"
-              label="Total Deductions from Salary"
-              value={amount(deductions)}
-              readOnly
-            />
-            <Amount
-              id="salary-net"
-              label="Net Salary (After Deductions)"
-              value={amount(net)}
-              readOnly
-            />
-            <Amount
-              id="salary-payable"
-              label="Amount Payable"
-              value={amount(net)}
-              readOnly
-              highlight
-            />
-          </div>
+          <Panel title="Disciplinary Deductions" icon={ShieldCheck}>
+            <RecordTable minWidth={320}>
+              <HeadRow>
+                <Th width="40%">Month</Th>
+                <Th width="28%">Year</Th>
+                <Th width="32%">Total Deduction</Th>
+              </HeadRow>
+              <tbody>
+                {penalties.length === 0 ? (
+                  <Row>
+                    <Td className="text-muted-foreground" colSpan={3}>
+                      No penalty has been deducted.
+                    </Td>
+                  </Row>
+                ) : (
+                  penalties.map((penalty) => (
+                    <Row key={penalty.key}>
+                      <Td>{penalty.month}</Td>
+                      <Td>{penalty.year}</Td>
+                      <Td className="whitespace-nowrap">{amount(penalty.total)}</Td>
+                    </Row>
+                  ))
+                )}
+              </tbody>
+            </RecordTable>
+          </Panel>
         </div>
 
-        {/* The salary belongs to the employee, so it is saved onto the record
-            rather than only feeding the payment form below - by the firm, on
-            the Employees page. */}
+        {/* What it all comes to, in the order it is worked out. */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Tile
+            icon={Wallet}
+            title="Total Earnings"
+            note="Salary + Allowances"
+            value={amount(earnings)}
+          />
+          <Tile
+            icon={PieChart}
+            title="Total Deductions"
+            note="Loans + Disciplinary"
+            value={amount(deductions)}
+            tone="held"
+          />
+          <Tile
+            icon={BarChart3}
+            title="Net Salary"
+            note="After Deductions"
+            value={amount(net)}
+          />
+          <Tile
+            icon={Receipt}
+            title="Amount Payable"
+            note="Final Amount"
+            value={amount(net)}
+            tone="payable"
+          />
+        </div>
+
+        {/* The salary belongs to the employee, so it is saved onto the
+            record - by the firm, on the Employees page. */}
         {canEdit && (
           <div className="flex justify-end">
             <Button
@@ -911,8 +1058,7 @@ export default function SalariesSection({
             </Button>
           </div>
         )}
-      </fieldset>
-      )}
+      </div>
 
       {/* What has been asked for out of the salary above. The firm sees its
           own record of an advance in the payments; this is the employee's. */}
@@ -921,11 +1067,11 @@ export default function SalariesSection({
       {/* What has been paid, month by month */}
       <SalaryHistory
         history={history}
-        detailsOpen={detailsOpen}
-        onToggleDetails={onToggleDetails}
         // A request that has not been approved opens back into the form, to
         // be followed, corrected or decided.
         onOpenRequest={canEdit ? trackRequest : null}
+        onAdd={canEdit && !adding ? () => onOpenAdd?.() : null}
+        addLabel={addLabel}
       />
     </div>
   );

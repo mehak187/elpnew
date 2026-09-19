@@ -123,10 +123,6 @@ export default function InvoicesList() {
             </p>
           </div>
         </div>
-        <Button onClick={() => navigate('/finance/invoices/create')}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Invoice
-        </Button>
       </div>
 
       <RecordDialog
@@ -151,6 +147,8 @@ export default function InvoicesList() {
             columns={columns}
             data={visibleInvoices}
             searchPlaceholder="Search invoices..."
+            onAdd={() => navigate("/finance/invoices/create")}
+            addLabel="Create Invoice"
             currentPage={currentPage}
             totalPages={Math.ceil(visibleInvoices.length / pageSize)}
             pageSize={pageSize}

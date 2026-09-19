@@ -120,7 +120,7 @@ export default function ClientContractsSection() {
           <button
             type="button"
             onClick={() => setEditing({ ...row })}
-            className="rounded font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+            className="rounded font-medium text-primary focus:outline-none focus:ring-2 focus:ring-ring"
           >
             {value}
           </button>
@@ -178,7 +178,7 @@ export default function ClientContractsSection() {
           onClick={() =>
             window.open(row.fileUrl, "_blank", "noopener,noreferrer")
           }
-          className="flex items-start gap-2 rounded text-left text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+          className="flex items-start gap-2 rounded text-left text-primary focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <FileText className="h-4 w-4 shrink-0" />
           {value}
@@ -205,18 +205,9 @@ export default function ClientContractsSection() {
           being added the form's heading stands in its place. */}
       {!adding && (
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-        {/* Named as the sidebar names it: the page is already one client's. */}
+        {/* Named as the sidebar names it: the page is already one client's.
+            The way to add sits on the row above the table. */}
         <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">Contracts</h2>
-        {/* ml-auto keeps it right once it wraps below the heading. */}
-        <Button
-          type="button"
-          className="ml-auto"
-          onClick={() => setAdding(true)}
-          disabled={adding}
-        >
-          <Plus className="mr-1.5 h-4 w-4" />
-          Add Contract
-        </Button>
       </div>
       )}
 
@@ -373,6 +364,8 @@ export default function ClientContractsSection() {
         keepOrder
         searchPlaceholder="Search contracts..."
         enableColumnSearch={false}
+        onAdd={adding ? null : () => setAdding(true)}
+        addLabel="Add Contract"
         currentPage={currentPage}
         pageSize={pageSize}
         onPageChange={setCurrentPage}
@@ -500,7 +493,7 @@ export default function ClientContractsSection() {
                   onClick={() =>
                     window.open(editing.fileUrl, "_blank", "noopener,noreferrer")
                   }
-                  className="flex h-9 w-full items-center gap-2 rounded-md border bg-muted/40 px-3 text-left text-sm text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="flex h-9 w-full items-center gap-2 rounded-md border bg-muted/40 px-3 text-left text-sm text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   <FileText className="h-4 w-4 shrink-0" />
                   <span className="truncate">{editing.fileName}</span>

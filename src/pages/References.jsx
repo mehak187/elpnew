@@ -145,10 +145,6 @@ export default function References() {
             </p>
           </div>
         </div>
-        <Button onClick={() => setSelected({ ...blankReference, id: 0 })}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Reference
-        </Button>
       </div>
 
       {/* Category Filter */}
@@ -189,6 +185,8 @@ export default function References() {
             // One no longer in use is kept, at the foot of its list.
             endedRow={(row) => isEndedStatus(row.status)}
             searchPlaceholder="Search references..."
+            onAdd={() => setSelected({ ...blankReference, id: 0 })}
+            addLabel="Add Reference"
             currentPage={currentPage}
             totalPages={Math.ceil(filteredData.length / pageSize)}
             pageSize={pageSize}

@@ -992,7 +992,7 @@ export default function GeneralInvoices({ partnersOnly = false }) {
                         <button
                           type="button"
                           onClick={() => setRequestHistoryFor(invoice)}
-                          className="rounded text-xs font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                          className="rounded text-xs font-medium text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                         >
                           View Request History
                         </button>
@@ -1017,7 +1017,7 @@ export default function GeneralInvoices({ partnersOnly = false }) {
                         <button
                           type="button"
                           onClick={() => setHistoryFor(invoice)}
-                          className="rounded text-xs font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                          className="rounded text-xs font-medium text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                         >
                           View Supplier History
                         </button>

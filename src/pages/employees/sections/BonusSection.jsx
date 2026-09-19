@@ -23,7 +23,7 @@ import {
   Td,
 } from "@/components/shared/RecordTable";
 import { Rial } from "@/components/shared/Rial";
-import { ArrowRight, FileCheck } from "lucide-react";
+import { ArrowRight, FileCheck, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { amountValue } from "@/lib/money";
 import { smartSearch } from "@/lib/search/smartSearch";
@@ -68,7 +68,6 @@ const emptyPayment = () => ({
   accountNo: "",
   paidOn: todayIso(),
   reference: "",
-  notes: "",
 });
 
 /** A label with its required mark, so the asterisk is coloured everywhere. */
@@ -188,12 +187,14 @@ function BonusDisbursement({
         />
       </div>
 
-      {/* What the bank called the payment, and the proof of it. */}
-      <div className="space-y-2 sm:col-span-1 lg:col-span-2">
+      {/* What the bank called the payment, and the proof of it - on the same
+          row as the rest of the transfer. */}
+      <div className="space-y-2">
         <FieldLabel htmlFor="bonus-pay-reference">Payment Reference</FieldLabel>
-        <div className="flex gap-2">
+        <div className="flex w-full min-w-0 items-center gap-2">
           <Input
             id="bonus-pay-reference"
+            className="min-w-0 flex-1"
             value={payment.reference}
             onChange={(e) => onChange("reference", e.target.value)}
             placeholder="TRX-0000-00000"
@@ -224,17 +225,6 @@ function BonusDisbursement({
         </div>
       </div>
 
-      <div className="space-y-2 sm:col-span-2">
-        <FieldLabel htmlFor="bonus-pay-notes">Notes</FieldLabel>
-        <Textarea
-          id="bonus-pay-notes"
-          rows={3}
-          maxLength={NOTES_LIMIT}
-          value={payment.notes}
-          onChange={(e) => onChange("notes", e.target.value)}
-          placeholder="Enter payment notes"
-        />
-      </div>
     </div>
   );
 }
@@ -254,6 +244,8 @@ export default function BonusSection({
   // Opening a request from the list puts the section back into adding, so
   // the window over the page is the one that shows it.
   onOpenAdd,
+  // The words on the button that opens the form, over the list it adds to.
+  addLabel = "Add Bonus",
 }) {
   const { bonuses, addBonus, updateBonus } = useBonuses();
   const [draft, setDraft] = useState(emptyDraft);
@@ -341,7 +333,6 @@ export default function BonusSection({
       paidOn: payment.paidOn,
       reference: payment.reference.trim(),
       receipt: receipt?.name || "",
-      paymentNotes: payment.notes.trim(),
     });
     close();
   };
@@ -376,7 +367,6 @@ export default function BonusSection({
       accountNo: bonus.accountNo || "",
       paidOn: bonus.paidOn || todayIso(),
       reference: bonus.reference || "",
-      notes: bonus.paymentNotes || "",
     });
     onOpenAdd?.();
   };
@@ -626,17 +616,20 @@ export default function BonusSection({
           </DialogContent>
         </Dialog>
 
-        {/* The search on the left, where every list in the system has it, and
-            the name of the list on the right. */}
+        {/* The search on the left, where every list in the system has it,
+            and the way to add on the right. */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <AiSearch
             value={query}
             onChange={setQuery}
             placeholder="Ask about bonuses..."
           />
-          <h3 className="ml-auto text-lg font-bold text-primary">
-            Bonus History
-          </h3>
+          {addLabel && !adding && (
+            <Button type="button" className="ml-auto" onClick={onOpenAdd}>
+              <Plus className="mr-2 h-4 w-4" />
+              {addLabel}
+            </Button>
+          )}
         </div>
 
         {mine.length === 0 ? (
@@ -644,23 +637,23 @@ export default function BonusSection({
         ) : (
           <RecordTable minWidth={900}>
             <HeadRow>
-              <Th width="6%">No.</Th>
+              <Th width="10%">No.</Th>
               <Th width="14%">Bonus Date</Th>
-              <Th width="26%">Bonus Details</Th>
+              <Th width="30%">Bonus Details</Th>
               {/* The unit is said once, in the heading, so the figures under
                   it can be read against each other. */}
-              <Th width="16%" className="text-right">
+              <Th width="18%" className="text-right">
                 Bonus Amount (OMR)
               </Th>
-              <Th width="16%">Status</Th>
-              <Th width="22%">Notes</Th>
+              <Th width="28%">Notes</Th>
             </HeadRow>
             <tbody>
               {mine.map((bonus, index) => (
                 <Row key={bonus.id}>
                   {/* A bonus waiting on a decision carries its temporary
                       number and opens back into the form; one already paid
-                      out simply takes its place in the run. */}
+                      out simply takes its place in the run. Where it stands
+                      is said under its number rather than in a column. */}
                   <Td className="whitespace-nowrap font-medium text-primary">
                     {bonus.status === BONUS_DISBURSED ? (
                       index + 1
@@ -668,11 +661,20 @@ export default function BonusSection({
                       <button
                         type="button"
                         onClick={() => track(bonus)}
-                        className="rounded font-bold text-primary underline underline-offset-2 hover:no-underline focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                       >
                         {bonus.requestNo || index + 1}
                       </button>
                     )}
+                    <span
+                      className={cn(
+                        "mt-1 block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold",
+                        BONUS_STATUS_CHIP[bonus.status] ||
+                          REQUEST_STATUS_CHIP[bonus.status]
+                      )}
+                    >
+                      {bonus.status}
+                    </span>
                   </Td>
                   <Td className="whitespace-nowrap text-primary">
                     {formatDate(bonusDate(bonus))}
@@ -687,17 +689,6 @@ export default function BonusSection({
                   </Td>
                   <Td className="whitespace-nowrap text-right font-bold text-green-700">
                     {amountValue(bonus.amount)}
-                  </Td>
-                  <Td className="text-center">
-                    <span
-                      className={cn(
-                        "inline-block rounded-md px-3 py-1 text-xs font-semibold",
-                        BONUS_STATUS_CHIP[bonus.status] ||
-                          REQUEST_STATUS_CHIP[bonus.status]
-                      )}
-                    >
-                      {bonus.status}
-                    </span>
                   </Td>
                   <Td className="text-left text-muted-foreground">
                     {bonus.notes || "-"}

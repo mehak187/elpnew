@@ -224,7 +224,7 @@ export default function DocumentsSection({ formData, onChange }) {
             setAdding(false);
             setOpenId(row.id === openId ? null : row.id);
           }}
-          className="rounded font-semibold text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+          className="rounded font-semibold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
         >
           {value}
         </button>
@@ -264,7 +264,7 @@ export default function DocumentsSection({ formData, onChange }) {
         <button
           type="button"
           onClick={() => openFile(row)}
-          className="flex items-start gap-2 rounded text-left text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+          className="flex items-start gap-2 rounded text-left text-primary focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <FileText className="mt-0.5 h-4 w-4 shrink-0" />
           {value}
@@ -285,24 +285,10 @@ export default function DocumentsSection({ formData, onChange }) {
     <div className="space-y-6">
       {/* The section's own heading, so the way to add to it sits on the
           same line rather than costing a row of its own. */}
+      {/* The section's own heading. The way to add is not here: it sits on
+          the row above the table, where every list in the system has it. */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
         <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">Documents</h2>
-        {/* ml-auto keeps it right once it wraps below the heading. The way to
-            add gives way to the form it opens, and opening it closes any
-            paper that was being read. */}
-        {!adding && (
-          <Button
-            type="button"
-            className="ml-auto"
-            onClick={() => {
-              setOpenId(null);
-              setAdding(true);
-            }}
-          >
-            <Plus className="mr-1.5 h-4 w-4" />
-            Add Document
-          </Button>
-        )}
       </div>
 
       {/* The form takes the place of the list while it is being filled
@@ -468,7 +454,7 @@ export default function DocumentsSection({ formData, onChange }) {
                 <button
                   type="button"
                   onClick={() => openFile(opened)}
-                  className="flex items-center gap-2 rounded text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="flex items-center gap-2 rounded text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   <FileText className="h-4 w-4 shrink-0" />
                   {opened.fileName}
@@ -501,6 +487,17 @@ export default function DocumentsSection({ formData, onChange }) {
         data={documents}
         searchPlaceholder="Search documents..."
         enableColumnSearch={false}
+        // Opening the form closes any paper that was being read: only one of
+        // the two belongs on screen.
+        onAdd={
+          adding
+            ? null
+            : () => {
+                setOpenId(null);
+                setAdding(true);
+              }
+        }
+        addLabel="Add Document"
         currentPage={currentPage}
         pageSize={pageSize}
         onPageChange={setCurrentPage}

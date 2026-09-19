@@ -215,12 +215,6 @@ export default function BranchesSection({ canEdit }) {
               {branches.length} {branches.length === 1 ? "branch" : "branches"}
             </span>
           </h2>
-          {canEdit && (
-            <Button onClick={() => setAdding(true)}>
-              <Plus className="mr-1.5 h-4 w-4" />
-              Add Branch
-            </Button>
-          )}
         </div>
       )}
 
@@ -254,6 +248,16 @@ export default function BranchesSection({ canEdit }) {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* The way to add, on the row above the list it adds to. */}
+      {canEdit && !adding && (
+        <div className="flex justify-end">
+          <Button type="button" onClick={() => setAdding(true)}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Add Branch
+          </Button>
+        </div>
       )}
 
       {/* The form opens at the top and the branches stay under it: a new
@@ -292,7 +296,7 @@ export default function BranchesSection({ canEdit }) {
                       <button
                         type="button"
                         onClick={() => setEditing({ ...branch })}
-                        className="rounded font-semibold text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="rounded font-semibold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                       >
                         {branch.branchNumber}
                       </button>

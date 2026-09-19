@@ -608,15 +608,7 @@ export default function ViolationsSection({ employee, canEdit = true }) {
           onBack={close}
         />
       ) : (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <FormHeading icon={Gavel} title="Violations & Penalties History" />
-          {canEdit && (
-            <Button type="button" className="ml-auto" onClick={openNew}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Violation
-            </Button>
-          )}
-        </div>
+        <FormHeading icon={Gavel} title="Violations & Penalties History" />
       )}
 
       {openId && (
@@ -635,7 +627,17 @@ export default function ViolationsSection({ employee, canEdit = true }) {
 
       <Card>
         <CardContent className="space-y-4 p-4 sm:p-6">
-          <AiSearch value={query} onChange={setQuery} placeholder="Ask AI" />
+          {/* The search on the left, and the way to add on the right - the
+              one row every list in the system has. */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <AiSearch value={query} onChange={setQuery} placeholder="Ask AI" />
+            {canEdit && !openId && (
+              <Button type="button" className="ml-auto" onClick={openNew}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Violation
+              </Button>
+            )}
+          </div>
 
           {shown.length === 0 ? (
             <EmptyState>
@@ -666,7 +668,7 @@ export default function ViolationsSection({ employee, canEdit = true }) {
                           <button
                             type="button"
                             onClick={() => openRecord(violation)}
-                            className="rounded font-bold text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                            className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                           >
                             {violation.violationNo || "Pending"}
                           </button>

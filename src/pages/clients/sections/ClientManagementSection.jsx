@@ -148,16 +148,6 @@ export default function ClientManagementSection() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
         {/* Named as the sidebar names it: the page is already one client's. */}
         <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">Team</h2>
-        {/* ml-auto keeps it right once it wraps below the heading. */}
-        <Button
-          type="button"
-          className="ml-auto"
-          onClick={openAdd}
-          disabled={mode === "add"}
-        >
-          <Plus className="mr-1.5 h-4 w-4" />
-          Add Client Team
-        </Button>
       </div>
       )}
 
@@ -267,6 +257,16 @@ export default function ClientManagementSection() {
         </Card>
       )}
 
+      {/* The way to add, on the row above the list it adds to. */}
+      {!mode && (
+        <div className="flex justify-end">
+          <Button type="button" onClick={openAdd}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Add Client Team
+          </Button>
+        </div>
+      )}
+
       {/* Every branch that has a team, one row each. The branch name opens
           that team above, which is the only way to change it.
  */}
@@ -308,7 +308,7 @@ export default function ClientManagementSection() {
                         <button
                           type="button"
                           onClick={() => openBranch(String(branch.id))}
-                          className="rounded font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+                          className="rounded font-medium text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                         >
                           {branch.branchNumber} - {branchName(branch)}
                         </button>

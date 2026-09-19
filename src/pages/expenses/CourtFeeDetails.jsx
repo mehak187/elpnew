@@ -49,7 +49,7 @@ function DocumentLink({ file, children }) {
       href={file}
       onClick={(event) => event.preventDefault()}
       title={file}
-      className="inline-flex items-center gap-1.5 rounded text-sm text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+      className="inline-flex items-center gap-1.5 rounded text-sm text-primary focus:outline-none focus:ring-2 focus:ring-ring"
     >
       <FileText className="h-3.5 w-3.5 shrink-0" />
       {children}

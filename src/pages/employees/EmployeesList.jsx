@@ -57,7 +57,7 @@ export default function EmployeesList() {
               e.stopPropagation();
               navigate(`/employees/${row.id}`);
             }}
-            className="rounded font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+            className="rounded font-medium text-primary focus:outline-none focus:ring-2 focus:ring-ring"
           >
             {value}
           </button>
@@ -164,10 +164,6 @@ export default function EmployeesList() {
             </p>
           </div>
         </div>
-        <Button onClick={() => navigate('/employees/create')}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Employee
-        </Button>
       </div>
 
       <Card>
@@ -180,6 +176,8 @@ export default function EmployeesList() {
             searchPlaceholder="Search employee by name, ID, department..."
             enableColumnSearch={false}
             enableSorting
+            onAdd={() => navigate("/employees/create")}
+            addLabel="Add Employee"
             currentPage={currentPage}
             totalPages={Math.ceil(employees.length / pageSize)}
             pageSize={pageSize}

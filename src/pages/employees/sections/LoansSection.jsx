@@ -39,6 +39,7 @@ import {
   Users,
   HandCoins,
   Tag,
+  Plus,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
@@ -200,6 +201,8 @@ export default function LoansSection({
   // Opening a request from the list puts the section back into adding, so
   // the window over the page is the one that shows it.
   onOpenAdd,
+  // The words on the button that opens the form, over the list it adds to.
+  addLabel = "Add Loan",
   // Management decides a request; on My Profile the decision is only read.
   canDecide = true,
 }) {
@@ -555,14 +558,12 @@ export default function LoansSection({
                   id="decision-last-date"
                   label="Last Installment Date"
                   value={reviewLastDue ? formatDate(reviewLastDue) : ""}
-                  className="sm:col-span-1 lg:col-span-2"
                 />
 
                 <Derived
                   id="decision-last-amount"
                   label="Last Installment Amount (OMR)"
                   value={reviewPlan.months ? amountValue(reviewPlan.last) : ""}
-                  className="sm:col-span-1 lg:col-span-2"
                 />
 
                 <div className="space-y-2 sm:col-span-2 lg:col-span-4">
@@ -673,14 +674,12 @@ export default function LoansSection({
                 id="loan-last-date"
                 label="Last Installment Date"
                 value={lastDue ? formatDate(lastDue) : ""}
-                className="sm:col-span-1 lg:col-span-2"
               />
 
               <Derived
                 id="loan-last-amount"
                 label="Last Installment Amount (OMR)"
                 value={plan.months ? amountValue(plan.last) : ""}
-                className="sm:col-span-1 lg:col-span-2"
               />
             </div>
           )}
@@ -757,9 +756,12 @@ export default function LoansSection({
               </div>
             </div>
 
-            <h3 className="ml-auto text-lg font-bold text-primary">
-              Loans and Installments
-            </h3>
+            {addLabel && !adding && (
+              <Button type="button" className="ml-auto" onClick={onOpenAdd}>
+                <Plus className="mr-2 h-4 w-4" />
+                {addLabel}
+              </Button>
+            )}
           </div>
 
           {shown.length === 0 ? (
@@ -812,13 +814,25 @@ export default function LoansSection({
                             <button
                               type="button"
                               onClick={() => track(record)}
-                              className="rounded font-bold text-primary underline underline-offset-2 hover:no-underline focus:outline-none focus:ring-2 focus:ring-ring"
+                              className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                             >
                               {record.requestNo || index + 1}
                             </button>
                           ) : (
                             index + 1
                           )}
+
+                          {/* Where it stands, under the number it belongs
+                              to - the Installment Status column is the
+                              instalments', not the loan's. */}
+                          <span
+                            className={cn(
+                              "mt-1 block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold",
+                              LOAN_STATUS_CHIP[record.status]
+                            )}
+                          >
+                            {record.status}
+                          </span>
                         </Td>
                         <Td className="text-left">
                           <span className="block font-bold text-primary">
@@ -854,18 +868,8 @@ export default function LoansSection({
                         <Td className="text-right text-muted-foreground">-</Td>
                         <Td className="text-right text-muted-foreground">-</Td>
                         {/* The instalment columns say nothing about the loan
-                            itself, but where the request got to belongs on its
-                            row: it decides what may be asked for next. */}
-                        <Td className="text-center">
-                          <span
-                            className={cn(
-                              "inline-block rounded-md px-3 py-1 text-xs font-semibold",
-                              LOAN_STATUS_CHIP[record.status]
-                            )}
-                          >
-                            {record.status}
-                          </span>
-                        </Td>
+                            itself, so nothing is put in them. */}
+                        <Td className="text-center text-muted-foreground">-</Td>
                         <Td className="text-right text-muted-foreground">-</Td>
                         <Td className="text-center">
                           <button

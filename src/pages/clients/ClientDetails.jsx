@@ -342,7 +342,7 @@ export default function ClientDetails() {
                 <button
                   type="button"
                   onClick={() => navigate("/clients/" + mergedInto.id)}
-                  className="inline-flex items-center gap-1 text-primary underline-offset-2 hover:underline"
+                  className="inline-flex items-center gap-1 text-primary"
                 >
                   Open {mergedInto.clientName}
                   <ArrowRight className="h-3.5 w-3.5" />

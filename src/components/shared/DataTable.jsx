@@ -251,16 +251,12 @@ export default function DataTable({
             </Button>
           )}
 
+          {/* The way to add, at the end of the row above the table it adds
+              to - where every list in the system carries it. */}
           {onAdd && (
-            <Button
-              variant="outline"
-              size="icon"
-              className="shrink-0"
-              onClick={onAdd}
-              title={addLabel}
-            >
-              <Plus className="h-4 w-4" />
-              <span className="sr-only">{addLabel}</span>
+            <Button type="button" className="shrink-0" onClick={onAdd}>
+              <Plus className="mr-2 h-4 w-4" />
+              {addLabel}
             </Button>
           )}
         </div>
