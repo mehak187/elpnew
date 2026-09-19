@@ -181,8 +181,7 @@ export default function AssistanceSection({
         expenseType: draft.expenseType,
         category: draft.category,
         subcategory: draft.subcategory,
-        // Who the help is for, and whose record it was asked from.
-        beneficiary: draft.beneficiary,
+        // Whose record it was asked from.
         employee: employee?.name || "",
         purpose: draft.notes.trim(),
         amount: Number(draft.amount),
@@ -243,7 +242,6 @@ export default function AssistanceSection({
     setDraft({
       ...emptyDraft,
       subcategory: record.subcategory,
-      beneficiary: record.beneficiary,
       amount: String(record.amount),
       notes: record.purpose || record.notes || "",
     });
