@@ -64,7 +64,9 @@ import {
   DEFAULT_DIAL_CODE,
   COUNTRY_DIAL_CODES,
   EMERGENCY_RELATIONSHIPS,
+  EMPLOYMENT_TYPES,
 } from "@/lib/constants";
+import { initialBranches } from "@/pages/firm/firmData";
 import FinancialBenefitsSection from "./sections/FinancialBenefitsSection";
 import EntitlementsSection from "./sections/EntitlementsSection";
 
@@ -107,7 +109,7 @@ const SECTIONS = [
     // entries in this menu that were all one answer, so they are one page
     // with a box each.
     key: "information",
-    label: "Employee Information",
+    label: "Employee Profile",
     title: "Employee",
     icon: User,
     note: "Employee profile, job description and contact details",
@@ -307,8 +309,11 @@ const emptyFormData = {
   jobLevel: "",
   department: "",
   occupation: "",
-
-
+  // Where the person works, how they are engaged, and - where the engagement
+  // runs out - the day it does.
+  branch: "",
+  employmentType: "",
+  employmentEndDate: "",
 
   // The card a person is identified by in Oman: a citizen's civil ID, or a
   // resident's card. One field, because a person carries one or the other.
@@ -574,17 +579,8 @@ export default function EmployeeForm({ self }) {
             <p className="text-xs text-primary/75 sm:text-sm">{current.note}</p>
           </div>
         </div>
-        {/* A section with its own buttons has nothing for the page header
-            to offer: there is no draft up here to save. */}
-        {!current.noSave && !readOnly && (
-          <Button type="submit" form="employee-form">
-            <Save className="mr-2 h-4 w-4" />
-            {current.save ||
-              (activeSection === "information"
-                ? "Save Employee"
-                : "Save " + current.label)}
-          </Button>
-        )}
+        {/* No Save up here: it sits at the end of the form it saves, where
+            the last field leaves off. */}
       </div>
 
       <div className="flex flex-col items-start gap-4 sm:gap-6 lg:flex-row">
@@ -657,9 +653,199 @@ export default function EmployeeForm({ self }) {
                     there is nothing to be Active. */}
                 {/* No standing beside the heading: it is already on the row
                     this record was opened from, and it is a field below. */}
-                <SectionCard title="Employee Information">
+                <SectionCard title="Personal Details">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="arabicName">
+                        Full Name (Arabic)
+                        <Required show={asksFor} />
+                      </Label>
+                      <Input
+                        id="arabicName"
+                        name="arabicName"
+                        value={formData.arabicName}
+                        onChange={onChange}
+                        placeholder="أدخل الاسم الكامل بالعربية"
+                        dir="rtl"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="employeeName">
+                        Full Name (English)
+                        <Required show={asksFor} />
+                      </Label>
+                      <Input
+                        id="employeeName"
+                        name="employeeName"
+                        value={formData.employeeName}
+                        onChange={onChange}
+                        placeholder="Enter full name in English"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="nationality">
+                        Nationality
+                        <Required show={asksFor} />
+                      </Label>
+                      <Select
+                        value={formData.nationality}
+                        onValueChange={(value) => set("nationality", value)}
+                      >
+                        <SelectTrigger id="nationality">
+                          <SelectValue placeholder="Select Nationality" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-72">
+                          {NATIONALITIES.map((nationality) => (
+                            <SelectItem key={nationality} value={nationality}>
+                              {nationality}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="gender">
+                        Gender
+                        <Required show={asksFor} />
+                      </Label>
+                      <Select
+                        value={formData.gender}
+                        onValueChange={(value) => set("gender", value)}
+                      >
+                        <SelectTrigger id="gender">
+                          <SelectValue placeholder="Select Gender" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {GENDERS.map((gender) => (
+                            <SelectItem key={gender} value={gender}>
+                              {gender}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="dateOfBirth">
+                        Date of Birth
+                        <Required show={asksFor} />
+                      </Label>
+                      <Input
+                        id="dateOfBirth"
+                        name="dateOfBirth"
+                        type="date"
+                        value={formData.dateOfBirth}
+                        onChange={onChange}
+                        required
+                      />
+                    </div>
+
+                    {/* The card the person is identified by. The copy of it
+                        is filed on the Documents page, with the rest. */}
+                    <div className="space-y-2">
+                      <Label htmlFor="civilId">
+                        Civil ID / Resident Card No.
+                        <Required show={asksFor} />
+                      </Label>
+                      <Input
+                        id="civilId"
+                        name="civilId"
+                        value={formData.civilId}
+                        onChange={onChange}
+                        placeholder="Enter civil ID or resident card number"
+                      />
+                    </div>
+
+                    <PhoneField
+                      id="phone"
+                      label={<>Phone Number<Required show={asksFor} /></>}
+                      placeholder="Enter phone number"
+                      dialCode={formData.dialCode}
+                      onDialCode={(value) => set("dialCode", value)}
+                      value={formData.phone}
+                      onChange={(e) => set("phone", e.target.value)}
+                    />
+
+                    {/* Two addresses, said apart: the firm writes to the work
+                        one, and reaches a person on the other. */}
+                    <IconField
+                      icon={Mail}
+                      id="personalEmail"
+                      name="personalEmail"
+                      type="email"
+                      label="Personal Email"
+                      placeholder="Enter personal email address"
+                      value={formData.personalEmail}
+                      onChange={onChange}
+                    />
+
+                    <IconField
+                      icon={MapPin}
+                      id="address"
+                      name="address"
+                      label={<>Address<Required show={asksFor} /></>}
+                      placeholder="Enter full address"
+                      value={formData.address}
+                      onChange={onChange}
+                    />
+
+                    {/* Who to call, and on what number, if something happens */}
+                    <IconField
+                      icon={User}
+                      id="emergencyName"
+                      name="emergencyName"
+                      label={<>Emergency Contact Name<Required show={asksFor} /></>}
+                      placeholder="Enter emergency contact name"
+                      value={formData.emergencyName}
+                      onChange={onChange}
+                    />
+
+                    {/* Who they are to the employee: whoever answers that call
+                        needs to know who they are speaking to. */}
+                    <div className="space-y-2">
+                      <Label htmlFor="emergencyRelationship">
+                        Relationship to Employee
+                        <Required show={asksFor} />
+                      </Label>
+                      <Select
+                        value={formData.emergencyRelationship}
+                        onValueChange={(value) =>
+                          value && set("emergencyRelationship", value)
+                        }
+                      >
+                        <SelectTrigger id="emergencyRelationship">
+                          <SelectValue placeholder="Select Relationship" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {EMERGENCY_RELATIONSHIPS.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <PhoneField
+                      id="emergencyPhone"
+                      label={<>Emergency Contact Phone Number<Required show={asksFor} /></>}
+                      placeholder="Enter emergency contact phone number"
+                      dialCode={formData.emergencyDialCode}
+                      onDialCode={(value) => set("emergencyDialCode", value)}
+                      value={formData.emergencyPhone}
+                      onChange={(e) => set("emergencyPhone", e.target.value)}
+                    />
+                  </div>
+                </SectionCard>
+
+                <SectionCard title="Employment Details">
                   <div className="space-y-6">
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-5">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
                       {/* Where the employee stands comes first: it decides
                           what else the record has to say. It is the firm's
                           business, so My Profile does not show it. */}
@@ -703,74 +889,73 @@ export default function EmployeeForm({ self }) {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="arabicName">
-                          Full Name (Arabic)
-                          <Required show={asksFor} />
-                        </Label>
-                        <Input
-                          id="arabicName"
-                          name="arabicName"
-                          value={formData.arabicName}
-                          onChange={onChange}
-                          placeholder="أدخل الاسم الكامل بالعربية"
-                          dir="rtl"
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="employeeName">
-                          Full Name (English)
-                          <Required show={asksFor} />
-                        </Label>
-                        <Input
-                          id="employeeName"
-                          name="employeeName"
-                          value={formData.employeeName}
-                          onChange={onChange}
-                          placeholder="Enter full name in English"
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="nationality">
-                          Nationality
+                        <Label htmlFor="branch">
+                          Branch / Work Location
                           <Required show={asksFor} />
                         </Label>
                         <Select
-                          value={formData.nationality}
-                          onValueChange={(value) => set("nationality", value)}
+                          value={formData.branch}
+                          onValueChange={(value) => value && set("branch", value)}
                         >
-                          <SelectTrigger id="nationality">
-                            <SelectValue placeholder="Select Nationality" />
-                          </SelectTrigger>
-                          <SelectContent className="max-h-72">
-                            {NATIONALITIES.map((nationality) => (
-                              <SelectItem key={nationality} value={nationality}>
-                                {nationality}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="gender">
-                          Gender
-                          <Required show={asksFor} />
-                        </Label>
-                        <Select
-                          value={formData.gender}
-                          onValueChange={(value) => set("gender", value)}
-                        >
-                          <SelectTrigger id="gender">
-                            <SelectValue placeholder="Select Gender" />
+                          <SelectTrigger id="branch">
+                            <SelectValue placeholder="Select Branch" />
                           </SelectTrigger>
                           <SelectContent>
-                            {GENDERS.map((gender) => (
-                              <SelectItem key={gender} value={gender}>
-                                {gender}
+                            {initialBranches.map((branch) => (
+                              <SelectItem key={branch.id} value={branch.name}>
+                                {branch.name} Branch
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <IconField
+                        icon={Mail}
+                        id="workEmail"
+                        name="workEmail"
+                        type="email"
+                        label={<>Work Email<Required show={asksFor} /></>}
+                        placeholder="name@firm.com"
+                        value={formData.workEmail}
+                        onChange={onChange}
+                      />
+
+                      <div className="space-y-2">
+                        <Label htmlFor="dateOfJoining">
+                          Date of Joining
+                          <Required show={asksFor} />
+                        </Label>
+                        <Input
+                          id="dateOfJoining"
+                          name="dateOfJoining"
+                          type="date"
+                          value={formData.dateOfJoining}
+                          onChange={onChange}
+                          required
+                        />
+                      </div>
+
+                      {/* How the person is engaged, and - where the engagement
+                          runs out - the day it does. */}
+                      <div className="space-y-2">
+                        <Label htmlFor="employmentType">
+                          Employment Type
+                          <Required show={asksFor} />
+                        </Label>
+                        <Select
+                          value={formData.employmentType}
+                          onValueChange={(value) =>
+                            value && set("employmentType", value)
+                          }
+                        >
+                          <SelectTrigger id="employmentType">
+                            <SelectValue placeholder="Select Employment Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {EMPLOYMENT_TYPES.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -778,144 +963,105 @@ export default function EmployeeForm({ self }) {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="dateOfBirth">
-                          Date of Birth
-                          <Required show={asksFor} />
+                        <Label htmlFor="employmentEndDate">
+                          Employment End Date
                         </Label>
                         <Input
-                          id="dateOfBirth"
-                          name="dateOfBirth"
+                          id="employmentEndDate"
+                          name="employmentEndDate"
                           type="date"
-                          value={formData.dateOfBirth}
+                          value={formData.employmentEndDate}
                           onChange={onChange}
-                          required
                         />
                       </div>
 
-                      {/* The card the person is identified by. The copy of it
-                          is filed on the Documents page, with the rest. */}
                       <div className="space-y-2">
-                        <Label htmlFor="civilId">
-                          Civil ID / Resident Card No.
+                        <Label htmlFor="category">
+                          Category / Role
                           <Required show={asksFor} />
                         </Label>
-                        <Input
-                          id="civilId"
-                          name="civilId"
-                          value={formData.civilId}
-                          onChange={onChange}
-                          placeholder="Enter civil ID or resident card number"
-                        />
+                        <Select
+                          value={formData.category}
+                          onValueChange={(value) => set("category", value)}
+                        >
+                          <SelectTrigger id="category">
+                            <SelectValue placeholder="Select Category / Role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {EMPLOYEE_CATEGORIES.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
 
-                      {/* When somebody joined and what they do: the firm's own
-                          view of the employment, kept off My Profile. */}
-                      {!self && (
-                        <>
-                          <div className="space-y-2">
-                            <Label htmlFor="dateOfJoining">
-                              Date of Joining
-                              <Required show={asksFor} />
-                            </Label>
-                            <Input
-                              id="dateOfJoining"
-                              name="dateOfJoining"
-                              type="date"
-                              value={formData.dateOfJoining}
-                              onChange={onChange}
-                              required
-                            />
-                          </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="jobLevel">
+                          Job Level
+                          <Required show={asksFor} />
+                        </Label>
+                        <Select
+                          value={formData.jobLevel}
+                          onValueChange={(value) => set("jobLevel", value)}
+                        >
+                          <SelectTrigger id="jobLevel">
+                            <SelectValue placeholder="Select Job Level" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {JOB_LEVELS.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                          <div className="space-y-2">
-                            <Label htmlFor="category">
-                              Category / Role
-                              <Required show={asksFor} />
-                            </Label>
-                            <Select
-                              value={formData.category}
-                              onValueChange={(value) => set("category", value)}
-                            >
-                              <SelectTrigger id="category">
-                                <SelectValue placeholder="Select Category / Role" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {EMPLOYEE_CATEGORIES.map((option) => (
-                                  <SelectItem key={option} value={option}>
-                                    {option}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="department">
+                          Department / Division
+                          <Required show={asksFor} />
+                        </Label>
+                        <Select
+                          value={formData.department}
+                          onValueChange={(value) => set("department", value)}
+                        >
+                          <SelectTrigger id="department">
+                            <SelectValue placeholder="Select Department / Division" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {DEPARTMENTS.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                          <div className="space-y-2">
-                            <Label htmlFor="jobLevel">
-                              Job Level
-                              <Required show={asksFor} />
-                            </Label>
-                            <Select
-                              value={formData.jobLevel}
-                              onValueChange={(value) => set("jobLevel", value)}
-                            >
-                              <SelectTrigger id="jobLevel">
-                                <SelectValue placeholder="Select Job Level" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {JOB_LEVELS.map((option) => (
-                                  <SelectItem key={option} value={option}>
-                                    {option}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="department">
-                              Department / Division
-                              <Required show={asksFor} />
-                            </Label>
-                            <Select
-                              value={formData.department}
-                              onValueChange={(value) => set("department", value)}
-                            >
-                              <SelectTrigger id="department">
-                                <SelectValue placeholder="Select Department / Division" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {DEPARTMENTS.map((option) => (
-                                  <SelectItem key={option} value={option}>
-                                    {option}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="occupation">
-                              Profession / Occupation
-                              <Required show={asksFor} />
-                            </Label>
-                            <Select
-                              value={formData.occupation}
-                              onValueChange={(value) => set("occupation", value)}
-                            >
-                              <SelectTrigger id="occupation">
-                                <SelectValue placeholder="Select Profession / Occupation" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {OCCUPATIONS.map((option) => (
-                                  <SelectItem key={option} value={option}>
-                                    {option}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </>
-                      )}
+                      <div className="space-y-2">
+                        <Label htmlFor="occupation">
+                          Profession / Occupation
+                          <Required show={asksFor} />
+                        </Label>
+                        <Select
+                          value={formData.occupation}
+                          onValueChange={(value) => set("occupation", value)}
+                        >
+                          <SelectTrigger id="occupation">
+                            <SelectValue placeholder="Select Profession / Occupation" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {OCCUPATIONS.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
 
                     {/* Asked for only once the status says somebody has left */}
@@ -963,103 +1109,6 @@ export default function EmployeeForm({ self }) {
                   </div>
                 </SectionCard>
 
-                <SectionCard title="Contact &amp; Address Information">
-                  <div className="space-y-6">
-
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
-                      <PhoneField
-                        id="phone"
-                        label={<>Phone Number<Required show={asksFor} /></>}
-                        placeholder="Enter phone number"
-                        dialCode={formData.dialCode}
-                        onDialCode={(value) => set("dialCode", value)}
-                        value={formData.phone}
-                        onChange={(e) => set("phone", e.target.value)}
-                      />
-
-                      {/* Two addresses, said apart: the firm writes to the
-                          work one, and reaches a person on the other. */}
-                      <IconField
-                        icon={Mail}
-                        id="workEmail"
-                        name="workEmail"
-                        type="email"
-                        label={<>Work Email<Required show={asksFor} /></>}
-                        placeholder="name@firm.com"
-                        value={formData.workEmail}
-                        onChange={onChange}
-                      />
-
-                      <IconField
-                        icon={Mail}
-                        id="personalEmail"
-                        name="personalEmail"
-                        type="email"
-                        label="Personal Email"
-                        placeholder="Enter personal email address"
-                        value={formData.personalEmail}
-                        onChange={onChange}
-                      />
-
-                      <IconField
-                        icon={MapPin}
-                        id="address"
-                        name="address"
-                        label={<>Address<Required show={asksFor} /></>}
-                        placeholder="Enter full address"
-                        value={formData.address}
-                        onChange={onChange}
-                      />
-
-                      {/* Who to call, and on what number, if something happens */}
-                      <IconField
-                        icon={User}
-                        id="emergencyName"
-                        name="emergencyName"
-                        label={<>Emergency Contact Name<Required show={asksFor} /></>}
-                        placeholder="Enter emergency contact name"
-                        value={formData.emergencyName}
-                        onChange={onChange}
-                      />
-
-                      {/* Who they are to the employee: whoever answers that
-                          call needs to know who they are speaking to. */}
-                      <div className="space-y-2">
-                        <Label htmlFor="emergencyRelationship">
-                          Relationship to Employee
-                          <Required show={asksFor} />
-                        </Label>
-                        <Select
-                          value={formData.emergencyRelationship}
-                          onValueChange={(value) =>
-                            value && set("emergencyRelationship", value)
-                          }
-                        >
-                          <SelectTrigger id="emergencyRelationship">
-                            <SelectValue placeholder="Select Relationship" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {EMERGENCY_RELATIONSHIPS.map((option) => (
-                              <SelectItem key={option} value={option}>
-                                {option}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <PhoneField
-                        id="emergencyPhone"
-                        label={<>Emergency Contact Phone Number<Required show={asksFor} /></>}
-                        placeholder="Enter emergency contact phone number"
-                        dialCode={formData.emergencyDialCode}
-                        onDialCode={(value) => set("emergencyDialCode", value)}
-                        value={formData.emergencyPhone}
-                        onChange={(e) => set("emergencyPhone", e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </SectionCard>
                   </fieldset>
                 )}
 
@@ -1076,17 +1125,6 @@ export default function EmployeeForm({ self }) {
                     {/* No heading: the page above is already called Documents.
                         The firm files the papers on an employee's record; on My
                         Profile they are read, not added to. */}
-                    {/* The way to add gives way to the form it opens: while
-                        one paper is being filed there is nothing to add. */}
-                    {!readOnly && !addingDoc && (
-                      <div className="mb-6 flex justify-end border-b pb-3">
-                        <Button type="button" onClick={() => setAddingDoc(true)}>
-                          <Plus className="mr-2 h-4 w-4" />
-                          Add Document
-                        </Button>
-                      </div>
-                    )}
-
                     {addingDoc && (
                     <div className="rounded-lg border p-4">
                       <div className="mb-4">
@@ -1249,7 +1287,22 @@ export default function EmployeeForm({ self }) {
 
                     {/* What is already on file */}
                     <div className="space-y-4 rounded-lg border p-4">
-                      <FormHeading title="Uploaded Documents" icon={FileText} />
+                      {/* The list's name on the left, and the way to add to
+                          it on the right - one row, not two. It gives way to
+                          the form it opens. */}
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <FormHeading title="Uploaded Documents" icon={FileText} />
+                        {!readOnly && !addingDoc && (
+                          <Button
+                            type="button"
+                            className="ml-auto"
+                            onClick={() => setAddingDoc(true)}
+                          >
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add Document
+                          </Button>
+                        )}
+                      </div>
 
                       <AiSearch
                         value={docQuery}
@@ -1287,7 +1340,7 @@ export default function EmployeeForm({ self }) {
                                       <button
                                         type="button"
                                         onClick={() => editDocument(document)}
-                                        className="rounded font-bold text-primary underline underline-offset-2 hover:no-underline focus:outline-none focus:ring-2 focus:ring-ring"
+                                        className="rounded font-bold text-primary underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
                                       >
                                         {shownDocuments.length - index}
                                       </button>
@@ -1360,9 +1413,9 @@ export default function EmployeeForm({ self }) {
                                         type="button"
                                         onClick={() => setRemovingDoc(document)}
                                         title={"Delete " + document.fileName}
-                                        className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus:outline-none focus:ring-2 focus:ring-ring"
+                                        className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus:outline-none focus:ring-2 focus:ring-ring"
                                       >
-                                        <Trash2 className="h-4 w-4" />
+                                        <Trash2 className="h-5 w-5" />
                                         <span className="sr-only">
                                           Delete {document.fileName}
                                         </span>
@@ -1458,7 +1511,17 @@ export default function EmployeeForm({ self }) {
                   <EmptyState>{current.label} is not set up yet.</EmptyState>
                 )}
 
-
+                {/* Save at the end of what it saves, where the last field
+                    leaves off. A section that saves its own records has
+                    nothing here: there is no draft on the page to save. */}
+                {!current.noSave && !readOnly && (
+                  <div className="flex justify-end">
+                    <Button type="submit">
+                      <Save className="mr-2 h-4 w-4" />
+                      {current.save || "Save"}
+                    </Button>
+                  </div>
+                )}
               </form>
             </CardContent>
           </Card>
