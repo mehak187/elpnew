@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff } from "lucide-react";
+import { Plus } from "lucide-react";
 import AiSearch from "@/components/shared/AiSearch";
 import { EmptyState } from "@/components/shared/panels";
 import {
@@ -42,12 +42,11 @@ function Part({ label, value }) {
  */
 export default function SalaryHistory({
   history = salaryHistory,
-  // The salary breakdown above this list is opened from here, beside the
-  // search - the row that used to hold the month and the year.
-  detailsOpen = false,
-  onToggleDetails = null,
   // What to do when a request's temporary number is clicked.
   onOpenRequest = null,
+  // The way to add, on the row above the list it adds to.
+  onAdd = null,
+  addLabel = "Add Salary",
 }) {
   const [query, setQuery] = useState("");
 
@@ -65,32 +64,18 @@ export default function SalaryHistory({
       <CardContent className="space-y-4 p-4 sm:p-6">
         {/* The search on the left, where every list in the system has it, and
             the name of what is being searched on the right. */}
+        {/* The search on the left, where every list in the system has it,
+            and the way to add on the right. */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <AiSearch
             value={query}
             onChange={setQuery}
             placeholder="Ask about salaries..."
           />
-
-          {/* The section above already names this list, so the row's other
-              end carries what acts on it instead of saying so twice. The
-              words say what a click will do, and to what. */}
-          {onToggleDetails && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="ml-auto"
-              aria-expanded={detailsOpen}
-              aria-controls="salary-details"
-              onClick={onToggleDetails}
-            >
-              {detailsOpen ? (
-                <EyeOff className="mr-1.5 h-4 w-4" />
-              ) : (
-                <Eye className="mr-1.5 h-4 w-4" />
-              )}
-              {detailsOpen ? "Hide Salary Details" : "View Salary Details"}
+          {onAdd && (
+            <Button type="button" className="ml-auto" onClick={onAdd}>
+              <Plus className="mr-2 h-4 w-4" />
+              {addLabel}
             </Button>
           )}
         </div>

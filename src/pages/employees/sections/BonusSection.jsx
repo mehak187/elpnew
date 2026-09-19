@@ -23,7 +23,7 @@ import {
   Td,
 } from "@/components/shared/RecordTable";
 import { Rial } from "@/components/shared/Rial";
-import { ArrowRight, FileCheck } from "lucide-react";
+import { ArrowRight, FileCheck, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { amountValue } from "@/lib/money";
 import { smartSearch } from "@/lib/search/smartSearch";
@@ -254,6 +254,8 @@ export default function BonusSection({
   // Opening a request from the list puts the section back into adding, so
   // the window over the page is the one that shows it.
   onOpenAdd,
+  // The words on the button that opens the form, over the list it adds to.
+  addLabel = "Add Bonus",
 }) {
   const { bonuses, addBonus, updateBonus } = useBonuses();
   const [draft, setDraft] = useState(emptyDraft);
@@ -626,17 +628,20 @@ export default function BonusSection({
           </DialogContent>
         </Dialog>
 
-        {/* The search on the left, where every list in the system has it, and
-            the name of the list on the right. */}
+        {/* The search on the left, where every list in the system has it,
+            and the way to add on the right. */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <AiSearch
             value={query}
             onChange={setQuery}
             placeholder="Ask about bonuses..."
           />
-          <h3 className="ml-auto text-lg font-bold text-primary">
-            Bonus History
-          </h3>
+          {addLabel && !adding && (
+            <Button type="button" className="ml-auto" onClick={onOpenAdd}>
+              <Plus className="mr-2 h-4 w-4" />
+              {addLabel}
+            </Button>
+          )}
         </div>
 
         {mine.length === 0 ? (

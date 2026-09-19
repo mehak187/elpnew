@@ -1290,8 +1290,16 @@ export default function EmployeeForm({ self }) {
                       {/* The list's name on the left, and the way to add to
                           it on the right - one row, not two. It gives way to
                           the form it opens. */}
+                      <FormHeading title="Uploaded Documents" icon={FileText} />
+
+                      {/* The search on the left, and the way to add on the
+                          right - the one row every list in the system has. */}
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <FormHeading title="Uploaded Documents" icon={FileText} />
+                        <AiSearch
+                          value={docQuery}
+                          onChange={setDocQuery}
+                          placeholder="Ask about documents..."
+                        />
                         {!readOnly && !addingDoc && (
                           <Button
                             type="button"
@@ -1303,12 +1311,6 @@ export default function EmployeeForm({ self }) {
                           </Button>
                         )}
                       </div>
-
-                      <AiSearch
-                        value={docQuery}
-                        onChange={setDocQuery}
-                        placeholder="Ask about documents..."
-                      />
 
                       {shownDocuments.length === 0 ? (
                         <EmptyState>No documents uploaded yet.</EmptyState>

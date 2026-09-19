@@ -34,7 +34,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { Rial } from "@/components/shared/Rial";
-import { FileText, FileImage, FileCheck } from "lucide-react";
+import { FileText, FileImage, FileCheck, Plus } from "lucide-react";
 import { formatDate } from "../loanData";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
 import { PAYMENT_SOURCES, DEFAULT_BANK } from "../payrollData";
@@ -124,6 +124,8 @@ export default function AssistanceSection({
   // Opening a request from the list puts the section back into adding, so
   // the window over the page is the one that shows it.
   onOpenAdd,
+  // The words on the button that opens the form, over the list it adds to.
+  addLabel = "Add Assistance",
   // Management decides a request; on My Profile the decision is only read.
   canDecide = true,
 }) {
@@ -716,7 +718,7 @@ export default function AssistanceSection({
       </Dialog>
 
       {/* The search on the left, where every list in the system has it, and
-          the name of the list on the right. */}
+          the way to add on the right. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <AiSearch
           value={query}
@@ -726,9 +728,12 @@ export default function AssistanceSection({
           }}
           placeholder="Ask about assistance..."
         />
-        <h3 className="ml-auto text-lg font-bold text-primary">
-          Assistance History
-        </h3>
+        {addLabel && !adding && (
+          <Button type="button" className="ml-auto" onClick={onOpenAdd}>
+            <Plus className="mr-2 h-4 w-4" />
+            {addLabel}
+          </Button>
+        )}
       </div>
 
       {ordered.length === 0 ? (

@@ -39,6 +39,7 @@ import {
   Users,
   HandCoins,
   Tag,
+  Plus,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
@@ -200,6 +201,8 @@ export default function LoansSection({
   // Opening a request from the list puts the section back into adding, so
   // the window over the page is the one that shows it.
   onOpenAdd,
+  // The words on the button that opens the form, over the list it adds to.
+  addLabel = "Add Loan",
   // Management decides a request; on My Profile the decision is only read.
   canDecide = true,
 }) {
@@ -757,9 +760,12 @@ export default function LoansSection({
               </div>
             </div>
 
-            <h3 className="ml-auto text-lg font-bold text-primary">
-              Loans and Installments
-            </h3>
+            {addLabel && !adding && (
+              <Button type="button" className="ml-auto" onClick={onOpenAdd}>
+                <Plus className="mr-2 h-4 w-4" />
+                {addLabel}
+              </Button>
+            )}
           </div>
 
           {shown.length === 0 ? (
