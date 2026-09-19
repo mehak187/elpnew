@@ -250,10 +250,6 @@ export default function CourtFeePayments() {
             </p>
           </div>
         </div>
-        <Button onClick={() => navigate("/court-fee-payments/create")}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Expense
-        </Button>
       </div>
 
       {/* What the firm has paid the courts, by what it was paid for */}
@@ -276,6 +272,8 @@ export default function CourtFeePayments() {
             enableColumnSearch={false}
             enableSorting
             itemLabel="expenses"
+            onAdd={() => navigate("/court-fee-payments/create")}
+            addLabel="Add Expense"
             currentPage={currentPage}
             totalPages={Math.ceil(judicialExpenses.length / pageSize)}
             pageSize={pageSize}

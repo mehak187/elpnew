@@ -257,19 +257,13 @@ export default function Execution() {  const { id } = useParams();
       {/* Execution Actions List */}
       <Card>
         <CardContent className="p-4 sm:p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-semibold text-primary">Execution Actions</h3>
-            {!showForm && (
-              <Button size="sm" onClick={() => setShowForm(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Action
-              </Button>
-            )}
-          </div>
+          <h3 className="mb-4 font-semibold text-primary">Execution Actions</h3>
           <DataTable
             columns={columns}
             data={executionActions}
             searchPlaceholder="Search actions..."
+            onAdd={showForm ? null : () => setShowForm(true)}
+            addLabel="Add Action"
             currentPage={currentPage}
             totalPages={Math.ceil(executionActions.length / pageSize)}
             pageSize={pageSize}

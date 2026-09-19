@@ -70,12 +70,6 @@ export default function SupplierPaymentsSection({ supplier }) {
             </span>
             <span className="text-sm font-bold text-primary">{omr(total)}</span>
           </div>
-
-          {/* ml-auto keeps it right once it wraps below the heading. */}
-          <Button type="button" className="ml-auto" onClick={() => setAdding(true)}>
-            <Plus className="mr-1.5 h-4 w-4" />
-            Add Expense Request
-          </Button>
         </div>
       )}
 
@@ -103,6 +97,8 @@ export default function SupplierPaymentsSection({ supplier }) {
             searchPlaceholder="Ask about this supplier's expenses..."
             exportFileName="supplier-expenses.csv"
             enableColumnSearch={false}
+            onAdd={adding ? null : () => setAdding(true)}
+            addLabel="Add Expense Request"
             currentPage={currentPage}
             pageSize={pageSize}
             onPageChange={setCurrentPage}

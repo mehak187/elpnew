@@ -205,18 +205,9 @@ export default function ClientContractsSection() {
           being added the form's heading stands in its place. */}
       {!adding && (
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-        {/* Named as the sidebar names it: the page is already one client's. */}
+        {/* Named as the sidebar names it: the page is already one client's.
+            The way to add sits on the row above the table. */}
         <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">Contracts</h2>
-        {/* ml-auto keeps it right once it wraps below the heading. */}
-        <Button
-          type="button"
-          className="ml-auto"
-          onClick={() => setAdding(true)}
-          disabled={adding}
-        >
-          <Plus className="mr-1.5 h-4 w-4" />
-          Add Contract
-        </Button>
       </div>
       )}
 
@@ -373,6 +364,8 @@ export default function ClientContractsSection() {
         keepOrder
         searchPlaceholder="Search contracts..."
         enableColumnSearch={false}
+        onAdd={adding ? null : () => setAdding(true)}
+        addLabel="Add Contract"
         currentPage={currentPage}
         pageSize={pageSize}
         onPageChange={setCurrentPage}

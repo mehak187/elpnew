@@ -108,10 +108,6 @@ export default function CorporateList() {
             </p>
           </div>
         </div>
-        <Button onClick={() => navigate('/corporate/create')}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Matter
-        </Button>
       </div>
 
       <RecordDialog
@@ -135,6 +131,8 @@ export default function CorporateList() {
             columns={columns}
             data={matters}
             searchPlaceholder="Search corporate matters..."
+            onAdd={() => navigate("/corporate/create")}
+            addLabel="New Matter"
             currentPage={currentPage}
             totalPages={Math.ceil(matters.length / pageSize)}
             pageSize={pageSize}

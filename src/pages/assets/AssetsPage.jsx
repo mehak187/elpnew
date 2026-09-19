@@ -345,13 +345,6 @@ export default function AssetsPage() {
             <p className="text-xs text-primary/75 sm:text-sm">Fixed Asset Register</p>
           </div>
         </div>
-        {/* The way to add gives way to the form it opens. */}
-        {!adding && (
-          <Button type="button" onClick={() => setAdding(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Asset
-          </Button>
-        )}
       </div>
 
       {adding && (
@@ -500,6 +493,8 @@ export default function AssetsPage() {
             exportFileName="assets.csv"
             enableColumnSearch={false}
             enableSorting
+            onAdd={adding ? null : () => setAdding(true)}
+            addLabel="Add Asset"
             currentPage={currentPage}
             totalPages={Math.ceil(rows.length / pageSize)}
             pageSize={pageSize}

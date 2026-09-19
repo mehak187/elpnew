@@ -148,12 +148,6 @@ export default function DocumentsSection({ canEdit }) {
           <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
             Documents
           </h2>
-          {canEdit && (
-            <Button type="button" onClick={() => setAdding(true)}>
-              <Plus className="mr-1.5 h-4 w-4" />
-              Add Document
-            </Button>
-          )}
         </div>
       )}
 
@@ -281,6 +275,16 @@ export default function DocumentsSection({ canEdit }) {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* The way to add, on the row above the list it adds to. */}
+      {canEdit && !adding && (
+        <div className="flex justify-end">
+          <Button type="button" onClick={() => setAdding(true)}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Add Document
+          </Button>
+        </div>
       )}
 
       {/* The list stays under the form rather than making way for it: a

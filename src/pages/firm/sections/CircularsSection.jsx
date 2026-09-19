@@ -394,12 +394,6 @@ export default function CircularsSection({ canEdit }) {
           <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
             Circulars
           </h2>
-          {canEdit && (
-            <Button onClick={startNew}>
-              <Plus className="mr-1.5 h-4 w-4" />
-              New Circular
-            </Button>
-          )}
         </div>
       )}
 
@@ -447,6 +441,14 @@ export default function CircularsSection({ canEdit }) {
             <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
             <span className="sr-only">Export to CSV</span>
           </Button>
+
+          {/* The way to add, at the end of the row above the list. */}
+          {canEdit && !open && (
+            <Button type="button" className="shrink-0" onClick={startNew}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              New Circular
+            </Button>
+          )}
         </div>
       </div>
 

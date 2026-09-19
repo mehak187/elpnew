@@ -109,21 +109,13 @@ export default function SuppliersPage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() =>
-              downloadCsv(toCsv(columns, suppliers), "suppliers.csv")
-            }
-          >
-            <FileSpreadsheet className="mr-2 h-4 w-4 text-emerald-600" />
-            Export
-          </Button>
-          <Button onClick={() => navigate("/suppliers/create")}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Supplier
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          onClick={() => downloadCsv(toCsv(columns, suppliers), "suppliers.csv")}
+        >
+          <FileSpreadsheet className="mr-2 h-4 w-4 text-emerald-600" />
+          Export
+        </Button>
       </div>
 
       <Card>
@@ -136,6 +128,8 @@ export default function SuppliersPage() {
             searchPlaceholder="Ask anything..."
             showExport={false}
             enableColumnSearch={false}
+            onAdd={() => navigate("/suppliers/create")}
+            addLabel="Add Supplier"
             currentPage={currentPage}
             totalPages={Math.ceil(suppliers.length / pageSize)}
             pageSize={pageSize}

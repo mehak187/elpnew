@@ -227,28 +227,31 @@ export default function LeavesSection({ employee, canReview = true }) {
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <FormHeading icon={CalendarCheck} title="Leave Requests History" />
-          <div className="ml-auto flex flex-wrap items-center gap-2">
-            {/* Leave is granted a year at a time, so the year is a choice
-                rather than a column repeated down every row. Empty values are
-                ignored: Radix reports "" whenever its list changes. */}
-            <Select value={year} onValueChange={(value) => value && setYear(value)}>
-              <SelectTrigger className="w-28" aria-label="Leave year">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {years.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Leave is granted a year at a time, so the year is a choice
+              rather than a column repeated down every row. Empty values are
+              ignored: Radix reports "" whenever its list changes. */}
+          <Select value={year} onValueChange={(value) => value && setYear(value)}>
+            <SelectTrigger className="ml-auto w-28" aria-label="Leave year">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {years.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
-            <Button type="button" onClick={() => setAdding(true)}>
-              <Plus className="mr-1.5 h-4 w-4" />
-              Add New Leave
-            </Button>
-          </div>
+      {/* The way to add, on the row above the list it adds to. */}
+      {!adding && !open && (
+        <div className="flex justify-end">
+          <Button type="button" onClick={() => setAdding(true)}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Add New Leave
+          </Button>
         </div>
       )}
 
