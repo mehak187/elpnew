@@ -152,6 +152,10 @@ export function DecisionChoice({
   // The stage's own heading, so a form that opens on this stage is not left
   // with two headings or none.
   title = "Management Decision",
+  // What each card says under its name, where the answer needs saying in
+  // the request's own words: a loan is granted on terms, not only on an
+  // amount. A request that needs none leaves the cards as three plain names.
+  notes = {},
 }) {
   return (
     <Bordered title={title}>
@@ -187,8 +191,15 @@ export function DecisionChoice({
               >
                 {chosen && <Check className="h-3.5 w-3.5 text-white" />}
               </span>
-              <span className="min-w-0 flex-1 font-semibold text-primary">
-                {decision.title}
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold text-primary">
+                  {decision.title}
+                </span>
+                {notes[decision.key] && (
+                  <span className="block text-xs text-muted-foreground">
+                    {notes[decision.key]}
+                  </span>
+                )}
               </span>
             </button>
           );
