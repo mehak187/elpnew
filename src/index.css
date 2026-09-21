@@ -37,6 +37,9 @@
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-locked: var(--locked);
+  --color-decision-full: var(--decision-full);
+  --color-decision-partial: var(--decision-partial);
+  --color-decision-rejected: var(--decision-rejected);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
@@ -70,7 +73,13 @@
   /* The background of a field the system fills in: a figure worked out, or a
      record being read rather than written. One tint for all of them, so "you
      cannot type here" is the same colour wherever it appears. */
-  --locked: oklch(0.975 0.022 150);
+  --locked: #f7f5f2;
+  /* The three answers a request can be given. Each carries its own tint
+     wherever the decision is shown, so what was decided is read from the
+     colour before a word of it. */
+  --decision-full: #eaf8ee;
+  --decision-partial: #f2ecf6;
+  --decision-rejected: #fff0f0;
   --background: oklch(0.99 0 0);
   --foreground: oklch(0.20 0 0);
   --card: oklch(1 0 0);
@@ -91,8 +100,11 @@
   /* Destructive is plain red, now well clear of the brand hue */
   --destructive: oklch(0.55 0.20 27);
   --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(0.90 0 0);
-  --input: oklch(0.90 0 0);
+  /* A section is framed in a thin, muted navy; the boxes inside it are
+     framed lighter still, so a field never reads as loudly as the panel it
+     sits in. */
+  --border: oklch(0.89 0.012 262);
+  --input: oklch(0.93 0.008 262);
   --ring: oklch(0.46 0.13 262);
   /* Charts: one hue, dark to light */
   --chart-1: oklch(0.33 0.11 262);

@@ -45,7 +45,7 @@ export const formatDate = (dateStr) =>
   dateStr
     ? new Date(dateStr).toLocaleDateString("en-GB", {
         day: "2-digit",
-        month: "short",
+        month: "2-digit",
         year: "numeric",
       })
     : "";
@@ -258,6 +258,20 @@ export const initialTransfers = [
   { id: 1, transferNo: "TRF-2026-0001", fromAccountId: 3, toAccountId: 1, amount: 3000, date: dayOffset(-95), time: "02:15 PM", reference: "REF-2026-039", receipt: "receipt_2026_039.pdf", byName: "Fatima Al Riyami", byRole: "Accountant", description: "Internal transfer" },
   { id: 2, transferNo: "TRF-2026-0002", fromAccountId: 1, toAccountId: 2, amount: 5000, date: dayOffset(-50), time: "10:30 AM", reference: "REF-2026-045", receipt: "receipt_2026_045.pdf", byName: "Ahmed Al Balushi", byRole: "Finance Manager", description: "Internal transfer" },
 ];
+
+/**
+ * "Bank Muscat - **** 6789", the way an account is named on a transfer.
+ *
+ * One choice rather than two: the account carries the bank it is held at, so
+ * the two can never be set to disagree.
+ */
+export const accountLabel = (account) =>
+  account.bankName + " — •••• " + String(account.accountNumber).slice(-4);
+
+/** The accounts money can actually leave from, as a transfer names them. */
+export const PAYING_ACCOUNTS = initialBankAccounts
+  .filter((account) => account.active)
+  .map(accountLabel);
 
 /**
  * An account number is shown masked wherever the account is only being

@@ -28,14 +28,31 @@ export const BONUS_SUBCATEGORIES = [
 /** Anything that is not one of the reasons above has to say what it was. */
 export const OTHER_BONUS = "Other";
 
+/** How a bonus is filed once it is paid: the same booking every time. */
+export const BONUS_BOOKING = {
+  expenseType: BONUS_EXPENSE_TYPE,
+  category: BONUS_CATEGORY,
+};
+
 /**
  * Where a bonus has got to.
  *
- * Deciding a bonus is not paying it: it is recorded first and disbursed
- * after, so the list says which of the two has happened.
+ * Asking for a bonus is not being granted one, and being granted one is not
+ * being paid it, so the list says which of the three has happened.
  */
 export const BONUS_PENDING = "Pending";
 export const BONUS_DISBURSED = "Disbursed";
+
+/** "BON-001", counted across the firm so a number is never reused. */
+export const nextBonusNo = (bonuses) =>
+  "BON-" +
+  String(
+    bonuses.reduce(
+      (max, bonus) =>
+        Math.max(max, Number(String(bonus.requestNo || "").replace(/\D/g, "")) || 0),
+      0
+    ) + 1
+  ).padStart(3, "0");
 
 export const BONUS_STATUS_CHIP = {
   [BONUS_PENDING]: "bg-amber-100 text-amber-800",
@@ -63,6 +80,7 @@ export const bonusesFor = (bonuses, name) =>
 export const initialBonuses = [
   {
     id: 1,
+    requestNo: "BON-001",
     employee: "Mohammed Al Yahyaei",
     expenseType: BONUS_EXPENSE_TYPE,
     category: BONUS_CATEGORY,
@@ -75,6 +93,7 @@ export const initialBonuses = [
   },
   {
     id: 2,
+    requestNo: "BON-002",
     employee: "Mohammed Al Yahyaei",
     expenseType: BONUS_EXPENSE_TYPE,
     category: BONUS_CATEGORY,
@@ -87,6 +106,7 @@ export const initialBonuses = [
   },
   {
     id: 3,
+    requestNo: "BON-003",
     employee: "Fatima Al Rashdi",
     expenseType: BONUS_EXPENSE_TYPE,
     category: BONUS_CATEGORY,
@@ -99,6 +119,7 @@ export const initialBonuses = [
   },
   {
     id: 4,
+    requestNo: "BON-004",
     employee: "Fatima Al Rashdi",
     expenseType: BONUS_EXPENSE_TYPE,
     category: BONUS_CATEGORY,
@@ -111,6 +132,7 @@ export const initialBonuses = [
   },
   {
     id: 5,
+    requestNo: "BON-005",
     employee: "Aisha Al Kindi",
     expenseType: BONUS_EXPENSE_TYPE,
     category: BONUS_CATEGORY,
@@ -123,6 +145,7 @@ export const initialBonuses = [
   },
   {
     id: 6,
+    requestNo: "BON-006",
     employee: "Aisha Al Kindi",
     expenseType: BONUS_EXPENSE_TYPE,
     category: BONUS_CATEGORY,
@@ -135,6 +158,7 @@ export const initialBonuses = [
   },
   {
     id: 7,
+    requestNo: "BON-007",
     employee: "Priya Sharma",
     expenseType: BONUS_EXPENSE_TYPE,
     category: BONUS_CATEGORY,
@@ -152,6 +176,7 @@ export const initialBonuses = [
   },
   {
     id: 8,
+    requestNo: "BON-008",
     employee: "Priya Sharma",
     expenseType: BONUS_EXPENSE_TYPE,
     category: BONUS_CATEGORY,
@@ -169,6 +194,7 @@ export const initialBonuses = [
   },
   {
     id: 9,
+    requestNo: "BON-009",
     employee: "Priya Sharma",
     expenseType: BONUS_EXPENSE_TYPE,
     category: BONUS_CATEGORY,
@@ -187,13 +213,13 @@ export const initialBonuses = [
   {
     // Decided but not paid out yet: it waits under its temporary number.
     id: 10,
+    requestNo: "BON-010",
     employee: "Priya Sharma",
     expenseType: BONUS_EXPENSE_TYPE,
     category: BONUS_CATEGORY,
     subcategory: "Exceptional Bonus",
     bonusType: "",
     amount: 200,
-    requestNo: "REQ-002",
     recordedOn: dayOffset(-6),
     paidOn: "",
     status: BONUS_PENDING,
@@ -202,13 +228,13 @@ export const initialBonuses = [
   {
     // Refused, and the reason stays on the record.
     id: 11,
+    requestNo: "BON-011",
     employee: "Priya Sharma",
     expenseType: BONUS_EXPENSE_TYPE,
     category: BONUS_CATEGORY,
     subcategory: "Collection",
     bonusType: "",
     amount: 75,
-    requestNo: "REQ-003",
     recordedOn: dayOffset(-30),
     paidOn: "",
     status: "Rejected",

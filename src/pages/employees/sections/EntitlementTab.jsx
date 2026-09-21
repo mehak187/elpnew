@@ -16,7 +16,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { EmptyState } from "@/components/shared/panels";
+import { Bordered, EmptyState } from "@/components/shared/panels";
+import { Settled, Choice } from "@/components/shared/formFields";
+import { PAYING_ACCOUNTS } from "@/pages/firm/firmData";
+import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 import {
   RecordTable,
   HeadRow,
@@ -25,7 +28,16 @@ import {
   Td,
 } from "@/components/shared/RecordTable";
 import { RequestSteps, DecisionChoice } from "@/components/shared/RequestSteps";
-import { Lock } from "lucide-react";
+import {
+  Lock,
+  CalendarDays,
+  FileText,
+  FileCheck,
+  User,
+  Landmark,
+  History,
+  UploadCloud,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { amountValue } from "@/lib/money";
 import { smartSearch } from "@/lib/search/smartSearch";
@@ -35,9 +47,7 @@ import { nextRequestNo } from "../requestFlow";
 import { typesIn, remainingBalance } from "../leaveData";
 import {
   PAYMENT_YEARS,
-  PAYMENT_SOURCES,
   SALARY_MONTHS,
-  DEFAULT_BANK,
 } from "../payrollData";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
 import {
@@ -54,9 +64,11 @@ import {
   entitlementsFor,
   nextEntitlementNo,
   modeOf,
+  lastSimilar,
+  entitlementHistory,
 } from "../entitlementData";
 
-const NOTES_LIMIT = 300;
+const NOTES_LIMIT = 500;
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
@@ -74,8 +86,8 @@ const emptyDraft = () => ({
 const emptyPayment = () => ({
   approved: "",
   method: "",
-  bank: DEFAULT_BANK,
-  accountNo: "",
+  // One choice for where it leaves from: the account carries its bank.
+  bankAccount: "",
   paymentDate: todayIso(),
   reference: "",
 });
@@ -111,6 +123,27 @@ function Booked({ id, label, value }) {
           className="cursor-default bg-locked pl-9 text-muted-foreground"
         />
       </div>
+    </div>
+  );
+}
+
+/**
+ * One fact of the card under the decision.
+ *
+ * The label carries the icon and the value sits under it, lighter and
+ * smaller: the card is read across for what the request is, not down.
+ */
+function Fact({ icon, label, children }) {
+  const Icon = icon;
+  return (
+    <div className="px-0 lg:px-4 lg:first:pl-0">
+      <p className="flex items-center gap-1.5 text-sm font-medium text-primary">
+        <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
+        {label}
+      </p>
+      {/* Lighter and smaller than the label above it: the card is read for
+          what the request is, not for any one figure in it. */}
+      <p className="mt-1 text-xs font-normal text-primary">{children}</p>
     </div>
   );
 }
@@ -159,6 +192,8 @@ export default function EntitlementTab({
   const [decision, setDecision] = useState("");
   const [openId, setOpenId] = useState(null);
   const [reason, setReason] = useState("");
+  const [receipt, setReceipt] = useState(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
   const setPay = (name, value) =>
@@ -205,19 +240,32 @@ export default function EntitlementTab({
     (mode !== "hours" || draft.month) &&
     draft.reason.trim();
 
+  // A full approval grants what was asked for; only a partial one names a
+  // figure of its own, and a refusal grants nothing at all.
   const amending = decision === "partial";
+  const refusing = decision === "rejected";
   const approvedAmount = amending ? Number(payment.approved || 0) : amount;
+  const decidedOn = open?.decisionDate || todayIso();
+  const attachedName = open?.attachment || "";
+  // What this person was given last time, where there was a last time.
+  const previous = lastSimilar(records, employee?.name, kind, openId);
+
   const canDisburse =
     Boolean(decision) &&
-    decision !== "rejected" &&
+    !refusing &&
     canDecide &&
+    approvedAmount > 0 &&
+    approvedAmount <= amount &&
     payment.method &&
+    payment.bankAccount &&
     payment.paymentDate &&
-    (!amending || approvedAmount > 0);
+    payment.reference.trim();
 
   const close = () => {
     setDraft(emptyDraft());
     setPayment(emptyPayment());
+    setReceipt(null);
+    setShowHistory(false);
     setStage("request");
     setDecision("");
     setOpenId(null);
@@ -279,11 +327,15 @@ export default function EntitlementTab({
               status: ENTITLEMENT_APPROVED,
               rejectionReason: "",
               amount: approvedAmount,
+              approvedAmount,
+              decisionDate: decidedOn,
+              decidedBy: CURRENT_USER.name,
+              managementComment: reason.trim(),
               method: payment.method,
-              bank: payment.bank,
-              accountNo: payment.accountNo,
+              bankAccount: payment.bankAccount,
               paymentDate: payment.paymentDate,
               reference: payment.reference.trim(),
+              receipt: receipt?.name || "",
             }
           : row
       )
@@ -300,6 +352,9 @@ export default function EntitlementTab({
           ? {
               ...row,
               status: ENTITLEMENT_REJECTED,
+              decisionDate: decidedOn,
+              decidedBy: CURRENT_USER.name,
+              managementComment: reason.trim(),
               rejectionReason: reason.trim(),
             }
           : row
@@ -329,8 +384,7 @@ export default function EntitlementTab({
       ...emptyPayment(),
       approved: String(record.amount || ""),
       method: record.method || "",
-      bank: record.bank || DEFAULT_BANK,
-      accountNo: record.accountNo || "",
+      bankAccount: record.bankAccount || "",
       paymentDate: record.paymentDate || todayIso(),
       reference: record.reference || "",
     });
@@ -355,7 +409,9 @@ export default function EntitlementTab({
           {
             key: "request",
             title: label + " Request",
-            note: "Submit request details",
+            note: canSubmit
+              ? label + " details completed"
+              : "Enter " + label.toLowerCase() + " details",
             done: Boolean(canSubmit),
           },
           {
@@ -370,167 +426,127 @@ export default function EntitlementTab({
 
       {stage === "decision" ? (
         <>
-          {/* What is being decided, read off the request rather than asked
-              for again. */}
-          <div className="space-y-4">
-            <h3 className="text-base font-semibold text-primary">
-              Request Summary
-            </h3>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
-              <Worked
-                id="ent-no"
-                label="Request No."
-                value={open?.entitlementNo || open?.requestNo || ""}
-              />
-              <Worked
-                id="ent-date"
-                label="Request Date"
-                value={draft.requestDate ? formatDate(draft.requestDate) : ""}
-              />
-              <Worked
-                id="ent-measure"
-                label={
-                  mode === "leaveDays"
-                    ? "Days Requested"
-                    : mode === "hours"
-                      ? "Hours Worked"
-                      : "Requested Amount (OMR)"
-                }
-                value={
-                  mode === "leaveDays"
-                    ? days + " Days"
-                    : mode === "hours"
-                      ? (draft.hours || 0) + " Hours"
-                      : amountValue(amount)
-                }
-              />
-              <Worked
-                id="ent-amount-settled"
-                label="Requested Amount (OMR)"
-                value={amountValue(amount)}
-              />
-
-              <div className="space-y-2 sm:col-span-2 lg:col-span-4">
-                <FieldLabel htmlFor="ent-details">Request Details</FieldLabel>
-                <Textarea
-                  id="ent-details"
-                  readOnly
-                  tabIndex={-1}
-                  rows={2}
-                  className="cursor-default bg-locked text-muted-foreground"
-                  value={draft.reason}
-                />
-              </div>
-            </div>
-          </div>
-
+          {/* What was asked for is not restated here: it is in the card at
+              the foot of the page, which is where the decision is checked
+              against it. */}
           <DecisionChoice
-            subject={label.toLowerCase()}
             value={decision}
             onChange={setDecision}
             disabled={!canDecide || settled || refused}
           />
 
-          {/* A refused request says why, and stays as it is. */}
-          {refused && (
-            <div className="space-y-2">
-              <FieldLabel htmlFor="ent-refused">Reason for Rejection</FieldLabel>
-              <Textarea
-                id="ent-refused"
-                readOnly
-                tabIndex={-1}
-                rows={2}
-                className="cursor-default border-destructive/40 bg-destructive/5 text-destructive"
-                value={open?.rejectionReason || ""}
+          {/* The answer itself: when it was given, what it grants, and why.
+              A separate box from the choice above it, with room between. */}
+          <Bordered title="Decision">
+            {/* The bottom padding is the room the counter hangs in. */}
+            <div className="grid grid-cols-1 gap-4 pb-5 sm:gap-6 lg:grid-cols-5">
+              <Settled
+                id="ent-decision-date"
+                label="Decision Date"
+                value={formatDate(decidedOn)}
               />
-            </div>
-          )}
 
-          {decision === "rejected" && !refused && (
-            <div className="space-y-2">
-              <FieldLabel htmlFor="ent-reason" required>
-                Reason for Rejection
-              </FieldLabel>
-              <Textarea
-                id="ent-reason"
-                rows={2}
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                placeholder="Say why this request is refused"
-              />
-            </div>
-          )}
-
-          {/* How the money actually reaches them. A refused request has none
-              of this: there is nothing to pay. */}
-          {decision && decision !== "rejected" && (
-            <div className="space-y-4">
-              <h3 className="text-base font-semibold text-primary">
-                Payment Details
-              </h3>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
-                <div className="space-y-2">
+              {/* Only a partial approval names a figure of its own; a full
+                  one grants what was asked for. */}
+              {amending ? (
+                <div className="flex h-full flex-col justify-end gap-2">
                   <FieldLabel htmlFor="ent-approved" required>
                     Approved Amount (OMR)
                   </FieldLabel>
                   <Input
                     id="ent-approved"
                     inputMode="decimal"
-                    readOnly={!amending}
-                    tabIndex={amending ? undefined : -1}
-                    className={cn(
-                      !amending && "cursor-default bg-locked text-muted-foreground"
-                    )}
-                    value={
-                      amending ? payment.approved : amountValue(amount)
-                    }
+                    value={payment.approved}
                     onChange={(e) =>
                       setPay("approved", e.target.value.replace(/[^\d.]/g, ""))
                     }
+                    placeholder="0.000"
+                    className={cn(approvedAmount > amount && "border-destructive")}
                   />
                 </div>
+              ) : (
+                <Settled
+                  id="ent-approved"
+                  label="Approved Amount (OMR)"
+                  value={amountValue(approvedAmount)}
+                />
+              )}
 
-                <div className="space-y-2">
-                  <FieldLabel htmlFor="ent-method" required>
-                    Payment Method
-                  </FieldLabel>
-                  <Select
-                    value={payment.method}
-                    onValueChange={(value) => value && setPay("method", value)}
-                  >
-                    <SelectTrigger id="ent-method">
-                      <SelectValue placeholder="Select method" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PAYMENT_METHODS.map((method) => (
-                        <SelectItem key={method} value={method}>
-                          {method}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              {/* The counter hangs below the box rather than sitting in the
+                  column: in the flow it would push this field's box up out
+                  of line with the two beside it. */}
+              <div className="relative flex h-full flex-col justify-end gap-2 lg:col-span-3">
+                <FieldLabel htmlFor="ent-comment" required={refusing}>
+                  Management Comment
+                </FieldLabel>
+                <Textarea
+                  id="ent-comment"
+                  rows={2}
+                  maxLength={NOTES_LIMIT}
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  disabled={!canDecide || settled || refused}
+                  placeholder="Enter management comment"
+                />
+                <p className="absolute right-0 top-full mt-1 text-xs text-muted-foreground">
+                  {reason.length} / {NOTES_LIMIT}
+                </p>
+              </div>
+            </div>
+          </Bordered>
 
-                <div className="space-y-2">
-                  <FieldLabel htmlFor="ent-bank">Bank Account</FieldLabel>
-                  <Select
-                    value={payment.bank}
-                    onValueChange={(value) => value && setPay("bank", value)}
-                  >
-                    <SelectTrigger id="ent-bank">
-                      <SelectValue placeholder="Select bank or cash" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PAYMENT_SOURCES.map((source) => (
-                        <SelectItem key={source} value={source}>
-                          {source}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+          {/* How the money actually reaches them. A refused request has none
+              of this: there is nothing to pay, and so nothing to ask. */}
+          {decision && !refusing && (
+            <div className="space-y-4 sm:space-y-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+                <Settled
+                  id="ent-type"
+                  label="Expense Type"
+                  value={ENTITLEMENT_EXPENSE_TYPE}
+                />
+                <Settled
+                  id="ent-category"
+                  label="Category"
+                  value={ENTITLEMENT_CATEGORY}
+                />
+                <Settled
+                  id="ent-subcategory"
+                  label="Subcategory"
+                  value={ENTITLEMENT_SUBCATEGORY[kind] || label + " Request"}
+                />
+                <Settled
+                  id="ent-disbursed"
+                  label="Amount Disbursed (OMR)"
+                  value={amountValue(approvedAmount)}
+                  payable
+                />
+              </div>
 
-                <div className="space-y-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+                <Choice
+                  id="ent-method"
+                  label="Payment Method"
+                  value={payment.method}
+                  onChange={(value) => value && setPay("method", value)}
+                  placeholder="Select method"
+                  options={PAYMENT_METHODS}
+                  disabled={!canDecide}
+                />
+
+                {/* One choice, not two: the account carries the bank it is
+                    held at, so they cannot be set to disagree. */}
+                <Choice
+                  id="ent-bank"
+                  label="Bank / Account"
+                  value={payment.bankAccount}
+                  onChange={(value) => value && setPay("bankAccount", value)}
+                  placeholder="Select bank account"
+                  options={PAYING_ACCOUNTS}
+                  disabled={!canDecide}
+                />
+
+                <div className="flex h-full flex-col justify-end gap-2">
                   <FieldLabel htmlFor="ent-payment-date" required>
                     Payment Date
                   </FieldLabel>
@@ -539,23 +555,105 @@ export default function EntitlementTab({
                     type="date"
                     value={payment.paymentDate}
                     onChange={(e) => setPay("paymentDate", e.target.value)}
+                    disabled={!canDecide}
                   />
                 </div>
 
-                <div className="space-y-2 sm:col-span-2">
-                  <FieldLabel htmlFor="ent-reference">
+                {/* The proof of the transfer sits beside its reference as a
+                    plain icon: nothing to press but the paperclip itself. */}
+                <div className="flex h-full flex-col justify-end gap-2">
+                  <FieldLabel htmlFor="ent-reference" required>
                     Payment Reference
                   </FieldLabel>
-                  <Input
-                    id="ent-reference"
-                    value={payment.reference}
-                    onChange={(e) => setPay("reference", e.target.value)}
-                    placeholder="TRX-0000-00000"
-                  />
+                  <div className="flex w-full min-w-0 items-center gap-2">
+                    <Input
+                      id="ent-reference"
+                      className="min-w-0 flex-1"
+                      value={payment.reference}
+                      onChange={(e) => setPay("reference", e.target.value)}
+                      placeholder="TRX-0000-00000"
+                      disabled={!canDecide}
+                    />
+                    <label
+                      className="shrink-0 cursor-pointer text-primary hover:text-primary/70"
+                      title={
+                        receipt ? receipt.name + " attached" : "Upload transfer receipt"
+                      }
+                    >
+                      {receipt ? (
+                        <FileCheck className="h-5 w-5 text-green-600" />
+                      ) : (
+                        <UploadCloud className="h-5 w-5" />
+                      )}
+                      <span className="sr-only">Upload transfer receipt</span>
+                      <input
+                        type="file"
+                        className="hidden"
+                        onChange={(e) =>
+                          e.target.files[0] && setReceipt(e.target.files[0])
+                        }
+                      />
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
           )}
+
+          {/* Everything about the request itself, in one line under the
+              decision it belongs to - wearing the colour of that decision,
+              so the answer is read before a word of it. */}
+          <div
+            className={cn(
+              "rounded-lg border p-4",
+              decision === "full" && "border-green-600/50 bg-decision-full",
+              decision === "partial" && "border-violet-400 bg-decision-partial",
+              refusing && "border-red-500/50 bg-decision-rejected",
+              !decision && "bg-card"
+            )}
+          >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 lg:divide-x">
+              <Fact icon={CalendarDays} label="Request Date">
+                {draft.requestDate ? formatDate(draft.requestDate) : "-"}
+                {attachedName && (
+                  <span className="mt-0.5 block text-primary">{attachedName}</span>
+                )}
+              </Fact>
+              <Fact icon={FileText} label="Request Type">
+                General
+              </Fact>
+              <Fact icon={User} label="Employee Name">
+                {(employee?.name || "") +
+                  (employee?.empNo ? " - " + employee.empNo : "")}
+              </Fact>
+              <Fact icon={Landmark} label="Bank / Account">
+                {employee?.bankName
+                  ? employee.bankName + " - " + employee.accountNumber
+                  : "-"}
+              </Fact>
+              <Fact icon={History} label="History">
+                <button
+                  type="button"
+                  className="text-primary no-underline hover:text-primary/70"
+                  onClick={() => setShowHistory(true)}
+                >
+                  View history
+                </button>
+              </Fact>
+            </div>
+
+            {/* What this person was given last time, where there was a last
+                time: the one comparison every decision wants. */}
+            {previous && (
+              <p className="mt-3 border-t pt-3 text-xs text-muted-foreground">
+                Last Similar Request:{" "}
+                <span className="text-primary">
+                  {label} &middot; {previous.entitlementNo || previous.requestNo}{" "}
+                  &middot; Paid {formatDate(previous.paymentDate)}
+                </span>
+              </p>
+            )}
+          </div>
         </>
       ) : (
         <>
@@ -784,12 +882,17 @@ export default function EntitlementTab({
         </>
       )}
 
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button type="button" variant="outline" onClick={close}>
-          Cancel
+      {/* The way back and the answer, with clear room above them. */}
+      <div className="flex flex-wrap justify-end gap-2 pt-6">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={stage === "decision" ? () => setStage("request") : close}
+        >
+          Back
         </Button>
         {stage === "decision" ? (
-          decision === "rejected" ? (
+          refusing ? (
             !refused && (
               <Button
                 type="button"
@@ -803,13 +906,13 @@ export default function EntitlementTab({
           ) : (
             !settled && (
               <Button type="button" onClick={disburse} disabled={!canDisburse}>
-                Approve &amp; Disburse
+                Approve &amp; Pay
               </Button>
             )
           )
         ) : (
           <Button type="button" onClick={submit} disabled={!canSubmit}>
-            Submit Request
+            Save
           </Button>
         )}
       </div>
@@ -820,15 +923,62 @@ export default function EntitlementTab({
     <>
       {/* Opened over the page, so the list it is filed into stays behind. */}
       <Dialog open={Boolean(adding)} onOpenChange={(o) => !o && close()}>
-        <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {open
-                ? label + " " + (open.entitlementNo || open.requestNo)
-                : label + " Request"}
-            </DialogTitle>
+            <DialogTitle>{label + " Request"}</DialogTitle>
           </DialogHeader>
           {form}
+        </DialogContent>
+      </Dialog>
+
+      {/* What has already happened to this request, newest first. Nothing
+          here is kept twice: every line is read off the record itself. */}
+      <Dialog open={showHistory} onOpenChange={setShowHistory}>
+        <DialogContent className="max-h-[85vh] w-[92vw] max-w-6xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {"History - " + (open?.entitlementNo || open?.requestNo || label)}
+            </DialogTitle>
+          </DialogHeader>
+
+          {entitlementHistory(open).length === 0 ? (
+            <EmptyState>Nothing has happened to this request yet.</EmptyState>
+          ) : (
+            <RecordTable minWidth={980}>
+              <HeadRow>
+                <Th width="14%">Date &amp; Time</Th>
+                <Th width="14%">Action</Th>
+                <Th width="11%">Previous Status</Th>
+                <Th width="11%">New Status</Th>
+                <Th width="14%">Performed By</Th>
+                <Th width="10%" className="text-right">
+                  Amount
+                </Th>
+                <Th width="16%">Comment</Th>
+                <Th width="10%">Reference</Th>
+              </HeadRow>
+              <tbody>
+                {entitlementHistory(open).map((event, index) => (
+                  <Row key={index}>
+                    <Td className="whitespace-nowrap text-primary">
+                      {formatDate(event.at)}
+                    </Td>
+                    <Td className="text-primary">{event.action}</Td>
+                    <Td className="text-muted-foreground">{event.from}</Td>
+                    <Td className="text-primary">{event.to}</Td>
+                    <Td className="text-primary">{event.by}</Td>
+                    <Td className="whitespace-nowrap text-right font-semibold text-green-700">
+                      {amountValue(event.amount)}
+                    </Td>
+                    <Td className="text-left text-muted-foreground">
+                      {event.comment || "-"}
+                    </Td>
+                    <Td className="text-primary">{event.reference || "-"}</Td>
+                  </Row>
+                ))}
+              </tbody>
+            </RecordTable>
+          )}
         </DialogContent>
       </Dialog>
 

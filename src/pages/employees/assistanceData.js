@@ -86,6 +86,17 @@ export const CASH_ACCOUNT = "Paid in cash";
  */
 export const DECISIONS = ["Pending", "Approved", "Rejected"];
 
+/** "ASR-001", counted across the firm so a number is never reused. */
+export const nextAssistanceNo = (records) =>
+  "ASR-" +
+  String(
+    records.reduce(
+      (max, record) =>
+        Math.max(max, Number(String(record.requestNo || "").replace(/\D/g, "")) || 0),
+      0
+    ) + 1
+  ).padStart(3, "0");
+
 /** Pending -> Approved -> Paid, unless it was refused. */
 export const statusOf = (record) => {
   if (record.decision === "Rejected") return "Rejected";
@@ -118,10 +129,10 @@ export const STATUS_CHIP = {
  * has no payment at all, which is why those fields are empty on it.
  */
 export const assistanceRecords = [
-  { id: 1, requestDate: "2026-08-15", beneficiary: "Employee (Self)", decision: "Pending", expenseType: "Employee Expenses", category: "Assistance", subcategory: "Social Assistance", purpose: "House damaged by flooding", amount: 700, paymentDate: "", method: "", account: "", proof: "assistance_150826.pdf", notes: "Family emergency aid" },
-  { id: 2, requestDate: "2026-08-26", beneficiary: "Employee (Self)", decision: "Approved", expenseType: "Employee Expenses", category: "Assistance", subcategory: "Social Assistance", purpose: "Marriage of the employee", amount: 500, paymentDate: "2026-08-26", method: "Bank Transfer", account: "Bank Muscat (1234)", proof: "assistance_260826.pdf", notes: "Marriage contract attached" },
-  { id: 3, requestDate: "2026-08-20", beneficiary: "Father", decision: "Approved", expenseType: "Employee Expenses", category: "Assistance", subcategory: "Medical Assistance", purpose: "Hospital treatment for the employee's father", amount: 300, paymentDate: "2026-08-20", method: "Bank Transfer", account: "NBO (5678)", proof: "assistance_200826.png", notes: "Medical support" },
-  { id: 4, requestDate: "2026-08-05", beneficiary: "Son", decision: "Approved", expenseType: "Employee Expenses", category: "Assistance", subcategory: "Education Assistance", purpose: "School fees for the new term", amount: 400, paymentDate: "2026-08-05", method: "Bank Transfer", account: "Oman Arab Bank (9012)", proof: "assistance_050826.pdf", notes: "Student tuition support" },
-  { id: 5, requestDate: "2026-07-28", beneficiary: "Employee (Self)", decision: "Rejected", expenseType: "Employee Expenses", category: "Assistance", subcategory: "Other Assistance", purpose: "Car maintenance support", amount: 350, paymentDate: "", method: "", account: "", proof: "", notes: "Car maintenance support" },
-  { id: 6, requestDate: "2026-07-12", beneficiary: "Mother", decision: "Approved", expenseType: "Employee Expenses", category: "Assistance", subcategory: "Social Assistance", purpose: "Funeral of the employee's mother", amount: 600, paymentDate: "2026-07-12", method: "Bank Transfer", account: "Sohar Bank (3344)", proof: "assistance_120726.pdf", notes: "Condolences from the firm" },
+  { id: 1, requestNo: "ASR-001", requestDate: "2026-08-15", beneficiary: "Employee (Self)", decision: "Pending", expenseType: "Employee Expenses", category: "Assistance", subcategory: "Social Assistance", purpose: "House damaged by flooding", amount: 700, paymentDate: "", method: "", account: "", proof: "assistance_150826.pdf", notes: "Family emergency aid" },
+  { id: 2, requestNo: "ASR-002", requestDate: "2026-08-26", beneficiary: "Employee (Self)", decision: "Approved", expenseType: "Employee Expenses", category: "Assistance", subcategory: "Social Assistance", purpose: "Marriage of the employee", amount: 500, paymentDate: "2026-08-26", method: "Bank Transfer", account: "Bank Muscat (1234)", proof: "assistance_260826.pdf", notes: "Marriage contract attached" },
+  { id: 3, requestNo: "ASR-003", requestDate: "2026-08-20", beneficiary: "Father", decision: "Approved", expenseType: "Employee Expenses", category: "Assistance", subcategory: "Medical Assistance", purpose: "Hospital treatment for the employee's father", amount: 300, paymentDate: "2026-08-20", method: "Bank Transfer", account: "NBO (5678)", proof: "assistance_200826.png", notes: "Medical support" },
+  { id: 4, requestNo: "ASR-004", requestDate: "2026-08-05", beneficiary: "Son", decision: "Approved", expenseType: "Employee Expenses", category: "Assistance", subcategory: "Education Assistance", purpose: "School fees for the new term", amount: 400, paymentDate: "2026-08-05", method: "Bank Transfer", account: "Oman Arab Bank (9012)", proof: "assistance_050826.pdf", notes: "Student tuition support" },
+  { id: 5, requestNo: "ASR-005", requestDate: "2026-07-28", beneficiary: "Employee (Self)", decision: "Rejected", expenseType: "Employee Expenses", category: "Assistance", subcategory: "Other Assistance", purpose: "Car maintenance support", amount: 350, paymentDate: "", method: "", account: "", proof: "", notes: "Car maintenance support" },
+  { id: 6, requestNo: "ASR-006", requestDate: "2026-07-12", beneficiary: "Mother", decision: "Approved", expenseType: "Employee Expenses", category: "Assistance", subcategory: "Social Assistance", purpose: "Funeral of the employee's mother", amount: 600, paymentDate: "2026-07-12", method: "Bank Transfer", account: "Sohar Bank (3344)", proof: "assistance_120726.pdf", notes: "Condolences from the firm" },
 ];

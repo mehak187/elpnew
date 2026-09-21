@@ -553,10 +553,8 @@ export default function CommissionForm({
           ]}
         />
 
-        <h3 className="text-base font-semibold text-primary">
-          {stage === "payment" ? "Commission Payment" : "Add Commission"}
-        </h3>
-
+        {/* No heading here: the step above says which half is open, and the
+            window it sits in is already named after it. */}
         {stage === "payment" ? (
           <CommissionPayment
             commissionNo={commissionNo}
@@ -873,7 +871,9 @@ export default function CommissionForm({
           </div>
         </div>
 
-        <div className="flex h-full flex-col justify-end gap-2">
+        {/* Not a cell of the grid above: on its own it needs no stretching
+            to a row's height, which would only hold it off the bottom. */}
+        <div className="space-y-2">
           <FieldLabel htmlFor="commissionNotes">Notes</FieldLabel>
           <Textarea
             id="commissionNotes"

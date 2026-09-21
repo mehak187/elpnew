@@ -31,6 +31,14 @@ export default function AdvancesProvider({ children }) {
             status: "Pending",
           },
         ]),
+
+      /** What the office decided, written onto the request it answers. */
+      decideAdvance: (id, decision) =>
+        setAdvances((prev) =>
+          prev.map((advance) =>
+            advance.id === id ? { ...advance, ...decision } : advance
+          )
+        ),
     }),
     [advances]
   );

@@ -82,6 +82,78 @@ export const entitlementsFor = (records, name, kind) =>
         String(b.requestDate).localeCompare(String(a.requestDate)) || b.id - a.id
     );
 
+/**
+ * The last request of the same kind this person had paid.
+ *
+ * What was given before is the first thing anyone deciding a request wants to
+ * know, so it is read off the list rather than looked up by hand.
+ */
+export const lastSimilar = (records, name, kind, exceptId) =>
+  records
+    .filter(
+      (row) =>
+        row.employee === name &&
+        row.kind === kind &&
+        row.id !== exceptId &&
+        row.status === ENTITLEMENT_APPROVED &&
+        row.paymentDate
+    )
+    .sort((a, b) => String(b.paymentDate).localeCompare(String(a.paymentDate)))[0] ||
+  null;
+
+/**
+ * What has happened to one request, newest first.
+ *
+ * There is no separate log: each step leaves its own mark on the record - the
+ * day it was asked for, the day it was decided, the day it was paid - so the
+ * history is read back off those rather than kept twice and left to disagree.
+ */
+export const entitlementHistory = (record) => {
+  if (!record) return [];
+  const events = [];
+
+  if (record.requestDate) {
+    events.push({
+      at: record.requestDate,
+      action: "Request submitted",
+      from: "-",
+      to: ENTITLEMENT_PENDING,
+      by: record.employee,
+      amount: record.amount,
+      comment: record.reason || "",
+      reference: record.requestNo || "",
+    });
+  }
+
+  if (record.decisionDate) {
+    events.push({
+      at: record.decisionDate,
+      action: record.status === ENTITLEMENT_REJECTED ? "Request rejected" : "Request approved",
+      from: ENTITLEMENT_PENDING,
+      to: record.status,
+      by: record.decidedBy || "Management",
+      amount: record.status === ENTITLEMENT_REJECTED ? 0 : record.approvedAmount ?? record.amount,
+      comment: record.managementComment || record.rejectionReason || "",
+      reference: record.entitlementNo || "",
+    });
+  }
+
+  if (record.paymentDate) {
+    events.push({
+      at: record.paymentDate,
+      action: "Amount disbursed",
+      from: ENTITLEMENT_APPROVED,
+      to: ENTITLEMENT_APPROVED,
+      by: record.decidedBy || "Management",
+      amount: record.approvedAmount ?? record.amount,
+      comment: record.method || "",
+      reference: record.reference || "",
+    });
+  }
+
+  return events.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+};
+
 export const initialEntitlements = [
   {
     id: 1,
@@ -96,6 +168,74 @@ export const initialEntitlements = [
     amount: 416.667,
     reason: "Encashing part of this year's annual leave.",
     status: ENTITLEMENT_APPROVED,
+    rejectionReason: "",
+  },
+  {
+    // Paid, and so the one a new transport request is compared against.
+    id: 2,
+    kind: "transport",
+    employee: "Mohammed Al Yahyaei",
+    requestNo: "REQ-002",
+    entitlementNo: "ENT-002",
+    requestDate: "2026-08-10",
+    amount: 25,
+    approvedAmount: 25,
+    reason: "Travel between the Muscat and Sohar offices for the month.",
+    status: ENTITLEMENT_APPROVED,
+    decisionDate: "2026-08-12",
+    decidedBy: "Ahmed Al Balushi",
+    managementComment: "Approved as claimed.",
+    method: "Bank Transfer",
+    bankAccount: "Bank Muscat — •••• 6789",
+    paymentDate: "2026-08-15",
+    reference: "TRX-2026-00418",
+    rejectionReason: "",
+  },
+  {
+    // Waiting on a decision: the one that opens on the decision stage.
+    id: 3,
+    kind: "transport",
+    employee: "Mohammed Al Yahyaei",
+    requestNo: "REQ-003",
+    entitlementNo: "",
+    requestDate: "2026-09-19",
+    amount: 25,
+    reason: "Client meetings in Sohar over three days.",
+    status: ENTITLEMENT_PENDING,
+    attachment: "fuel-receipts.pdf",
+    rejectionReason: "",
+  },
+  {
+    id: 4,
+    kind: "transport",
+    employee: "Priya Sharma",
+    requestNo: "REQ-004",
+    entitlementNo: "ENT-003",
+    requestDate: "2026-07-28",
+    amount: 18,
+    approvedAmount: 15,
+    reason: "Daily travel to the court registry.",
+    status: ENTITLEMENT_APPROVED,
+    decisionDate: "2026-07-30",
+    decidedBy: "Ahmed Al Balushi",
+    managementComment: "Approved at the standard monthly rate.",
+    method: "Bank Transfer",
+    bankAccount: "Bank Muscat — •••• 6789",
+    paymentDate: "2026-08-01",
+    reference: "TRX-2026-00377",
+    rejectionReason: "",
+  },
+  {
+    id: 5,
+    kind: "transport",
+    employee: "Priya Sharma",
+    requestNo: "REQ-005",
+    entitlementNo: "",
+    requestDate: "2026-09-20",
+    amount: 25,
+    reason: "Document filing runs for the month of September.",
+    status: ENTITLEMENT_PENDING,
+    attachment: "transport-claim.pdf",
     rejectionReason: "",
   },
 ];
