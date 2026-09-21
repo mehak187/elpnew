@@ -12,7 +12,13 @@ import {
   SelectTrigger,
   SelectValue,
   } from "@/components/ui/select";
-import { EmptyState } from "@/components/shared/panels";
+import { Bordered, EmptyState } from "@/components/shared/panels";
+import {
+  FieldLabel,
+  Settled,
+  Choice,
+  Attach,
+} from "@/components/shared/formFields";
 import { smartSearch } from "@/lib/search/smartSearch";
 import { amountValue } from "@/lib/money";
 import {
@@ -21,7 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { nextRequestNo } from "../requestFlow";
+import { nextAssistanceNo } from "../assistanceData";
 import { RequestSteps, DecisionChoice } from "@/components/shared/RequestSteps";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -34,7 +40,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { Rial } from "@/components/shared/Rial";
-import { FileText, FileImage, FileCheck, Plus } from "lucide-react";
+import { FileText, FileImage, History, Plus } from "lucide-react";
 import { formatDate } from "../loanData";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
 import { PAYMENT_SOURCES, DEFAULT_BANK } from "../payrollData";
@@ -68,23 +74,6 @@ const emptyReview = {
   reference: "",
   notes: "",
 };
-
-/** The button says what it is about to do, not merely that it saves. */
-const CONFIRM_LABEL = {
-  full: "Confirm Full Approval",
-  partial: "Confirm Partial Approval",
-  rejected: "Confirm Rejection",
-};
-
-/** A label with its required mark, so the asterisk is coloured everywhere. */
-function FieldLabel({ htmlFor, required, children }) {
-  return (
-    <Label htmlFor={htmlFor}>
-      {children}
-      {required && <span className="whitespace-nowrap text-destructive">&nbsp;*</span>}
-    </Label>
-  );
-}
 
 /** A fact the decision reads off the request rather than asking for again. */
 function Locked({ id, label, value }) {
@@ -140,6 +129,14 @@ export default function AssistanceSection({
   const [receipt, setReceipt] = useState(null);
 
   const open = records.find((record) => record.id === openId) || null;
+
+  // The number this request carries, the day it was asked on, and whatever
+  // was attached to it - each read off the open request, or settled fresh
+  // for one being written now.
+  const requestNo = open?.requestNo || nextAssistanceNo(records);
+  const requestedOn =
+    open?.requestDate || new Date().toISOString().slice(0, 10);
+  const attachedName = proof?.name || open?.proof || "";
   const setReviewField = (name, value) =>
     setReview((prev) => ({ ...prev, [name]: value }));
 
@@ -174,7 +171,7 @@ export default function AssistanceSection({
         id,
         // On the list straight away, under a temporary number, waiting on a
         // decision.
-        requestNo: nextRequestNo(records),
+        requestNo,
         requestDate: new Date().toISOString().slice(0, 10),
         decision: "Pending",
         paymentDate: "",
@@ -302,13 +299,13 @@ export default function AssistanceSection({
             {
               key: "request",
               title: "Assistance Request",
-              note: "Submit assistance details and supporting documents",
+              note: "Enter assistance details and supporting document",
               done: Boolean(canSave),
             },
             {
               key: "decision",
               title: "Management Decision",
-              note: "Review and approval decision",
+              note: "Review, approve and disburse",
               done: Boolean(decision),
             },
           ]}
@@ -631,8 +628,8 @@ export default function AssistanceSection({
         <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {open
-                ? "Assistance " + (open.requestNo || "")
+              {stage === "decision"
+                ? "Assistance Management Decision"
                 : "Add Assistance Request"}
             </DialogTitle>
           </DialogHeader>
