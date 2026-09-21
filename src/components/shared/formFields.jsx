@@ -40,9 +40,9 @@ export function FieldLabel({ htmlFor, required, children }) {
  * `held` marks money coming off the pay, and `payable` the one figure the
  * request is really about, so neither has to be hunted for among the rest.
  */
-export function Settled({ id, label, value, held, payable }) {
+export function Settled({ id, label, value, held, payable, hint }) {
   return (
-    <div className="flex h-full flex-col justify-end gap-2">
+    <div className="relative flex h-full flex-col justify-end gap-2">
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <Input
         id={id}
@@ -55,6 +55,15 @@ export function Settled({ id, label, value, held, payable }) {
           payable && "font-semibold text-green-700"
         )}
       />
+      {/* What the figure above means, hung below the box rather than set in
+          the column: in the flow it would push this one field's box up out
+          of line with the rest of the row. The row it sits in leaves the
+          space for it. */}
+      {hint && (
+        <p className="absolute left-0 top-full mt-1 text-xs text-muted-foreground">
+          {hint}
+        </p>
+      )}
     </div>
   );
 }

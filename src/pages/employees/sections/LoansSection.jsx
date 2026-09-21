@@ -12,7 +12,14 @@ import {
   SelectTrigger,
   SelectValue,
   } from "@/components/ui/select";
-import { EmptyState } from "@/components/shared/panels";
+import { Bordered, EmptyState } from "@/components/shared/panels";
+import {
+  FieldLabel,
+  Settled,
+  Said,
+  Choice,
+  Attach,
+} from "@/components/shared/formFields";
 import AiSearch from "@/components/shared/AiSearch";
 import SearchableSelect from "@/components/shared/SearchableSelect";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,13 +40,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { nextRequestNo } from "../requestFlow";
 import { RequestSteps, DecisionChoice } from "@/components/shared/RequestSteps";
 import {
   Users,
   HandCoins,
   Tag,
   Plus,
+  History,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
@@ -53,6 +60,9 @@ import {
   LOAN_DECISION_STATUS,
   LOAN_STATUS_CHIP,
   loanCategoryFor,
+  nextLoanNo,
+  startMonths,
+  monthEnd,
   outstandingTotal,
   pendingRequest,
   loanRecords,
@@ -75,8 +85,11 @@ const emptyDraft = {
   requested: "",
   extraRequested: "",
   monthly: "",
-  firstDate: "",
+  startMonth: "",
+  comment: "",
 };
+
+const COMMENT_LIMIT = 500;
 
 /** The button says what it is about to do, not merely that it saves. */
 const CONFIRM_LABEL = {
@@ -84,21 +97,6 @@ const CONFIRM_LABEL = {
   partial: "Confirm Partial Approval",
   rejected: "Confirm Rejection",
 };
-
-/** A label with its required mark, so the asterisk is coloured everywhere. */
-function FieldLabel({ htmlFor, required, children }) {
-  return (
-    <Label htmlFor={htmlFor}>
-      {children}
-      {required && <span className="whitespace-nowrap text-destructive">&nbsp;*</span>}
-    </Label>
-  );
-}
-
-/** The note under a field that says where its figure came from. */
-function Hint({ children }) {
-  return <p className="text-xs text-muted-foreground">{children}</p>;
-}
 
 /**
  * One labelled line of a loan's summary.
@@ -155,7 +153,6 @@ function Derived({ id, label, value, className }) {
         className="cursor-default bg-locked text-muted-foreground"
         value={value}
       />
-      <Hint>Calculated automatically</Hint>
     </div>
   );
 }
@@ -227,6 +224,7 @@ export default function LoansSection({
 
   // Which loans have been folded away. Absent means open: a loan says very
   // little without the schedule that repays it.
+  const [attachment, setAttachment] = useState(null);
   const [collapsed, setCollapsed] = useState({});
   const [year, setYear] = useState("");
   const [query, setQuery] = useState("");
@@ -259,11 +257,26 @@ export default function LoansSection({
   const requested = num(isIncrease ? draft.extraRequested : draft.requested);
   const totalLoan = isIncrease ? outstanding + requested : requested;
 
+  // An installment comes off the pay at the end of a month, so the month is
+  // what is asked for and the day follows from it.
+  const firstDate = monthEnd(draft.startMonth);
+
   // The number of months, the size of the final instalment and the day it
   // falls due all follow from the three figures above. None of them is typed,
   // so none of them can contradict the loan it describes.
   const plan = schedule(totalLoan, num(draft.monthly));
-  const lastDue = plan.months ? dueDate(draft.firstDate, plan.months - 1) : "";
+  const lastDue = plan.months ? dueDate(firstDate, plan.months - 1) : "";
+
+  const requestedOn =
+    records.find((record) => record.id === openId)?.requestedOn ||
+    new Date().toISOString().slice(0, 10);
+  // The months a repayment can start in, settled once rather than on every
+  // keystroke in the form above them.
+  const months = startMonths();
+
+  const requestNo = openId
+    ? records.find((record) => record.id === openId)?.requestNo || ""
+    : nextLoanNo(records);
 
   // The same arithmetic over what management decided rather than what was
   // asked for. Only a partial approval may amend the terms.
@@ -283,7 +296,7 @@ export default function LoansSection({
     borrower &&
     requested > 0 &&
     num(draft.monthly) > 0 &&
-    draft.firstDate;
+    draft.startMonth;
 
   /**
    * The request submitted. It is on record straight away, waiting for a
@@ -299,7 +312,11 @@ export default function LoansSection({
         kind: category,
         // On the list straight away, under a temporary number, waiting on a
         // decision. Asked for, not granted.
-        requestNo: nextRequestNo(records),
+        requestNo,
+        requestedOn,
+        startMonth: draft.startMonth,
+        employeeComment: draft.comment.trim(),
+        attachment: attachment?.name || "",
         status: LOAN_PENDING,
         loanAmount: requested,
         merged: isIncrease ? outstanding : 0,
@@ -308,7 +325,7 @@ export default function LoansSection({
         bankName: "",
         accountNumber: "",
         monthly: num(draft.monthly),
-        firstDue: draft.firstDate,
+        firstDue: firstDate,
         payments: [],
       },
       ...prev,
@@ -318,7 +335,7 @@ export default function LoansSection({
     setReview({
       approved: String(requested),
       monthly: draft.monthly,
-      firstDate: draft.firstDate,
+      firstDate,
       notes: "",
     });
     setStage("decision");
@@ -351,6 +368,7 @@ export default function LoansSection({
 
   const closeAdd = () => {
     setDraft(emptyDraft);
+    setAttachment(null);
     setStage("request");
     setDecision("");
     setOpenId(null);
@@ -371,7 +389,8 @@ export default function LoansSection({
       requested: String(record.loanAmount),
       extraRequested: String(record.loanAmount),
       monthly: String(record.monthly),
-      firstDate: record.firstDue,
+      startMonth: record.startMonth || "",
+      comment: record.employeeComment || "",
       employee: record.employee,
     });
     setReview({
@@ -446,15 +465,11 @@ export default function LoansSection({
               {
                 key: "decision",
                 title: "Management Decision",
-                note: "Review and approval decision",
+                note: "Review, approve and disburse",
                 done: Boolean(decision),
               },
             ]}
           />
-
-          {stage === "request" && (
-            <h3 className="text-base font-semibold text-primary">Loan Request</h3>
-          )}
 
           {stage === "decision" ? (
             <>
@@ -579,128 +594,168 @@ export default function LoansSection({
               </div>
             </>
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
-              <div className="space-y-2">
-                <FieldLabel htmlFor="loan-employee" required>
-                  Employee
-                </FieldLabel>
-                <SearchableSelect
-                  id="loan-employee"
-                  value={borrower}
-                  onValueChange={(value) => set("employee", value)}
-                  options={people}
-                  placeholder="Select employee"
-                  searchPlaceholder="Search employees..."
-                />
-              </div>
+            <>
+              {/* Who is asking, under what number, and what they already owe
+                  - which is what decides whether this is a new loan or an
+                  addition to the one running. */}
+              <Bordered title="Request Information">
+                {/* The bottom padding is the room the status hint hangs in. */}
+                <div className="grid grid-cols-1 gap-4 pb-8 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+                  <div className="flex h-full flex-col justify-end gap-2">
+                    <FieldLabel htmlFor="loan-no">Request No.</FieldLabel>
+                    <div className="flex w-full min-w-0 items-center gap-2">
+                      <Input
+                        id="loan-no"
+                        readOnly
+                        tabIndex={-1}
+                        value={requestNo}
+                        className="min-w-0 flex-1 cursor-default bg-locked text-muted-foreground"
+                      />
+                      <Attach
+                        file={attachment}
+                        onPick={setAttachment}
+                        label="supporting document"
+                      />
+                    </div>
+                  </div>
 
-              {/* Where the loan lands in the accounts. None of the three is a
-                  question: a loan is always an employee expense, and which
-                  kind it is is read off what is still owed. */}
-              <Fixed
-                id="loan-type"
-                label="Expense Type"
-                value={LOAN_EXPENSE_TYPE}
-                icon={Users}
-              />
-              <Fixed
-                id="loan-category"
-                label="Category"
-                value={LOAN_CATEGORY}
-                icon={Tag}
-              />
-              <Fixed
-                id="loan-subcategory"
-                label="Subcategory"
-                value={category}
-              />
-
-              <AmountField
-                id="loan-requested"
-                label="Requested Amount"
-                required
-                value={isIncrease ? draft.extraRequested : draft.requested}
-                onChange={(e) =>
-                  set(isIncrease ? "extraRequested" : "requested", e.target.value)
-                }
-              />
-
-              {/* An increase is repaid on the whole debt, so what was already
-                  owed has to be on the form that adds to it. */}
-              {isIncrease && (
-                <>
-                  <Derived
-                    id="loan-outstanding"
-                    label="Current Outstanding Balance"
-                    value={amount(outstanding)}
+                  <Settled
+                    id="loan-request-date"
+                    label="Request Date"
+                    value={formatDate(requestedOn)}
                   />
-                  <Derived
-                    id="loan-after"
-                    label="Total Loan Amount After Addition"
-                    value={amount(totalLoan)}
+                  <Settled id="loan-employee" label="Employee Name" value={borrower} />
+
+                  <Settled
+                    id="loan-active"
+                    label="Active Loan Status"
+                    value={
+                      isIncrease
+                        ? "Active Loan - " + amount(outstanding)
+                        : "No Active Loan"
+                    }
+                    hint={
+                      isIncrease
+                        ? "An active loan is running - this request will be added to it."
+                        : "No active loan found - this request will create a new loan."
+                    }
                   />
-                </>
-              )}
+                </div>
+              </Bordered>
 
-              <AmountField
-                id="loan-monthly"
-                label="Monthly Installment"
-                required
-                value={draft.monthly}
-                onChange={(e) => set("monthly", e.target.value)}
-              />
+              {/* How much, how fast, and from when. Everything else about the
+                  schedule is counted from these three. */}
+              <Bordered title="Repayment Schedule">
+                <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-3">
+                  <AmountField
+                    id="loan-requested"
+                    label="Requested Loan Amount"
+                    required
+                    value={isIncrease ? draft.extraRequested : draft.requested}
+                    onChange={(e) =>
+                      set(isIncrease ? "extraRequested" : "requested", e.target.value)
+                    }
+                  />
 
-              <div className="space-y-2">
-                <FieldLabel htmlFor="loan-first-date" required>
-                  First Installment Date
-                </FieldLabel>
-                <Input
-                  id="loan-first-date"
-                  type="date"
-                  value={draft.firstDate}
-                  onChange={(e) => set("firstDate", e.target.value)}
-                />
+                  <AmountField
+                    id="loan-monthly"
+                    label="Monthly Installment"
+                    required
+                    value={draft.monthly}
+                    onChange={(e) => set("monthly", e.target.value)}
+                  />
+
+                  {/* An installment comes off the pay at the end of a month,
+                      so a month is asked for rather than a day. */}
+                  <Choice
+                    id="loan-start-month"
+                    label="Start Month"
+                    value={draft.startMonth}
+                    onChange={(value) => value && set("startMonth", value)}
+                    placeholder="Select start month"
+                    options={months}
+                  />
+                </div>
+              </Bordered>
+
+              <Bordered title="Employee Comment">
+                <div className="space-y-2">
+                  <Textarea
+                    id="loan-comment"
+                    rows={3}
+                    maxLength={COMMENT_LIMIT}
+                    value={draft.comment}
+                    onChange={(e) => set("comment", e.target.value)}
+                    placeholder="Add a comment supporting this loan request (optional)"
+                  />
+                  <p className="text-right text-xs text-muted-foreground">
+                    {draft.comment.length} / {COMMENT_LIMIT}
+                  </p>
+                </div>
+              </Bordered>
+
+              {/* What the three figures above come to, read back as one line
+                  before the request is sent. */}
+              <div className="rounded-lg border border-green-600/40 bg-green-50/50 p-4">
+                <p className="mb-3 flex items-center gap-2 font-semibold text-green-700">
+                  <span
+                    aria-hidden="true"
+                    className="h-5 w-1 shrink-0 rounded-full bg-green-600"
+                  />
+                  Loan &amp; Repayment Summary
+                </p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:divide-x">
+                  <Said label="Loan Amount" value={amount(totalLoan)} settled />
+                  <Said
+                    label="Monthly Installment"
+                    value={amount(num(draft.monthly))}
+                    settled
+                  />
+                  <Said
+                    label="Number of Installments"
+                    value={plan.months ? String(plan.months) : ""}
+                  />
+                  <Said
+                    label="Final Installment"
+                    value={
+                      lastDue
+                        ? formatDate(lastDue) + " - " + amount(plan.last)
+                        : ""
+                    }
+                    settled
+                  />
+                </div>
               </div>
-
-              <Derived
-                id="loan-months"
-                label="Number of Months"
-                value={plan.months || ""}
-              />
-
-              <Derived
-                id="loan-last-date"
-                label="Last Installment Date"
-                value={lastDue ? formatDate(lastDue) : ""}
-              />
-
-              <Derived
-                id="loan-last-amount"
-                label="Last Installment Amount (OMR)"
-                value={plan.months ? amountValue(plan.last) : ""}
-              />
-            </div>
+            </>
           )}
 
           {/* Plain buttons: this form sits inside the employee form, which a
               submit button here would send instead. */}
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <Button type="button" variant="outline" onClick={closeAdd}>
-              Cancel
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-4">
+            {/* What has been borrowed before is the list behind this form. */}
+            <Button type="button" variant="ghost" onClick={closeAdd}>
+              <History className="mr-2 h-4 w-4" />
+              History
             </Button>
-            {stage === "decision" ? (
-              <Button
-                type="button"
-                onClick={confirmDecision}
-                disabled={!canConfirm || !canDecide}
-              >
-                {CONFIRM_LABEL[decision] || "Confirm Decision"}
+
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              <Button type="button" variant="outline" onClick={closeAdd}>
+                Cancel
               </Button>
-            ) : (
-              <Button type="button" onClick={save} disabled={!canSave}>
-                Save and Submit Request
-              </Button>
-            )}
+              {stage === "decision" ? (
+                <Button
+                  type="button"
+                  onClick={confirmDecision}
+                  disabled={!canConfirm || !canDecide}
+                >
+                  {CONFIRM_LABEL[decision] || "Confirm Decision"}
+                </Button>
+              ) : (
+                <Button type="button" onClick={save} disabled={!canSave}>
+                  Save
+                </Button>
+              )}
+            </div>
           </div>
         </div>
   );
@@ -712,10 +767,7 @@ export default function LoansSection({
         <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {openId
-                ? "Loan " +
-                  (records.find((r) => r.id === openId)?.requestNo || "")
-                : "Add Loan Request"}
+              {stage === "decision" ? "Management Decision" : "Loan Request"}
             </DialogTitle>
           </DialogHeader>
           {form}

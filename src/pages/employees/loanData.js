@@ -139,6 +139,52 @@ export function schedule(total, monthly) {
 export { money as amount } from "@/lib/money";
 
 /** "26/08/2026" */
+/** "LNR-001", counted across the firm so a number is never reused. */
+export const nextLoanNo = (records) =>
+  "LNR-" +
+  String(
+    records.reduce(
+      (max, record) =>
+        Math.max(max, Number(String(record.requestNo || "").replace(/\D/g, "")) || 0),
+      0
+    ) + 1
+  ).padStart(3, "0");
+
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+/**
+ * The months a repayment can start in: this one and the two years after it.
+ *
+ * A month is what is asked for rather than a date, because an installment
+ * always comes off the pay at the end of a month - there is no day to choose.
+ */
+export const startMonths = (count = 24, from = new Date()) =>
+  Array.from({ length: count }, (_, index) => {
+    const month = new Date(Date.UTC(from.getFullYear(), from.getMonth() + index, 1));
+    return MONTH_NAMES[month.getUTCMonth()] + " " + month.getUTCFullYear();
+  });
+
+/** The day the first installment falls due: the end of the month it starts in. */
+export const monthEnd = (label) => {
+  const [name, year] = String(label || "").split(" ");
+  const month = MONTH_NAMES.indexOf(name);
+  if (month < 0 || !year) return "";
+  return new Date(Date.UTC(Number(year), month + 1, 0)).toISOString().slice(0, 10);
+};
+
 export const formatDate = (value) => {
   const [year, month, day] = String(value).split("-");
   return `${day}/${month}/${year}`;
