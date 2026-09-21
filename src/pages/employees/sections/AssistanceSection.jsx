@@ -1,26 +1,18 @@
 import {
   useState } from "react";
-import UploadIcon from "@/components/shared/UploadIcon";
 import { Button } from "@/components/ui/button";
 import AiSearch from "@/components/shared/AiSearch";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  } from "@/components/ui/select";
 import { Bordered, EmptyState } from "@/components/shared/panels";
 import {
   FieldLabel,
   Settled,
+  Said,
   Choice,
   Attach,
 } from "@/components/shared/formFields";
 import { smartSearch } from "@/lib/search/smartSearch";
-import { amountValue } from "@/lib/money";
+import { amountValue, money } from "@/lib/money";
 import {
   Dialog,
   DialogContent,
@@ -43,7 +35,7 @@ import { Rial } from "@/components/shared/Rial";
 import { FileText, FileImage, History, Plus } from "lucide-react";
 import { formatDate } from "../loanData";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
-import { PAYMENT_SOURCES, DEFAULT_BANK } from "../payrollData";
+import { PAYING_ACCOUNTS } from "@/pages/firm/firmData";
 import {
   DEFAULT_ASSISTANCE_BOOKING,
   subcategoriesOf,
@@ -68,28 +60,12 @@ const emptyDraft = {
 const emptyReview = {
   approved: "",
   method: "",
-  bank: DEFAULT_BANK,
-  accountNo: "",
+  // One choice for where it leaves from: the account carries its bank.
+  bankAccount: "",
   paymentDate: "",
   reference: "",
   notes: "",
 };
-
-/** A fact the decision reads off the request rather than asking for again. */
-function Locked({ id, label, value }) {
-  return (
-    <div className="space-y-2">
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <Input
-        id={id}
-        readOnly
-        tabIndex={-1}
-        value={value}
-        className="cursor-default bg-locked text-muted-foreground"
-      />
-    </div>
-  );
-}
 
 const IMAGE_TYPES = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
 const isImage = (name) =>
@@ -140,17 +116,32 @@ export default function AssistanceSection({
   const setReviewField = (name, value) =>
     setReview((prev) => ({ ...prev, [name]: value }));
 
+  // What was asked for, what is being granted, and the day it is decided.
+  const requestedAmount = Number(open?.amount ?? draft.amount) || 0;
+  const decidedOn = open?.decisionDate || new Date().toISOString().slice(0, 10);
+
   // Only a partial approval changes what was asked for; a rejection has
   // nothing to pay, so there is nothing to prepare.
   const amending = decision === "partial";
   const granting = decision === "full" || decision === "partial";
+  const refusing = decision === "rejected";
+  const approvedAmount = amending
+    ? Number(review.approved) || 0
+    : requestedAmount;
+
+  // A refusal is settled by its reason alone; a grant has to say how the
+  // money leaves before it can be saved.
   const canConfirm =
     Boolean(decision) &&
     canDecide &&
-    (!granting ||
-      ((!amending || Number(review.approved) > 0) &&
+    (refusing
+      ? Boolean(review.notes.trim())
+      : approvedAmount > 0 &&
+        approvedAmount <= requestedAmount &&
         review.method &&
-        review.paymentDate));
+        review.bankAccount &&
+        review.paymentDate &&
+        review.reference.trim());
 
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
 
@@ -212,13 +203,14 @@ export default function AssistanceSection({
               ...record,
               decision: granted ? "Approved" : "Rejected",
               rejectionReason: granted ? "" : review.notes.trim(),
-              amount:
-                decision === "partial" ? Number(review.approved) : record.amount,
+              amount: approvedAmount,
+              decisionDate: decidedOn,
+              managementComment: review.notes.trim(),
               method: granted ? review.method : "",
-              bank: granted ? review.bank : "",
-              accountNo: granted ? review.accountNo : "",
-              account: granted ? review.bank : "",
+              bankAccount: granted ? review.bankAccount : "",
+              account: granted ? review.bankAccount : "",
               reference: granted ? review.reference.trim() : "",
+              receipt: granted ? receipt?.name || "" : "",
               disbursementDate: granted ? review.paymentDate : "",
               paymentNotes: review.notes.trim(),
             }
@@ -245,11 +237,10 @@ export default function AssistanceSection({
     setReview({
       approved: String(record.amount),
       method: record.method || "",
-      bank: record.bank || DEFAULT_BANK,
-      accountNo: record.accountNo || "",
-      paymentDate: record.disbursementDate || record.paymentDate || "",
+      bankAccount: record.bankAccount || "",
+      paymentDate: record.paymentDate || "",
       reference: record.reference || "",
-      notes: record.paymentNotes || "",
+      notes: record.managementComment || "",
     });
     onOpenAdd?.();
   };
@@ -299,7 +290,9 @@ export default function AssistanceSection({
             {
               key: "request",
               title: "Assistance Request",
-              note: "Enter assistance details and supporting document",
+              note: canSave
+                ? "Assistance details and supporting document completed"
+                : "Enter assistance details and supporting document",
               done: Boolean(canSave),
             },
             {
@@ -313,123 +306,171 @@ export default function AssistanceSection({
 
         {stage === "decision" ? (
           <>
+            {/* Who asked, and for what. Read off the request rather than
+                asked for again. */}
+            <Bordered title="Request Information">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+                <div className="flex h-full flex-col justify-end gap-2">
+                  <Settled
+                    id="decision-no"
+                    label="Request No."
+                    value={requestNo}
+                  />
+                  {attachedName && (
+                    <button
+                      type="button"
+                      className="flex items-center gap-1.5 text-sm text-primary no-underline hover:text-primary/70"
+                      title={"Open " + attachedName}
+                    >
+                      {isImage(attachedName) ? (
+                        <FileImage className="h-4 w-4 shrink-0 text-blue-600" />
+                      ) : (
+                        <FileText className="h-4 w-4 shrink-0 text-blue-600" />
+                      )}
+                      {attachedName}
+                    </button>
+                  )}
+                </div>
+
+                <Settled
+                  id="decision-date"
+                  label="Request Date"
+                  value={formatDate(requestedOn)}
+                />
+                <Settled
+                  id="decision-employee"
+                  label="Employee Name"
+                  value={open?.employee || employee?.name || ""}
+                />
+                <Settled
+                  id="decision-type"
+                  label="Assistance Type"
+                  value={open?.subcategory || draft.subcategory || ""}
+                />
+              </div>
+            </Bordered>
+
+            {/* What the employee said for themselves, as they wrote it. */}
+            <Bordered title="Employee Comment">
+              <Textarea
+                id="decision-employee-comment"
+                readOnly
+                tabIndex={-1}
+                rows={2}
+                className="cursor-default bg-locked text-muted-foreground"
+                value={open?.purpose || draft.notes}
+              />
+            </Bordered>
+
             <DecisionChoice
               value={decision}
               onChange={setDecision}
               disabled={!canDecide}
+              notes={{
+                full: "Approve the assistance as requested",
+                rejected: "Reject the assistance request",
+              }}
             />
 
-            {/* What is being decided, read off the request rather than asked
-                for again. Only the amount can be changed, and only where the
-                approval is a partial one. */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
-              <Locked
-                id="decision-employee"
-                label="Employee"
-                value={open?.employee || employee?.name || ""}
-              />
-              <Locked
-                id="decision-type"
-                label="Assistance Type"
-                value={open?.subcategory || ""}
-              />
-              <div className="space-y-2">
-                <FieldLabel htmlFor="decision-approved" required>
-                  Approved Amount (<Rial />)
-                </FieldLabel>
-                <Input
-                  id="decision-approved"
-                  inputMode="decimal"
-                  readOnly={!amending}
-                  tabIndex={amending ? undefined : -1}
-                  className={cn(
-                    !amending && "cursor-default bg-locked text-muted-foreground"
-                  )}
-                  value={
-                    amending ? review.approved : amountValue(Number(review.approved))
-                  }
-                  onChange={(e) =>
-                    setReviewField("approved", e.target.value.replace(/[^\d.]/g, ""))
-                  }
-                />
-              </div>
-            </div>
-
-            {/* How the money will actually reach them. A refused request has
-                none of this: there is nothing to pay. */}
+            {/* Nothing is granted and nothing leaves the firm on a refusal,
+                so both are asked about only once something is approved. */}
             {granting && (
-              <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-primary">
-                  Disbursement Details
-                </h4>
-
+              <Bordered title="Assistance Approval & Disbursement">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
-                  <div className="space-y-2">
-                    <FieldLabel htmlFor="decision-method" required>
-                      Payment Method
-                    </FieldLabel>
-                    <Select
-                      value={review.method}
-                      onValueChange={(value) => value && setReviewField("method", value)}
-                    >
-                      <SelectTrigger id="decision-method">
-                        <SelectValue placeholder="Select method" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PAYMENT_METHODS.map((method) => (
-                          <SelectItem key={method} value={method}>
-                            {method}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <Settled
+                    id="decision-expense-type"
+                    label="Expense Type"
+                    value={open?.expenseType || draft.expenseType}
+                  />
+                  <Settled
+                    id="decision-category"
+                    label="Category"
+                    value={open?.category || draft.category}
+                  />
+                  <Settled
+                    id="decision-subcategory"
+                    label="Subcategory"
+                    value={open?.subcategory || draft.subcategory}
+                  />
+                  <Settled
+                    id="decision-requested"
+                    label="Requested Amount"
+                    value={money(requestedAmount)}
+                  />
 
-                  <div className="space-y-2">
-                    <FieldLabel htmlFor="decision-bank">Bank</FieldLabel>
-                    <Select
-                      value={review.bank}
-                      onValueChange={(value) => value && setReviewField("bank", value)}
-                    >
-                      <SelectTrigger id="decision-bank">
-                        <SelectValue placeholder="Select bank or cash" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PAYMENT_SOURCES.map((source) => (
-                          <SelectItem key={source} value={source}>
-                            {source}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <FieldLabel htmlFor="decision-account">Account No.</FieldLabel>
-                    <Input
-                      id="decision-account"
-                      value={review.accountNo}
-                      onChange={(e) => setReviewField("accountNo", e.target.value)}
-                      placeholder="Enter the account the money goes to"
+                  {/* The one figure a partial approval changes. A full
+                      approval grants what was asked for, so there it is
+                      only shown. */}
+                  {amending ? (
+                    <div className="flex h-full flex-col justify-end gap-2">
+                      <FieldLabel htmlFor="decision-approved" required>
+                        Approved Amount (<Rial />)
+                      </FieldLabel>
+                      <Input
+                        id="decision-approved"
+                        inputMode="decimal"
+                        value={review.approved}
+                        onChange={(e) =>
+                          setReviewField(
+                            "approved",
+                            e.target.value.replace(/[^\d.]/g, "")
+                          )
+                        }
+                        placeholder="0.000"
+                        className={cn(
+                          Number(review.approved) > requestedAmount &&
+                            "border-destructive"
+                        )}
+                      />
+                    </div>
+                  ) : (
+                    <Settled
+                      id="decision-approved"
+                      label="Approved Amount"
+                      value={money(approvedAmount)}
+                      payable
                     />
-                  </div>
+                  )}
 
-                  <div className="space-y-2">
-                    <FieldLabel htmlFor="decision-date" required>
+                  <Choice
+                    id="decision-method"
+                    label="Payment Method"
+                    value={review.method}
+                    onChange={(value) => value && setReviewField("method", value)}
+                    placeholder="Select method"
+                    options={PAYMENT_METHODS}
+                    disabled={!canDecide}
+                  />
+
+                  {/* One choice, not two: the account carries the bank it is
+                      held at, so they cannot be set to disagree. */}
+                  <Choice
+                    id="decision-bank"
+                    label="Bank Account"
+                    value={review.bankAccount}
+                    onChange={(value) => value && setReviewField("bankAccount", value)}
+                    placeholder="Select bank account"
+                    options={PAYING_ACCOUNTS}
+                    disabled={!canDecide}
+                  />
+
+                  <div className="flex h-full flex-col justify-end gap-2">
+                    <FieldLabel htmlFor="decision-pay-date" required>
                       Payment Date
                     </FieldLabel>
                     <Input
-                      id="decision-date"
+                      id="decision-pay-date"
                       type="date"
                       value={review.paymentDate}
                       onChange={(e) => setReviewField("paymentDate", e.target.value)}
+                      disabled={!canDecide}
                     />
                   </div>
 
-                  {/* What the bank called the payment, and the proof of it. */}
-                  <div className="space-y-2 sm:col-span-1 lg:col-span-2">
-                    <FieldLabel htmlFor="decision-reference">
-                      Payment Reference
+                  {/* What the bank called the transfer, and the proof. */}
+                  <div className="flex h-full flex-col justify-end gap-2">
+                    <FieldLabel htmlFor="decision-reference" required>
+                      Transfer No.
                     </FieldLabel>
                     <div className="flex w-full min-w-0 items-center gap-2">
                       <Input
@@ -437,56 +478,81 @@ export default function AssistanceSection({
                         className="min-w-0 flex-1"
                         value={review.reference}
                         onChange={(e) => setReviewField("reference", e.target.value)}
-                        placeholder="AST-0000-00000"
+                        placeholder="TRX-0000-00000"
+                        disabled={!canDecide}
                       />
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        asChild
-                        title={
-                          receipt
-                            ? receipt.name + " attached"
-                            : "Attach payment receipt"
-                        }
-                        className={cn(
-                          "shrink-0",
-                          receipt && "border-green-600 text-green-600"
-                        )}
-                      >
-                        <label htmlFor="decision-receipt" className="cursor-pointer">
-                          {receipt ? (
-                            <FileCheck className="h-4 w-4" />
-                          ) : (
-                            <UploadIcon className="h-4 w-4" />
-                          )}
-                          <span className="sr-only">Attach payment receipt</span>
-                        </label>
-                      </Button>
-                      <Input
-                        id="decision-receipt"
-                        type="file"
-                        className="hidden"
-                        onChange={(e) =>
-                          e.target.files[0] && setReceipt(e.target.files[0])
-                        }
+                      <Attach
+                        file={receipt}
+                        onPick={setReceipt}
+                        label="transfer receipt"
                       />
                     </div>
                   </div>
 
-                  <div className="space-y-2 sm:col-span-1 lg:col-span-2">
-                    <FieldLabel htmlFor="decision-notes">Payment Notes</FieldLabel>
-                    <Textarea
-                      id="decision-notes"
-                      rows={3}
-                      maxLength={NOTES_LIMIT}
-                      value={review.notes}
-                      onChange={(e) => setReviewField("notes", e.target.value)}
-                      placeholder="Enter payment notes"
-                    />
-                    <p className="text-right text-xs text-muted-foreground">
-                      {review.notes.length} / {NOTES_LIMIT}
-                    </p>
-                  </div>
+                  <Settled
+                    id="decision-decided-on"
+                    label="Decision Date"
+                    value={formatDate(decidedOn)}
+                  />
+                </div>
+              </Bordered>
+            )}
+
+            {/* A refusal is only as good as its reason, so there the comment
+                is required; on an approval it is a note. */}
+            <Bordered
+              title={
+                <>
+                  Management Comment
+                  {refusing && (
+                    <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
+                  )}
+                </>
+              }
+            >
+              <div className="space-y-2">
+                <Textarea
+                  id="decision-notes"
+                  rows={3}
+                  maxLength={NOTES_LIMIT}
+                  value={review.notes}
+                  onChange={(e) => setReviewField("notes", e.target.value)}
+                  disabled={!canDecide}
+                  placeholder={
+                    refusing
+                      ? "Enter the reason for rejection"
+                      : "Add management comment (optional)"
+                  }
+                />
+                <p className="text-right text-xs text-muted-foreground">
+                  {review.notes.length} / {NOTES_LIMIT}
+                </p>
+              </div>
+            </Bordered>
+
+            {/* Who is being paid and where it lands, in one line to be read
+                against the transfer above before it is confirmed. */}
+            {granting && (
+              <div className="rounded-lg border border-green-600/40 bg-green-50/50 p-4">
+                <p className="mb-3 flex items-center gap-2 font-semibold text-green-700">
+                  <span
+                    aria-hidden="true"
+                    className="h-5 w-1 shrink-0 rounded-full bg-green-600"
+                  />
+                  Assistance Approval &amp; Transfer Summary
+                </p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:divide-x">
+                  <Said label="Employee Name" value={employee?.name || ""} />
+                  <Said label="Bank Name" value={employee?.bankName || ""} />
+                  <Said
+                    label="Employee Account Number"
+                    value={employee?.accountNumber || ""}
+                  />
+                  <Said
+                    label="Approved Amount"
+                    value={money(approvedAmount)}
+                    settled
+                  />
                 </div>
               </div>
             )}
