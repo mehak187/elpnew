@@ -59,6 +59,28 @@ export function Settled({ id, label, value, held, payable }) {
   );
 }
 
+/**
+ * One fact of a transfer summary: what it is, then what it says.
+ *
+ * Not a field: the strip at the foot of a disbursement, read against the
+ * transfer above it before that transfer is confirmed.
+ */
+export function Said({ label, value, settled }) {
+  return (
+    <div className="px-0 lg:px-4 lg:first:pl-0">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p
+        className={cn(
+          "mt-1 font-semibold",
+          settled ? "text-green-700" : "text-primary"
+        )}
+      >
+        {value || "-"}
+      </p>
+    </div>
+  );
+}
+
 /** One thing chosen from a list, laid out like every other field. */
 export function Choice({
   id,

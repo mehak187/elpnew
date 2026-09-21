@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import Panel from "@/components/shared/Panel";
 import { Bordered } from "@/components/shared/panels";
+import { Said } from "@/components/shared/formFields";
 import {
   RecordTable,
   HeadRow,
@@ -226,23 +227,6 @@ function Typed({ id, label, value, onChange, held }) {
 
 /** Two digits, the way an installment is counted: "03 / 12". */
 const pad = (n) => String(n).padStart(2, "0");
-
-/** One fact of the transfer summary: what it is, then what it says. */
-function Said({ label, value, settled }) {
-  return (
-    <div className="px-0 lg:px-4 lg:first:pl-0">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p
-        className={cn(
-          "mt-1 font-semibold",
-          settled ? "text-green-700" : "text-primary"
-        )}
-      >
-        {value || "-"}
-      </p>
-    </div>
-  );
-}
 
 /** One figure of the summary: what it is, then how much it came to. */
 function Sum({ label, value, held, payable }) {

@@ -3,12 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import AiSearch from "@/components/shared/AiSearch";
-import { RequestSteps, DecisionChoice } from "@/components/shared/RequestSteps";
+import { RequestSteps } from "@/components/shared/RequestSteps";
 import { Card, CardContent } from "@/components/ui/card";
 import { Bordered, EmptyState } from "@/components/shared/panels";
 import {
   FieldLabel,
   Settled,
+  Said,
   Choice,
   Attach,
 } from "@/components/shared/formFields";
@@ -92,16 +93,11 @@ export default function BonusSection({
   const { bonuses, addBonus, updateBonus } = useBonuses();
   const [draft, setDraft] = useState(emptyDraft);
   const [query, setQuery] = useState("");
-  // Which half of the request is open - what is being asked for, and then
-  // what was decided about it - and the request the form is open on.
+  // Which half of the bonus is open - what is being asked for, and then how
+  // it was paid out - and the request the form is open on.
   const [stage, setStage] = useState("request");
   const [openId, setOpenId] = useState(null);
   const [attachment, setAttachment] = useState(null);
-
-  // What management answered, and on what terms.
-  const [decision, setDecision] = useState("");
-  const [approved, setApproved] = useState("");
-  const [comment, setComment] = useState("");
   const [payment, setPayment] = useState(emptyPayment);
   const [receipt, setReceipt] = useState(null);
 
@@ -122,27 +118,17 @@ export default function BonusSection({
   const bonusName = isOther ? draft.bonusType.trim() : draft.subcategory;
 
   const requested = Number(draft.amount) || 0;
-  // A full approval grants what was asked for; only a partial approval sets
-  // a figure of its own, so only there is the amount typed.
-  const rejected = decision === "rejected";
-  const amending = decision === "partial";
-  const approvedAmount = amending ? Number(approved) || 0 : requested;
 
   const canSubmit = draft.subcategory && (!isOther || draft.bonusType.trim()) && requested > 0;
 
-  // A refusal is settled by its reason alone; a grant has to say how the
-  // money leaves before it can be saved.
-  const canSave =
+  // Nothing is paid out until the transfer says where it went and what the
+  // bank called it.
+  const canPay =
     Boolean(open) &&
-    Boolean(decision) &&
-    (rejected
-      ? Boolean(comment.trim())
-      : approvedAmount > 0 &&
-        approvedAmount <= requested &&
-        payment.method &&
-        payment.bankAccount &&
-        payment.paidOn &&
-        payment.reference.trim());
+    payment.method &&
+    payment.bankAccount &&
+    payment.paidOn &&
+    payment.reference.trim();
 
   const close = () => {
     setDraft(emptyDraft());
@@ -151,9 +137,6 @@ export default function BonusSection({
     setAttachment(null);
     setStage("request");
     setOpenId(null);
-    setDecision("");
-    setApproved("");
-    setComment("");
     onCloseAdd();
   };
 
@@ -186,24 +169,17 @@ export default function BonusSection({
     close();
   };
 
-  /** What the office decided, written onto the request it answers. */
-  const saveDecision = () => {
-    if (!canSave || !open) return;
+  /** Paid out: the bonus is disbursed, and the record says how. */
+  const disburse = () => {
+    if (!canPay || !open) return;
     updateBonus(open.id, {
-      decision,
-      status: rejected ? REQUEST_REJECTED : BONUS_DISBURSED,
-      approvedAmount: rejected ? 0 : approvedAmount,
-      managementComment: comment.trim(),
-      rejectionReason: rejected ? comment.trim() : "",
-      ...(rejected
-        ? { paidOn: "" }
-        : {
-            method: payment.method,
-            bankAccount: payment.bankAccount,
-            paidOn: payment.paidOn,
-            reference: payment.reference.trim(),
-            receipt: receipt?.name || "",
-          }),
+      status: BONUS_DISBURSED,
+      rejectionReason: "",
+      method: payment.method,
+      bankAccount: payment.bankAccount,
+      paidOn: payment.paidOn,
+      reference: payment.reference.trim(),
+      receipt: receipt?.name || "",
     });
     close();
   };
@@ -211,7 +187,7 @@ export default function BonusSection({
   /** A request opened back off the list, to be followed or decided. */
   const track = (bonus) => {
     setOpenId(bonus.id);
-    setStage("decision");
+    setStage("disbursement");
     setAttachment(null);
     setReceipt(null);
     setDraft({
@@ -221,9 +197,6 @@ export default function BonusSection({
       bonusDate: bonusDate(bonus),
       comment: bonus.notes || "",
     });
-    setDecision(bonus.decision || "");
-    setApproved(bonus.approvedAmount ? String(bonus.approvedAmount) : "");
-    setComment(bonus.managementComment || bonus.rejectionReason || "");
     setPayment({
       ...emptyPayment(),
       method: bonus.method || "",
@@ -292,193 +265,169 @@ export default function BonusSection({
   // filed into stays where it was, behind it.
   const form = (
     <div className="space-y-6">
-      {/* The two halves of a bonus: what is being asked for, and then what
-          was decided about it. Either header opens its own half. */}
+      {/* The two halves of a bonus: what is being asked for, and then how
+          it was paid out. Either header opens its own half. */}
       <RequestSteps
         active={stage}
         onChange={setStage}
         steps={[
           {
             key: "request",
-            title: "Submit Request",
-            note: "Enter bonus request details",
+            title: "Bonus Request",
+            // The note says where the half stands, so a finished one does
+            // not still read as an instruction.
+            note: canSubmit
+              ? "Bonus details completed"
+              : "Enter bonus request details",
             done: Boolean(canSubmit),
           },
           {
-            key: "decision",
-            title: "Management Decision",
-            note: "Review and decide request",
-            done: Boolean(decision),
-            // Nothing can be decided until there is a request to decide: a
-            // new one is saved first, and opened back off the list.
+            key: "disbursement",
+            title: "Bonus Disbursement",
+            note: "Payment and transfer details",
+            done: Boolean(open?.paidOn),
+            // Nothing can be paid out until there is a bonus to pay: a new
+            // request is saved first, and opened back off the list.
             disabled: !open,
           },
         ]}
       />
 
-      {requestInformation}
-
-      {stage === "decision" ? (
+      {stage === "disbursement" ? (
         <>
-          {/* What was asked for, read off the request rather than asked for
+          {/* What is being paid, read off the request rather than asked for
               again. */}
-          <Bordered title="Bonus Request Details">
+          <Bordered title="Bonus Information">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
-              <Settled id="bonus-type-said" label="Bonus Type" value={bonusName} />
+              <Settled id="bonus-no-said" label="Bonus No." value={requestNo} />
               <Settled
                 id="bonus-date-said"
                 label="Bonus Date"
                 value={formatDate(draft.bonusDate)}
               />
               <Settled
+                id="bonus-employee-said"
+                label="Employee Name"
+                value={employee?.name || ""}
+              />
+              <Settled
                 id="bonus-amount-said"
-                label="Requested Bonus Amount"
+                label="Bonus Amount"
                 value={amountValue(requested)}
+                payable
               />
             </div>
           </Bordered>
 
-          <DecisionChoice value={decision} onChange={setDecision} />
+          {/* Where it is booked, and how it actually leaves. */}
+          <Bordered title="Expense & Disbursement Details">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+              <Settled
+                id="bonus-expense-type"
+                label="Expense Type"
+                value={BONUS_EXPENSE_TYPE}
+              />
+              <Settled
+                id="bonus-category"
+                label="Category"
+                value={BONUS_CATEGORY}
+              />
+              <Settled
+                id="bonus-subcategory"
+                label="Subcategory"
+                value={bonusName}
+              />
 
-          {/* Nothing leaves the firm on a refusal, so the transfer is asked
-              about only once something has been granted. */}
-          {decision && !rejected && (
-            <Bordered title="Expense & Disbursement Details">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
-                <Settled
-                  id="bonus-expense-type"
-                  label="Expense Type"
-                  value={BONUS_EXPENSE_TYPE}
-                />
-                <Settled
-                  id="bonus-category"
-                  label="Category"
-                  value={BONUS_CATEGORY}
-                />
-                <Settled
-                  id="bonus-subcategory"
-                  label="Subcategory"
-                  value={bonusName}
-                />
+              <Choice
+                id="bonus-method"
+                label="Payment Method"
+                value={payment.method}
+                onChange={(value) => value && setPay("method", value)}
+                placeholder="Select method"
+                options={PAYMENT_METHODS}
+              />
 
-                {/* The one figure a partial approval changes. A full approval
-                    grants what was asked for, so there it is only shown. */}
-                {amending ? (
-                  <div className="flex h-full flex-col justify-end gap-2">
-                    <FieldLabel htmlFor="bonus-approved" required>
-                      Approved Amount (<Rial />)
-                    </FieldLabel>
-                    <Input
-                      id="bonus-approved"
-                      inputMode="decimal"
-                      value={approved}
-                      onChange={(e) =>
-                        setApproved(e.target.value.replace(/[^\d.]/g, ""))
-                      }
-                      placeholder="0.000"
-                      className={cn(
-                        approvedAmount > requested && "border-destructive"
-                      )}
-                    />
-                  </div>
-                ) : (
-                  <Settled
-                    id="bonus-approved"
-                    label="Approved Amount"
-                    value={amountValue(approvedAmount)}
-                    payable
-                  />
-                )}
+              {/* One choice, not two: the account carries the bank it is
+                  held at, so they cannot be set to disagree. */}
+              <Choice
+                id="bonus-bank"
+                label="Bank Account"
+                value={payment.bankAccount}
+                onChange={(value) => value && setPay("bankAccount", value)}
+                placeholder="Select bank account"
+                options={PAYING_ACCOUNTS}
+              />
 
-                <Choice
-                  id="bonus-method"
-                  label="Payment Method"
-                  value={payment.method}
-                  onChange={(value) => value && setPay("method", value)}
-                  placeholder="Select method"
-                  options={PAYMENT_METHODS}
+              <div className="flex h-full flex-col justify-end gap-2">
+                <FieldLabel htmlFor="bonus-paid-on" required>
+                  Payment Date
+                </FieldLabel>
+                <Input
+                  id="bonus-paid-on"
+                  type="date"
+                  value={payment.paidOn}
+                  onChange={(e) => setPay("paidOn", e.target.value)}
                 />
+              </div>
 
-                {/* One choice, not two: the account carries the bank it is
-                    held at, so they cannot be set to disagree. */}
-                <Choice
-                  id="bonus-bank"
-                  label="Bank Account"
-                  value={payment.bankAccount}
-                  onChange={(value) => value && setPay("bankAccount", value)}
-                  placeholder="Select bank account"
-                  options={PAYING_ACCOUNTS}
-                />
-
-                <div className="flex h-full flex-col justify-end gap-2">
-                  <FieldLabel htmlFor="bonus-paid-on" required>
-                    Payment Date
-                  </FieldLabel>
+              {/* What the bank called the transfer, and the proof of it. */}
+              <div className="flex h-full flex-col justify-end gap-2">
+                <FieldLabel htmlFor="bonus-reference" required>
+                  Transfer No.
+                </FieldLabel>
+                <div className="flex w-full min-w-0 items-center gap-2">
                   <Input
-                    id="bonus-paid-on"
-                    type="date"
-                    value={payment.paidOn}
-                    onChange={(e) => setPay("paidOn", e.target.value)}
+                    id="bonus-reference"
+                    className="min-w-0 flex-1"
+                    value={payment.reference}
+                    onChange={(e) => setPay("reference", e.target.value)}
+                    placeholder="TRX-0000-00000"
                   />
-                </div>
-
-                {/* What the bank called the transfer, and the proof of it. */}
-                <div className="flex h-full flex-col justify-end gap-2">
-                  <FieldLabel htmlFor="bonus-reference" required>
-                    Transfer No.
-                  </FieldLabel>
-                  <div className="flex w-full min-w-0 items-center gap-2">
-                    <Input
-                      id="bonus-reference"
-                      className="min-w-0 flex-1"
-                      value={payment.reference}
-                      onChange={(e) => setPay("reference", e.target.value)}
-                      placeholder="TRX-0000-00000"
-                    />
-                    <Attach
-                      file={receipt}
-                      onPick={setReceipt}
-                      label="transfer receipt"
-                    />
-                  </div>
+                  <Attach
+                    file={receipt}
+                    onPick={setReceipt}
+                    label="transfer receipt"
+                  />
                 </div>
               </div>
-            </Bordered>
-          )}
 
-          {/* A refusal is only as good as its reason, so there the comment is
-              required; on a grant it is a note. */}
-          <Bordered
-            title={
-              <>
-                Management Comment
-                {rejected && (
-                  <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
-                )}
-              </>
-            }
-          >
-            <div className="space-y-2">
-              <Textarea
-                id="bonus-management-comment"
-                rows={4}
-                maxLength={COMMENT_LIMIT}
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder={
-                  rejected
-                    ? "Enter the reason for rejection"
-                    : "Enter a note on this decision"
-                }
+              {/* The figure being transferred is the one the request settled
+                  on, so it is shown rather than typed again. */}
+              <Settled
+                id="bonus-to-disburse"
+                label="Amount to Disburse"
+                value={amountValue(requested)}
+                payable
               />
-              <p className="text-right text-xs text-muted-foreground">
-                {comment.length} / {COMMENT_LIMIT}
-              </p>
             </div>
           </Bordered>
+
+          {/* Who is being paid and where it lands, in one line to be read
+              against the transfer above before it is confirmed. */}
+          <div className="rounded-lg border border-green-600/40 bg-green-50/50 p-4">
+            <p className="mb-3 flex items-center gap-2 font-semibold text-green-700">
+              <span
+                aria-hidden="true"
+                className="h-5 w-1 shrink-0 rounded-full bg-green-600"
+              />
+              Employee &amp; Transfer Summary
+            </p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:divide-x">
+              <Said label="Employee No." value={employee?.empNo || ""} />
+              <Said label="Employee Name" value={employee?.name || ""} />
+              <Said label="Bank Account" value={payment.bankAccount} />
+              <Said
+                label="Transfer Amount"
+                value={amountValue(requested)}
+                settled
+              />
+            </div>
+          </div>
         </>
       ) : (
         <>
+          {requestInformation}
+
           <Bordered title="Bonus Details">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
               <Choice
@@ -553,9 +502,9 @@ export default function BonusSection({
       {/* Plain buttons: this form sits inside the employee form, which either
           would otherwise submit. */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-4">
-        {/* What was decided before is the list behind this form - offered
-            where a decision is being read, not where one is being written. */}
-        {stage === "decision" && (
+        {/* What has been paid before is the list behind this form - offered
+            where a payment is being made, not where one is being asked for. */}
+        {stage === "disbursement" && (
           <Button type="button" variant="ghost" onClick={close}>
             <History className="mr-2 h-4 w-4" />
             History
@@ -566,11 +515,11 @@ export default function BonusSection({
           <Button type="button" variant="outline" onClick={close}>
             Cancel
           </Button>
-          {stage === "decision" ? (
+          {stage === "disbursement" ? (
             <Button
               type="button"
-              onClick={saveDecision}
-              disabled={!canSave || settled || refused}
+              onClick={disburse}
+              disabled={!canPay || settled || refused}
             >
               Save
             </Button>
@@ -591,7 +540,9 @@ export default function BonusSection({
         <Dialog open={Boolean(adding)} onOpenChange={(o) => !o && close()}>
           <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Bonus Request</DialogTitle>
+              <DialogTitle>
+                {stage === "disbursement" ? "Bonus Disbursement" : "Bonus Request"}
+              </DialogTitle>
             </DialogHeader>
             {form}
           </DialogContent>
