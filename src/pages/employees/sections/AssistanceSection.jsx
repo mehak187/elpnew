@@ -496,144 +496,129 @@ export default function AssistanceSection({
           </>
         ) : (
         <>
-        <h3 className="text-base font-semibold text-primary">
-          Assistance Request
-        </h3>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
-          {/* Where the money comes from is not a choice: assistance is booked
-              to Employee Expenses under Assistance, always. It is shown so the
-              request says what it will be charged to. */}
-          <div className="space-y-2">
-            <FieldLabel htmlFor="assistance-expense-type">
-              Expense Type
-            </FieldLabel>
-            <Input
-              id="assistance-expense-type"
-              value={draft.expenseType}
-              readOnly
-              tabIndex={-1}
-              className="cursor-default bg-locked text-muted-foreground"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <FieldLabel htmlFor="assistance-category">Category</FieldLabel>
-            <Input
-              id="assistance-category"
-              value={draft.category}
-              readOnly
-              tabIndex={-1}
-              className="cursor-default bg-locked text-muted-foreground"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <FieldLabel htmlFor="assistance-subcategory" required>
-              Subcategory
-            </FieldLabel>
-            <Select
-              value={draft.subcategory}
-              onValueChange={(value) => value && set("subcategory", value)}
-            >
-              <SelectTrigger id="assistance-subcategory">
-                <SelectValue placeholder="Select Subcategory" />
-              </SelectTrigger>
-              <SelectContent>
-                {subcategoriesOf(draft.expenseType, draft.category).map((sub) => (
-                  <SelectItem key={sub} value={sub}>
-                    {sub}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* The paper that backs the request travels with what it is for,
-              rather than costing a field of its own. */}
-          <div className="space-y-2">
-            <FieldLabel htmlFor="assistance-amount" required>
-              Requested Amount (<Rial />)
-            </FieldLabel>
-            <div className="flex w-full min-w-0 items-center gap-2">
-              <Input
-                id="assistance-amount"
-                inputMode="decimal"
-                className="min-w-0 flex-1"
-                value={draft.amount}
-                onChange={(e) =>
-                  set("amount", e.target.value.replace(/[^\d.]/g, ""))
-                }
-                placeholder="0.000"
-              />
-              <Button
-                variant="outline"
-                size="icon"
-                asChild
-                title={
-                  proof ? proof.name + " attached" : "Attach supporting document"
-                }
-                className={cn(
-                  "shrink-0",
-                  proof && "border-green-600 text-green-600"
+          {/* Who is asking, under what number, for what and how much. The
+              paper that backs the request hangs under the number, so it
+              costs no field of its own. */}
+          <Bordered title="Request Information">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+              <div className="flex h-full flex-col justify-end gap-2">
+                <FieldLabel htmlFor="assistance-no">Request No.</FieldLabel>
+                <div className="flex w-full min-w-0 items-center gap-2">
+                  <Input
+                    id="assistance-no"
+                    readOnly
+                    tabIndex={-1}
+                    value={requestNo}
+                    className="min-w-0 flex-1 cursor-default bg-locked text-muted-foreground"
+                  />
+                  <Attach
+                    file={proof}
+                    onPick={setProof}
+                    label="supporting document"
+                  />
+                </div>
+                {attachedName && (
+                  <button
+                    type="button"
+                    className="flex items-center gap-1.5 text-sm text-primary no-underline hover:text-primary/70"
+                    title={"Open " + attachedName}
+                  >
+                    {isImage(attachedName) ? (
+                      <FileImage className="h-4 w-4 shrink-0 text-blue-600" />
+                    ) : (
+                      <FileText className="h-4 w-4 shrink-0 text-blue-600" />
+                    )}
+                    {attachedName}
+                  </button>
                 )}
-              >
-                <label htmlFor="assistance-proof" className="cursor-pointer">
-                  {proof ? (
-                    <FileCheck className="h-4 w-4" />
-                  ) : (
-                    <UploadIcon className="h-4 w-4" />
-                  )}
-                  <span className="sr-only">Attach supporting document</span>
-                </label>
-              </Button>
-              <Input
-                id="assistance-proof"
-                type="file"
-                className="hidden"
-                onChange={(e) => e.target.files[0] && setProof(e.target.files[0])}
-              />
-            </div>
-          </div>
+              </div>
 
-          <div className="space-y-2 sm:col-span-2 lg:col-span-4">
-            <FieldLabel htmlFor="assistance-notes" required>
-              Request Details / Notes
-            </FieldLabel>
-            <Textarea
-              id="assistance-notes"
-              rows={4}
-              maxLength={NOTES_LIMIT}
-              value={draft.notes}
-              onChange={(e) => set("notes", e.target.value)}
-              placeholder="Please explain the reason for your request..."
-            />
-            <p className="text-right text-xs text-muted-foreground">
-              {draft.notes.length} / {NOTES_LIMIT}
-            </p>
-          </div>
-        </div>
+              <Settled
+                id="assistance-date"
+                label="Request Date"
+                value={formatDate(requestedOn)}
+              />
+
+              <Choice
+                id="assistance-subcategory"
+                label="Assistance Type"
+                value={draft.subcategory}
+                onChange={(value) => value && set("subcategory", value)}
+                placeholder="Select Assistance Type"
+                options={subcategoriesOf(draft.expenseType, draft.category)}
+              />
+
+              <div className="flex h-full flex-col justify-end gap-2">
+                <FieldLabel htmlFor="assistance-amount" required>
+                  Requested Amount
+                </FieldLabel>
+                <div className="relative">
+                  <Input
+                    id="assistance-amount"
+                    inputMode="decimal"
+                    className="pr-12"
+                    value={draft.amount}
+                    onChange={(e) =>
+                      set("amount", e.target.value.replace(/[^\d.]/g, ""))
+                    }
+                    placeholder="0.000"
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                    <Rial />
+                  </span>
+                </div>
+              </div>
+            </div>
+          </Bordered>
+
+          <Bordered title="Request Details">
+            <div className="space-y-2">
+              <FieldLabel htmlFor="assistance-notes" required>
+                Employee Comment
+              </FieldLabel>
+              <Textarea
+                id="assistance-notes"
+                rows={4}
+                maxLength={NOTES_LIMIT}
+                value={draft.notes}
+                onChange={(e) => set("notes", e.target.value)}
+                placeholder="Explain the reason for this assistance request"
+              />
+              <p className="text-right text-xs text-muted-foreground">
+                {draft.notes.length} / {NOTES_LIMIT}
+              </p>
+            </div>
+          </Bordered>
         </>
         )}
 
-        <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-4">
-          {/* A plain button: this form sits inside the employee form. */}
-          <Button type="button" variant="outline" onClick={closeForm}>
-            Cancel
+        {/* Plain buttons: this form sits inside the employee form, which a
+            submit button here would send instead. */}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-4">
+          {/* What has been given before is the list behind this form. */}
+          <Button type="button" variant="ghost" onClick={closeForm}>
+            <History className="mr-2 h-4 w-4" />
+            History
           </Button>
-          {stage === "decision" ? (
-            <Button
-              type="button"
-              onClick={confirmDecision}
-              disabled={!canConfirm}
-            >
-              {CONFIRM_LABEL[decision] || "Confirm Decision"}
+
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <Button type="button" variant="outline" onClick={closeForm}>
+              Cancel
             </Button>
-          ) : (
-            <Button type="button" onClick={saveRecord} disabled={!canSave}>
-              Save and Submit Request
-            </Button>
-          )}
+            {stage === "decision" ? (
+              <Button
+                type="button"
+                onClick={confirmDecision}
+                disabled={!canConfirm}
+              >
+                Save
+              </Button>
+            ) : (
+              <Button type="button" onClick={saveRecord} disabled={!canSave}>
+                Save
+              </Button>
+            )}
+          </div>
         </div>
       </div>
   );
