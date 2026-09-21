@@ -134,9 +134,27 @@ export function RequestSteps({ steps, active, onChange, compact = false }) {
  * one was chosen is said by the mark on the left, the way a radio says it.
  */
 const DECISIONS = [
-  { key: "full", title: "Full Approval", tone: "border-green-600 bg-green-50", mark: "border-green-600 text-green-600" },
-  { key: "partial", title: "Partial Approval", tone: "border-border bg-card", mark: "border-muted-foreground/40 text-primary" },
-  { key: "rejected", title: "Rejection", tone: "border-red-600 bg-red-50", mark: "border-red-600 text-red-600" },
+  {
+    key: "full",
+    title: "Full Approval",
+    tone: "border-green-600 bg-decision-full",
+    mark: "border-green-600 text-green-600",
+  },
+  {
+    key: "partial",
+    title: "Partial Approval",
+    // Plain until it is the answer given: the middle card is the one that
+    // has to be chosen deliberately.
+    tone: "border-border bg-card",
+    chosen: "border-violet-400 bg-decision-partial",
+    mark: "border-muted-foreground/40 text-violet-600",
+  },
+  {
+    key: "rejected",
+    title: "Rejection",
+    tone: "border-red-600 bg-decision-rejected",
+    mark: "border-red-600 text-red-600",
+  },
 ];
 
 /**
@@ -177,6 +195,7 @@ export function DecisionChoice({
               className={cn(
                 "flex items-center gap-4 rounded-md border-2 px-5 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default",
                 decision.tone,
+                chosen && decision.chosen,
                 !chosen && !disabled && "hover:brightness-95",
                 disabled && !chosen && "opacity-70"
               )}

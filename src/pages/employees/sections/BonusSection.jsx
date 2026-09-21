@@ -538,7 +538,7 @@ export default function BonusSection({
       <CardContent className="space-y-4 p-4 sm:p-6">
         {/* Opened over the page, so the list it is filed into stays behind. */}
         <Dialog open={Boolean(adding)} onOpenChange={(o) => !o && close()}>
-          <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
+          <DialogContent className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {stage === "disbursement" ? "Bonus Disbursement" : "Bonus Request"}

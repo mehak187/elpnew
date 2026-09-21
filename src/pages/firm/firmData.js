@@ -45,7 +45,7 @@ export const formatDate = (dateStr) =>
   dateStr
     ? new Date(dateStr).toLocaleDateString("en-GB", {
         day: "2-digit",
-        month: "short",
+        month: "2-digit",
         year: "numeric",
       })
     : "";

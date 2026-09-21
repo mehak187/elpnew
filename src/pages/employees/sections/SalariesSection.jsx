@@ -1011,7 +1011,7 @@ export default function SalariesSection({
         open={Boolean(adding) && !addingAdvance}
         onOpenChange={(open) => !open && closeAdd()}
       >
-        <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {openRequest
@@ -1029,7 +1029,7 @@ export default function SalariesSection({
         open={addingAdvance}
         onOpenChange={(open) => !open && closeAdd()}
       >
-        <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Salary Advance Request</DialogTitle>
           </DialogHeader>
