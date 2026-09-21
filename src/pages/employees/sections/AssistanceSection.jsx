@@ -317,7 +317,6 @@ export default function AssistanceSection({
         {stage === "decision" ? (
           <>
             <DecisionChoice
-              subject="assistance"
               value={decision}
               onChange={setDecision}
               disabled={!canDecide}

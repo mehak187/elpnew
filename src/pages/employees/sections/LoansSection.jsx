@@ -56,6 +56,7 @@ import {
   outstandingTotal,
   pendingRequest,
   loanRecords,
+  loansFor,
   loanTotal,
   loanYear,
   schedule,
@@ -206,7 +207,10 @@ export default function LoansSection({
   // Management decides a request; on My Profile the decision is only read.
   canDecide = true,
 }) {
-  const [records, setRecords] = useState(loanRecords);
+  // A loan belongs to somebody, so a page shows only that person's.
+  const [records, setRecords] = useState(() =>
+    loansFor(loanRecords, employee?.name)
+  );
   const [draft, setDraft] = useState(emptyDraft);
   // Which stage of the request is open, and what management decided.
   const [stage, setStage] = useState("request");
@@ -455,15 +459,9 @@ export default function LoansSection({
           {stage === "decision" ? (
             <>
               <DecisionChoice
-                subject="loan"
                 value={decision}
                 onChange={setDecision}
                 disabled={!canDecide}
-                // A loan is granted on terms, not only on an amount.
-                notes={{
-                  full: "Approve the loan as requested",
-                  partial: "Approve with amended terms",
-                }}
               />
 
               {/* The terms the loan runs on. They are what was asked for

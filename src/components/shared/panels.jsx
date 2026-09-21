@@ -34,6 +34,30 @@ export function PriorityDot({ level, label }) {
   );
 }
 
+/**
+ * One titled box of a stepped form.
+ *
+ * The title wears a bar in its own colour, so what goes onto a figure and what
+ * comes off it are told apart before a single amount is read.
+ */
+export function Bordered({ title, held, children }) {
+  return (
+    <div className="space-y-4 rounded-lg border p-4">
+      <p className="flex items-center gap-2 font-semibold text-primary">
+        <span
+          aria-hidden="true"
+          className={cn(
+            "h-5 w-1 shrink-0 rounded-full",
+            held ? "bg-destructive" : "bg-primary"
+          )}
+        />
+        {title}
+      </p>
+      {children}
+    </div>
+  );
+}
+
 /** Section wrapper: title, optional icon, optional action on the right. */
 export function SectionCard({ title, icon: Icon, action, children, className }) {
   return (

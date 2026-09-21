@@ -18,7 +18,6 @@ import {
   AdvanceRequests,
 } from "./AdvanceSalarySection";
 import { Rial } from "@/components/shared/Rial";
-import { amountValue } from "@/lib/money";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -30,7 +29,7 @@ import { cn } from "@/lib/utils";
 import {
   Save,
   FileCheck,
-  ArrowRight,
+  History,
   Landmark,
   ShieldCheck,
   Wallet,
@@ -39,6 +38,7 @@ import {
   Receipt,
 } from "lucide-react";
 import Panel from "@/components/shared/Panel";
+import { Bordered } from "@/components/shared/panels";
 import {
   RecordTable,
   HeadRow,
@@ -50,19 +50,19 @@ import { useViolations } from "@/lib/violations/context";
 import { DEDUCTION_PENALTY } from "../violationData";
 import {
   loanRecords,
+  loansFor,
   loanTotal,
   schedule,
   isApprovedLoan,
 } from "../loanData";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
+import { PAYING_ACCOUNTS } from "@/pages/firm/firmData";
 import {
   ALLOWANCES,
   DEDUCTIONS,
   SALARY_MONTHS,
   MONTH_FULL,
   PAYMENT_YEARS,
-  PAYMENT_SOURCES,
-  DEFAULT_BANK,
   DEFAULT_BOOKING,
   salaryHistory,
   nextSalaryNo,
@@ -103,14 +103,11 @@ const emptyPayment = {
   ...DEFAULT_BOOKING,
   month: "",
   year: "",
-  basic: null,
-  allowances: null,
-  deductions: null,
+  calculationDate: new Date().toISOString().slice(0, 10),
   method: "",
-  source: DEFAULT_BANK,
-  accountNo: "",
+  // One choice for where it leaves from: the account carries its bank.
+  bankAccount: "",
   reference: "",
-  notes: "",
   paymentDate: "",
 };
 
@@ -135,7 +132,7 @@ function Group({ title, children }) {
  */
 function Amount({ id, label, required, value, onChange, readOnly, highlight }) {
   return (
-    <div className="space-y-2">
+    <div className="flex h-full flex-col justify-end gap-2">
       <Label htmlFor={id}>
         {label}
         {required && <span className="whitespace-nowrap text-destructive">&nbsp;*</span>}
@@ -189,7 +186,7 @@ function PayLine({ label, tone, className, children }) {
 /** A booking the form does not ask about: it is what a salary is filed as. */
 function Locked({ id, label, value }) {
   return (
-    <div className="space-y-2">
+    <div className="flex h-full flex-col justify-end gap-2">
       <Label htmlFor={id}>{label}</Label>
       <Input
         id={id}
@@ -211,7 +208,7 @@ function Locked({ id, label, value }) {
  */
 function Typed({ id, label, value, onChange, held }) {
   return (
-    <div className="space-y-2">
+    <div className="flex h-full flex-col justify-end gap-2">
       <Label htmlFor={id}>
         {label} (<Rial />)
       </Label>
@@ -229,6 +226,52 @@ function Typed({ id, label, value, onChange, held }) {
 
 /** Two digits, the way an installment is counted: "03 / 12". */
 const pad = (n) => String(n).padStart(2, "0");
+
+/** One fact of the transfer summary: what it is, then what it says. */
+function Said({ label, value, settled }) {
+  return (
+    <div className="px-0 lg:px-4 lg:first:pl-0">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p
+        className={cn(
+          "mt-1 font-semibold",
+          settled ? "text-green-700" : "text-primary"
+        )}
+      >
+        {value || "-"}
+      </p>
+    </div>
+  );
+}
+
+/** One figure of the summary: what it is, then how much it came to. */
+function Sum({ label, value, held, payable }) {
+  return (
+    <div
+      className={cn(
+        "rounded-lg border p-4",
+        payable && "border-green-600/40 bg-green-50"
+      )}
+    >
+      <p
+        className={cn(
+          "text-sm font-medium",
+          held ? "text-destructive" : "text-muted-foreground"
+        )}
+      >
+        {label}
+      </p>
+      <p
+        className={cn(
+          "mt-1 text-lg font-bold",
+          held ? "text-destructive" : payable ? "text-green-700" : "text-primary"
+        )}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
 
 /**
  * One figure of the salary, as a tile.
@@ -274,7 +317,7 @@ function Tile({ icon, title, note, value, tone }) {
 /** A settled figure inside the payment form's summary. */
 function Figure({ label, value }) {
   return (
-    <div className="space-y-2">
+    <div className="flex h-full flex-col justify-end gap-2">
       <p className="text-sm font-semibold">{label}</p>
       <div className="relative">
         <Input
@@ -291,7 +334,7 @@ function Figure({ label, value }) {
 /** A labelled select, since the payment form is made almost entirely of them. */
 function Choice({ id, label, value, onChange, placeholder, options }) {
   return (
-    <div className="space-y-2">
+    <div className="flex h-full flex-col justify-end gap-2">
       <Label htmlFor={id}>{label}</Label>
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger id={id}>
@@ -356,6 +399,8 @@ export default function SalariesSection({
   const [openId, setOpenId] = useState(null);
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
+  // The advance request opened off its own list, if one is.
+  const [openAdvanceId, setOpenAdvanceId] = useState(null);
 
   const openRequest = history.find((row) => row.id === openId) || null;
   const settled = Boolean(openRequest?.salaryNo);
@@ -371,7 +416,9 @@ export default function SalariesSection({
 
   // What comes off the pay is not typed: it is the loans still being repaid
   // and the penalties on record, added up.
-  const debts = loanRecords.filter(isApprovedLoan).map((loan) => {
+  const debts = loansFor(loanRecords, employee?.name)
+    .filter(isApprovedLoan)
+    .map((loan) => {
     const plan = schedule(loanTotal(loan), loan.monthly);
     const taken = (loan.payments || []).filter((p) => Number(p.amount) > 0).length;
     return {
@@ -413,28 +460,23 @@ export default function SalariesSection({
   const deductions = Number((loanDue + penaltyDue).toFixed(3));
   const net = Number((earnings - deductions).toFixed(3));
 
-  // The month being recorded opens on the salary in force, and can be edited
-  // where that month differed from it. Untouched (null) means the figure above.
-  const entered = (key, fallback) =>
-    payment[key] === null ? String(fallback) : payment[key];
-  const payBasic = entered("basic", Number(payslip.basic) || 0);
-  const payAllowances = entered("allowances", allowances);
-  const payDeductions = entered("deductions", deductions);
-  const payNet =
-    Number(payBasic || 0) + Number(payAllowances || 0) - Number(payDeductions || 0);
+  // The month being recorded is worth what the record says it is worth: the
+  // salary in force, less the loans and penalties on it.
+  const payBasic = Number(payslip.basic) || 0;
+  const payAllowances = allowances;
+  const payNet = net;
 
   // What the salary is called while it waits: the request's own number until
   // it is approved and takes the next salary number.
+  // A request that is waiting carries its own temporary number; a new one
+  // shows the salary number it will take once it is approved.
   const salaryNo = openRequest
     ? openRequest.salaryNo || openRequest.requestNo
-    : nextRequestNo(history);
+    : nextSalaryNo(history);
   const monthNumber = SALARY_MONTHS.findIndex((m) => m.value === payment.month) + 1;
   const period = monthNumber
     ? MONTH_FULL[monthNumber - 1] + " " + payment.year
     : "";
-  // The account the last salary went to, unless this one goes elsewhere.
-  const lastAccount = history[history.length - 1]?.accountNo || "";
-  const accountNo = payment.accountNo || lastAccount;
 
   /** The salary in force, saved onto the employee's record. */
   const savePayslip = () => {
@@ -453,6 +495,7 @@ export default function SalariesSection({
     setOpenId(null);
     setRejecting(false);
     setReason("");
+    setOpenAdvanceId(null);
     onCloseAdd();
   };
 
@@ -467,33 +510,36 @@ export default function SalariesSection({
       ...emptyPayment,
       month: SALARY_MONTHS[record.month - 1]?.value || "",
       year: String(record.year),
-      basic: String(record.basic),
-      allowances: String(record.allowances),
-      deductions: String(record.loanDeducted + record.administrative),
+      calculationDate: record.calculationDate || emptyPayment.calculationDate,
       method: record.method || "",
-      source: record.bank || DEFAULT_BANK,
-      accountNo: record.accountNo || "",
+      bankAccount: record.bankAccount || "",
       reference: record.reference || "",
-      notes: record.notes || "",
       paymentDate: record.paymentDate || "",
     });
     onOpenAdd?.();
   };
 
   // What the month came to has to be settled before how it was transferred.
-  const canSaveSalary = payment.month && payment.year && Number(payBasic) > 0;
-  const canPay = canSaveSalary && payment.method && payment.paymentDate;
+  const canSaveSalary =
+    payment.month && payment.year && payment.calculationDate && payBasic > 0;
+  const canPay =
+    canSaveSalary &&
+    payment.method &&
+    payment.bankAccount &&
+    payment.paymentDate &&
+    payment.reference.trim();
 
   /** What the month is worth, as the record keeps it. */
   const figures = () => ({
     month: monthNumber,
     year: Number(payment.year),
-    basic: Number(payBasic) || 0,
-    allowances: Number(payAllowances) || 0,
-    // What came off this month was entered as one figure, so it is the whole
-    // of the deduction and none of it is a loan installment.
-    loanDeducted: 0,
-    administrative: Number(payDeductions) || 0,
+    calculationDate: payment.calculationDate,
+    basic: payBasic,
+    allowances: payAllowances,
+    // Each deduction is kept as what it is: an installment of a loan, and
+    // what the penalties took.
+    loanDeducted: loanDue,
+    administrative: penaltyDue,
     administrativeReason: "",
   });
 
@@ -519,11 +565,9 @@ export default function SalariesSection({
           status: SALARY_PENDING,
           ...figures(),
           method: "",
-          bank: "",
-          accountNo: "",
+          bankAccount: "",
           reference: "",
           receipt: "",
-          notes: "",
           paymentDate: "",
         },
       ]);
@@ -545,11 +589,9 @@ export default function SalariesSection({
               status: SALARY_TRANSFERRED,
               rejectionReason: "",
               method: payment.method,
-              bank: payment.source,
-              accountNo,
+              bankAccount: payment.bankAccount,
               reference: payment.reference.trim(),
               receipt: receipt?.name || "",
-              notes: payment.notes.trim(),
               paymentDate: payment.paymentDate,
             }
           : row
@@ -573,13 +615,10 @@ export default function SalariesSection({
 
   /* ------------------------------------------------ the payment being added */
 
-  // On My Profile the only thing that opens here is a request for an advance:
-  // an employee does not pay their own salary.
-  if (adding && advance) {
-    return (
-      <AdvanceSalaryForm employee={employee} net={net} onClose={closeAdd} />
-    );
-  }
+  // An advance is what the employee asks for out of their own salary: on My
+  // Profile it is the only thing that opens here, and on the firm's side it
+  // opens whenever one of those requests is picked off the list to decide.
+  const addingAdvance = Boolean(adding && (advance || openAdvanceId));
 
   // The form opens over the page rather than pushing it down: the list it is
   // filed into stays where it was, behind it.
@@ -593,8 +632,8 @@ export default function SalariesSection({
           steps={[
             {
               key: "salary",
-              title: "Add Salary",
-              note: "Salary calculation and period",
+              title: "Salary Calculation",
+              note: "Review earnings, deductions and salary period",
               done: Boolean(canSaveSalary),
             },
             {
@@ -608,225 +647,290 @@ export default function SalariesSection({
           ]}
         />
 
-        <h3 className="text-base font-semibold text-primary">
-          {payStage === "salary" ? "Add Salary" : "Salary Transfer"}
-        </h3>
-
         {payStage === "salary" ? (
           <>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
-              {/* Where a salary lands in the accounts is not a choice: it is
-                  what a salary is, and the page for bonuses is its own. */}
-              <Locked id="pay-type" label="Expense Type" value={payment.expenseType} />
-              <Locked id="pay-category" label="Category" value={payment.category} />
-              <Locked
-                id="pay-subcategory"
-                label="Subcategory"
-                value={payment.subcategory}
-              />
+            {/* Which month is being paid. The number and the figures are not
+                asked for: they follow from the record. */}
+            <Bordered title="Salary Information">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+                <div className="space-y-2">
+                  <Label htmlFor="pay-no">Salary No.</Label>
+                  <div className="relative">
+                    <Input
+                      id="pay-no"
+                      readOnly
+                      tabIndex={-1}
+                      value={salaryNo}
+                      className="cursor-default bg-locked pr-16 text-muted-foreground"
+                    />
+                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded bg-secondary px-2 py-0.5 text-xs font-medium text-primary">
+                      Auto
+                    </span>
+                  </div>
+                </div>
 
-              <Choice
-                id="pay-month"
-                label="Month"
-                value={payment.month}
-                onChange={(value) => value && setPay("month", value)}
-                placeholder="Select month"
-                options={SALARY_MONTHS}
-              />
+                <div className="space-y-2">
+                  <Label htmlFor="pay-calc-date">Calculation Date</Label>
+                  <Input
+                    id="pay-calc-date"
+                    type="date"
+                    value={payment.calculationDate}
+                    onChange={(e) => setPay("calculationDate", e.target.value)}
+                  />
+                </div>
 
-              <Choice
-                id="pay-year"
-                label="Year"
-                value={payment.year}
-                onChange={(value) => value && setPay("year", value)}
-                placeholder="Select year"
-                options={PAYMENT_YEARS}
-              />
+                <Choice
+                  id="pay-month"
+                  label="Salary Month"
+                  value={payment.month}
+                  onChange={(value) => value && setPay("month", value)}
+                  placeholder="Select month"
+                  options={SALARY_MONTHS}
+                />
 
-              {/* Opened on the salary in force, and edited only where this
-                  month differed from it. */}
-              <Typed
-                id="pay-basic"
-                label="Basic Salary"
-                value={payBasic}
-                onChange={(value) => setPay("basic", value)}
-              />
-              <Typed
-                id="pay-allowances"
-                label="Total Allowances"
-                value={payAllowances}
-                onChange={(value) => setPay("allowances", value)}
-              />
-              <Typed
-                id="pay-deductions"
-                label="Total Deductions"
-                held
-                value={payDeductions}
-                onChange={(value) => setPay("deductions", value)}
-              />
+                <Choice
+                  id="pay-year"
+                  label="Salary Year"
+                  value={payment.year}
+                  onChange={(value) => value && setPay("year", value)}
+                  placeholder="Select year"
+                  options={PAYMENT_YEARS}
+                />
+              </div>
+            </Bordered>
+
+            {/* What goes onto the pay and what comes off it, side by side. */}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+              <Bordered title="Earnings">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <Amount
+                    id="pay-basic"
+                    label="Basic Salary"
+                    value={amount(payslip.basic)}
+                    readOnly
+                  />
+                  {ALLOWANCES.map((allowance) => (
+                    <Amount
+                      key={allowance.key}
+                      id={"pay-" + allowance.key}
+                      label={allowance.label}
+                      value={amount(payslip[allowance.key])}
+                      readOnly
+                    />
+                  ))}
+                </div>
+              </Bordered>
+
+              <Bordered title="Deductions" held>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Amount
+                    id="pay-loan"
+                    label="Loan Installment"
+                    value={amount(loanDue)}
+                    readOnly
+                  />
+                  <Amount
+                    id="pay-penalty"
+                    label="Disciplinary Deductions"
+                    value={amount(penaltyDue)}
+                    readOnly
+                  />
+                </div>
+              </Bordered>
             </div>
 
-            {/* The one figure the whole form is for, worked out from the three
-                above rather than asked for. */}
-            <div className="rounded-lg border border-green-600/40 bg-green-50 p-4">
-              <p className="font-semibold text-green-700">Net Salary Payable</p>
-              {/* The figure arrives with the currency already on it. */}
-              <p className="mt-1 text-3xl font-bold text-green-700">
-                {amount(payNet)}
-              </p>
-              <p className="mt-1 text-sm text-green-700">
-                Basic salary plus allowances minus total deductions.
-              </p>
-            </div>
+            {/* What it all comes to, in the order it is worked out. */}
+            <Bordered title="Salary Summary">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <Sum label="Total Earnings" value={amount(earnings)} />
+                <Sum label="Total Deductions" value={amount(deductions)} held />
+                <Sum label="Net Salary" value={amount(net)} />
+                <Sum label="Amount Payable" value={amount(net)} payable />
+              </div>
+            </Bordered>
 
             {/* Plain buttons: this form sits inside the employee form, which
                 either would otherwise submit. */}
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={closeAdd}>
-                Cancel
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              {/* What has been paid before is the list behind this window. */}
+              <Button type="button" variant="ghost" onClick={closeAdd}>
+                <History className="mr-2 h-4 w-4" />
+                History
               </Button>
-              <Button type="button" onClick={saveSalary} disabled={!canSaveSalary}>
-                Save and Continue
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                <Button type="button" variant="outline" onClick={closeAdd}>
+                  Cancel
+                </Button>
+                <Button type="button" onClick={saveSalary} disabled={!canSaveSalary}>
+                  Save
+                </Button>
+              </div>
             </div>
           </>
         ) : (
           <>
-            {/* What is being transferred, read off the salary just saved
+            {/* What is being transferred, read off the salary just settled
                 rather than asked for again. */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
-              <Locked id="pay-no" label="Salary No." value={salaryNo} />
-              <Locked id="pay-period" label="Salary Period" value={period} />
-              <Locked
-                id="pay-employee"
-                label="Employee Name"
-                value={employee?.name || ""}
-              />
-              <Locked
-                id="pay-net"
-                label="Net Salary Payable"
-                value={amount(payNet)}
-              />
-
-              <Choice
-                id="pay-method"
-                label="Payment Method"
-                value={payment.method}
-                onChange={(value) => value && setPay("method", value)}
-                placeholder="Select method"
-                options={PAYMENT_METHODS}
-              />
-
-              <Choice
-                id="pay-bank"
-                label="Bank"
-                value={payment.source}
-                onChange={(value) => value && setPay("source", value)}
-                placeholder="Select bank or cash"
-                options={PAYMENT_SOURCES}
-              />
-
-              <div className="space-y-2">
-                <Label htmlFor="pay-account">Account No.</Label>
-                <Input
-                  id="pay-account"
-                  value={accountNo}
-                  onChange={(e) => setPay("accountNo", e.target.value)}
-                  placeholder="Enter the account the salary goes to"
+            <Bordered title="Salary Information">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+                <Locked id="pay-no" label="Salary No." value={salaryNo} />
+                <Locked id="pay-period" label="Salary Period" value={period} />
+                <Locked
+                  id="pay-employee"
+                  label="Employee Name"
+                  value={employee?.name || ""}
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="pay-date">
-                  Payment Date
-                  <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
-                </Label>
-                <Input
-                  id="pay-date"
-                  type="date"
-                  value={payment.paymentDate}
-                  onChange={(e) => setPay("paymentDate", e.target.value)}
-                />
-              </div>
-
-              {/* The figure being transferred is the one settled on the stage
-                  before, so it is shown rather than typed again. */}
-              <div className="space-y-2">
-                <Label htmlFor="pay-amount">
-                  Transfer Amount (<Rial />)
-                </Label>
-                <Input
-                  id="pay-amount"
+                <Amount
+                  id="pay-net"
+                  label="Amount Payable"
+                  value={amount(payNet)}
                   readOnly
-                  tabIndex={-1}
-                  // The label already says OMR, so the figure does not.
-                  value={amountValue(payNet)}
-                  className="cursor-default border-green-600/40 bg-green-50 font-semibold text-green-700"
+                  highlight
                 />
               </div>
+            </Bordered>
 
-              {/* What the bank called the transfer, and the proof of it: the
-                  file name lives in the tooltip, so the control stays
-                  icon-sized either way. */}
-              <div className="space-y-2">
-                <Label htmlFor="pay-reference">Payment Reference</Label>
-                <div className="flex w-full min-w-0 items-center gap-2">
+            {/* Where it is booked, and how it actually leaves. */}
+            <Bordered title="Expense & Disbursement Details">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+                <Locked
+                  id="pay-type"
+                  label="Expense Type"
+                  value={payment.expenseType}
+                />
+                <Locked id="pay-category" label="Category" value="Salaries" />
+                <Locked
+                  id="pay-subcategory"
+                  label="Subcategory"
+                  value={payment.subcategory}
+                />
+
+                <Choice
+                  id="pay-method"
+                  label={
+                    <>
+                      Payment Method
+                      <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
+                    </>
+                  }
+                  value={payment.method}
+                  onChange={(value) => value && setPay("method", value)}
+                  placeholder="Select method"
+                  options={PAYMENT_METHODS}
+                />
+
+                {/* One choice, not two: the account carries the bank it is
+                    held at, so they cannot be set to disagree. */}
+                <Choice
+                  id="pay-bank"
+                  label={
+                    <>
+                      Bank Account
+                      <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
+                    </>
+                  }
+                  value={payment.bankAccount}
+                  onChange={(value) => value && setPay("bankAccount", value)}
+                  placeholder="Select bank account"
+                  options={PAYING_ACCOUNTS}
+                />
+
+                <div className="flex h-full flex-col justify-end gap-2">
+                  <Label htmlFor="pay-date">
+                    Payment Date
+                    <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
+                  </Label>
                   <Input
-                    id="pay-reference"
-                    className="min-w-0 flex-1"
-                    value={payment.reference}
-                    onChange={(e) => setPay("reference", e.target.value)}
-                    placeholder="TRX-0000-00000"
+                    id="pay-date"
+                    type="date"
+                    value={payment.paymentDate}
+                    onChange={(e) => setPay("paymentDate", e.target.value)}
                   />
-                  {receipt ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="shrink-0 border-green-600 text-green-600 hover:text-destructive"
-                      title={receipt.name + " - click to remove"}
-                      onClick={() => setReceipt(null)}
-                    >
-                      <FileCheck className="h-4 w-4" />
-                      <span className="sr-only">
-                        {receipt.name} attached. Remove it.
-                      </span>
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="shrink-0"
-                      title="Upload transfer receipt"
-                      asChild
-                    >
-                      <label className="cursor-pointer">
-                        <UploadIcon className="h-4 w-4" />
-                        <span className="sr-only">Upload transfer receipt</span>
-                        <Input
-                          type="file"
-                          className="hidden"
-                          onChange={(e) =>
-                            e.target.files[0] && setReceipt(e.target.files[0])
-                          }
-                        />
-                      </label>
-                    </Button>
-                  )}
                 </div>
-              </div>
 
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="pay-notes">Notes</Label>
-                <Textarea
-                  id="pay-notes"
-                  rows={3}
-                  value={payment.notes}
-                  onChange={(e) => setPay("notes", e.target.value)}
-                  placeholder="Enter transfer notes"
+                {/* What the bank called the transfer, and the proof of it:
+                    the file name lives in the tooltip, so the control stays
+                    icon-sized either way. */}
+                <div className="flex h-full flex-col justify-end gap-2">
+                  <Label htmlFor="pay-reference">
+                    Transfer No.
+                    <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
+                  </Label>
+                  <div className="flex w-full min-w-0 items-center gap-2">
+                    <Input
+                      id="pay-reference"
+                      className="min-w-0 flex-1"
+                      value={payment.reference}
+                      onChange={(e) => setPay("reference", e.target.value)}
+                      placeholder="TRX-0000-00000"
+                    />
+                    {receipt ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="shrink-0 border-green-600 text-green-600 hover:text-destructive"
+                        title={receipt.name + " - click to remove"}
+                        onClick={() => setReceipt(null)}
+                      >
+                        <FileCheck className="h-4 w-4" />
+                        <span className="sr-only">
+                          {receipt.name} attached. Remove it.
+                        </span>
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="shrink-0"
+                        title="Upload transfer receipt"
+                        asChild
+                      >
+                        <label className="cursor-pointer">
+                          <UploadIcon className="h-4 w-4" />
+                          <span className="sr-only">Upload transfer receipt</span>
+                          <Input
+                            type="file"
+                            className="hidden"
+                            onChange={(e) =>
+                              e.target.files[0] && setReceipt(e.target.files[0])
+                            }
+                          />
+                        </label>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* The figure being transferred is the one settled on the
+                    stage before, so it is shown rather than typed again. */}
+                <Amount
+                  id="pay-amount"
+                  label="Amount to Disburse"
+                  value={amount(payNet)}
+                  readOnly
+                  highlight
                 />
+              </div>
+            </Bordered>
+
+            {/* Who is being paid and where it lands, in one line to be read
+                against the transfer above before it is confirmed. */}
+            <div className="rounded-lg border border-green-600/40 bg-green-50/50 p-4">
+              <p className="mb-3 flex items-center gap-2 font-semibold text-green-700">
+                <span
+                  aria-hidden="true"
+                  className="h-5 w-1 shrink-0 rounded-full bg-green-600"
+                />
+                Employee &amp; Transfer Summary
+              </p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:divide-x">
+                <Said label="Employee No." value={employee?.empNo || ""} />
+                <Said label="Employee Name" value={employee?.name || ""} />
+                <Said label="Bank Account" value={payment.bankAccount} />
+                <Said label="Transfer Amount" value={amount(payNet)} settled />
               </div>
             </div>
 
@@ -862,50 +966,51 @@ export default function SalariesSection({
               </div>
             )}
 
-            <div className="flex flex-wrap justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setPayStage("salary")}
-              >
-                Previous
-              </Button>
-              <Button type="button" variant="outline" onClick={closeAdd}>
-                Cancel
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              {/* What has been paid before is the list behind this window. */}
+              <Button type="button" variant="ghost" onClick={closeAdd}>
+                <History className="mr-2 h-4 w-4" />
+                History
               </Button>
 
-              {/* A salary already transferred is only being looked at. */}
-              {!settled && !refused && (
-                rejecting ? (
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    onClick={rejectRequest}
-                    disabled={!reason.trim()}
-                  >
-                    Confirm Rejection
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => setRejecting(true)}
-                  >
-                    Reject Request
-                  </Button>
-                )
-              )}
-
-              {!refused && (
-                <Button
-                  type="button"
-                  onClick={savePayment}
-                  disabled={!canPay || rejecting}
-                >
-                  Confirm Salary Transfer
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                <Button type="button" variant="outline" onClick={closeAdd}>
+                  Cancel
                 </Button>
-              )}
+
+                {/* A salary already transferred is only being looked at. */}
+                {!settled && !refused && (
+                  rejecting ? (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={rejectRequest}
+                      disabled={!reason.trim()}
+                    >
+                      Confirm Rejection
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => setRejecting(true)}
+                    >
+                      Reject Request
+                    </Button>
+                  )
+                )}
+
+                {!refused && (
+                  <Button
+                    type="button"
+                    onClick={savePayment}
+                    disabled={!canPay || rejecting}
+                  >
+                    Save
+                  </Button>
+                )}
+              </div>
             </div>
           </>
         )}
@@ -918,16 +1023,38 @@ export default function SalariesSection({
   return (
     <div className="space-y-6">
       {/* Opened over the page, so the list it is filed into stays behind it. */}
-      <Dialog open={Boolean(adding)} onOpenChange={(open) => !open && closeAdd()}>
+      <Dialog
+        open={Boolean(adding) && !addingAdvance}
+        onOpenChange={(open) => !open && closeAdd()}
+      >
         <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {openRequest
-                ? "Salary " + (openRequest.salaryNo || openRequest.requestNo)
-                : "Add Salary"}
+                ? "Salary Payment " +
+                  (openRequest.salaryNo || openRequest.requestNo)
+                : "Salary Payment"}
             </DialogTitle>
           </DialogHeader>
           {form}
+        </DialogContent>
+      </Dialog>
+
+      {/* What the employee asks for out of that salary opens the same way. */}
+      <Dialog
+        open={addingAdvance}
+        onOpenChange={(open) => !open && closeAdd()}
+      >
+        <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Salary Advance Request</DialogTitle>
+          </DialogHeader>
+          <AdvanceSalaryForm
+            employee={employee}
+            net={net}
+            requestId={openAdvanceId}
+            onClose={closeAdd}
+          />
         </DialogContent>
       </Dialog>
 
@@ -1062,7 +1189,24 @@ export default function SalariesSection({
 
       {/* What has been asked for out of the salary above. The firm sees its
           own record of an advance in the payments; this is the employee's. */}
-      {advance && <AdvanceRequests employee={employee} />}
+      {/* What has been asked for out of the salary above. The employee asks
+          here, on their own page; the office decides it on theirs. */}
+      <AdvanceRequests
+        employee={employee}
+        // The one thing the employee may do with their own salary, on the row
+        // above the list it is added to.
+        onAdd={advance && addLabel && !adding ? () => onOpenAdd?.() : null}
+        addLabel={addLabel}
+        onOpenRequest={
+          adding
+            ? null
+            : (request) => {
+                setOpenAdvanceId(request.id);
+                onOpenAdd?.();
+              }
+        }
+      />
+
 
       {/* What has been paid, month by month */}
       <SalaryHistory

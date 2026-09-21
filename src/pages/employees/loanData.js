@@ -281,6 +281,7 @@ export const SOURCE_SHORT = {
 export const loanRecords = [
   {
     id: 1,
+    employee: "Mohammed Al Yahyaei",
     kind: NEW_LOAN,
     status: LOAN_APPROVED,
     loanAmount: 7000,
@@ -299,6 +300,7 @@ export const loanRecords = [
   },
   {
     id: 2,
+    employee: "Mohammed Al Yahyaei",
     kind: NEW_LOAN,
     status: LOAN_APPROVED,
     loanAmount: 5000,
@@ -315,6 +317,7 @@ export const loanRecords = [
   },
   {
     id: 3,
+    employee: "Mohammed Al Yahyaei",
     kind: NEW_LOAN,
     status: LOAN_APPROVED,
     loanAmount: 8500,
@@ -330,4 +333,25 @@ export const loanRecords = [
       { due: "2026-08-31", amount: 850, date: "2026-08-31" },
     ],
   },
+  {
+    id: 4,
+    employee: "Priya Sharma",
+    kind: NEW_LOAN,
+    status: LOAN_APPROVED,
+    loanAmount: 600,
+    merged: 0,
+    disbursementDate: "2026-06-20",
+    bankName: "Bank Muscat",
+    accountNumber: "030112345678",
+    monthly: 50,
+    firstDue: "2026-07-31",
+    payments: [
+      { due: "2026-07-31", amount: 50, date: "2026-07-31" },
+      { due: "2026-08-31", amount: 50, date: "2026-08-31" },
+    ],
+  },
 ];
+
+/** Everything one employee has borrowed. */
+export const loansFor = (records, name) =>
+  records.filter((record) => record.employee === name);

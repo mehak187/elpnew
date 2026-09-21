@@ -260,6 +260,20 @@ export const initialTransfers = [
 ];
 
 /**
+ * "Bank Muscat - **** 6789", the way an account is named on a transfer.
+ *
+ * One choice rather than two: the account carries the bank it is held at, so
+ * the two can never be set to disagree.
+ */
+export const accountLabel = (account) =>
+  account.bankName + " — •••• " + String(account.accountNumber).slice(-4);
+
+/** The accounts money can actually leave from, as a transfer names them. */
+export const PAYING_ACCOUNTS = initialBankAccounts
+  .filter((account) => account.active)
+  .map(accountLabel);
+
+/**
  * An account number is shown masked wherever the account is only being
  * identified - the last four digits are enough to tell one from another, and
  * the rest has no business being on a screen anyone can look over.

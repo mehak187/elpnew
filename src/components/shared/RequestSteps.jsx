@@ -1,5 +1,6 @@
-import { Check, PieChart, X } from "lucide-react";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Bordered } from "@/components/shared/panels";
 
 /**
  * The two stages a financial request goes through, as one bar of headers.
@@ -125,65 +126,35 @@ export function RequestSteps({ steps, active, onChange, compact = false }) {
   );
 }
 
-/** What management can decide about a request, and how each one looks. */
+/**
+ * What management can decide about a request.
+ *
+ * Each answer wears its own colour whether or not it is the one chosen, so
+ * approving and declining are never a click apart in identical cards. Which
+ * one was chosen is said by the mark on the left, the way a radio says it.
+ */
 const DECISIONS = [
-  {
-    key: "full",
-    title: "Full Approval",
-    note: (subject) => "Approve the requested " + subject + " amount",
-    mark: (
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-600 text-white">
-        <Check className="h-5 w-5" />
-      </span>
-    ),
-    chosen: "border-green-600 bg-green-50",
-  },
-  {
-    key: "partial",
-    title: "Partial Approval",
-    note: () => "Approve a different amount",
-    mark: (
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center text-blue-700">
-        <PieChart className="h-8 w-8" />
-      </span>
-    ),
-    chosen: "border-blue-600 bg-blue-50",
-  },
-  {
-    key: "rejected",
-    title: "Rejected",
-    note: (subject) => "Decline the " + subject + " request",
-    mark: (
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-600 text-white">
-        <X className="h-5 w-5" />
-      </span>
-    ),
-    chosen: "border-red-600 bg-red-50",
-  },
+  { key: "full", title: "Full Approval", tone: "border-green-600 bg-green-50", mark: "border-green-600 text-green-600" },
+  { key: "partial", title: "Partial Approval", tone: "border-border bg-card", mark: "border-muted-foreground/40 text-primary" },
+  { key: "rejected", title: "Rejection", tone: "border-red-600 bg-red-50", mark: "border-red-600 text-red-600" },
 ];
 
 /**
  * Management's answer to a request, as three cards to choose between.
  *
- * `subject` is what is being asked for ("assistance", "loan") so each card
- * says what it approves or declines. Only the office decides: where `disabled`
- * is set the cards show the decision and cannot change it.
+ * Only the office decides: where `disabled` is set the cards show the decision
+ * and cannot change it.
  */
 export function DecisionChoice({
-  subject,
   value,
   onChange,
   disabled,
   // The stage's own heading, so a form that opens on this stage is not left
   // with two headings or none.
   title = "Management Decision",
-  // What each card says, where a request needs its own words: a loan is
-  // approved on terms, not only on an amount.
-  notes = {},
 }) {
   return (
-    <div className="space-y-3">
-      <h3 className="text-base font-semibold text-primary">{title}</h3>
+    <Bordered title={title}>
       <div
         role="radiogroup"
         aria-label={title}
@@ -200,38 +171,29 @@ export function DecisionChoice({
               disabled={disabled}
               onClick={() => onChange(decision.key)}
               className={cn(
-                "flex items-center gap-4 rounded-md border-2 bg-card px-5 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default",
-                chosen ? decision.chosen : "border-border hover:border-primary/30",
+                "flex items-center gap-4 rounded-md border-2 px-5 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default",
+                decision.tone,
+                !chosen && !disabled && "hover:brightness-95",
                 disabled && !chosen && "opacity-70"
               )}
             >
-              {decision.mark}
-              <span className="min-w-0 flex-1">
-                <span className="block font-semibold text-primary">
-                  {decision.title}
-                </span>
-                <span className="block text-xs text-muted-foreground">
-                  {notes[decision.key] || decision.note(subject)}
-                </span>
-              </span>
-
-              {/* Which one is chosen, said again on the right: three cards in
-                  a row are read across, and the ring is where the eye goes. */}
               <span
                 aria-hidden="true"
                 className={cn(
-                  "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2",
-                  chosen ? "border-primary" : "border-muted-foreground/40"
+                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2",
+                  decision.mark,
+                  chosen && "bg-current"
                 )}
               >
-                {chosen && (
-                  <span className="h-2.5 w-2.5 rounded-full bg-primary" />
-                )}
+                {chosen && <Check className="h-3.5 w-3.5 text-white" />}
+              </span>
+              <span className="min-w-0 flex-1 font-semibold text-primary">
+                {decision.title}
               </span>
             </button>
           );
         })}
       </div>
-    </div>
+    </Bordered>
   );
 }

@@ -425,7 +425,6 @@ export default function EntitlementTab({
           </div>
 
           <DecisionChoice
-            subject={label.toLowerCase()}
             value={decision}
             onChange={setDecision}
             disabled={!canDecide || settled || refused}

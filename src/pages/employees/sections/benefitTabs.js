@@ -27,17 +27,16 @@ export const BENEFIT_TABS = [
     // cannot pay themselves, but they can ask for part of it early - and the
     // firm never asks for an advance on somebody else's behalf, so this is
     // the one place it exists.
-    selfAdd: "Request Salary Advance",
+    selfAdd: "Salary Advance Request",
   },
   {
-    // The firm decides a bonus and records it once paid, so it is kept to the
-    // employee's own page - nobody reads their bonuses on My Profile.
+    // A bonus is asked for the way everything else here is: the employee
+    // writes the request, and the office answers it.
     key: "bonus",
     label: "Bonus",
     icon: Gift,
-    note: "Bonuses paid to this employee",
-    add: "Add Bonus",
-    office: true,
+    note: "Bonuses asked for and paid to this employee",
+    add: "Bonus Request",
   },
   {
     key: "loans",
