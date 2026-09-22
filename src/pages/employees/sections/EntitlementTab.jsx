@@ -16,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Bordered, EmptyState } from "@/components/shared/panels";
+import { EmptyState } from "@/components/shared/panels";
 import { Settled, Choice } from "@/components/shared/formFields";
 import { PAYING_ACCOUNTS } from "@/pages/firm/firmData";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
@@ -30,11 +30,8 @@ import {
 import { RequestSteps, DecisionChoice } from "@/components/shared/RequestSteps";
 import {
   Lock,
-  CalendarDays,
   FileText,
   FileCheck,
-  User,
-  Landmark,
   History,
   UploadCloud,
 } from "lucide-react";
@@ -44,7 +41,7 @@ import { smartSearch } from "@/lib/search/smartSearch";
 import { useLeaves } from "@/lib/leaves/context";
 import { formatDate } from "@/pages/firm/firmData";
 import { nextRequestNo } from "../requestFlow";
-import { typesIn, remainingBalance } from "../leaveData";
+import { remainingBalance, entitlementOf } from "../leaveData";
 import {
   PAYMENT_YEARS,
   SALARY_MONTHS,
@@ -69,6 +66,14 @@ import {
 } from "../entitlementData";
 
 const NOTES_LIMIT = 500;
+
+/**
+ * A section heading, with the rule down its left.
+ *
+ * The same mark the page's own heading uses, one step quieter - so a run of
+ * fields always sits under something that says which question they answer.
+ */
+const HEADING = "border-l-4 border-primary pl-3 text-base font-bold text-primary";
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
@@ -108,7 +113,7 @@ function FieldLabel({ htmlFor, required, children }) {
  */
 function Booked({ id, label, value }) {
   return (
-    <div className="space-y-2">
+    <div className="flex h-full flex-col justify-end gap-2">
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <div className="relative">
         <Lock
@@ -151,7 +156,7 @@ function Fact({ icon, label, children }) {
 /** A figure the form works out rather than asks for. */
 function Worked({ id, label, value }) {
   return (
-    <div className="space-y-2">
+    <div className="flex h-full flex-col justify-end gap-2">
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <Input
         id={id}
@@ -206,6 +211,19 @@ export default function EntitlementTab({
 
   const mine = smartSearch(entitlementsFor(records, employee?.name, kind), query);
 
+  // The number it already carries, or the one it is about to be given. Shown
+  // before it is saved so the employee can quote it.
+  const requestNo = open?.requestNo || nextRequestNo(records);
+
+  // Who it is for, as a personnel record names them: the name alone is not an
+  // identifier, and two people can share one.
+  const whose =
+    (employee?.name || "") + (employee?.empNo ? " \u2014 " + employee.empNo : "");
+
+  // What the leave being encashed is worth in a year, read off the leave type
+  // rather than stored: it is a rule of the type, not a fact of the request.
+  const yearlyEntitlement = entitlementOf(draft.leaveType) || "-";
+
   // What is left of the leave being encashed - counted off the leave already
   // taken, never stored.
   const balance =
@@ -245,6 +263,21 @@ export default function EntitlementTab({
   const amending = decision === "partial";
   const refusing = decision === "rejected";
   const approvedAmount = amending ? Number(payment.approved || 0) : amount;
+
+  /**
+   * How many days a decision actually grants.
+   *
+   * A full approval grants the days asked for. A partial one grants whatever
+   * the amount was cut to, so the days are read back off that figure rather
+   * than asked for a second time - two fields for one decision can disagree,
+   * and the money is the half that gets paid.
+   */
+  const approvedDays =
+    mode !== "leaveDays" || amount <= 0
+      ? null
+      : amending
+        ? Math.round((approvedAmount / amount) * days * 10) / 10
+        : days;
   const decidedOn = open?.decisionDate || todayIso();
   const attachedName = open?.attachment || "";
   // What this person was given last time, where there was a last time.
@@ -328,6 +361,7 @@ export default function EntitlementTab({
               rejectionReason: "",
               amount: approvedAmount,
               approvedAmount,
+              approvedDays: approvedDays ?? undefined,
               decisionDate: decidedOn,
               decidedBy: CURRENT_USER.name,
               managementComment: reason.trim(),
@@ -426,9 +460,77 @@ export default function EntitlementTab({
 
       {stage === "decision" ? (
         <>
-          {/* What was asked for is not restated here: it is in the card at
-              the foot of the page, which is where the decision is checked
-              against it. */}
+          {/* What is being answered, read back and unanswerable-with: a
+              decision is taken against what was asked for, so what was asked
+              for has to be on the same screen as the answer. */}
+          <div className="space-y-4">
+            <h3 className={HEADING}>
+              Request Information
+            </h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+              <Booked id="dec-employee" label="Employee Name" value={whose} />
+              <Booked id="dec-request-no" label="Request No." value={requestNo} />
+              <Booked
+                id="dec-request-date"
+                label="Request Date"
+                value={draft.requestDate ? formatDate(draft.requestDate) : "-"}
+              />
+              {mode === "leaveDays" && (
+                <Booked id="dec-year" label="Year" value={draft.year} />
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className={HEADING}>
+              {label} Summary
+            </h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-6">
+              {mode === "leaveDays" ? (
+                <>
+                  <Booked
+                    id="dec-leave-type"
+                    label="Leave Type"
+                    value={draft.leaveType}
+                  />
+                  <Booked
+                    id="dec-entitlement"
+                    label="Annual Leave Entitlement"
+                    value={yearlyEntitlement}
+                  />
+                  <Booked
+                    id="dec-balance"
+                    label="Remaining Leave Balance"
+                    value={balance ? available + " Days" : "-"}
+                  />
+                  <Booked
+                    id="dec-days"
+                    label="Days Requested for Encashment"
+                    value={days + " Days"}
+                  />
+                  <Booked
+                    id="dec-after"
+                    label="Balance After Request"
+                    value={balance ? after + " Days" : "-"}
+                  />
+                </>
+              ) : (
+                mode === "hours" && (
+                  <Booked
+                    id="dec-hours"
+                    label="Hours Requested"
+                    value={(draft.hours || 0) + " Hours"}
+                  />
+                )
+              )}
+              <Booked
+                id="dec-estimated"
+                label="Estimated Amount (OMR)"
+                value={amountValue(amount)}
+              />
+            </div>
+          </div>
+
           <DecisionChoice
             value={decision}
             onChange={setDecision}
@@ -437,68 +539,93 @@ export default function EntitlementTab({
 
           {/* The answer itself: when it was given, what it grants, and why.
               A separate box from the choice above it, with room between. */}
-          <Bordered title="Decision">
-            {/* The bottom padding is the room the counter hangs in. */}
-            <div className="grid grid-cols-1 gap-4 pb-5 sm:gap-6 lg:grid-cols-5">
-              <Settled
-                id="ent-decision-date"
-                label="Decision Date"
-                value={formatDate(decidedOn)}
-              />
+          <div className="space-y-4">
+            <h3 className={HEADING}>Decision</h3>
 
-              {/* Only a partial approval names a figure of its own; a full
-                  one grants what was asked for. */}
-              {amending ? (
-                <div className="flex h-full flex-col justify-end gap-2">
-                  <FieldLabel htmlFor="ent-approved" required>
-                    Approved Amount (OMR)
-                  </FieldLabel>
-                  <Input
-                    id="ent-approved"
-                    inputMode="decimal"
-                    value={payment.approved}
-                    onChange={(e) =>
-                      setPay("approved", e.target.value.replace(/[^\d.]/g, ""))
-                    }
-                    placeholder="0.000"
-                    className={cn(approvedAmount > amount && "border-destructive")}
-                  />
-                </div>
-              ) : (
+            {/* A refusal grants nothing, so it has no day and no figure to
+                show - only a reason. Leaving an Approved Amount on screen
+                beside a rejection invites the question of what was approved,
+                and the answer is nothing. */}
+            {!refusing && (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
                 <Settled
-                  id="ent-approved"
-                  label="Approved Amount (OMR)"
-                  value={amountValue(approvedAmount)}
+                  id="ent-decision-date"
+                  label="Decision Date"
+                  value={formatDate(decidedOn)}
                 />
-              )}
 
-              {/* The counter hangs below the box rather than sitting in the
-                  column: in the flow it would push this field's box up out
-                  of line with the two beside it. */}
-              <div className="relative flex h-full flex-col justify-end gap-2 lg:col-span-3">
-                <FieldLabel htmlFor="ent-comment" required={refusing}>
-                  Management Comment
-                </FieldLabel>
-                <Textarea
-                  id="ent-comment"
-                  rows={2}
-                  maxLength={NOTES_LIMIT}
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  disabled={!canDecide || settled || refused}
-                  placeholder="Enter management comment"
-                />
-                <p className="absolute right-0 top-full mt-1 text-xs text-muted-foreground">
-                  {reason.length} / {NOTES_LIMIT}
-                </p>
+                {approvedDays !== null && (
+                  <Settled
+                    id="ent-approved-days"
+                    label="Approved Days"
+                    value={approvedDays + " Days"}
+                  />
+                )}
+
+                {/* Only a partial approval names a figure of its own; a full
+                    one grants what was asked for. */}
+                {amending ? (
+                  <div className="flex h-full flex-col justify-end gap-2">
+                    <FieldLabel htmlFor="ent-approved" required>
+                      Approved Amount (OMR)
+                    </FieldLabel>
+                    <Input
+                      id="ent-approved"
+                      inputMode="decimal"
+                      value={payment.approved}
+                      onChange={(e) =>
+                        setPay("approved", e.target.value.replace(/[^\d.]/g, ""))
+                      }
+                      placeholder="0.000"
+                      className={cn(
+                        approvedAmount > amount && "border-destructive"
+                      )}
+                    />
+                  </div>
+                ) : (
+                  <Settled
+                    id="ent-approved"
+                    label="Approved Amount (OMR)"
+                    value={amountValue(approvedAmount)}
+                  />
+                )}
               </div>
+            )}
+
+            {/* The comment takes the whole width rather than a share of the
+                row above: it is prose, not a figure, and a box that stops
+                two thirds of the way across leaves the section looking like
+                it ran out of things to say. */}
+            <div className="space-y-2">
+              <FieldLabel htmlFor="ent-comment" required={refusing}>
+                {refusing ? "Reason for Rejection" : "Management Comment"}
+              </FieldLabel>
+              <Textarea
+                id="ent-comment"
+                rows={3}
+                maxLength={NOTES_LIMIT}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                disabled={!canDecide || settled || refused}
+                placeholder={
+                  refusing
+                    ? "Say why this request is refused"
+                    : "Enter management comment"
+                }
+              />
+              <p className="text-right text-xs text-muted-foreground">
+                {reason.length} / {NOTES_LIMIT}
+              </p>
             </div>
-          </Bordered>
+          </div>
 
           {/* How the money actually reaches them. A refused request has none
               of this: there is nothing to pay, and so nothing to ask. */}
           {decision && !refusing && (
             <div className="space-y-4 sm:space-y-6">
+              <h3 className={HEADING}>
+                Payment Details
+              </h3>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
                 <Settled
                   id="ent-type"
@@ -612,24 +739,9 @@ export default function EntitlementTab({
               !decision && "bg-card"
             )}
           >
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 lg:divide-x">
-              <Fact icon={CalendarDays} label="Request Date">
-                {draft.requestDate ? formatDate(draft.requestDate) : "-"}
-                {attachedName && (
-                  <span className="mt-0.5 block text-primary">{attachedName}</span>
-                )}
-              </Fact>
-              <Fact icon={FileText} label="Request Type">
-                General
-              </Fact>
-              <Fact icon={User} label="Employee Name">
-                {(employee?.name || "") +
-                  (employee?.empNo ? " - " + employee.empNo : "")}
-              </Fact>
-              <Fact icon={Landmark} label="Bank / Account">
-                {employee?.bankName
-                  ? employee.bankName + " - " + employee.accountNumber
-                  : "-"}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:divide-x">
+              <Fact icon={FileText} label="Supporting Document">
+                {attachedName || "None attached"}
               </Fact>
               <Fact icon={History} label="History">
                 <button
@@ -657,46 +769,27 @@ export default function EntitlementTab({
         </>
       ) : (
         <>
-          {/* Where the request is booked. None of it is asked for: every
-              entitlement is filed the same way. */}
+          {/* Who is asking, and under what number. None of it is asked for:
+              the request is being written on this person's own record, on the
+              day it is being written. Where it is booked is not here either -
+              that belongs beside the payment it governs, on the stage that
+              makes one. */}
           <div className="space-y-4">
-            <h3 className="text-base font-semibold text-primary">
-              Request Classification
+            <h3 className={HEADING}>
+              Request Information
             </h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+              <Booked id="ent-employee" label="Employee Name" value={whose} />
+              <Booked id="ent-request-no" label="Request No." value={requestNo} />
               <Booked
-                id="ent-type"
-                label="Expense Type"
-                value={ENTITLEMENT_EXPENSE_TYPE}
-              />
-              <Booked
-                id="ent-category"
-                label="Category"
-                value={ENTITLEMENT_CATEGORY}
-              />
-              <Booked
-                id="ent-subcategory"
-                label="Subcategory"
-                value={ENTITLEMENT_SUBCATEGORY[kind] || label + " Request"}
+                id="ent-request-date"
+                label="Request Date"
+                value={formatDate(draft.requestDate)}
               />
 
-              <div className="space-y-2">
-                <FieldLabel htmlFor="ent-request-date">Request Date</FieldLabel>
-                <Input
-                  id="ent-request-date"
-                  type="date"
-                  value={draft.requestDate}
-                  onChange={(e) => set("requestDate", e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
-            {/* Days off a leave balance. */}
-            {mode === "leaveDays" && (
-              <>
-                <div className="space-y-2">
+              {/* Which year's balance is being drawn on. */}
+              {mode === "leaveDays" && (
+                <div className="flex h-full flex-col justify-end gap-2">
                   <FieldLabel htmlFor="ent-year" required>
                     Year
                   </FieldLabel>
@@ -716,35 +809,39 @@ export default function EntitlementTab({
                     </SelectContent>
                   </Select>
                 </div>
+              )}
+            </div>
+          </div>
 
-                <div className="space-y-2">
-                  <FieldLabel htmlFor="ent-leave-type" required>
-                    Leave Type
-                  </FieldLabel>
-                  <Select
-                    value={draft.leaveType}
-                    onValueChange={(value) => value && set("leaveType", value)}
-                  >
-                    <SelectTrigger id="ent-leave-type">
-                      <SelectValue placeholder="Select leave type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {typesIn("Regular Leave").map((type) => (
-                        <SelectItem key={type.name} value={type.name}>
-                          {type.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+          <h3 className={HEADING}>
+            {label} Details
+          </h3>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+            {/* Days off a leave balance. */}
+            {mode === "leaveDays" && (
+              <>
+                {/* Not a choice: only annual leave is encashable. Sick leave
+                    is there to be taken and unpaid leave is worth nothing, so
+                    offering either would be offering a mistake. */}
+                <Booked
+                  id="ent-leave-type"
+                  label="Leave Type"
+                  value={draft.leaveType}
+                />
 
-                <Worked
+                <Booked
+                  id="ent-entitlement"
+                  label="Annual Leave Entitlement"
+                  value={yearlyEntitlement}
+                />
+
+                <Booked
                   id="ent-available"
-                  label="Available Leave Balance"
+                  label="Remaining Leave Balance"
                   value={balance ? available + " Days" : "-"}
                 />
 
-                <div className="space-y-2">
+                <div className="flex h-full flex-col justify-end gap-2">
                   <FieldLabel htmlFor="ent-days" required>
                     Days Requested for Encashment
                   </FieldLabel>
@@ -763,7 +860,7 @@ export default function EntitlementTab({
                   )}
                 </div>
 
-                <Worked
+                <Booked
                   id="ent-after"
                   label="Balance After Request"
                   value={balance ? after + " Days" : "-"}
@@ -774,7 +871,7 @@ export default function EntitlementTab({
             {/* Hours of overtime, at the employee's own rate. */}
             {mode === "hours" && (
               <>
-                <div className="space-y-2">
+                <div className="flex h-full flex-col justify-end gap-2">
                   <FieldLabel htmlFor="ent-month" required>
                     Month
                   </FieldLabel>
@@ -795,7 +892,7 @@ export default function EntitlementTab({
                   </Select>
                 </div>
 
-                <div className="space-y-2">
+                <div className="flex h-full flex-col justify-end gap-2">
                   <FieldLabel htmlFor="ent-year" required>
                     Year
                   </FieldLabel>
@@ -816,7 +913,7 @@ export default function EntitlementTab({
                   </Select>
                 </div>
 
-                <div className="space-y-2">
+                <div className="flex h-full flex-col justify-end gap-2">
                   <FieldLabel htmlFor="ent-hours" required>
                     Overtime Hours
                   </FieldLabel>
@@ -867,17 +964,20 @@ export default function EntitlementTab({
           </div>
 
           <div className="space-y-2">
-            <FieldLabel htmlFor="ent-reason-notes" required>
-              Reason / Notes
-            </FieldLabel>
+            <h3 className={HEADING}>
+              Employee Comment
+            </h3>
             <Textarea
               id="ent-reason-notes"
               rows={3}
               maxLength={NOTES_LIMIT}
               value={draft.reason}
               onChange={(e) => set("reason", e.target.value)}
-              placeholder={"Enter the reason for requesting " + label.toLowerCase()}
+              placeholder="Enter employee comment"
             />
+            <p className="text-right text-xs text-muted-foreground">
+              {draft.reason.length} / {NOTES_LIMIT}
+            </p>
           </div>
         </>
       )}
@@ -912,7 +1012,7 @@ export default function EntitlementTab({
           )
         ) : (
           <Button type="button" onClick={submit} disabled={!canSubmit}>
-            Save
+            Submit Request
           </Button>
         )}
       </div>
@@ -923,7 +1023,7 @@ export default function EntitlementTab({
     <>
       {/* Opened over the page, so the list it is filed into stays behind. */}
       <Dialog open={Boolean(adding)} onOpenChange={(o) => !o && close()}>
-        <DialogContent className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] w-[95vw] max-w-[1700px] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{label + " Request"}</DialogTitle>
           </DialogHeader>
