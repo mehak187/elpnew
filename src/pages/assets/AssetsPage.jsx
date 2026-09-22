@@ -61,8 +61,8 @@ const emptyDraft = {
 function IconSelect({ id, label, required, icon, value, onChange, options, disabled }) {
   const Icon = icon;
   return (
-    <Field>
-      <FieldLabel htmlFor={id} required={required}>
+    <Field data-required={required ? "true" : undefined}>
+      <FieldLabel htmlFor={id}>
         {label}
       </FieldLabel>
       <Select value={value} onValueChange={(next) => next && onChange(next)} disabled={disabled}>

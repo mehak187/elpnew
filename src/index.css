@@ -7,14 +7,28 @@
   /*
    * One family does the whole interface, told apart by weight rather than by
    * changing typeface - which is what stops a page of forms and tables looking
-   * like a ransom note. Georgia is kept for anywhere a serif is wanted; swap
-   * --font-heading to it if page titles should be set in serif instead.
+   * like a ransom note. IBM Plex Sans Arabic reads the same in both languages
+   * and keeps its shape at the small sizes forms and tables are set in.
    */
-  --font-sans: "Open Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
-    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "IBM Plex Sans Arabic", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-serif: Georgia, "Times New Roman", Times, serif;
   --font-heading: var(--font-sans);
 
+  /*
+   * Two radii, and the difference between them is the point: a container is
+   * rounded more than the controls inside it, so a section and a field in it
+   * are told apart at a glance rather than counted.
+   */
+  --radius-container: var(--container-radius);
+  --radius-field: var(--field-radius);
+  --color-field: var(--field-background);
+  --color-field-border: var(--field-border);
+  --color-container-border: var(--container-border);
+  --color-disabled: var(--disabled-background);
+  --color-disabled-border: var(--disabled-border);
+  --color-disabled-text: var(--disabled-text);
+  --color-error-text: var(--error-text);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -73,7 +87,38 @@
   /* The background of a field the system fills in: a figure worked out, or a
      record being read rather than written. One tint for all of them, so "you
      cannot type here" is the same colour wherever it appears. */
-  --locked: #f7f5f2;
+  --locked: #f3f5f7;
+
+  /* ---- Standard 01: borders, radii and field states -------------------- */
+  /*
+   * Containers are rounded at 10px and fields at 7px. Nothing permanent
+   * carries a shadow: a section card that floats reads as a dialog, which is
+   * not the tone a legal and administrative record keeps.
+   */
+  --container-radius: 10px;
+  --field-radius: 7px;
+  --container-border: #e2e8f0;
+  --field-background: #ffffff;
+  /* Darker than the container's own border on purpose - a field edge that
+     disappears on a bright screen is a field nobody can see the bounds of. */
+  --field-border: #a8b4c3;
+  --focus-navy: #142f5f;
+  --focus-ring: 0 0 0 3px rgba(20, 47, 95, 0.14);
+  /* A field the system fills in, or one that cannot be used. */
+  --disabled-background: #f3f5f7;
+  --disabled-border: #d5dce5;
+  --disabled-text: #667085;
+  --error-border: #dc2626;
+  --error-ring: 0 0 0 3px rgba(220, 38, 38, 0.12);
+  --error-text: #b42318;
+
+  /* ---- Standard 02: typography ----------------------------------------- */
+  --text-strong: #0f172a;   /* titles, values, table data */
+  --text-label: #334155;    /* field labels, table headers */
+  --text-muted-ink: #64748b; /* subtitles and helper text */
+  --accent-navy: #1e3a8a;   /* the rule beside a section title */
+  --text-success: #15803d;
+  --text-warning: #b45309;
   /* The three answers a request can be given. Each carries its own tint
      wherever the decision is shown, so what was decided is read from the
      colour before a word of it. */
@@ -159,11 +204,178 @@
   --sidebar-accent-foreground: oklch(0.92 0.015 258);
   --sidebar-border: oklch(0.30 0.04 258);
   --sidebar-ring: oklch(0.55 0.12 260);
+  --container-border: oklch(0.30 0 0);
+  --field-background: oklch(0.20 0 0);
+  --field-border: oklch(0.42 0 0);
+  --disabled-background: oklch(0.24 0 0);
+  --disabled-border: oklch(0.32 0 0);
+  --disabled-text: oklch(0.68 0 0);
+  --locked: oklch(0.24 0 0);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
+  }
+
+  /*
+   * Standard 01 - read-only and disabled fields, set once for the whole
+   * system rather than per page.
+   *
+   * A field the system filled in and a field nobody may use must not look
+   * like one somebody is expected to type in. The size never changes with
+   * the state: a locked field keeps the dimensions of an editable one, so a
+   * row of fields stays a row.
+   *
+   * Read-only keeps the ordinary cursor - its value is there to be read and
+   * copied. Disabled does not, because there is nothing to do with it.
+   */
+  input[readonly],
+  textarea[readonly] {
+    background-color: var(--disabled-background);
+    border-color: var(--disabled-border);
+    color: var(--disabled-text);
+    box-shadow: none;
+  }
+
+  input:disabled,
+  textarea:disabled,
+  select:disabled {
+    background-color: var(--disabled-background);
+    border-color: var(--disabled-border);
+    color: var(--disabled-text);
+    box-shadow: none;
+    cursor: not-allowed;
+    opacity: 1;
+  }
+
+  /*
+   * Standard 04 - a field that was left empty, said once somebody tried to
+   * save. Painted from the field wrapper so the rule reaches the control
+   * whatever it is and however deeply it is wrapped.
+   */
+  [data-invalid="true"] input,
+  [data-invalid="true"] textarea,
+  [data-invalid="true"] button[role="combobox"] {
+    border-color: var(--error-border);
+  }
+
+  [data-invalid="true"] input:focus-visible,
+  [data-invalid="true"] textarea:focus-visible,
+  [data-invalid="true"] button[role="combobox"]:focus {
+    border-color: var(--error-border);
+    box-shadow: var(--error-ring);
+  }
+
+  /* ==========================================================================
+     Standard 02 - the type scale, set once.
+     Four sizes carry the whole system: 20 for a page, 15 for a section, 13
+     for everything a person reads or writes, 12 for tables and the small
+     print under a field. Weight tells the levels apart, not another family.
+     ========================================================================== */
+  .page-title {
+    margin: 0 0 4px;
+    color: var(--text-strong);
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .page-subtitle {
+    margin: 0 0 16px;
+    color: var(--text-muted-ink);
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+
+  /*
+   * The rule runs down the start of the line, not the left of it: in Arabic
+   * the start is the right, and a border nailed to the left would sit on the
+   * wrong side of every heading in the system.
+   */
+  .section-title {
+    margin: 0 0 16px;
+    padding-inline-start: 10px;
+    border-inline-start: 3px solid var(--accent-navy);
+    color: var(--text-strong);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  label {
+    color: var(--text-label);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.5;
+  }
+
+  input,
+  textarea,
+  select,
+  button[role="combobox"] {
+    color: var(--text-strong);
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.5;
+    text-align: start;
+  }
+
+  .helper-text {
+    color: var(--text-muted-ink);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+
+  /*
+   * Numbers read left to right in both languages.
+   *
+   * A case number, an account, a date or an amount carries slashes, dashes,
+   * dots and commas. Let those inherit Arabic's direction and the parts come
+   * back in the wrong order - which for a bank account or a case reference is
+   * not a cosmetic fault. `isolate` keeps each value out of the surrounding
+   * text's direction entirely. Tabular figures keep columns of them aligned.
+   */
+  .numeric-value,
+  .currency-value,
+  .case-number,
+  .file-number,
+  .invoice-number,
+  .phone-number,
+  .account-number,
+  .iban-number,
+  .date-value,
+  .percentage-value {
+    direction: ltr;
+    unicode-bidi: isolate;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The figure and its currency are one thing, and never break across lines. */
+  .currency-value {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    white-space: nowrap;
+  }
+
+  .field-error {
+    margin-top: 4px;
+    color: var(--error-border);
+    font-size: 12px;
+    line-height: 1.5;
+    text-align: start;
+  }
+
+  /* A locked field is not an active one, so it takes no focus ring. */
+  input[readonly]:focus,
+  input[readonly]:focus-visible,
+  textarea[readonly]:focus,
+  textarea[readonly]:focus-visible {
+    border-color: var(--disabled-border);
+    box-shadow: none;
   }
   body {
     font-family: var(--font-sans);

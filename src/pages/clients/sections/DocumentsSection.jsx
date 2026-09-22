@@ -288,7 +288,7 @@ export default function DocumentsSection({ formData, onChange }) {
       {/* The section's own heading. The way to add is not here: it sits on
           the row above the table, where every list in the system has it. */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-        <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">Documents</h2>
+        <h2 className="border-s-4 border-primary ps-3 text-lg font-bold text-primary">Documents</h2>
       </div>
 
       {/* The form takes the place of the list while it is being filled

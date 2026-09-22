@@ -207,7 +207,7 @@ export default function ClientContractsSection() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
         {/* Named as the sidebar names it: the page is already one client's.
             The way to add sits on the row above the table. */}
-        <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">Contracts</h2>
+        <h2 className="border-s-4 border-primary ps-3 text-lg font-bold text-primary">Contracts</h2>
       </div>
       )}
 

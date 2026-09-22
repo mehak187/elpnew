@@ -20,6 +20,8 @@ import {
   Counted,
   Decision,
   Attach,
+  FieldError,
+  useRequiredFields,
 } from "@/components/shared/formFields";
 import {
   RecordTable,
@@ -84,17 +86,28 @@ export default function GeneralRequestSection({ employee }) {
   const requestDate = open?.date || todayIso();
   const attachment = open ? open.document : document?.name || "";
 
-  const canSubmit = Boolean(draft.requestType) && Boolean(draft.comment.trim());
+  /**
+   * The request's own required fields, and the decision's.
+   *
+   * Nothing here is marked in advance: the form says what is missing only
+   * once somebody has tried to save it, and stops saying so the moment the
+   * field is filled.
+   */
+  const asked = useRequiredFields({
+    grType: draft.requestType,
+    grComment: draft.comment,
+  });
 
   /** Refusing and approving both have to say why, so both need a comment. */
-  const canDecide =
-    Boolean(open) &&
-    !settled &&
-    Boolean(decision.answer) &&
-    Boolean(decision.comment.trim());
+  const answered = useRequiredFields({
+    grAnswer: decision.answer,
+    grRemarks: decision.comment,
+  });
 
   /** Back to a blank request, with nothing carried over from the last one. */
   const clear = () => {
+    asked.reset();
+    answered.reset();
     setDraft(emptyDraft);
     setDecision(emptyDecision);
     setDocument(null);
@@ -107,7 +120,7 @@ export default function GeneralRequestSection({ employee }) {
    * on the answer. The form moves on to that answer.
    */
   const submit = () => {
-    if (!canSubmit) return;
+    if (!asked.check()) return;
     const date = todayIso();
     const id = requests.reduce((max, r) => Math.max(max, r.id), 0) + 1;
     setRequests((prev) => [
@@ -133,7 +146,7 @@ export default function GeneralRequestSection({ employee }) {
 
   /** The answer, against the request it was given on. */
   const decide = () => {
-    if (!canDecide) return;
+    if (!open || settled || !answered.check()) return;
     setRequests((prev) =>
       prev.map((request) =>
         request.id === openId
@@ -188,7 +201,7 @@ export default function GeneralRequestSection({ employee }) {
                 key: "request",
                 title: "Submit Request",
                 note: "Enter request details and supporting document",
-                done: Boolean(open) || canSubmit,
+                done: Boolean(open),
               },
               {
                 key: "decision",
@@ -249,7 +262,12 @@ export default function GeneralRequestSection({ employee }) {
                   value={open.requestType}
                 />
               ) : (
-                <Field id="grType" label="Request Type" required>
+                <Field
+                  id="grType"
+                  label="Request Type"
+                  required
+                  error={asked.errorFor("grType")}
+                >
                   <Select
                     value={draft.requestType}
                     onValueChange={(value) => value && set("requestType", value)}
@@ -272,7 +290,12 @@ export default function GeneralRequestSection({ employee }) {
 
           {stage === "request" ? (
             <Group title="Request Details">
-              <Field id="grComment" label="Employee Comment" required>
+              <Field
+                id="grComment"
+                label="Employee Comment"
+                required
+                error={asked.errorFor("grComment")}
+              >
                 <Counted
                   id="grComment"
                   rows={5}
@@ -323,22 +346,31 @@ export default function GeneralRequestSection({ employee }) {
                   </Row>
                 ) : (
                   <>
-                    <div
-                      role="radiogroup"
-                      aria-label="Management decision"
-                      className="grid grid-cols-1 gap-3 sm:grid-cols-2"
-                    >
-                      <Decision
-                        value={APPROVED}
-                        chosen={decision.answer}
-                        onChoose={(v) => setAnswer("answer", v)}
-                      />
-                      <Decision
-                        value={REJECTED}
-                        chosen={decision.answer}
-                        onChoose={(v) => setAnswer("answer", v)}
-                        tone="bad"
-                      />
+                    <div>
+                      <div
+                        id="grAnswer"
+                        role="radiogroup"
+                        tabIndex={-1}
+                        aria-label="Management decision"
+                        className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+                      >
+                        <Decision
+                          value={APPROVED}
+                          chosen={decision.answer}
+                          onChoose={(v) => setAnswer("answer", v)}
+                        />
+                        <Decision
+                          value={REJECTED}
+                          chosen={decision.answer}
+                          onChoose={(v) => setAnswer("answer", v)}
+                          tone="bad"
+                        />
+                      </div>
+                      {answered.errorFor("grAnswer") && (
+                        <FieldError htmlFor="grAnswer">
+                          {answered.errorFor("grAnswer")}
+                        </FieldError>
+                      )}
                     </div>
 
                     <Row>
@@ -357,6 +389,7 @@ export default function GeneralRequestSection({ employee }) {
                               : "Management Comment"
                           }
                           required
+                          error={answered.errorFor("grRemarks")}
                         >
                           <Counted
                             id="grRemarks"
@@ -390,11 +423,7 @@ export default function GeneralRequestSection({ employee }) {
             </Button>
 
             {stage === "request" ? (
-              <Button
-                type="button"
-                onClick={submit}
-                disabled={!canSubmit || Boolean(open)}
-              >
+              <Button type="button" onClick={submit} disabled={Boolean(open)}>
                 Save
               </Button>
             ) : (
@@ -403,7 +432,6 @@ export default function GeneralRequestSection({ employee }) {
                   type="button"
                   variant={refusing ? "destructive" : "default"}
                   onClick={decide}
-                  disabled={!canDecide}
                 >
                   {refusing ? "Confirm Rejection" : "Save"}
                 </Button>

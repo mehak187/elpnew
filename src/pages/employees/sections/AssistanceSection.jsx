@@ -504,9 +504,6 @@ export default function AssistanceSection({
               title={
                 <>
                   Management Comment
-                  {refusing && (
-                    <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
-                  )}
                 </>
               }
             >

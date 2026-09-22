@@ -29,11 +29,14 @@ export const money = (value, decimals = 3) =>
 
 /** An already-formatted figure with the currency after it. */
 export function withRial(text) {
+  // `currency-value` is what keeps it readable in Arabic: the figure runs
+  // left to right whichever way the page does, its separators and decimal
+  // point stay in the order they were written, and the amount and its
+  // currency never come apart across a line break.
   return (
-    <span className="whitespace-nowrap">
-      {text}
-      {" "}
-      {CURRENCY}
+    <span className="currency-value">
+      <span>{text}</span>
+      <span>{CURRENCY}</span>
     </span>
   );
 }

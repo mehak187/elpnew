@@ -71,20 +71,19 @@ const draftFrom = (record) => ({
   outcomeDate: record?.outcomeDate || today(),
 });
 
-/** A label with its required mark, so the asterisk is coloured everywhere. */
-function FieldLabel({ htmlFor, required, children }) {
+/** A field's label. */
+function FieldLabel({ htmlFor, children }) {
   return (
     <Label htmlFor={htmlFor}>
       {children}
-      {required && <span className="whitespace-nowrap text-destructive">&nbsp;*</span>}
     </Label>
   );
 }
 
-function Choice({ id, label, required, value, onChange, placeholder, options }) {
+function Choice({ id, label, value, onChange, placeholder, options }) {
   return (
     <div className="space-y-2">
-      <FieldLabel htmlFor={id} required={required}>
+      <FieldLabel htmlFor={id}>
         {label}
       </FieldLabel>
       <Select value={value} onValueChange={(next) => next && onChange(next)}>
@@ -119,10 +118,10 @@ function Settled({ id, label, value }) {
   );
 }
 
-function DateField({ id, label, required, value, onChange }) {
+function DateField({ id, label, value, onChange }) {
   return (
     <div className="space-y-2">
-      <FieldLabel htmlFor={id} required={required}>
+      <FieldLabel htmlFor={id}>
         {label}
       </FieldLabel>
       <Input id={id} type="date" value={value} onChange={(e) => onChange(e.target.value)} />
@@ -159,10 +158,10 @@ function FileField({ id, label, value, onChange }) {
   );
 }
 
-function LongText({ id, label, required, value, onChange, placeholder, className }) {
+function LongText({ id, label, value, onChange, placeholder, className }) {
   return (
     <div className={cn("space-y-2", className)}>
-      <FieldLabel htmlFor={id} required={required}>
+      <FieldLabel htmlFor={id}>
         {label}
       </FieldLabel>
       <Textarea

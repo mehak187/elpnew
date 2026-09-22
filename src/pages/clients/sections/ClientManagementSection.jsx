@@ -147,7 +147,7 @@ export default function ClientManagementSection() {
       {!mode && (
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
         {/* Named as the sidebar names it: the page is already one client's. */}
-        <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">Team</h2>
+        <h2 className="border-s-4 border-primary ps-3 text-lg font-bold text-primary">Team</h2>
       </div>
       )}
 
@@ -168,7 +168,7 @@ export default function ClientManagementSection() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 sm:gap-6">
               <div className="space-y-2">
                 <Label htmlFor="managementBranch">
-                  Branch Name<span className="whitespace-nowrap text-destructive">&nbsp;*</span>
+                  Branch Name
                 </Label>
                 <Select
                   value={branchId}
@@ -203,7 +203,7 @@ export default function ClientManagementSection() {
                   <div key={role} className="space-y-2">
                     <Label htmlFor={fieldId}>
                       {role}
-                      <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
+                      
                     </Label>
                     <Select
                       value={draft[role] || ""}

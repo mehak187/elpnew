@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,12 +26,11 @@ import { cn } from "@/lib/utils";
  * instead: stretching to nothing is what leaves a hole under it.
  */
 
-/** A label with its required mark, so the asterisk is coloured everywhere. */
-export function FieldLabel({ htmlFor, required, children }) {
+/** A field's label. */
+export function FieldLabel({ htmlFor, children }) {
   return (
     <Label htmlFor={htmlFor}>
       {children}
-      {required && <span className="whitespace-nowrap text-destructive">&nbsp;*</span>}
     </Label>
   );
 }
@@ -102,10 +101,15 @@ export function Choice({
   options,
   disabled,
   required = true,
+  error,
 }) {
   return (
-    <div className="flex h-full flex-col justify-end gap-2">
-      <FieldLabel htmlFor={id} required={required}>
+    <div
+      className="flex h-full flex-col justify-end gap-2"
+      data-invalid={error ? "true" : undefined}
+      data-required={required ? "true" : undefined}
+    >
+      <FieldLabel htmlFor={id}>
         {label}
       </FieldLabel>
       <Select value={value} onValueChange={onChange} disabled={disabled}>
@@ -181,7 +185,7 @@ export function Attach({ file, onPick, label }) {
 export function Group({ title, children }) {
   return (
     <section className="space-y-4">
-      <p className="border-l-4 border-primary pl-3 text-base font-bold text-primary">
+      <p className="border-s-4 border-primary ps-3 text-base font-bold text-primary">
         {title}
       </p>
       {children}
@@ -220,16 +224,88 @@ export function Row({ cols = 3, children }) {
  * The note is part of the field rather than a thing written after it: one
  * written outside belongs to no cell, and grows over whatever comes next.
  */
-export function Field({ id, label, required, note, children }) {
+export function Field({ id, label, required, note, error, children }) {
   return (
-    <div className="flex h-full flex-col gap-2">
-      <FieldLabel htmlFor={id} required={required}>
-        {label}
-      </FieldLabel>
+    <div
+      className="flex h-full flex-col gap-2"
+      // Read by the stylesheet, which paints whatever control is inside -
+      // an input, a textarea, a select, or one wrapped in a div of its own.
+      // Marking the control itself would mean knowing how deep it sits.
+      data-invalid={error ? "true" : undefined}
+      data-required={required ? "true" : undefined}
+    >
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
       {children}
-      {note && <Note className="-mt-1">{note}</Note>}
+      {/* What is wrong takes the place of what is merely worth knowing: two
+          lines under one field is one line too many. */}
+      {error ? (
+        <FieldError htmlFor={id}>{error}</FieldError>
+      ) : (
+        note && <Note className="-mt-1">{note}</Note>
+      )}
     </div>
   );
+}
+
+/** What a field is missing, said under it. */
+export function FieldError({ htmlFor, children }) {
+  return (
+    <p id={htmlFor ? htmlFor + "-error" : undefined} className="field-error" role="alert">
+      {children}
+    </p>
+  );
+}
+
+/** The one thing an empty required field is told. */
+export const REQUIRED_MESSAGE = "Required field";
+
+const isBlank = (value) =>
+  value === undefined ||
+  value === null ||
+  (typeof value === "string" && !value.trim()) ||
+  (Array.isArray(value) && value.length === 0);
+
+/**
+ * Required fields, checked when somebody tries to save rather than before.
+ *
+ * Standard 04: nothing is marked in advance - no asterisk, no red, no notice
+ * that a field will be wanted. The form only speaks once the person has said
+ * they are finished, and then it says exactly which fields are not.
+ *
+ * `fields` maps a field's id to its current value, so a field that gets
+ * filled in stops complaining the moment it does, without waiting for another
+ * attempt. `check()` returns whether the form may be saved, and takes the
+ * person to the first field that is not, because a message under a field
+ * scrolled off the screen is a message nobody reads.
+ */
+export function useRequiredFields(fields) {
+  const [attempted, setAttempted] = useState(false);
+
+  const missing = useMemo(
+    () => Object.keys(fields).filter((id) => isBlank(fields[id])),
+    [fields]
+  );
+
+  const check = useCallback(() => {
+    setAttempted(true);
+    if (missing.length === 0) return true;
+    const first = document.getElementById(missing[0]);
+    if (first) {
+      first.scrollIntoView({ block: "center", behavior: "smooth" });
+      first.focus({ preventScroll: true });
+    }
+    return false;
+  }, [missing]);
+
+  const errorFor = useCallback(
+    (id) => (attempted && missing.includes(id) ? REQUIRED_MESSAGE : ""),
+    [attempted, missing]
+  );
+
+  /** Back to saying nothing, for a form that has been closed and reopened. */
+  const reset = useCallback(() => setAttempted(false), []);
+
+  return { check, errorFor, reset, missing, attempted };
 }
 
 /** A figure or a fact the form reads back rather than asks for. */

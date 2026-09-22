@@ -75,7 +75,7 @@ const NOTES_LIMIT = 500;
  * The same mark the page's own heading uses, one step quieter - so a run of
  * fields always sits under something that says which question they answer.
  */
-const HEADING = "border-l-4 border-primary pl-3 text-base font-bold text-primary";
+const HEADING = "border-s-4 border-primary ps-3 text-base font-bold text-primary";
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
@@ -111,12 +111,11 @@ const emptyPayment = () => ({
   reference: "",
 });
 
-/** A label with its required mark, so the asterisk is coloured everywhere. */
-function FieldLabel({ htmlFor, required, children }) {
+/** A field's label. */
+function FieldLabel({ htmlFor, children }) {
   return (
     <Label htmlFor={htmlFor}>
       {children}
-      {required && <span className="whitespace-nowrap text-destructive">&nbsp;*</span>}
     </Label>
   );
 }

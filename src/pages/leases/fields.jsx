@@ -12,14 +12,11 @@ import UploadIcon from "@/components/shared/UploadIcon";
 import { FileCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/** A field's label, with its required mark glued to the last word. */
-export function FieldLabel({ htmlFor, required, children }) {
+/** A field's label. */
+export function FieldLabel({ htmlFor, children }) {
   return (
     <Label htmlFor={htmlFor}>
       {children}
-      {required && (
-        <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
-      )}
     </Label>
   );
 }
@@ -29,10 +26,10 @@ export function Field({ children }) {
 }
 
 /** A choice from a list. Empty values are ignored - nobody picks "nothing". */
-export function Choice({ id, label, required, value, onChange, options, placeholder = "Please Select", disabled, children }) {
+export function Choice({ id, label, value, onChange, options, placeholder = "Please Select", disabled, children }) {
   return (
     <Field>
-      <FieldLabel htmlFor={id} required={required}>
+      <FieldLabel htmlFor={id}>
         {label}
       </FieldLabel>
       <div className="flex gap-2">
@@ -76,10 +73,10 @@ export function Worked({ id, label, value }) {
 }
 
 /** A typed field, with anything that belongs beside the input (an upload) after it. */
-export function TextField({ id, label, required, value, onChange, placeholder, type, inputMode, max, children }) {
+export function TextField({ id, label, value, onChange, placeholder, type, inputMode, max, children }) {
   return (
     <Field>
-      <FieldLabel htmlFor={id} required={required}>
+      <FieldLabel htmlFor={id}>
         {label}
       </FieldLabel>
       <div className="flex gap-2">

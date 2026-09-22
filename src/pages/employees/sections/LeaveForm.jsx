@@ -29,12 +29,11 @@ import {
 /** A reason has to fit on the request, so the form says how much room. */
 const NOTES_LIMIT = 500;
 
-/** A label with its required mark, so the asterisk is coloured everywhere. */
-function FieldLabel({ htmlFor, required, children }) {
+/** A field's label. */
+function FieldLabel({ htmlFor, children }) {
   return (
     <Label htmlFor={htmlFor}>
       {children}
-      {required && <span className="whitespace-nowrap text-destructive">&nbsp;*</span>}
     </Label>
   );
 }

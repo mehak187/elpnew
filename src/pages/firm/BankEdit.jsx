@@ -20,14 +20,15 @@ import { RECEIVING_BANKS, BANK_BRANCHES, ACCOUNT_TYPES } from "@/lib/constants";
 import { useFirm } from "@/lib/firm/context";
 import { accountBalance, invoices, money } from "./firmData";
 
-/** A required field, with the mark that says so. */
-function FieldLabel({ htmlFor, optional, children }) {
-  return (
-    <Label htmlFor={htmlFor}>
-      {children}
-      {!optional && <span className="whitespace-nowrap text-destructive">&nbsp;*</span>}
-    </Label>
-  );
+/**
+ * A field's label.
+ *
+ * It no longer says whether the field is required: Standard 04 asks for no
+ * advance mark at all, and for the form to say what is missing only once
+ * somebody tries to save it.
+ */
+function FieldLabel({ htmlFor, children }) {
+  return <Label htmlFor={htmlFor}>{children}</Label>;
 }
 
 /**

@@ -87,10 +87,10 @@ const decimal = (value) => value.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1
 const years = (count) => count + (count === 1 ? " Year" : " Years");
 
 /** A typed field, with anything that belongs beside the input (an upload) after it. */
-function TextField({ id, label, required, value, onChange, placeholder, type, inputMode, max, hint, children }) {
+function TextField({ id, label, value, onChange, placeholder, type, inputMode, max, hint, children }) {
   return (
     <Field>
-      <FieldLabel htmlFor={id} required={required}>
+      <FieldLabel htmlFor={id}>
         {label}
       </FieldLabel>
       {/* The hint hangs below the input rather than taking room in the

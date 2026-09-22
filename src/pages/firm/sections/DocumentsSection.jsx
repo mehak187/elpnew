@@ -145,7 +145,7 @@ export default function DocumentsSection({ canEdit }) {
           while a paper is being filed. */}
       {!adding && (
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-          <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
+          <h2 className="border-s-4 border-primary ps-3 text-lg font-bold text-primary">
             Documents
           </h2>
         </div>

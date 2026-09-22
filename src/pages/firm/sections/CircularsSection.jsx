@@ -70,12 +70,12 @@ const branchLabelFor = (circular, branches) => {
   return branch ? branch.name : "General";
 };
 
-/** A required field, with the mark that says so. */
+/** A field's label. */
 function FieldLabel({ htmlFor, children }) {
   return (
     <Label htmlFor={htmlFor}>
       {children}
-      <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
+      
     </Label>
   );
 }
@@ -391,7 +391,7 @@ export default function CircularsSection({ canEdit }) {
           while a circular is being written. */}
       {!open && (
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-          <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
+          <h2 className="border-s-4 border-primary ps-3 text-lg font-bold text-primary">
             Circulars
           </h2>
         </div>

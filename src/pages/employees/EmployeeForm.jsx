@@ -210,7 +210,7 @@ const SECTIONS = [
  */
 function Required({ show }) {
   if (!show) return null;
-  return <span className="whitespace-nowrap text-destructive">&nbsp;*</span>;
+  return ;
 }
 
 /**
@@ -274,7 +274,7 @@ function SectionCard({ title, aside, children }) {
     <Card>
       <CardContent className="p-4 sm:p-6">
         <div className="mb-6 flex items-center gap-3 border-b pb-3">
-          <h2 className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">{title}</h2>
+          <h2 className="border-s-4 border-primary ps-3 text-lg font-bold text-primary">{title}</h2>
           {aside}
         </div>
         {children}
@@ -1158,7 +1158,7 @@ export default function EmployeeForm({ self }) {
                         <div className="space-y-2">
                           <Label htmlFor="docType">
                             Document Type{" "}
-                            <span className="text-destructive">*</span>
+                            
                           </Label>
                           <div className="flex w-full min-w-0 items-center gap-2">
                             <Select
@@ -1228,7 +1228,7 @@ export default function EmployeeForm({ self }) {
                         <div className="space-y-2">
                           <Label htmlFor="docExpiry">
                             Expiry Date{" "}
-                            <span className="text-destructive">*</span>
+                            
                           </Label>
                           <Input
                             id="docExpiry"

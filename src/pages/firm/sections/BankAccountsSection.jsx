@@ -22,7 +22,8 @@ import {
   Plus,
   Search,
   Landmark,
-  FileSpreadsheet,  Info,
+  FileSpreadsheet,
+  Info,
 } from "lucide-react";
 import { EmptyState } from "@/components/shared/panels";
 import { cn } from "@/lib/utils";
@@ -68,7 +69,7 @@ function FieldLabel({ htmlFor, children }) {
   return (
     <Label htmlFor={htmlFor}>
       {children}
-      <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
+      
     </Label>
   );
 }
@@ -797,7 +798,7 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
             <Card>
               <CardContent className="space-y-5 p-4 sm:p-6">
                 {/* The rule beside the heading marks where the form starts */}
-                <p className="border-l-4 border-primary pl-3 text-lg font-bold text-primary">
+                <p className="border-s-4 border-primary ps-3 text-lg font-bold text-primary">
                   Transfer Between Accounts
                 </p>
 

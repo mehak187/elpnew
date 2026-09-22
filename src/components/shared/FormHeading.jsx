@@ -14,7 +14,7 @@ export default function FormHeading({ title, note, icon: Icon, onBack }) {
   return (
     <div className="flex items-center gap-3">
       {onBack && <BackButton onBack={onBack} />}
-      <div className="flex items-center gap-2 border-l-4 border-primary pl-3">
+      <div className="flex items-center gap-2 border-s-4 border-primary ps-3">
         {Icon && (
           <Icon className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
         )}

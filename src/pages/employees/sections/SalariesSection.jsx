@@ -131,12 +131,11 @@ function Group({ title, children }) {
  * `readOnly` marks a figure that is worked out rather than entered; `highlight`
  * marks the one figure the whole page is for.
  */
-function Amount({ id, label, required, value, onChange, readOnly, highlight }) {
+function Amount({ id, label, value, onChange, readOnly, highlight }) {
   return (
     <div className="flex h-full flex-col justify-end gap-2">
       <Label htmlFor={id}>
         {label}
-        {required && <span className="whitespace-nowrap text-destructive">&nbsp;*</span>}
       </Label>
       <div className="relative">
         <Input
@@ -795,7 +794,7 @@ export default function SalariesSection({
                   label={
                     <>
                       Payment Method
-                      <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
+                      
                     </>
                   }
                   value={payment.method}
@@ -811,7 +810,7 @@ export default function SalariesSection({
                   label={
                     <>
                       Bank Account
-                      <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
+                      
                     </>
                   }
                   value={payment.bankAccount}
@@ -823,7 +822,7 @@ export default function SalariesSection({
                 <div className="flex h-full flex-col justify-end gap-2">
                   <Label htmlFor="pay-date">
                     Payment Date
-                    <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
+                    
                   </Label>
                   <Input
                     id="pay-date"
@@ -839,7 +838,7 @@ export default function SalariesSection({
                 <div className="flex h-full flex-col justify-end gap-2">
                   <Label htmlFor="pay-reference">
                     Transfer No.
-                    <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
+                    
                   </Label>
                   <div className="flex w-full min-w-0 items-center gap-2">
                     <Input
@@ -938,7 +937,7 @@ export default function SalariesSection({
               <div className="space-y-2">
                 <Label htmlFor="pay-reason">
                   Reason for Rejection
-                  <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
+                  
                 </Label>
                 <Textarea
                   id="pay-reason"

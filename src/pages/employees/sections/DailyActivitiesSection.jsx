@@ -24,12 +24,11 @@ import {
   recordedDays,
 } from "../activityData";
 
-/** A label with its required mark, so the asterisk is coloured everywhere. */
-function FieldLabel({ htmlFor, required, children }) {
+/** A field's label. */
+function FieldLabel({ htmlFor, children }) {
   return (
     <Label htmlFor={htmlFor}>
       {children}
-      {required && <span className="whitespace-nowrap text-destructive">&nbsp;*</span>}
     </Label>
   );
 }

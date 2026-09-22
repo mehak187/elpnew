@@ -106,10 +106,10 @@ function Detail({ label, children }) {
 }
 
 /** An amount field, with the currency named in its label. */
-function AmountField({ id, label, required, value, onChange, readOnly }) {
+function AmountField({ id, label, value, onChange, readOnly }) {
   return (
     <div className="space-y-2">
-      <FieldLabel htmlFor={id} required={required}>
+      <FieldLabel htmlFor={id}>
         {label} (<Rial />)
       </FieldLabel>
       <Input
@@ -663,9 +663,6 @@ export default function LoansSection({
                 title={
                   <>
                     Management Comment
-                    {refusing && (
-                      <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
-                    )}
                   </>
                 }
               >

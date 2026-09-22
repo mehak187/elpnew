@@ -38,12 +38,12 @@ const emptyDraft = {
   address: "",
 };
 
-/** A field's label, with its required mark glued to the last word. */
+/** A field's label. */
 function FieldLabel({ htmlFor, children }) {
   return (
     <Label htmlFor={htmlFor}>
       {children}
-      <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
+      
     </Label>
   );
 }

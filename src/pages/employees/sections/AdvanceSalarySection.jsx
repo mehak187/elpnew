@@ -398,9 +398,6 @@ export function AdvanceSalaryForm({
             title={
               <>
                 Management Comment
-                {rejected && (
-                  <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
-                )}
               </>
             }
           >

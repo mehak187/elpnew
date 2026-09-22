@@ -47,12 +47,11 @@ const shortDate = (value) => {
   return day + "/" + month + "/" + year;
 };
 
-/** A label with its required mark, so the asterisk is coloured everywhere. */
-function FieldLabel({ htmlFor, required, children }) {
+/** A field's label. */
+function FieldLabel({ htmlFor, children }) {
   return (
     <Label htmlFor={htmlFor}>
       {children}
-      {required && <span className="whitespace-nowrap text-destructive">&nbsp;*</span>}
     </Label>
   );
 }

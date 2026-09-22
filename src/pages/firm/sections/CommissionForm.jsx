@@ -22,6 +22,7 @@ import {
   Note,
   Counted,
   Decision,
+  useRequiredFields,
 } from "@/components/shared/formFields";
 import { RequestSteps } from "@/components/shared/RequestSteps";
 import { REQUEST_REJECTED } from "@/pages/employees/requestFlow";
@@ -613,6 +614,17 @@ export default function CommissionForm({
     : legalFeesCollected(draft.clientNo, draft.periodFrom, draft.periodTo);
   const commission = (fees * Number(draft.rate || 0)) / 100;
 
+  const asked = useRequiredFields({
+    commissionSubcategory: draft.subcategory,
+    commissionClientType: draft.clientType,
+    commissionClient: draft.clientNo,
+    ...(isInvoiceLinked
+      ? { commissionInvoice: draft.invoiceNo }
+      : { periodFrom: draft.periodFrom, periodTo: draft.periodTo }),
+    paidTo: draft.paidTo,
+    commissionRate: Number(draft.rate) > 0 ? draft.rate : "",
+  });
+
   const canSave =
     draft.expenseType &&
     draft.category &&
@@ -651,7 +663,7 @@ export default function CommissionForm({
    * payment that settles it, and the form moves on to that payment.
    */
   const saveAndContinue = () => {
-    if (!canSave) return;
+    if (!asked.check()) return;
     onSubmit?.(agreed());
     setStage("payment");
   };
@@ -794,10 +806,12 @@ export default function CommissionForm({
                 start with - but only to start with. Commission is earned by
                 whoever brought in the client or the case, which can be anyone
                 in the office, so the name stays open to change. */}
-            <div className="flex h-full flex-col justify-end gap-2">
-              <FieldLabel htmlFor="paidTo" required>
-                Employee Name
-              </FieldLabel>
+            <Field
+              id="paidTo"
+              label="Employee Name"
+              required
+              error={asked.errorFor("paidTo")}
+            >
               <SearchableSelect
                 id="paidTo"
                 value={draft.paidTo}
@@ -806,14 +820,16 @@ export default function CommissionForm({
                 placeholder="Select Employee"
                 searchPlaceholder="Search employees..."
               />
-            </div>
+            </Field>
 
             {/* Which of the two kinds this is. It decides every question
                 below it, so nothing is shown until it has been answered. */}
-            <div className="flex h-full flex-col justify-end gap-2">
-              <FieldLabel htmlFor="commissionSubcategory" required>
-                Commission Type
-              </FieldLabel>
+            <Field
+              id="commissionSubcategory"
+              label="Commission Type"
+              required
+              error={asked.errorFor("commissionSubcategory")}
+            >
               <Select
                 value={draft.subcategory}
                 onValueChange={(value) => setField("subcategory", value)}
@@ -831,7 +847,7 @@ export default function CommissionForm({
                   )}
                 </SelectContent>
               </Select>
-            </div>
+            </Field>
           </div>
         </Group>
 
@@ -846,7 +862,7 @@ export default function CommissionForm({
         >
           {/* Whose fees the commission runs on. */}
           <Row>
-            <Field id="commissionClientType" label="Client Type" required>
+            <Field error={asked.errorFor("commissionClientType")} id="commissionClientType" label="Client Type" required>
               <Select value={draft.clientType} onValueChange={chooseClientType}>
                 <SelectTrigger id="commissionClientType">
                   <SelectValue placeholder="Select Client Type" />
@@ -861,7 +877,7 @@ export default function CommissionForm({
               </Select>
             </Field>
 
-            <Field id="commissionClient" label="Client Name" required>
+            <Field error={asked.errorFor("commissionClient")} id="commissionClient" label="Client Name" required>
               <Select
                 value={draft.clientNo}
                 onValueChange={chooseClient}
@@ -892,7 +908,7 @@ export default function CommissionForm({
                  full is shown - so it is clear it exists - but cannot be
                  chosen, because commission is earned only on fees the client
                  has actually paid. */
-              <Field id="commissionInvoice" label="Invoice No." required>
+              <Field error={asked.errorFor("commissionInvoice")} id="commissionInvoice" label="Invoice No." required>
                 <Select
                   value={draft.invoiceNo}
                   onValueChange={chooseInvoice}
@@ -936,6 +952,7 @@ export default function CommissionForm({
               </Field>
             ) : (
               <Field
+                error={asked.errorFor("periodFrom")}
                 id="periodFrom"
                 label="Period From"
                 required
@@ -997,6 +1014,7 @@ export default function CommissionForm({
               />
             ) : (
               <Field
+                error={asked.errorFor("periodTo")}
                 id="periodTo"
                 label="Period To"
                 required
@@ -1016,6 +1034,7 @@ export default function CommissionForm({
               id="commissionRate"
               label="Commission Percentage (Before VAT)"
               required
+              error={asked.errorFor("commissionRate")}
             >
               <div className="relative">
                 <Input
@@ -1104,7 +1123,7 @@ export default function CommissionForm({
               </Button>
             )
           ) : (
-            <Button type="button" onClick={saveAndContinue} disabled={!canSave}>
+            <Button type="button" onClick={saveAndContinue}>
               Save and Continue
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
