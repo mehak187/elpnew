@@ -2,22 +2,40 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/panels";
 import FormHeading from "@/components/shared/FormHeading";
+import { RequestSteps } from "@/components/shared/RequestSteps";
+import {
+  Group,
+  Row,
+  Field,
+  Locked,
+  Counted,
+  Decision,
+  Attach,
+} from "@/components/shared/formFields";
 import {
   RecordTable,
   HeadRow,
   Th,
-  Row,
+  Row as TableRow,
   Td,
 } from "@/components/shared/RecordTable";
-import { Send, History } from "lucide-react";
+import { Send, History, Paperclip } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  SUBJECT_LIMIT,
-  DETAILS_LIMIT,
+  REQUEST_TYPES,
+  COMMENT_LIMIT,
+  DECISION_COMMENT_LIMIT,
+  APPROVED,
+  REJECTED,
   REQUEST_STATUS_TONE,
   initialGeneralRequests,
   requestsFor,
@@ -26,16 +44,21 @@ import {
   todayIso,
 } from "../generalRequestData";
 
-const emptyDraft = { subject: "", details: "" };
+const emptyDraft = { requestType: "", comment: "" };
+const emptyDecision = { answer: "", comment: "" };
+
+/** Who answers a general request, written on it so the trail says who did. */
+const DECIDED_BY = "Admin Department";
 
 /**
  * Anything an employee asks the administration for that has no form of its
  * own, and what became of it.
  *
- * The form is open from the start rather than behind a button: asking is the
- * whole point of the page, and a request is two fields long. What has been
- * asked before sits underneath, so a new request is written knowing what the
- * last similar one was told.
+ * Two halves, like every other request in the system: the employee writes it,
+ * and the administration answers. The second half cannot be opened until
+ * there is a request to answer, and once answered the first half is only read
+ * back - a decision taken on one request must not be able to end up filed
+ * against a different one.
  *
  * Every button here says type="button": the section sits inside the employee
  * record's own form, and a plain button would submit the whole record.
@@ -43,94 +66,349 @@ const emptyDraft = { subject: "", details: "" };
 export default function GeneralRequestSection({ employee }) {
   const [requests, setRequests] = useState(initialGeneralRequests);
   const [draft, setDraft] = useState(emptyDraft);
+  const [decision, setDecision] = useState(emptyDecision);
+  const [document, setDocument] = useState(null);
+  const [stage, setStage] = useState("request");
+  // The request on the list the form is open on, if any.
+  const [openId, setOpenId] = useState(null);
 
   const mine = requestsFor(requests, employee.name);
+  const open = requests.find((request) => request.id === openId) || null;
+  const settled = Boolean(open) && open.status !== "Pending";
 
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
+  const setAnswer = (name, value) =>
+    setDecision((prev) => ({ ...prev, [name]: value }));
 
-  const canSubmit = draft.subject.trim() && draft.details.trim();
+  const requestNo = open?.requestNo || nextRequestNo(requests, todayIso());
+  const requestDate = open?.date || todayIso();
+  const attachment = open ? open.document : document?.name || "";
 
+  const canSubmit = Boolean(draft.requestType) && Boolean(draft.comment.trim());
+
+  /** Refusing and approving both have to say why, so both need a comment. */
+  const canDecide =
+    Boolean(open) &&
+    !settled &&
+    Boolean(decision.answer) &&
+    Boolean(decision.comment.trim());
+
+  /** Back to a blank request, with nothing carried over from the last one. */
+  const clear = () => {
+    setDraft(emptyDraft);
+    setDecision(emptyDecision);
+    setDocument(null);
+    setOpenId(null);
+    setStage("request");
+  };
+
+  /**
+   * The request, on the list straight away under its own number and waiting
+   * on the answer. The form moves on to that answer.
+   */
   const submit = () => {
     if (!canSubmit) return;
     const date = todayIso();
+    const id = requests.reduce((max, r) => Math.max(max, r.id), 0) + 1;
     setRequests((prev) => [
       ...prev,
       {
-        id: prev.reduce((max, r) => Math.max(max, r.id), 0) + 1,
+        id,
         employee: employee.name,
         requestNo: nextRequestNo(prev, date),
-        subject: draft.subject.trim(),
-        details: draft.details.trim(),
+        requestType: draft.requestType,
+        comment: draft.comment.trim(),
+        document: document?.name || "",
         date,
         // Not decided yet, so it says so and nothing more.
         status: "Pending",
+        decisionDate: "",
         remarks: "",
         reviewedBy: "",
       },
     ]);
-    setDraft(emptyDraft);
+    setOpenId(id);
+    setStage("decision");
   };
+
+  /** The answer, against the request it was given on. */
+  const decide = () => {
+    if (!canDecide) return;
+    setRequests((prev) =>
+      prev.map((request) =>
+        request.id === openId
+          ? {
+              ...request,
+              status: decision.answer,
+              decisionDate: todayIso(),
+              remarks: decision.comment.trim(),
+              reviewedBy: DECIDED_BY,
+            }
+          : request
+      )
+    );
+    clear();
+  };
+
+  /** A request opened back off the list, to be read or answered. */
+  const track = (request) => {
+    setOpenId(request.id);
+    setDraft({ requestType: request.requestType, comment: request.comment });
+    setDecision({
+      answer: request.status === "Pending" ? "" : request.status,
+      comment: request.remarks || "",
+    });
+    setDocument(null);
+    setStage("decision");
+  };
+
+  const refusing = decision.answer === REJECTED;
 
   return (
     <div className="space-y-6">
       <Card>
-        <CardContent className="space-y-4 p-4 sm:p-6">
-          <FormHeading title="Submit a New Request" icon={Send} />
+        <CardContent className="space-y-6 p-4 sm:p-6">
+          <FormHeading
+            title={open ? "Request " + open.requestNo : "General Request"}
+            note={
+              open
+                ? "Review and record the management decision"
+                : "Ask the administration for anything without a form of its own"
+            }
+            icon={Send}
+          />
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,3fr)] sm:gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="requestSubject">
-                Request Subject
-                <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
-              </Label>
-              <div className="relative">
-                <Input
-                  id="requestSubject"
-                  maxLength={SUBJECT_LIMIT}
-                  value={draft.subject}
-                  onChange={(e) => set("subject", e.target.value)}
-                  placeholder="e.g. Parking Card"
-                  className="pr-14"
-                  autoComplete="off"
-                />
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                  {draft.subject.length}/{SUBJECT_LIMIT}
-                </span>
-              </div>
-            </div>
+          {/* The employee writes it; the administration answers. Either
+              header opens its own half. */}
+          <RequestSteps
+            active={stage}
+            onChange={setStage}
+            steps={[
+              {
+                key: "request",
+                title: "Submit Request",
+                note: "Enter request details and supporting document",
+                done: Boolean(open) || canSubmit,
+              },
+              {
+                key: "decision",
+                title: "Management Decision",
+                note: "Review and record the management decision",
+                done: settled,
+                // Nothing to decide until there is a request to decide on.
+                disabled: !open,
+              },
+            ]}
+          />
 
-            <div className="space-y-2">
-              <Label htmlFor="requestDetails">
-                Request Details
-                <span className="whitespace-nowrap text-destructive">&nbsp;*</span>
-              </Label>
-              <Textarea
-                id="requestDetails"
-                rows={5}
-                maxLength={DETAILS_LIMIT}
-                value={draft.details}
-                onChange={(e) => set("details", e.target.value)}
-                placeholder="Write your request here..."
+          <Group title="Request Information">
+            <Row cols={4}>
+              {/* The supporting document hangs off the number rather than
+                  standing on its own: it is this request's paper, and a row
+                  of its own would leave it belonging to nothing in
+                  particular. Once the request is made the paper is read, not
+                  replaced. */}
+              <Field id="grNo" label="Request No.">
+                <div className="flex w-full min-w-0 items-center gap-2">
+                  <Input
+                    id="grNo"
+                    readOnly
+                    tabIndex={-1}
+                    value={requestNo}
+                    className="min-w-0 flex-1 cursor-default bg-locked text-muted-foreground"
+                  />
+                  {!open && (
+                    <Attach
+                      file={document}
+                      onPick={setDocument}
+                      label="supporting document"
+                    />
+                  )}
+                </div>
+                {attachment && (
+                  <p className="flex items-center gap-1.5 text-xs font-medium text-primary">
+                    <Paperclip className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    <span className="truncate">{attachment}</span>
+                  </p>
+                )}
+              </Field>
+              <Locked
+                id="grDate"
+                label="Request Date"
+                value={shortDate(requestDate)}
               />
-              <p className="-mt-1 text-right text-xs text-muted-foreground">
-                {draft.details.length}/{DETAILS_LIMIT}
-              </p>
-            </div>
-          </div>
+              <Locked id="grEmployee" label="Employee Name" value={employee.name} />
+
+              {/* Fixed once the request exists: the kind of thing being asked
+                  is what it was answered as, so it cannot be rewritten after
+                  the fact. */}
+              {open ? (
+                <Locked
+                  id="grType"
+                  label="Request Type"
+                  value={open.requestType}
+                />
+              ) : (
+                <Field id="grType" label="Request Type" required>
+                  <Select
+                    value={draft.requestType}
+                    onValueChange={(value) => value && set("requestType", value)}
+                  >
+                    <SelectTrigger id="grType">
+                      <SelectValue placeholder="Select Request Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {REQUEST_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              )}
+            </Row>
+          </Group>
+
+          {stage === "request" ? (
+            <Group title="Request Details">
+              <Field id="grComment" label="Employee Comment" required>
+                <Counted
+                  id="grComment"
+                  rows={5}
+                  limit={COMMENT_LIMIT}
+                  value={draft.comment}
+                  onChange={(value) => set("comment", value)}
+                  placeholder="Write your request here..."
+                />
+              </Field>
+            </Group>
+          ) : (
+            <>
+              <Group title="Employee Comment">
+                <p className="rounded-md bg-locked px-3 py-2 text-sm text-muted-foreground">
+                  {open?.comment}
+                </p>
+              </Group>
+
+              {/* A request already answered is read, not answered again: an
+                  editable box that quietly refuses what is typed into it
+                  reads as broken, so once decided it stops being a box. */}
+              <Group title="Management Decision">
+                {settled ? (
+                  <Row>
+                    <Locked
+                      id="grAnswer"
+                      label="Decision"
+                      value={open.status}
+                      highlight={open.status === APPROVED}
+                    />
+                    <Locked
+                      id="grDecisionDate"
+                      label="Decision Date"
+                      value={shortDate(open.decisionDate)}
+                    />
+                    <Field
+                      id="grRemarks"
+                      label={
+                        open.status === REJECTED
+                          ? "Reason for Rejection"
+                          : "Management Comment"
+                      }
+                    >
+                      <p className="rounded-md bg-locked px-3 py-2 text-sm text-muted-foreground">
+                        {open.remarks || "-"}
+                      </p>
+                    </Field>
+                  </Row>
+                ) : (
+                  <>
+                    <div
+                      role="radiogroup"
+                      aria-label="Management decision"
+                      className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+                    >
+                      <Decision
+                        value={APPROVED}
+                        chosen={decision.answer}
+                        onChoose={(v) => setAnswer("answer", v)}
+                      />
+                      <Decision
+                        value={REJECTED}
+                        chosen={decision.answer}
+                        onChoose={(v) => setAnswer("answer", v)}
+                        tone="bad"
+                      />
+                    </div>
+
+                    <Row>
+                      <Locked
+                        id="grDecisionDate"
+                        label="Decision Date"
+                        value={shortDate(todayIso())}
+                      />
+
+                      <div className="sm:col-span-1 lg:col-span-2">
+                        <Field
+                          id="grRemarks"
+                          label={
+                            refusing
+                              ? "Reason for Rejection"
+                              : "Management Comment"
+                          }
+                          required
+                        >
+                          <Counted
+                            id="grRemarks"
+                            grow
+                            limit={DECISION_COMMENT_LIMIT}
+                            value={decision.comment}
+                            onChange={(value) => setAnswer("comment", value)}
+                            placeholder={
+                              refusing
+                                ? "Say why this request is refused"
+                                : "Enter management comment"
+                            }
+                          />
+                        </Field>
+                      </div>
+                    </Row>
+                  </>
+                )}
+              </Group>
+            </>
+          )}
 
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {/* Nothing to close - the form stays open - so Cancel clears it. */}
             <Button
               type="button"
               variant="outline"
-              onClick={() => setDraft(emptyDraft)}
-              disabled={!draft.subject && !draft.details}
+              onClick={clear}
+              disabled={!open && !draft.requestType && !draft.comment}
             >
               Cancel
             </Button>
-            <Button type="button" onClick={submit} disabled={!canSubmit}>
-              Submit Request
-            </Button>
+
+            {stage === "request" ? (
+              <Button
+                type="button"
+                onClick={submit}
+                disabled={!canSubmit || Boolean(open)}
+              >
+                Save
+              </Button>
+            ) : (
+              !settled && (
+                <Button
+                  type="button"
+                  variant={refusing ? "destructive" : "default"}
+                  onClick={decide}
+                  disabled={!canDecide}
+                >
+                  {refusing ? "Confirm Rejection" : "Save"}
+                </Button>
+              )
+            )}
           </div>
         </CardContent>
       </Card>
@@ -146,22 +424,39 @@ export default function GeneralRequestSection({ employee }) {
               <HeadRow>
                 <Th width="4%">#</Th>
                 <Th width="13%">Request No.</Th>
-                <Th width="13%">Subject</Th>
-                <Th width="22%">Details</Th>
-                <Th width="11%">Request Date</Th>
-                <Th width="10%">Status</Th>
-                <Th width="15%">Remarks</Th>
+                <Th width="15%">Request Type</Th>
+                <Th width="22%">Employee Comment</Th>
+                <Th width="10%">Request Date</Th>
+                <Th width="9%">Status</Th>
+                <Th width="15%">Management Comment</Th>
                 <Th width="12%">Reviewed By</Th>
               </HeadRow>
               <tbody>
                 {mine.map((request, index) => (
-                  <Row key={request.id}>
+                  <TableRow key={request.id}>
                     <Td className="font-medium text-primary">{index + 1}</Td>
-                    <Td className="whitespace-nowrap font-medium text-primary">
-                      {request.requestNo}
+                    {/* The number is the way back into the request. */}
+                    <Td className="whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => track(request)}
+                        className="font-medium text-primary underline-offset-2 hover:underline"
+                      >
+                        {request.requestNo}
+                      </button>
                     </Td>
-                    <Td className="text-left">{request.subject}</Td>
-                    <Td className="text-left">{request.details}</Td>
+                    <Td className="text-left">{request.requestType}</Td>
+                    <Td className="text-left">
+                      <span className="inline-flex items-start gap-1.5">
+                        {request.document && (
+                          <Paperclip
+                            className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                            aria-label="Has a supporting document"
+                          />
+                        )}
+                        {request.comment}
+                      </span>
+                    </Td>
                     <Td className="whitespace-nowrap">
                       {shortDate(request.date)}
                     </Td>
@@ -183,7 +478,7 @@ export default function GeneralRequestSection({ employee }) {
                     <Td className="text-muted-foreground">
                       {request.reviewedBy || "-"}
                     </Td>
-                  </Row>
+                  </TableRow>
                 ))}
               </tbody>
             </RecordTable>

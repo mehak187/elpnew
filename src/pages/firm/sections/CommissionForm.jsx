@@ -13,6 +13,16 @@ import {
 import { ArrowRight, FileCheck } from "lucide-react";
 import UploadIcon from "@/components/shared/UploadIcon";
 import SearchableSelect from "@/components/shared/SearchableSelect";
+import {
+  FieldLabel,
+  Group,
+  Row,
+  Field,
+  Locked,
+  Note,
+  Counted,
+  Decision,
+} from "@/components/shared/formFields";
 import { RequestSteps } from "@/components/shared/RequestSteps";
 import { REQUEST_REJECTED } from "@/pages/employees/requestFlow";
 import { cn } from "@/lib/utils";
@@ -132,165 +142,6 @@ const money = (value) =>
     minimumFractionDigits: 3,
     maximumFractionDigits: 3,
   });
-
-/**
- * A field's label, with its required mark coloured.
- *
- * The mark is glued to the last word rather than following a plain space:
- * a long label wraps, and an asterisk alone under it reads as a mistake.
- */
-function FieldLabel({ htmlFor, required, children }) {
-  return (
-    <Label htmlFor={htmlFor}>
-      {children}
-      {required && <span className="whitespace-nowrap text-destructive">&nbsp;*</span>}
-    </Label>
-  );
-}
-
-/**
- * A named part of the form.
- *
- * The request is long enough that a run of fields tells nobody which question
- * they are answering, so each part says what it is and carries its own rule
- * down the left - the same mark the page's own heading uses, one step quieter.
- */
-function Group({ title, children }) {
-  return (
-    <section className="space-y-4">
-      <p className="border-l-4 border-primary pl-3 text-base font-bold text-primary">
-        {title}
-      </p>
-      {children}
-    </section>
-  );
-}
-
-/**
- * One row of fields.
- *
- * Three to a row on a wide screen, which is how the form was drawn, falling to
- * two and then one as there stops being room for them.
- */
-function Row({ cols = 3, children }) {
-  return (
-    <div
-      className={cn(
-        "grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6",
-        cols === 4 ? "lg:grid-cols-4" : "lg:grid-cols-3"
-      )}
-    >
-      {children}
-    </div>
-  );
-}
-
-/**
- * A field: its label, its control, and whatever rule governs it underneath.
- *
- * All three are stacked from the top, so every control in a row sits at the
- * same height whether or not the field beside it has a note to carry. Hanging
- * them from the bottom instead would drop any field without a note lower than
- * its neighbours - which is the one thing a row of figures must not do, since
- * it reads as though they belong to different rows.
- *
- * The note is part of the field rather than a thing written after it: one
- * written outside belongs to no cell, and grows over whatever comes next.
- */
-function Field({ id, label, required, note, children }) {
-  return (
-    <div className="flex h-full flex-col gap-2">
-      <FieldLabel htmlFor={id} required={required}>
-        {label}
-      </FieldLabel>
-      {children}
-      {note && <Note className="-mt-1">{note}</Note>}
-    </div>
-  );
-}
-
-/** The rule a field is governed by, written under it rather than assumed. */
-function Note({ className, children }) {
-  return (
-    <p className={cn("text-xs leading-snug text-muted-foreground", className)}>
-      {children}
-    </p>
-  );
-}
-
-/**
- * A comment with a limit, and the limit in sight.
- *
- * The count is shown rather than the typing simply stopping: a box that
- * refuses a keystroke without saying why reads as broken.
- */
-function Counted({ id, value, onChange, limit, rows, placeholder }) {
-  // A record written before this field existed has nothing under that name,
-  // and an empty box is what that should read as - not a crash.
-  const text = value || "";
-  return (
-    <div className="space-y-1">
-      <Textarea
-        id={id}
-        rows={rows}
-        maxLength={limit}
-        value={text}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-      />
-      <p className="text-right text-xs text-muted-foreground">
-        {text.length} / {limit}
-      </p>
-    </div>
-  );
-}
-
-/**
- * One of the three answers the office can give, as a row that can be picked.
- *
- * Built from a button rather than a native radio so the whole row is the
- * target: the answer to a request for money is not a thing to have to aim at.
- */
-function Decision({ value, chosen, onChoose, tone }) {
-  const picked = chosen === value;
-  return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={picked}
-      onClick={() => onChoose(value)}
-      className={cn(
-        "flex w-full items-center gap-3 rounded-md border px-4 py-3 text-left text-sm transition",
-        picked
-          ? tone === "bad"
-            ? "border-destructive bg-destructive/5 font-medium text-destructive"
-            : "border-green-600 bg-green-50 font-medium text-green-800"
-          : "hover:bg-muted/50"
-      )}
-    >
-      <span
-        className={cn(
-          "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border",
-          picked
-            ? tone === "bad"
-              ? "border-destructive"
-              : "border-green-600"
-            : "border-muted-foreground/50"
-        )}
-      >
-        {picked && (
-          <span
-            className={cn(
-              "h-2 w-2 rounded-full",
-              tone === "bad" ? "bg-destructive" : "bg-green-600"
-            )}
-          />
-        )}
-      </span>
-      {value}
-    </button>
-  );
-}
 
 /**
  * The office's answer to a commission request, and how it was then paid.
@@ -583,24 +434,6 @@ function CommissionPayment({
         </div>
       )}
     </div>
-  );
-}
-
-/** A figure or a fact the form reads back rather than asks for. */
-function Locked({ id, label, value, highlight, note }) {
-  return (
-    <Field id={id} label={label} note={note}>
-      <Input
-        id={id}
-        readOnly
-        tabIndex={-1}
-        value={value}
-        className={cn(
-          "cursor-default bg-locked text-muted-foreground",
-          highlight && "border-green-600/40 font-semibold text-green-700"
-        )}
-      />
-    </Field>
   );
 }
 
