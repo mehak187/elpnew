@@ -41,20 +41,23 @@ export default function EntitlementsSection({
 
   return (
     <div className="space-y-6">
-      {/* One row for the whole section: its name on the left, and the tabs
-          that say which entitlement is open on the right. */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <FormHeading
-          icon={FileSpreadsheet}
-          title="Employee Entitlements"
-          note="Manage employee allowances and end-of-service entitlements"
-        />
-        <div className="ml-auto">
-          <TabBar options={ENTITLEMENT_TABS} value={tab} onChange={setTab} />
-        </div>
-      </div>
+      {/* The section's name, and under it the nine entitlements it covers.
+          Not beside the name, as a shorter set of tabs would be: nine of these
+          labels and a heading cannot share a line without the tabs folding
+          onto a second one, and a folded set stops looking like one set. */}
+      <FormHeading
+        icon={FileSpreadsheet}
+        title="Employee Entitlements"
+        note="Manage employee allowances and end-of-service entitlements"
+      />
 
-      {/* What is searched, and the way to add to it. */}
+      <TabBar options={ENTITLEMENT_TABS} value={tab} onChange={setTab} fit />
+
+      {/* What is searched, and the way to ask for one.
+          The button names the entitlement the open tab is on, and asks for it
+          rather than adding it: nothing here is granted by writing it down -
+          every one of the nine is a request the office still has to answer.
+          A button that said "Add" would promise otherwise. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <AiSearch value={query} onChange={setQuery} placeholder="Search..." />
         <Button
@@ -64,7 +67,7 @@ export default function EntitlementsSection({
           disabled={adding === tab}
         >
           <Plus className="mr-2 h-4 w-4" />
-          Add Entitlement
+          {"Request " + current.label}
         </Button>
       </div>
 
