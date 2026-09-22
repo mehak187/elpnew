@@ -13,8 +13,8 @@ export const ENTITLEMENT_CATEGORY = "Allowance Request";
 /** What each tab's request is filed as. */
 export const ENTITLEMENT_SUBCATEGORY = {
   leaveEncashment: "Leave Encashment Request",
-  overtime: "Overtime Pay Request",
-  medical: "Medical Allowance Request",
+  overtime: "Overtime Allowance",
+  medical: "Medical Allowance",
   transport: "Transport Allowance Request",
   assignment: "Assignment Allowance Request",
   travel: "Travel Allowance Request",
@@ -43,20 +43,78 @@ export const HOURS_IN_DAY = 8;
 /**
  * What each tab asks for beyond the classification it shares with the rest.
  *
- * "leaveDays" counts days off a leave balance, "hours" counts overtime, and
+ * "leaveDays" counts days off a leave balance, "hours" counts overtime,
+ * "medical" counts what a bill cost less whatever the insurer met, and
  * everything else is a sum the employee names. The amount follows from the
  * choice, so no tab asks for a figure it can work out.
  */
 export const ENTITLEMENT_MODE = {
   leaveEncashment: "leaveDays",
   overtime: "hours",
+  medical: "medical",
 };
 
 export const modeOf = (kind) => ENTITLEMENT_MODE[kind] || "amount";
 
-/** What one hour of overtime is worth. */
+/** What one ordinary hour of the salary is worth. */
 export const hourlyRate = (salary) =>
   Number((Number(salary || 0) / DAYS_IN_MONTH / HOURS_IN_DAY).toFixed(3));
+
+/**
+ * What an hour of overtime is worth, as a multiple of an ordinary hour.
+ *
+ * Overtime is not paid at the plain rate: the law and the firm's own policy
+ * both price an hour worked on a rest day above one worked after a normal
+ * shift. Kept as one table so the three prices are set in a single place -
+ * confirm the two higher ones against the firm's policy before go-live.
+ */
+export const OVERTIME_TYPES = [
+  { name: "Working Day", multiplier: 1.5 },
+  { name: "Weekend", multiplier: 2 },
+  { name: "Public Holiday", multiplier: 2.5 },
+];
+
+export const overtimeMultiplier = (type) =>
+  OVERTIME_TYPES.find((option) => option.name === type)?.multiplier || 0;
+
+/** What one hour of overtime of a given kind is worth. */
+export const overtimeRate = (salary, type) =>
+  Number((hourlyRate(salary) * overtimeMultiplier(type)).toFixed(3));
+
+/**
+ * The hours between two clock times, to a tenth.
+ *
+ * A shift that ends before it starts ran past midnight, so it is counted
+ * round the clock rather than treated as a mistake - overtime after a late
+ * shift is exactly when that happens.
+ */
+export function hoursBetween(start, end) {
+  if (!start || !end) return 0;
+  const minutes = (value) => {
+    const [h, m] = String(value).split(":").map(Number);
+    return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : null;
+  };
+  const from = minutes(start);
+  const to = minutes(end);
+  if (from === null || to === null) return 0;
+  const span = to > from ? to - from : to + 24 * 60 - from;
+  return Number((span / 60).toFixed(2));
+}
+
+/** "06:00 PM" - a clock time as a record writes it. */
+export function clockTime(value) {
+  if (!value) return "-";
+  const [h, m] = String(value).split(":").map(Number);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return "-";
+  const hour = h % 12 || 12;
+  return (
+    String(hour).padStart(2, "0") +
+    ":" +
+    String(m).padStart(2, "0") +
+    " " +
+    (h < 12 ? "AM" : "PM")
+  );
+}
 
 /**
  * What a run of leave days is worth in money.
@@ -69,9 +127,20 @@ export const encashmentAmount = (salary, days) =>
     ((Number(salary || 0) / DAYS_IN_MONTH) * Number(days || 0)).toFixed(3)
   );
 
-/** What overtime hours come to at the employee's own rate. */
-export const overtimeAmount = (salary, hours) =>
-  Number((hourlyRate(salary) * Number(hours || 0)).toFixed(3));
+/** What overtime hours come to, at the rate the kind of day sets. */
+export const overtimeAmount = (salary, hours, type) =>
+  Number((overtimeRate(salary, type) * Number(hours || 0)).toFixed(3));
+
+/**
+ * What the firm is actually being asked for on a medical bill.
+ *
+ * The whole cost less whatever the insurer has already met: the firm meets
+ * the part nobody else did. Never below nothing - an insurer paying more than
+ * the bill is a refund, not a claim on the firm - and worked out rather than
+ * typed, so the three figures on the form cannot contradict each other.
+ */
+export const medicalAmount = (total, insured) =>
+  Number(Math.max(Number(total || 0) - Number(insured || 0), 0).toFixed(3));
 
 /** Everything one employee has claimed, newest first. */
 export const entitlementsFor = (records, name, kind) =>
@@ -239,6 +308,42 @@ export const initialEntitlements = [
     rejectionReason: "",
   },
 ];
+
+/**
+ * The letters each kind of request is numbered under.
+ *
+ * A number that says what it is can be quoted on its own - "OTR-0004" tells
+ * whoever hears it which list to look in, where "REQ-0004" does not.
+ */
+export const REQUEST_PREFIX = {
+  leaveEncashment: "LER",
+  overtime: "OTR",
+  medical: "MED",
+  transport: "TAR",
+  assignment: "ASR",
+  travel: "TVR",
+  airTicket: "ATR",
+  notice: "NPR",
+  endOfService: "EOS",
+};
+
+/**
+ * The next number in one kind's run: OTR-0004.
+ *
+ * Counted across that kind alone, so each list numbers from one and two kinds
+ * cannot hand out the same number.
+ */
+export function nextKindRequestNo(records, kind) {
+  const prefix = (REQUEST_PREFIX[kind] || "REQ") + "-";
+  const highest = records
+    .filter((row) => String(row.requestNo || "").startsWith(prefix))
+    .reduce(
+      (max, row) =>
+        Math.max(max, Number(String(row.requestNo).slice(prefix.length)) || 0),
+      0
+    );
+  return prefix + String(highest + 1).padStart(4, "0");
+}
 
 /** "ENT-001", the number a request takes once it has been approved. */
 export const nextEntitlementNo = (records) =>

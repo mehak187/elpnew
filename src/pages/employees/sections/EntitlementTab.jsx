@@ -40,12 +40,8 @@ import { amountValue } from "@/lib/money";
 import { smartSearch } from "@/lib/search/smartSearch";
 import { useLeaves } from "@/lib/leaves/context";
 import { formatDate } from "@/pages/firm/firmData";
-import { nextRequestNo } from "../requestFlow";
 import { remainingBalance, entitlementOf } from "../leaveData";
-import {
-  PAYMENT_YEARS,
-  SALARY_MONTHS,
-} from "../payrollData";
+import { PAYMENT_YEARS } from "../payrollData";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
 import {
   ENTITLEMENT_EXPENSE_TYPE,
@@ -57,7 +53,13 @@ import {
   ENTITLEMENT_STATUS_CHIP,
   encashmentAmount,
   overtimeAmount,
+  overtimeRate,
+  medicalAmount,
   hourlyRate,
+  hoursBetween,
+  clockTime,
+  OVERTIME_TYPES,
+  nextKindRequestNo,
   entitlementsFor,
   nextEntitlementNo,
   modeOf,
@@ -83,9 +85,21 @@ const emptyDraft = () => ({
   month: "",
   leaveType: "Annual Leave",
   days: "",
-  hours: "",
   amount: "",
   reason: "",
+  // Overtime is claimed as the shift that was worked rather than as a number
+  // of hours: the hours follow from the clock, and a typed total can disagree
+  // with the times beside it.
+  overtimeDate: todayIso(),
+  startTime: "",
+  endTime: "",
+  overtimeType: "",
+  // A medical claim is made from the bill: what it cost, what the insurer
+  // met, and the invoice that proves both.
+  treatmentDate: todayIso(),
+  invoiceNo: "",
+  totalCost: "",
+  insuranceCovered: "",
 });
 
 const emptyPayment = () => ({
@@ -213,7 +227,7 @@ export default function EntitlementTab({
 
   // The number it already carries, or the one it is about to be given. Shown
   // before it is saved so the employee can quote it.
-  const requestNo = open?.requestNo || nextRequestNo(records);
+  const requestNo = open?.requestNo || nextKindRequestNo(records, kind);
 
   // Who it is for, as a personnel record names them: the name alone is not an
   // identifier, and two people can share one.
@@ -235,27 +249,50 @@ export default function EntitlementTab({
   const after = Math.max(available - days, 0);
   const exceeded = mode === "leaveDays" && days > available;
 
+  // How long the overtime shift ran, counted off the clock rather than typed.
+  const workedHours =
+    mode === "hours" ? hoursBetween(draft.startTime, draft.endTime) : 0;
+
+  // What an hour of it is worth: the ordinary hourly rate, lifted by however
+  // much the kind of day it fell on is worth.
+  const otRate =
+    mode === "hours" ? overtimeRate(employee?.salary, draft.overtimeType) : 0;
+
   // What the request comes to. Days and hours are worth what the salary says
   // they are worth; anything else is the sum that was asked for.
   const amount =
     mode === "leaveDays"
       ? encashmentAmount(employee?.salary, days)
       : mode === "hours"
-        ? overtimeAmount(employee?.salary, draft.hours)
-        : Number(draft.amount || 0);
+        ? overtimeAmount(employee?.salary, workedHours, draft.overtimeType)
+        : mode === "medical"
+          ? medicalAmount(draft.totalCost, draft.insuranceCovered)
+          : Number(draft.amount || 0);
+
+  // An insurer meeting more than the bill is a refund, not a claim, and the
+  // form says so rather than quietly showing nothing owed.
+  const overInsured =
+    mode === "medical" &&
+    Number(draft.totalCost || 0) > 0 &&
+    Number(draft.insuranceCovered || 0) > Number(draft.totalCost || 0);
 
   const counted =
     mode === "leaveDays"
       ? days > 0
       : mode === "hours"
-        ? Number(draft.hours) > 0
-        : Number(draft.amount) > 0;
+        ? workedHours > 0
+        : mode === "medical"
+          ? amount > 0
+          : Number(draft.amount) > 0;
 
   const canSubmit =
     draft.requestDate &&
     counted &&
     !exceeded &&
-    (mode !== "hours" || draft.month) &&
+    (mode !== "hours" ||
+      (draft.overtimeDate && draft.startTime && draft.endTime && draft.overtimeType)) &&
+    (mode !== "medical" ||
+      (draft.treatmentDate && draft.invoiceNo.trim() && !overInsured)) &&
     draft.reason.trim();
 
   // A full approval grants what was asked for; only a partial one names a
@@ -278,6 +315,14 @@ export default function EntitlementTab({
       : amending
         ? Math.round((approvedAmount / amount) * days * 10) / 10
         : days;
+
+  /** The same, in hours, for a request counted in hours. */
+  const approvedHours =
+    mode !== "hours" || amount <= 0
+      ? null
+      : amending
+        ? Math.round((approvedAmount / amount) * workedHours * 10) / 10
+        : workedHours;
   const decidedOn = open?.decisionDate || todayIso();
   const attachedName = open?.attachment || "";
   // What this person was given last time, where there was a last time.
@@ -315,10 +360,17 @@ export default function EntitlementTab({
     const details = {
       requestDate: draft.requestDate,
       year: draft.year,
-      month: draft.month,
       leaveType: draft.leaveType,
       days,
-      hours: Number(draft.hours || 0),
+      overtimeDate: draft.overtimeDate,
+      startTime: draft.startTime,
+      endTime: draft.endTime,
+      overtimeType: draft.overtimeType,
+      hours: workedHours,
+      treatmentDate: draft.treatmentDate,
+      invoiceNo: draft.invoiceNo.trim(),
+      totalCost: Number(draft.totalCost || 0),
+      insuranceCovered: Number(draft.insuranceCovered || 0),
       amount,
       reason: draft.reason.trim(),
     };
@@ -334,7 +386,7 @@ export default function EntitlementTab({
           id,
           kind,
           employee: employee?.name || "",
-          requestNo: nextRequestNo(prev),
+          requestNo: nextKindRequestNo(prev, kind),
           entitlementNo: "",
           status: ENTITLEMENT_PENDING,
           rejectionReason: "",
@@ -362,6 +414,7 @@ export default function EntitlementTab({
               amount: approvedAmount,
               approvedAmount,
               approvedDays: approvedDays ?? undefined,
+              approvedHours: approvedHours ?? undefined,
               decisionDate: decidedOn,
               decidedBy: CURRENT_USER.name,
               managementComment: reason.trim(),
@@ -478,14 +531,65 @@ export default function EntitlementTab({
               {mode === "leaveDays" && (
                 <Booked id="dec-year" label="Year" value={draft.year} />
               )}
+              {mode === "hours" && (
+                <Booked
+                  id="dec-ot-year"
+                  label="Year"
+                  value={String(draft.overtimeDate || "").slice(0, 4) || "-"}
+                />
+              )}
+
+              {mode === "medical" && (
+                <>
+                  <Booked
+                    id="dec-treatment-date"
+                    label="Date"
+                    value={
+                      draft.treatmentDate ? formatDate(draft.treatmentDate) : "-"
+                    }
+                  />
+                  <Booked
+                    id="dec-invoice-no"
+                    label="Invoice No."
+                    value={draft.invoiceNo || "-"}
+                  />
+                  <Booked
+                    id="dec-total-cost"
+                    label="Total Medical Cost (OMR)"
+                    value={amountValue(draft.totalCost)}
+                  />
+                  <Booked
+                    id="dec-insured"
+                    label="Insurance Covered Amount (OMR)"
+                    value={amountValue(draft.insuranceCovered)}
+                  />
+                  <Booked
+                    id="dec-requested"
+                    label="Requested Amount (OMR)"
+                    value={amountValue(amount)}
+                  />
+                </>
+              )}
             </div>
           </div>
 
+          {mode !== "medical" && (
           <div className="space-y-4">
             <h3 className={HEADING}>
               {label} Summary
             </h3>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-6">
+            {/* As wide as the summary has fields to fill: overtime reads back
+                eight, which is two rows of four, while leave encashment reads
+                back six and wants them on one. A row that leaves half itself
+                empty reads as a row with something missing from it. */}
+            <div
+              className={cn(
+                "grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6",
+                mode === "hours" || mode === "medical"
+                  ? "lg:grid-cols-4"
+                  : "lg:grid-cols-3 xl:grid-cols-6"
+              )}
+            >
               {mode === "leaveDays" ? (
                 <>
                   <Booked
@@ -516,13 +620,48 @@ export default function EntitlementTab({
                 </>
               ) : (
                 mode === "hours" && (
-                  <Booked
-                    id="dec-hours"
-                    label="Hours Requested"
-                    value={(draft.hours || 0) + " Hours"}
-                  />
+                  <>
+                    <Booked
+                      id="dec-ot-date"
+                      label="Overtime Date"
+                      value={
+                        draft.overtimeDate ? formatDate(draft.overtimeDate) : "-"
+                      }
+                    />
+                    <Booked
+                      id="dec-start"
+                      label="Start Time"
+                      value={clockTime(draft.startTime)}
+                    />
+                    <Booked
+                      id="dec-end"
+                      label="End Time"
+                      value={clockTime(draft.endTime)}
+                    />
+                    <Booked
+                      id="dec-total-hours"
+                      label="Total Overtime Hours"
+                      value={workedHours ? workedHours + " Hours" : "-"}
+                    />
+                    <Booked
+                      id="dec-ot-type"
+                      label="Overtime Type"
+                      value={draft.overtimeType || "-"}
+                    />
+                    <Booked
+                      id="dec-rate"
+                      label="Hourly Rate (OMR)"
+                      value={amountValue(hourlyRate(employee?.salary))}
+                    />
+                    <Booked
+                      id="dec-ot-rate"
+                      label="Overtime Rate (OMR)"
+                      value={draft.overtimeType ? amountValue(otRate) : "-"}
+                    />
+                  </>
                 )
               )}
+
               <Booked
                 id="dec-estimated"
                 label="Estimated Amount (OMR)"
@@ -530,6 +669,7 @@ export default function EntitlementTab({
               />
             </div>
           </div>
+          )}
 
           <DecisionChoice
             value={decision}
@@ -559,6 +699,14 @@ export default function EntitlementTab({
                     id="ent-approved-days"
                     label="Approved Days"
                     value={approvedDays + " Days"}
+                  />
+                )}
+
+                {approvedHours !== null && (
+                  <Settled
+                    id="ent-approved-hours"
+                    label="Approved Hours"
+                    value={approvedHours + " Hours"}
                   />
                 )}
 
@@ -787,6 +935,17 @@ export default function EntitlementTab({
                 value={formatDate(draft.requestDate)}
               />
 
+              {/* The year the overtime falls in, read off its own date -
+                  asking for it again is asking to be told something the form
+                  already knows, and can be told wrong. */}
+              {mode === "hours" && (
+                <Booked
+                  id="ent-ot-year"
+                  label="Year"
+                  value={String(draft.overtimeDate || "").slice(0, 4) || "-"}
+                />
+              )}
+
               {/* Which year's balance is being drawn on. */}
               {mode === "leaveDays" && (
                 <div className="flex h-full flex-col justify-end gap-2">
@@ -868,70 +1027,196 @@ export default function EntitlementTab({
               </>
             )}
 
-            {/* Hours of overtime, at the employee's own rate. */}
+            {/* The shift that was worked. The hours are not asked for: they
+                are the distance between the two clock times, and a typed
+                total could disagree with them. Nor is the rate, which is the
+                salary's own hourly rate lifted by whatever the kind of day is
+                worth. */}
             {mode === "hours" && (
               <>
                 <div className="flex h-full flex-col justify-end gap-2">
-                  <FieldLabel htmlFor="ent-month" required>
-                    Month
-                  </FieldLabel>
-                  <Select
-                    value={draft.month}
-                    onValueChange={(value) => value && set("month", value)}
-                  >
-                    <SelectTrigger id="ent-month">
-                      <SelectValue placeholder="Select month" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SALARY_MONTHS.map((month) => (
-                        <SelectItem key={month.value} value={month.value}>
-                          {month.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex h-full flex-col justify-end gap-2">
-                  <FieldLabel htmlFor="ent-year" required>
-                    Year
-                  </FieldLabel>
-                  <Select
-                    value={draft.year}
-                    onValueChange={(value) => value && set("year", value)}
-                  >
-                    <SelectTrigger id="ent-year">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PAYMENT_YEARS.map((year) => (
-                        <SelectItem key={year} value={year}>
-                          {year}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex h-full flex-col justify-end gap-2">
-                  <FieldLabel htmlFor="ent-hours" required>
-                    Overtime Hours
+                  <FieldLabel htmlFor="ent-ot-date" required>
+                    Overtime Date
                   </FieldLabel>
                   <Input
-                    id="ent-hours"
-                    inputMode="decimal"
-                    value={draft.hours}
-                    onChange={(e) =>
-                      set("hours", e.target.value.replace(/[^\d.]/g, ""))
-                    }
-                    placeholder="0"
+                    id="ent-ot-date"
+                    type="date"
+                    value={draft.overtimeDate}
+                    onChange={(e) => set("overtimeDate", e.target.value)}
                   />
                 </div>
 
-                <Worked
+                <div className="flex h-full flex-col justify-end gap-2">
+                  <FieldLabel htmlFor="ent-start" required>
+                    Start Time
+                  </FieldLabel>
+                  <Input
+                    id="ent-start"
+                    type="time"
+                    value={draft.startTime}
+                    onChange={(e) => set("startTime", e.target.value)}
+                  />
+                </div>
+
+                <div className="flex h-full flex-col justify-end gap-2">
+                  <FieldLabel htmlFor="ent-end" required>
+                    End Time
+                  </FieldLabel>
+                  <Input
+                    id="ent-end"
+                    type="time"
+                    value={draft.endTime}
+                    onChange={(e) => set("endTime", e.target.value)}
+                  />
+                </div>
+
+                <Booked
+                  id="ent-total-hours"
+                  label="Total Overtime Hours"
+                  value={workedHours ? workedHours + " Hours" : "-"}
+                />
+
+                <div className="flex h-full flex-col justify-end gap-2">
+                  <FieldLabel htmlFor="ent-ot-type" required>
+                    Overtime Type
+                  </FieldLabel>
+                  <Select
+                    value={draft.overtimeType}
+                    onValueChange={(value) => value && set("overtimeType", value)}
+                  >
+                    <SelectTrigger id="ent-ot-type">
+                      <SelectValue placeholder="Select overtime type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {OVERTIME_TYPES.map((option) => (
+                        <SelectItem key={option.name} value={option.name}>
+                          {option.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Booked
                   id="ent-rate"
                   label="Hourly Rate (OMR)"
                   value={amountValue(hourlyRate(employee?.salary))}
+                />
+
+                <Booked
+                  id="ent-ot-rate"
+                  label="Overtime Rate (OMR)"
+                  value={draft.overtimeType ? amountValue(otRate) : "-"}
+                />
+              </>
+            )}
+
+            {/* A medical bill: what it came to, what the insurer met, and
+                what is therefore left for the firm. The last of the three is
+                not asked for - it is the first less the second, and a typed
+                figure could disagree with the two above it. */}
+            {mode === "medical" && (
+              <>
+                <div className="flex h-full flex-col justify-end gap-2">
+                  <FieldLabel htmlFor="ent-treatment-date" required>
+                    Date
+                  </FieldLabel>
+                  <Input
+                    id="ent-treatment-date"
+                    type="date"
+                    value={draft.treatmentDate}
+                    onChange={(e) => set("treatmentDate", e.target.value)}
+                  />
+                </div>
+
+                {/* The invoice, and the copy of it. The paperclip sits on the
+                    number because it is that invoice being attached, not some
+                    loose document belonging to the request at large. */}
+                <div className="flex h-full flex-col justify-end gap-2">
+                  <FieldLabel htmlFor="ent-invoice-no" required>
+                    Invoice No.
+                  </FieldLabel>
+                  <div className="flex w-full min-w-0 items-center gap-2">
+                    <Input
+                      id="ent-invoice-no"
+                      className="min-w-0 flex-1"
+                      value={draft.invoiceNo}
+                      onChange={(e) => set("invoiceNo", e.target.value)}
+                      placeholder="INV-00000"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      asChild
+                      title={
+                        receipt ? receipt.name + " attached" : "Upload the invoice"
+                      }
+                      className={cn(
+                        "shrink-0",
+                        receipt && "border-green-600 text-green-600"
+                      )}
+                    >
+                      <label htmlFor="ent-invoice-file" className="cursor-pointer">
+                        {receipt ? (
+                          <FileCheck className="h-4 w-4" />
+                        ) : (
+                          <UploadCloud className="h-4 w-4" />
+                        )}
+                        <span className="sr-only">Upload the invoice</span>
+                      </label>
+                    </Button>
+                    <Input
+                      id="ent-invoice-file"
+                      type="file"
+                      className="hidden"
+                      onChange={(e) =>
+                        e.target.files[0] && setReceipt(e.target.files[0])
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="flex h-full flex-col justify-end gap-2">
+                  <FieldLabel htmlFor="ent-total-cost" required>
+                    Total Medical Cost (OMR)
+                  </FieldLabel>
+                  <Input
+                    id="ent-total-cost"
+                    inputMode="decimal"
+                    value={draft.totalCost}
+                    onChange={(e) =>
+                      set("totalCost", e.target.value.replace(/[^\d.]/g, ""))
+                    }
+                    placeholder="0.000"
+                  />
+                </div>
+
+                <div className="flex h-full flex-col justify-end gap-2">
+                  <FieldLabel htmlFor="ent-insured">
+                    Insurance Covered Amount (OMR)
+                  </FieldLabel>
+                  <Input
+                    id="ent-insured"
+                    inputMode="decimal"
+                    value={draft.insuranceCovered}
+                    onChange={(e) =>
+                      set("insuranceCovered", e.target.value.replace(/[^\d.]/g, ""))
+                    }
+                    placeholder="0.000"
+                    className={cn(overInsured && "border-destructive text-destructive")}
+                  />
+                  {overInsured && (
+                    <p role="alert" className="text-xs font-semibold text-destructive">
+                      More than the bill came to
+                    </p>
+                  )}
+                </div>
+
+                <Booked
+                  id="ent-requested"
+                  label="Requested Amount (OMR)"
+                  value={amountValue(amount)}
                 />
               </>
             )}
@@ -954,7 +1239,7 @@ export default function EntitlementTab({
               </div>
             )}
 
-            {mode !== "amount" && (
+            {mode !== "amount" && mode !== "medical" && (
               <Worked
                 id="ent-estimated"
                 label="Estimated Amount (OMR)"
