@@ -57,22 +57,38 @@ export function legalFeesCollected(clientNo, from, to) {
 }
 
 /**
- * The legal-fees invoices raised to a client on one case file.
+ * The legal-fees invoices raised to a client.
  *
- * What a specific commission can be calculated from: the invoice has to belong
- * to the file the commission was agreed for, and it has to be for legal fees -
- * an invoice for court charges or execution fees earns nobody a share, so it is
- * not offered at all.
+ * What an invoice-linked commission can be calculated from. The case file is
+ * not asked for first: an invoice already knows which file it belongs to, so
+ * asking would only be a second way to say the same thing - and a way to get
+ * it wrong. The file is read back off whichever invoice is chosen.
+ *
+ * An invoice for court charges or execution fees earns nobody a share, so it
+ * is never offered.
  */
-export const legalFeesInvoicesOnFile = (clientNo, caseFileNo) =>
-  !clientNo || !caseFileNo
+export const legalFeesInvoicesFor = (clientNo) =>
+  !clientNo
     ? []
     : clientInvoices.filter(
         (invoice) =>
-          invoice.clientNo === clientNo &&
-          invoice.caseFileNo === caseFileNo &&
-          isLegalFeesInvoice(invoice)
+          invoice.clientNo === clientNo && isLegalFeesInvoice(invoice)
       );
+
+/**
+ * One invoice, whole.
+ *
+ * The form shows the date it was raised, whether it was paid and when - all
+ * read off the invoice rather than typed, because they are facts about it and
+ * a typed copy could disagree with the original.
+ */
+export const invoiceFor = (clientNo, invoiceNo) =>
+  !clientNo || !invoiceNo
+    ? null
+    : clientInvoices.find(
+        (invoice) =>
+          invoice.clientNo === clientNo && invoice.invoiceNo === invoiceNo
+      ) || null;
 
 /**
  * What one invoice earns commission on: its legal fees before VAT.
@@ -94,9 +110,9 @@ export function legalFeesOnInvoice(clientNo, invoiceNo) {
 
 /* ------------------------------------------------- where it lands in the books */
 
-/** A standing arrangement, and one agreed for a particular piece of work. */
+/** A standing arrangement, and one agreed against a single paid invoice. */
 export const FIXED_COMMISSION = "Fixed Commission";
-export const SPECIFIC_COMMISSION = "Specific Commission";
+export const INVOICE_LINKED_COMMISSION = "Invoice-Linked Commission";
 
 /**
  * Where a commission lands in the accounts.
@@ -111,7 +127,7 @@ export const COMMISSION_BOOKING = [
     categories: [
       {
         name: "Commission",
-        subcategories: [FIXED_COMMISSION, SPECIFIC_COMMISSION],
+        subcategories: [FIXED_COMMISSION, INVOICE_LINKED_COMMISSION],
       },
     ],
   },
@@ -146,7 +162,7 @@ export const DEFAULT_COMMISSION_BOOKING = {
  */
 export const commissionRecords = [
   { id: 1, commissionNo: "COM-2024-001", classification: "Partners", paidTo: "Mohammed Al Yahyaei", clientNo: "1", clientName: "ABC Holdings LLC", type: FIXED_COMMISSION, caseFileNo: "", rate: 10, periodFrom: "2024-01-01", periodTo: "", notes: "" },
-  { id: 2, commissionNo: "COM-2024-002", classification: "Lawyers", paidTo: "Fatima Al Rashdi", clientNo: "1", clientName: "ABC Holdings LLC", type: SPECIFIC_COMMISSION, caseFileNo: "21", invoiceNo: "INV-2024-011", rate: 5, periodFrom: "2024-05-01", periodTo: "2024-12-31", notes: "" },
+  { id: 2, commissionNo: "COM-2024-002", classification: "Lawyers", paidTo: "Fatima Al Rashdi", clientNo: "1", clientName: "ABC Holdings LLC", type: INVOICE_LINKED_COMMISSION, caseFileNo: "21", invoiceNo: "INV-2024-011", rate: 5, periodFrom: "2024-05-01", periodTo: "2024-12-31", notes: "" },
   { id: 3, commissionNo: "COM-2024-003", classification: "Consultants", paidTo: "Amina Al Farsi", clientNo: "3", clientName: "Al Madina Trading", type: FIXED_COMMISSION, caseFileNo: "", rate: 7.5, periodFrom: "2024-07-01", periodTo: "", notes: "" },
 ];
 
@@ -187,7 +203,7 @@ export const monthAndYear = (record) => {
  * a period and earns on every legal fee paid inside it.
  */
 export const feesFor = (record) =>
-  record.type === SPECIFIC_COMMISSION
+  record.type === INVOICE_LINKED_COMMISSION
     ? legalFeesOnInvoice(record.clientNo, record.invoiceNo)
     : legalFeesCollected(record.clientNo, record.periodFrom, record.periodTo);
 

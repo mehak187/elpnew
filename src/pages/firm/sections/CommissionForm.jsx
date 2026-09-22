@@ -10,85 +10,67 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Users,
-  UserCog,
-  Scale,
-  UserRound,
-  Calculator,
-  Building2,
-  Briefcase,
-  ArrowRight,
-  FileCheck,
-} from "lucide-react";
+import { ArrowRight, FileCheck } from "lucide-react";
 import UploadIcon from "@/components/shared/UploadIcon";
+import SearchableSelect from "@/components/shared/SearchableSelect";
 import { RequestSteps } from "@/components/shared/RequestSteps";
 import { REQUEST_REJECTED } from "@/pages/employees/requestFlow";
 import { cn } from "@/lib/utils";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
-import { PAYMENT_SOURCES, DEFAULT_BANK } from "@/pages/employees/payrollData";
 import { useClients } from "@/lib/clients/context";
-import { clientLinkedCases } from "@/pages/clients/clientMockData";
+import { useFirm } from "@/lib/firm/context";
 import { employeeRecords } from "@/pages/employees/employeeData";
+import { formatDate } from "@/pages/firm/firmData";
 import {
   DEFAULT_COMMISSION_BOOKING,
-  SPECIFIC_COMMISSION,
+  INVOICE_LINKED_COMMISSION,
   subcategoriesOf,
   legalFeesCollected,
-  legalFeesInvoicesOnFile,
+  legalFeesInvoicesFor,
   legalFeesOnInvoice,
+  invoiceFor,
   isFullyPaid,
 } from "../commissionData";
 
-/**
- * Who a commission can be paid to, and which staff each group holds.
- *
- * The group is asked for first so the person list is a handful of names rather
- * than the whole firm - `role` is the field on the employee record that decides
- * who belongs to it.
- */
-const ALL_MEMBERS = "All Office Members";
 const OTHER_STAFF = "Other Staff";
 
 /**
+ * The groups a beneficiary can belong to, and the job that puts them in one.
+ *
  * Commission is not a partners' matter: anyone in the office who brings in a
- * client or a case can be owed a share of the fees. So the first choice is the
- * whole office, and the last catches anyone whose role none of the named groups
- * covers - nobody who can earn commission is left out of the list.
+ * client or a case can be owed a share of the fees, so the last group catches
+ * whoever the named ones do not - nobody who can earn commission is left out.
+ *
+ * `role` is the field on the employee record the group is read from. Nobody is
+ * asked which group a person is in; it is what their job already says.
  */
 export const CLASSIFICATIONS = [
-  { key: ALL_MEMBERS, role: null, icon: Building2 },
-  { key: "Partners", role: "Partner", icon: Users },
-  { key: "Consultants", role: "Advisor", icon: UserCog },
-  { key: "Lawyers", role: "Lawyer", icon: Scale },
-  { key: "Administrators", role: "Administrative", icon: UserRound },
-  { key: "Accountants", role: "Accountant", icon: Calculator },
-  { key: OTHER_STAFF, role: null, icon: Briefcase },
+  { key: "Partners", role: "Partner" },
+  { key: "Consultants", role: "Advisor" },
+  { key: "Lawyers", role: "Lawyer" },
+  { key: "Administrators", role: "Administrative" },
+  { key: "Accountants", role: "Accountant" },
+  { key: OTHER_STAFF, role: null },
 ];
-
-const NAMED_ROLES = CLASSIFICATIONS.map((group) => group.role).filter(Boolean);
-
-const peopleIn = (classification) => {
-  if (classification === ALL_MEMBERS) return employeeRecords;
-  if (classification === OTHER_STAFF)
-    return employeeRecords.filter((e) => !NAMED_ROLES.includes(e.role));
-  const group = CLASSIFICATIONS.find((c) => c.key === classification);
-  if (!group) return [];
-  return employeeRecords.filter((e) => e.role === group.role);
-};
-
-/**
- * The groups worth offering: the whole office always, and any other group
- * only when somebody is in it - an empty group is a choice that leads nowhere.
- */
-const offeredClassifications = () =>
-  CLASSIFICATIONS.filter(
-    (group) => group.key === ALL_MEMBERS || peopleIn(group.key).length > 0
-  );
 
 /** The group a person's job puts them in. */
 const classificationOf = (role) =>
   CLASSIFICATIONS.find((group) => group.role === role)?.key || OTHER_STAFF;
+
+/**
+ * Everyone who can be paid a commission, each under the group their job puts
+ * them in.
+ *
+ * One question rather than two. The group used to be asked for first, to cut
+ * the whole office down to a handful of names - but a list you can type into
+ * does that better, and the group is a fact about the person's job rather than
+ * a decision, so it is read off whoever is chosen instead of asked for and
+ * then having to agree.
+ */
+const beneficiaryOptions = employeeRecords.map((person) => ({
+  value: person.name,
+  label: person.name + " \u2014 " + classificationOf(person.role),
+}));
 
 const emptyDraft = {
   ...DEFAULT_COMMISSION_BOOKING,
@@ -104,15 +86,45 @@ const emptyDraft = {
   notes: "",
 };
 
-/** How the commission was actually paid, once it has been settled. */
+/**
+ * What the office decides, and how the commission then reached the person.
+ *
+ * `decision` is the answer to the request rather than a step in paying it:
+ * approved in full, approved for less, or refused. Only a partial approval
+ * carries an amount of its own - the other two are worth what was asked for,
+ * or nothing.
+ */
 const emptyPayment = {
+  decision: "",
+  approvedAmount: "",
   method: "",
-  bank: DEFAULT_BANK,
-  accountNo: "",
+  bankAccountId: "",
   paymentDate: "",
   reference: "",
   notes: "",
 };
+
+/** Today, as a record writes it. */
+const today = () => new Date().toISOString().slice(0, 10);
+
+/** The three answers the office can give a commission request. */
+const APPROVED_IN_FULL = "Full Approval";
+const APPROVED_IN_PART = "Partial Approval";
+const REFUSED = "Rejection";
+
+/**
+ * What may be typed into a percentage.
+ *
+ * Digits and at most one point, and never above a hundred: a commission worth
+ * more than the whole fee it is a share of is not a rate, it is a slip - and
+ * the figure it produces would be wrong by thousands without ever looking
+ * wrong on the way in.
+ */
+function asRate(text) {
+  const [whole, ...rest] = text.replace(/[^\d.]/g, "").split(".");
+  const single = rest.length ? whole + "." + rest.join("") : whole;
+  return Number(single) > 100 ? "100" : single;
+}
 
 /** Three decimals, the way Rials are written here. */
 const money = (value) =>
@@ -137,169 +149,447 @@ function FieldLabel({ htmlFor, required, children }) {
 }
 
 /**
- * A booking the form does not ask about: every commission is an employee
- * expense, and every one is booked under Commission.
+ * A named part of the form.
+ *
+ * The request is long enough that a run of fields tells nobody which question
+ * they are answering, so each part says what it is and carries its own rule
+ * down the left - the same mark the page's own heading uses, one step quieter.
  */
-function Fixed({ id, label, value }) {
+function Group({ title, children }) {
   return (
-    <div className="flex h-full flex-col justify-end gap-2">
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <Select value={value} onValueChange={() => {}}>
-        <SelectTrigger id={id} className="bg-locked">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={value}>{value}</SelectItem>
-        </SelectContent>
-      </Select>
+    <section className="space-y-4">
+      <p className="border-l-4 border-primary pl-3 text-base font-bold text-primary">
+        {title}
+      </p>
+      {children}
+    </section>
+  );
+}
+
+/**
+ * One row of fields.
+ *
+ * Three to a row on a wide screen, which is how the form was drawn, falling to
+ * two and then one as there stops being room for them.
+ */
+function Row({ cols = 3, children }) {
+  return (
+    <div
+      className={cn(
+        "grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6",
+        cols === 4 ? "lg:grid-cols-4" : "lg:grid-cols-3"
+      )}
+    >
+      {children}
     </div>
   );
 }
 
 /**
- * How the commission actually reached the person it was agreed with.
+ * A field: its label, its control, and whatever rule governs it underneath.
  *
- * The figure is not asked for again: it is what the first stage worked out,
- * and a typed one could disagree with the fees it came from.
+ * All three are stacked from the top, so every control in a row sits at the
+ * same height whether or not the field beside it has a note to carry. Hanging
+ * them from the bottom instead would drop any field without a note lower than
+ * its neighbours - which is the one thing a row of figures must not do, since
+ * it reads as though they belong to different rows.
+ *
+ * The note is part of the field rather than a thing written after it: one
+ * written outside belongs to no cell, and grows over whatever comes next.
  */
-function CommissionPayment({
-  commissionNo,
-  payee,
-  amount,
-  payment,
-  onChange,
-  receipt,
-  onReceipt,
-}) {
+function Field({ id, label, required, note, children }) {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
-      <Locked id="payCommissionNo" label="Commission No." value={commissionNo} />
-      <Locked id="payPayee" label="Payee" value={payee} />
-      <Locked
-        id="payAmount"
-        label="Commission Amount (OMR)"
-        value={amount}
-        highlight
-      />
-
-      <div className="flex h-full flex-col justify-end gap-2">
-        <FieldLabel htmlFor="payMethod" required>
-          Payment Method
-        </FieldLabel>
-        <Select
-          value={payment.method}
-          onValueChange={(value) => value && onChange("method", value)}
-        >
-          <SelectTrigger id="payMethod">
-            <SelectValue placeholder="Select method" />
-          </SelectTrigger>
-          <SelectContent>
-            {PAYMENT_METHODS.map((method) => (
-              <SelectItem key={method} value={method}>
-                {method}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="flex h-full flex-col justify-end gap-2">
-        <FieldLabel htmlFor="payBank">Bank</FieldLabel>
-        <Select
-          value={payment.bank}
-          onValueChange={(value) => value && onChange("bank", value)}
-        >
-          <SelectTrigger id="payBank">
-            <SelectValue placeholder="Select bank or cash" />
-          </SelectTrigger>
-          <SelectContent>
-            {PAYMENT_SOURCES.map((source) => (
-              <SelectItem key={source} value={source}>
-                {source}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="flex h-full flex-col justify-end gap-2">
-        <FieldLabel htmlFor="payAccount">Account No.</FieldLabel>
-        <Input
-          id="payAccount"
-          value={payment.accountNo}
-          onChange={(e) => onChange("accountNo", e.target.value)}
-          placeholder="Enter the account the commission goes to"
-        />
-      </div>
-
-      <div className="flex h-full flex-col justify-end gap-2">
-        <FieldLabel htmlFor="payDate" required>
-          Payment Date
-        </FieldLabel>
-        <Input
-          id="payDate"
-          type="date"
-          value={payment.paymentDate}
-          onChange={(e) => onChange("paymentDate", e.target.value)}
-        />
-      </div>
-
-      {/* What the bank called the payment, and the proof of it. */}
-      <div className="flex h-full flex-col justify-end gap-2 sm:col-span-1 lg:col-span-2">
-        <FieldLabel htmlFor="payReference">Payment Reference</FieldLabel>
-        <div className="flex w-full min-w-0 items-center gap-2">
-          <Input
-            id="payReference"
-            className="min-w-0 flex-1"
-            value={payment.reference}
-            onChange={(e) => onChange("reference", e.target.value)}
-            placeholder="TRX-0000-00000"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            asChild
-            title={receipt ? receipt.name + " attached" : "Attach payment receipt"}
-            className={cn("shrink-0", receipt && "border-green-600 text-green-600")}
-          >
-            <label htmlFor="payReceipt" className="cursor-pointer">
-              {receipt ? (
-                <FileCheck className="h-4 w-4" />
-              ) : (
-                <UploadIcon className="h-4 w-4" />
-              )}
-              <span className="sr-only">Attach payment receipt</span>
-            </label>
-          </Button>
-          <Input
-            id="payReceipt"
-            type="file"
-            className="hidden"
-            onChange={(e) => e.target.files[0] && onReceipt(e.target.files[0])}
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2 sm:col-span-2">
-        <FieldLabel htmlFor="payNotes">Notes</FieldLabel>
-        <Textarea
-          id="payNotes"
-          rows={3}
-          value={payment.notes}
-          onChange={(e) => onChange("notes", e.target.value)}
-          placeholder="Enter payment notes"
-        />
-      </div>
+    <div className="flex h-full flex-col gap-2">
+      <FieldLabel htmlFor={id} required={required}>
+        {label}
+      </FieldLabel>
+      {children}
+      {note && <Note className="-mt-1">{note}</Note>}
     </div>
   );
 }
 
-/** A figure or a fact the payment stage reads back rather than asks for. */
-function Locked({ id, label, value, highlight }) {
+/** The rule a field is governed by, written under it rather than assumed. */
+function Note({ className, children }) {
   return (
-    <div className="flex h-full flex-col justify-end gap-2">
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+    <p className={cn("text-xs leading-snug text-muted-foreground", className)}>
+      {children}
+    </p>
+  );
+}
+
+/**
+ * A comment with a limit, and the limit in sight.
+ *
+ * The count is shown rather than the typing simply stopping: a box that
+ * refuses a keystroke without saying why reads as broken.
+ */
+function Counted({ id, value, onChange, limit, rows, placeholder }) {
+  // A record written before this field existed has nothing under that name,
+  // and an empty box is what that should read as - not a crash.
+  const text = value || "";
+  return (
+    <div className="space-y-1">
+      <Textarea
+        id={id}
+        rows={rows}
+        maxLength={limit}
+        value={text}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+      />
+      <p className="text-right text-xs text-muted-foreground">
+        {text.length} / {limit}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * One of the three answers the office can give, as a row that can be picked.
+ *
+ * Built from a button rather than a native radio so the whole row is the
+ * target: the answer to a request for money is not a thing to have to aim at.
+ */
+function Decision({ value, chosen, onChoose, tone }) {
+  const picked = chosen === value;
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={picked}
+      onClick={() => onChoose(value)}
+      className={cn(
+        "flex w-full items-center gap-3 rounded-md border px-4 py-3 text-left text-sm transition",
+        picked
+          ? tone === "bad"
+            ? "border-destructive bg-destructive/5 font-medium text-destructive"
+            : "border-green-600 bg-green-50 font-medium text-green-800"
+          : "hover:bg-muted/50"
+      )}
+    >
+      <span
+        className={cn(
+          "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border",
+          picked
+            ? tone === "bad"
+              ? "border-destructive"
+              : "border-green-600"
+            : "border-muted-foreground/50"
+        )}
+      >
+        {picked && (
+          <span
+            className={cn(
+              "h-2 w-2 rounded-full",
+              tone === "bad" ? "bg-destructive" : "bg-green-600"
+            )}
+          />
+        )}
+      </span>
+      {value}
+    </button>
+  );
+}
+
+/**
+ * The office's answer to a commission request, and how it was then paid.
+ *
+ * Everything the request said is read back first and none of it can be
+ * changed here: this screen decides a request, it does not rewrite one. The
+ * figure is not asked for again either - it is what the first stage worked
+ * out, and a typed one could disagree with the fees it came from. The single
+ * exception is a partial approval, which exists precisely to pay a different
+ * amount, and so is the only answer that opens that field.
+ */
+function CommissionPayment({
+  commissionNo,
+  requestDate,
+  payee,
+  commissionType,
+  clientName,
+  invoiceNo,
+  invoiceStatus,
+  period,
+  fees,
+  rate,
+  amount,
+  employeeComment,
+  expenseType,
+  category,
+  firmAccounts,
+  beneficiaryBank,
+  beneficiaryAccountNo,
+  payment,
+  onChange,
+  receipt,
+  onReceipt,
+  decided,
+}) {
+  const partial = payment.decision === APPROVED_IN_PART;
+  const refusing = payment.decision === REFUSED;
+
+  return (
+    <div className="space-y-6">
+      <Group title="Request Information">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+          <Locked id="payRequestNo" label="Request No." value={commissionNo} />
+          <Locked
+            id="payRequestDate"
+            label="Request Date"
+            value={formatDate(requestDate)}
+          />
+          <Locked id="payPayee" label="Employee Name" value={payee} />
+          <Locked
+            id="payType"
+            label="Commission Type"
+            value={commissionType}
+          />
+        </div>
+      </Group>
+
+      {/* What was asked for, in the terms it was worked out in. The rate and
+          the fees are beside the amount so the figure can be checked rather
+          than taken on trust. */}
+      <Group title="Commission Details">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+          <Locked id="payClient" label="Client Name" value={clientName} />
+          <Locked
+            id="payInvoice"
+            label={invoiceNo ? "Invoice No. & Status" : "Period"}
+            value={
+              invoiceNo ? invoiceNo + "  \u00b7  " + invoiceStatus : period
+            }
+          />
+          <Locked
+            id="payFees"
+            label="Eligible Legal Fees & Commission Rate"
+            value={fees + " OMR  |  " + (rate || 0) + "%"}
+          />
+          <Locked
+            id="payRequested"
+            label="Requested Commission Amount (OMR)"
+            value={amount}
+          />
+        </div>
+      </Group>
+
+      {employeeComment && (
+        <Group title="Employee Comment">
+          <p className="rounded-md bg-locked px-3 py-2 text-sm text-muted-foreground">
+            {employeeComment}
+          </p>
+        </Group>
+      )}
+
+      <Group title="Management Decision">
+        <div
+          role="radiogroup"
+          aria-label="Management decision"
+          className="grid grid-cols-1 gap-3 sm:grid-cols-3"
+        >
+          <Decision
+            value={APPROVED_IN_FULL}
+            chosen={payment.decision}
+            onChoose={(v) => onChange("decision", v)}
+          />
+          <Decision
+            value={APPROVED_IN_PART}
+            chosen={payment.decision}
+            onChoose={(v) => onChange("decision", v)}
+          />
+          <Decision
+            value={REFUSED}
+            chosen={payment.decision}
+            onChoose={(v) => onChange("decision", v)}
+            tone="bad"
+          />
+        </div>
+      </Group>
+
+      {/* Nothing about paying a commission that is being refused: there is no
+          payment to describe, only a reason to give. */}
+      {!refusing && (
+        <Group title="Expense & Disbursement Details">
+          {/* Where it lands in the books. Not a choice - every commission is
+              booked the same way - but shown, so the record says what it will
+              be charged to. */}
+          <Row cols={4}>
+            <Locked id="payExpenseType" label="Expense Type" value={expenseType} />
+            <Locked id="payCategory" label="Category" value={category} />
+            <Locked
+              id="paySubcategory"
+              label="Subcategory"
+              value={commissionType}
+            />
+
+            <Field id="payMethod" label="Payment Method" required>
+              <Select
+                value={payment.method}
+                onValueChange={(value) => value && onChange("method", value)}
+              >
+                <SelectTrigger id="payMethod">
+                  <SelectValue placeholder="Select method" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_METHODS.map((method) => (
+                    <SelectItem key={method} value={method}>
+                      {method}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          </Row>
+
+          <Row cols={4}>
+            {/* Which of the firm's own accounts the money leaves. Only the
+                last four digits are shown: enough to tell two accounts apart,
+                and no more of a live account number on screen than that. */}
+            <Field id="payBank" label="Bank Account" required>
+              <Select
+                value={payment.bankAccountId}
+                onValueChange={(value) => value && onChange("bankAccountId", value)}
+              >
+                <SelectTrigger id="payBank">
+                  <SelectValue placeholder="Select account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {firmAccounts.map((account) => (
+                    <SelectItem key={account.value} value={account.value}>
+                      {account.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+
+            {/* The day the money moves, which is the day this is decided -
+                read off the clock rather than typed, so it cannot be told to
+                have happened on some other day. */}
+            <Locked
+              id="payDate"
+              label="Payment Date"
+              value={formatDate(payment.paymentDate)}
+            />
+
+            {/* What the bank called the transfer, and the proof of it. */}
+            <Field id="payReference" label="Transfer No.">
+              <div className="flex w-full min-w-0 items-center gap-2">
+                <Input
+                  id="payReference"
+                  className="min-w-0 flex-1"
+                  value={payment.reference}
+                  onChange={(e) => onChange("reference", e.target.value)}
+                  placeholder="TRX-0000-00000"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  asChild
+                  title={
+                    receipt ? receipt.name + " attached" : "Attach transfer receipt"
+                  }
+                  className={cn(
+                    "shrink-0",
+                    receipt && "border-green-600 text-green-600"
+                  )}
+                >
+                  <label htmlFor="payReceipt" className="cursor-pointer">
+                    {receipt ? (
+                      <FileCheck className="h-4 w-4" />
+                    ) : (
+                      <UploadIcon className="h-4 w-4" />
+                    )}
+                    <span className="sr-only">Attach transfer receipt</span>
+                  </label>
+                </Button>
+                <Input
+                  id="payReceipt"
+                  type="file"
+                  className="hidden"
+                  onChange={(e) => e.target.files[0] && onReceipt(e.target.files[0])}
+                />
+              </div>
+            </Field>
+
+            {/* Approved in full, this is what was asked for and is only read
+                back. Approved in part, it is the whole point of the answer and
+                is the one figure this screen may set. */}
+            {partial ? (
+              <Field
+                id="payApproved"
+                label="Approved Commission Amount (OMR)"
+                required
+                note={"No more than the " + amount + " OMR requested."}
+              >
+                <Input
+                  id="payApproved"
+                  inputMode="decimal"
+                  value={payment.approvedAmount}
+                  onChange={(e) =>
+                    onChange(
+                      "approvedAmount",
+                      e.target.value.replace(/[^\d.]/g, "")
+                    )
+                  }
+                  placeholder="0.000"
+                />
+              </Field>
+            ) : (
+              <Locked
+                id="payApproved"
+                label="Approved Commission Amount (OMR)"
+                value={amount}
+                highlight
+              />
+            )}
+          </Row>
+        </Group>
+      )}
+
+      <Group title={refusing ? "Reason for Rejection" : "Management Comment"}>
+        <Counted
+          id="payManagementComment"
+          rows={3}
+          limit={300}
+          value={payment.notes}
+          onChange={(value) => onChange("notes", value)}
+          placeholder={
+            refusing
+              ? "Say why this commission is refused"
+              : "Add management comment (optional)"
+          }
+        />
+      </Group>
+
+      {/* Who is being paid what, and into which account - the four facts the
+          transfer is actually made from, gathered where they can be checked
+          in one look before the money moves. */}
+      {decided && !refusing && (
+        <div className="grid grid-cols-1 gap-4 rounded-md border border-green-600/40 bg-green-50 px-4 py-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            ["Employee Name", payee],
+            ["Bank Name", beneficiaryBank || "-"],
+            ["Employee Account Number", beneficiaryAccountNo || "-"],
+            ["Transfer Amount", (partial ? payment.approvedAmount : amount) + " OMR"],
+          ].map(([label, value]) => (
+            <div key={label}>
+              <p className="text-xs text-green-800/70">{label}</p>
+              <p className="font-semibold text-green-900">{value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** A figure or a fact the form reads back rather than asks for. */
+function Locked({ id, label, value, highlight, note }) {
+  return (
+    <Field id={id} label={label} note={note}>
       <Input
         id={id}
         readOnly
@@ -310,7 +600,7 @@ function Locked({ id, label, value, highlight }) {
           highlight && "border-green-600/40 font-semibold text-green-700"
         )}
       />
-    </div>
+    </Field>
   );
 }
 
@@ -347,6 +637,26 @@ export default function CommissionForm({
   onClientChange,
 }) {
   const { clients } = useClients();
+  const { bankAccounts } = useFirm();
+
+  /**
+   * The firm's own accounts the money can leave from. Closed ones are not
+   * offered: an account nobody can pay out of is not a choice.
+   */
+  const firmAccounts = bankAccounts
+    .filter((account) => account.active)
+    .map((account) => ({
+      value: String(account.id),
+      label:
+        account.bankName +
+        " \u2014 \u2022\u2022\u2022\u2022 " +
+        String(account.accountNumber).replace(/\s/g, "").slice(-4),
+    }));
+
+  // The day the request was made: the day it was first written, or today for
+  // one being written now. Not asked for - a date somebody can type is a date
+  // that can disagree with when the record was actually created.
+  const requestDate = initial?.date || new Date().toISOString().slice(0, 10);
 
   // Which half of the commission is open: what it comes to, and then how it
   // was paid.
@@ -356,18 +666,19 @@ export default function CommissionForm({
       ? {
           ...emptyPayment,
           method: initial.method || "",
-          bank: initial.bank || DEFAULT_BANK,
-          accountNo: initial.accountNo || "",
-          paymentDate: initial.paymentDate || "",
+          bankAccountId: initial.bankAccountId || "",
+          paymentDate: initial.paymentDate || today(),
           reference: initial.reference || "",
-          notes: initial.paymentNotes || "",
+          decision: initial.decision || "",
+          approvedAmount:
+            initial.approvedAmount === undefined
+              ? ""
+              : String(initial.approvedAmount),
+          notes: initial.paymentNotes || initial.rejectionReason || "",
         }
-      : emptyPayment
+      : { ...emptyPayment, paymentDate: today() }
   );
   const [receipt, setReceipt] = useState(null);
-  // Refusing asks for a reason before it takes one.
-  const [rejecting, setRejecting] = useState(false);
-  const [reason, setReason] = useState("");
   const refused = initial?.status === REQUEST_REJECTED;
   const setPay = (name, value) =>
     setPayment((prev) => ({ ...prev, [name]: value }));
@@ -394,9 +705,15 @@ export default function CommissionForm({
   const setField = (name, value) =>
     setDraft((prev) => ({ ...prev, [name]: value }));
 
-  /** Changing the group empties the person, who may not be in the new one. */
-  const chooseClassification = (value) =>
-    setDraft((prev) => ({ ...prev, classification: value, paidTo: "" }));
+  /** The person, and with them the group their job puts them in. */
+  const choosePaidTo = (name) => {
+    const person = employeeRecords.find((e) => e.name === name);
+    setDraft((prev) => ({
+      ...prev,
+      paidTo: name,
+      classification: person ? classificationOf(person.role) : "",
+    }));
+  };
 
   /** Changing the kind of client empties the client, for the same reason. */
   const chooseClientType = (value) => {
@@ -434,31 +751,31 @@ export default function CommissionForm({
     (client) => client.type === draft.clientType
   );
 
-  // A specific commission is agreed for one case file; a fixed one stands
-  // over a period. They are alternatives, so the form asks for one or the
-  // other and never for both.
-  const isSpecific = draft.subcategory === SPECIFIC_COMMISSION;
-
-  /** Another file has its own invoices, so the one chosen for the last goes. */
-  const chooseCaseFile = (value) => {
-    if (!value) return;
-    setDraft((prev) => ({ ...prev, caseFileNo: value, invoiceNo: "" }));
-  };
+  // An invoice-linked commission is calculated from one paid invoice; a fixed
+  // one stands over a period. They are alternatives, so the form asks for one
+  // or the other and never for both.
+  const isInvoiceLinked = draft.subcategory === INVOICE_LINKED_COMMISSION;
 
   const chooseInvoice = (value) => {
     if (!value) return;
     setField("invoiceNo", value);
   };
 
-  // What a specific commission can be calculated from: the legal-fees
-  // invoices this client was sent on this file, and no others.
-  const fileInvoices = legalFeesInvoicesOnFile(draft.clientNo, draft.caseFileNo);
+  // What an invoice-linked commission can be calculated from: every legal-fees
+  // invoice this client was sent. The case file is not asked for first - the
+  // invoice already knows which file it belongs to.
+  const clientInvoices = legalFeesInvoicesFor(draft.clientNo);
+
+  // The invoice itself, so the form can read back when it was raised, whether
+  // it was paid and when, rather than asking for any of it again.
+  const invoice = invoiceFor(draft.clientNo, draft.invoiceNo);
 
   // What the arrangement is worth so far: the legal fees before VAT it runs
-  // on, times the rate - one invoice for a specific commission, everything
-  // paid in the period for a fixed one. Both sides come from elsewhere, so it
-  // moves on its own as the invoice or the period and the percentage are set.
-  const fees = isSpecific
+  // on, times the rate - one invoice for an invoice-linked commission,
+  // everything paid in the period for a fixed one. Both sides come from
+  // elsewhere, so it moves on its own as the invoice or the period and the
+  // percentage are set.
+  const fees = isInvoiceLinked
     ? legalFeesOnInvoice(draft.clientNo, draft.invoiceNo)
     : legalFeesCollected(draft.clientNo, draft.periodFrom, draft.periodTo);
   const commission = (fees * Number(draft.rate || 0)) / 100;
@@ -469,8 +786,8 @@ export default function CommissionForm({
     draft.subcategory &&
     draft.clientType &&
     draft.clientNo &&
-    (isSpecific
-      ? draft.caseFileNo && draft.invoiceNo
+    (isInvoiceLinked
+      ? draft.invoiceNo
       : draft.periodFrom && draft.periodTo) &&
     draft.classification &&
     draft.paidTo &&
@@ -484,11 +801,13 @@ export default function CommissionForm({
       // The subcategory is what kind of commission this is, so the record
       // keeps it under the name the rest of the system reads it by.
       type: draft.subcategory,
-      // Only one of the two was asked for, so only one is kept.
-      caseFileNo: isSpecific ? draft.caseFileNo : "",
-      invoiceNo: isSpecific ? draft.invoiceNo : "",
-      periodFrom: isSpecific ? "" : draft.periodFrom,
-      periodTo: isSpecific ? "" : draft.periodTo,
+      // Only one of the two was asked for, so only one is kept. The case file
+      // is not among the questions: it is read off the invoice the commission
+      // was calculated from, so the two can never disagree.
+      caseFileNo: isInvoiceLinked ? invoice?.caseFileNo || "" : "",
+      invoiceNo: isInvoiceLinked ? draft.invoiceNo : "",
+      periodFrom: isInvoiceLinked ? "" : draft.periodFrom,
+      periodTo: isInvoiceLinked ? "" : draft.periodTo,
       clientName: client?.clientName || "",
       rate: Number(draft.rate),
     };
@@ -504,50 +823,88 @@ export default function CommissionForm({
     setStage("payment");
   };
 
-  const canPay = canSave && payment.method && payment.paymentDate;
+  const refusing = payment.decision === REFUSED;
+  const partial = payment.decision === APPROVED_IN_PART;
 
-  /** Refused: the commission keeps its temporary number and says why. */
-  const reject = () => {
-    if (!reason.trim()) return;
-    onReject?.(reason.trim());
-  };
+  /**
+   * Where the commission lands. Held on the person's own record, so it is read
+   * from there rather than asked for again on every request they make - an
+   * account number typed a second time is an account number that can be typed
+   * wrong.
+   */
+  const beneficiary = employeeRecords.find((e) => e.name === draft.paidTo);
+  const payingAccount = bankAccounts.find(
+    (account) => String(account.id) === payment.bankAccountId
+  );
+
+  /**
+   * What a partial approval comes to. It has to be worth something and it
+   * cannot be worth more than was asked for: an office that may pay less than
+   * the request may not use the same answer to pay more than it.
+   */
+  const approved = Number(payment.approvedAmount || 0);
+  const partialIsSound =
+    approved > 0 && approved <= Number(commission.toFixed(3));
+
+  /** Refusing needs only a reason; paying needs a way and a day. */
+  const canDecide =
+    canSave &&
+    Boolean(payment.decision) &&
+    (refusing
+      ? Boolean((payment.notes || "").trim())
+      : payment.method &&
+        payment.bankAccountId &&
+        (!partial || partialIsSound));
 
   const save = () => {
-    if (!canPay) return;
+    if (!canDecide) return;
+    if (refusing) {
+      onReject?.((payment.notes || "").trim());
+      return;
+    }
     onSave({
       ...agreed(),
       // The day it was agreed, which is what the list reads it by.
       date: new Date().toISOString().slice(0, 10),
+      decision: payment.decision,
+      // What is actually transferred. A full approval pays the figure the
+      // calculation produced; only a partial one departs from it, and it is
+      // written down rather than left to be inferred from the difference.
+      approvedAmount: partial ? approved : Number(commission.toFixed(3)),
       method: payment.method,
-      bank: payment.bank,
-      accountNo: payment.accountNo,
+      // Both ends of the transfer, as they stood on the day it was made.
+      bankAccountId: payment.bankAccountId,
+      bank: payingAccount?.bankName || "",
+      payingAccountNo: payingAccount?.accountNumber || "",
+      beneficiaryBank: beneficiary?.bankName || "",
+      accountNo: beneficiary?.accountNumber || "",
       paymentDate: payment.paymentDate,
       reference: payment.reference.trim(),
       receipt: receipt?.name || "",
-      paymentNotes: payment.notes.trim(),
+      paymentNotes: (payment.notes || "").trim(),
     });
   };
 
   return (
     <div className="space-y-6">
-        {/* The two halves of a commission: what it comes to, and then how it
-            was paid. Either header opens its own half. */}
+        {/* The two halves of a commission: what is being asked for, and then
+            what the office answers. Either header opens its own half. */}
         <RequestSteps
           active={stage}
           onChange={setStage}
           steps={[
             {
               key: "commission",
-              title: "Add Commission",
-              note: "Commission calculation and eligibility details",
+              title: "Submit Request",
+              note: "Enter commission calculation and eligibility details",
               done: Boolean(canSave),
             },
             {
               key: "payment",
-              title: "Commission Payment",
-              note: "Payment and bank transfer details",
-              done: Boolean(canPay),
-              // Nothing can be paid until there is a figure to pay.
+              title: "Management Decision",
+              note: "Review, approve and disburse",
+              done: Boolean(canDecide),
+              // Nothing can be decided until there is a figure to decide on.
               disabled: !canSave,
             },
           ]}
@@ -558,197 +915,199 @@ export default function CommissionForm({
         {stage === "payment" ? (
           <CommissionPayment
             commissionNo={commissionNo}
+            requestDate={requestDate}
             payee={draft.paidTo}
+            commissionType={draft.subcategory}
+            clientName={
+              clients.find((c) => c.clientNo === draft.clientNo)?.clientName || ""
+            }
+            invoiceNo={isInvoiceLinked ? draft.invoiceNo : ""}
+            invoiceStatus={invoice?.status || ""}
+            period={
+              isInvoiceLinked
+                ? ""
+                : formatDate(draft.periodFrom) +
+                  " \u2013 " +
+                  formatDate(draft.periodTo)
+            }
+            fees={money(fees)}
+            rate={draft.rate}
             amount={money(commission)}
+            employeeComment={draft.notes}
+            expenseType={draft.expenseType}
+            category={draft.category}
+            firmAccounts={firmAccounts}
+            beneficiaryBank={beneficiary?.bankName || ""}
+            beneficiaryAccountNo={beneficiary?.accountNumber || ""}
             payment={payment}
             onChange={setPay}
             receipt={receipt}
             onReceipt={setReceipt}
+            decided={canDecide}
           />
         ) : (
         <>
-        {/* Where the commission lands in the accounts. Neither of the first
-            two is a choice - every commission is booked the same way - but
-            they are shown so the record says what it will be charged to. */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-          <div className="flex h-full flex-col justify-end gap-2">
-            <FieldLabel htmlFor="commissionNo">Commission No.</FieldLabel>
-            <Input
-              id="commissionNo"
-              readOnly
-              tabIndex={-1}
-              className="cursor-default bg-locked text-muted-foreground"
-              value={commissionNo}
+        {/* What is being asked for, before anything about the money. */}
+        <Group title="Request Information">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+            <Locked id="commissionNo" label="Request No." value={commissionNo} />
+            <Locked
+              id="commissionRequestDate"
+              label="Request Date"
+              value={formatDate(requestDate)}
             />
-          </div>
 
-          <Fixed
-            id="commissionExpenseType"
-            label="Expense Type"
-            value={draft.expenseType}
-          />
-          <Fixed
-            id="commissionCategory"
-            label="Category"
-            value={draft.category}
-          />
-
-          <div className="flex h-full flex-col justify-end gap-2">
-            <FieldLabel htmlFor="commissionSubcategory" required>
-              Subcategory
-            </FieldLabel>
-            <Select
-              value={draft.subcategory}
-              onValueChange={(value) => setField("subcategory", value)}
-              disabled={!draft.category}
-            >
-              <SelectTrigger id="commissionSubcategory">
-                <SelectValue placeholder="Please Select" />
-              </SelectTrigger>
-              <SelectContent>
-                {subcategoriesOf(draft.expenseType, draft.category).map(
-                  (sub) => (
-                    <SelectItem key={sub} value={sub}>
-                      {sub}
-                    </SelectItem>
-                  )
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Nothing below the first row until a subcategory is chosen: a fixed
-            and a specific commission ask different questions, so there is
-            nothing sensible to show before the choice is made. */}
-        {draft.subcategory && (
-        <>
-        {/* Whose fees it runs on, and what bounds them. */}
-        {/* Four to a row either way: client type, client, and then a case
-            file and its invoice, or the two ends of a period. */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-          <div className="flex h-full flex-col justify-end gap-2">
-            <FieldLabel htmlFor="commissionClientType" required>
-              Client Type
-            </FieldLabel>
-            <Select value={draft.clientType} onValueChange={chooseClientType}>
-              <SelectTrigger id="commissionClientType">
-                <SelectValue placeholder="Select Client Type" />
-              </SelectTrigger>
-              <SelectContent>
-                {clientTypes.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex h-full flex-col justify-end gap-2">
-            <FieldLabel htmlFor="commissionClient" required>
-              Client Name
-            </FieldLabel>
-            <Select
-              value={draft.clientNo}
-              onValueChange={chooseClient}
-              disabled={!draft.clientType}
-            >
-              <SelectTrigger id="commissionClient">
-                <SelectValue
-                  placeholder={
-                    draft.clientType
-                      ? "Select Client"
-                      : "Select a client type first"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {clientsOfType.map((client) => (
-                  <SelectItem key={client.clientNo} value={client.clientNo}>
-                    {client.clientName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* A case file, or a period - never both. Which one is asked
-              for is the whole difference between the two subcategories. */}
-          {isSpecific ? (
-            <>
+            {/* Opened from an employee's record, that employee is filled in to
+                start with - but only to start with. Commission is earned by
+                whoever brought in the client or the case, which can be anyone
+                in the office, so the name stays open to change. */}
             <div className="flex h-full flex-col justify-end gap-2">
-              <FieldLabel htmlFor="caseFileNo" required>
-                Case File Number
+              <FieldLabel htmlFor="paidTo" required>
+                Employee Name
               </FieldLabel>
-              <Select value={draft.caseFileNo} onValueChange={chooseCaseFile}>
-                <SelectTrigger id="caseFileNo">
-                  <SelectValue placeholder="Select Case File" />
+              <SearchableSelect
+                id="paidTo"
+                value={draft.paidTo}
+                onValueChange={choosePaidTo}
+                options={beneficiaryOptions}
+                placeholder="Select Employee"
+                searchPlaceholder="Search employees..."
+              />
+            </div>
+
+            {/* Which of the two kinds this is. It decides every question
+                below it, so nothing is shown until it has been answered. */}
+            <div className="flex h-full flex-col justify-end gap-2">
+              <FieldLabel htmlFor="commissionSubcategory" required>
+                Commission Type
+              </FieldLabel>
+              <Select
+                value={draft.subcategory}
+                onValueChange={(value) => setField("subcategory", value)}
+              >
+                <SelectTrigger id="commissionSubcategory">
+                  <SelectValue placeholder="Please Select" />
                 </SelectTrigger>
                 <SelectContent>
-                  {clientLinkedCases.map((file) => (
-                    <SelectItem key={file.fileNo} value={file.fileNo}>
-                      {file.fileNo} - {file.opponent}
+                  {subcategoriesOf(draft.expenseType, draft.category).map(
+                    (sub) => (
+                      <SelectItem key={sub} value={sub}>
+                        {sub}
+                      </SelectItem>
+                    )
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </Group>
+
+        {draft.subcategory && (
+        <>
+        <Group
+          title={
+            isInvoiceLinked
+              ? "Invoice-Linked Commission Details"
+              : "Fixed Commission Details"
+          }
+        >
+          {/* Whose fees the commission runs on. */}
+          <Row>
+            <Field id="commissionClientType" label="Client Type" required>
+              <Select value={draft.clientType} onValueChange={chooseClientType}>
+                <SelectTrigger id="commissionClientType">
+                  <SelectValue placeholder="Select Client Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clientTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </Field>
 
-            {/* The invoice the commission is calculated from: only this
-                client's legal-fees invoices on this file are offered. One not
-                yet paid in full is shown - so it is clear it exists - but
-                cannot be chosen, because commission is earned only on fees the
-                client has actually paid. */}
-            <div className="flex h-full flex-col justify-end gap-2">
-              <FieldLabel htmlFor="commissionInvoice" required>
-                Invoice Number
-              </FieldLabel>
+            <Field id="commissionClient" label="Client Name" required>
               <Select
-                value={draft.invoiceNo}
-                onValueChange={chooseInvoice}
-                disabled={
-                  !draft.clientNo ||
-                  !draft.caseFileNo ||
-                  fileInvoices.length === 0
-                }
+                value={draft.clientNo}
+                onValueChange={chooseClient}
+                disabled={!draft.clientType}
               >
-                <SelectTrigger id="commissionInvoice">
+                <SelectTrigger id="commissionClient">
                   <SelectValue
                     placeholder={
-                      !draft.clientNo || !draft.caseFileNo
-                        ? "Select a case file first"
-                        : fileInvoices.length === 0
-                          ? "No legal-fees invoice on this file"
-                          : "Select Invoice"
+                      draft.clientType
+                        ? "Select Client"
+                        : "Select a client type first"
                     }
                   />
                 </SelectTrigger>
                 <SelectContent>
-                  {fileInvoices.map((invoice) => {
-                    const paidInFull = isFullyPaid(invoice);
-                    return (
-                      <SelectItem
-                        key={invoice.invoiceNo}
-                        value={invoice.invoiceNo}
-                        disabled={!paidInFull}
-                      >
-                        {invoice.invoiceNo} &mdash; {money(invoice.legalFees)}{" "}
-                        before VAT
-                        {!paidInFull && " · " + invoice.status}
-                      </SelectItem>
-                    );
-                  })}
+                  {clientsOfType.map((client) => (
+                    <SelectItem key={client.clientNo} value={client.clientNo}>
+                      {client.clientName}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-            </div>
-            </>
-          ) : (
-            <>
-              <div className="flex h-full flex-col justify-end gap-2">
-                <FieldLabel htmlFor="periodFrom" required>
-                  Period From
-                </FieldLabel>
+            </Field>
+
+            {isInvoiceLinked ? (
+              /* The invoice the commission is calculated from: only this
+                 client's legal-fees invoices are offered. One not yet paid in
+                 full is shown - so it is clear it exists - but cannot be
+                 chosen, because commission is earned only on fees the client
+                 has actually paid. */
+              <Field id="commissionInvoice" label="Invoice No." required>
+                <Select
+                  value={draft.invoiceNo}
+                  onValueChange={chooseInvoice}
+                  disabled={!draft.clientNo || clientInvoices.length === 0}
+                >
+                  <SelectTrigger id="commissionInvoice">
+                    {/* Only the number once it is chosen: the fees beside it
+                        help pick from the list, but repeating them in the box
+                        says twice what the field below already says once. */}
+                    {draft.invoiceNo ? (
+                      <SelectValue>{draft.invoiceNo}</SelectValue>
+                    ) : (
+                      <SelectValue
+                        placeholder={
+                          !draft.clientNo
+                            ? "Select a client first"
+                            : clientInvoices.length === 0
+                              ? "No legal-fees invoice for this client"
+                              : "Select Invoice"
+                        }
+                      />
+                    )}
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clientInvoices.map((row) => {
+                      const paidInFull = isFullyPaid(row);
+                      return (
+                        <SelectItem
+                          key={row.invoiceNo}
+                          value={row.invoiceNo}
+                          disabled={!paidInFull}
+                        >
+                          {row.invoiceNo} &mdash; {money(row.legalFees)} before
+                          VAT
+                          {!paidInFull && " \u00b7 " + row.status}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </Field>
+            ) : (
+              <Field
+                id="periodFrom"
+                label="Period From"
+                required
+                note="The period applies to paid invoices, not issued ones - whenever the client's payment was confirmed."
+              >
                 <Input
                   id="periodFrom"
                   type="date"
@@ -756,12 +1115,60 @@ export default function CommissionForm({
                   max={draft.periodTo || undefined}
                   onChange={(e) => setField("periodFrom", e.target.value)}
                 />
-              </div>
+              </Field>
+            )}
+          </Row>
 
-              <div className="flex h-full flex-col justify-end gap-2">
-                <FieldLabel htmlFor="periodTo" required>
-                  Period To
-                </FieldLabel>
+          {isInvoiceLinked && (
+            <>
+            {/* Facts about the invoice, read back rather than asked for. */}
+            <Row>
+              <Locked
+                id="commissionInvoiceDate"
+                label="Invoice Date"
+                value={formatDate(invoice?.date)}
+              />
+              <Locked
+                id="commissionPaymentStatus"
+                label="Payment Status"
+                value={invoice?.status || ""}
+                highlight={Boolean(invoice) && isFullyPaid(invoice)}
+              />
+              <Locked
+                id="commissionPaidDate"
+                label="Payment Date"
+                value={formatDate(invoice?.paidDate)}
+              />
+            </Row>
+            <Note>
+              Commission applies only to an invoice whose payment by the client
+              to the firm has been confirmed. VAT and disbursements are
+              excluded.
+            </Note>
+            </>
+          )}
+
+          {/* The whole calculation on one row, so the amount is never read
+              apart from the two numbers it came from. */}
+          <Row>
+            {/* A fixed commission does not show the fees it runs on: they are
+                every invoice paid inside the period rather than one named
+                sum, so a single figure beside the dates would read as a total
+                the office could check, which it is not. */}
+            {isInvoiceLinked ? (
+              <Locked
+                id="commissionFees"
+                label="Eligible Paid Legal Fees Before VAT (OMR)"
+                value={money(fees)}
+                note="Only the legal fees stated on the invoice."
+              />
+            ) : (
+              <Field
+                id="periodTo"
+                label="Period To"
+                required
+                note="The period applies to paid invoices, not issued ones - whenever the client's payment was confirmed."
+              >
                 <Input
                   id="periodTo"
                   type="date"
@@ -769,130 +1176,61 @@ export default function CommissionForm({
                   min={draft.periodFrom || undefined}
                   onChange={(e) => setField("periodTo", e.target.value)}
                 />
-              </div>
-            </>
-          )}
-        </div>
+              </Field>
+            )}
 
-        {/* Who is paid, and how much of the fees they are paid. */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-          <div className="flex h-full flex-col justify-end gap-2">
-            <FieldLabel htmlFor="classification" required>
-              Classification of Paid To
-            </FieldLabel>
-            <Select
-              value={draft.classification}
-              onValueChange={chooseClassification}
+            <Field
+              id="commissionRate"
+              label="Commission Percentage (Before VAT)"
+              required
             >
-              <SelectTrigger id="classification">
-                <SelectValue placeholder="Select Classification" />
-              </SelectTrigger>
-              <SelectContent>
-                {offeredClassifications().map((group) => {
-                  const Icon = group.icon;
-                  return (
-                    <SelectItem key={group.key} value={group.key}>
-                      <span className="inline-flex items-center gap-2">
-                        <Icon className="h-4 w-4 opacity-70" />
-                        {group.key}
-                      </span>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex h-full flex-col justify-end gap-2">
-            <FieldLabel htmlFor="paidTo" required>
-              Paid To (Beneficiary)
-            </FieldLabel>
-            <Select
-              value={draft.paidTo}
-              onValueChange={(value) => setField("paidTo", value)}
-              disabled={!draft.classification}
-            >
-              <SelectTrigger id="paidTo">
-                <SelectValue
-                  placeholder={
-                    draft.classification
-                      ? "Select Beneficiary"
-                      : "Select a classification first"
-                  }
+              <div className="relative">
+                <Input
+                  id="commissionRate"
+                  inputMode="decimal"
+                  value={draft.rate}
+                  onChange={(e) => setField("rate", asRate(e.target.value))}
+                  placeholder="0"
+                  className="pr-8"
                 />
-              </SelectTrigger>
-              <SelectContent>
-                {peopleIn(draft.classification).map((person) => (
-                  <SelectItem key={person.id} value={person.name}>
-                    {person.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 select-none text-sm text-muted-foreground"
+                >
+                  %
+                </span>
+              </div>
+            </Field>
 
-          <div className="flex h-full flex-col justify-end gap-2">
-            <FieldLabel htmlFor="commissionRate" required>
-              Commission Percentage (Before VAT)
-            </FieldLabel>
-            <div className="relative">
-              <Input
-                id="commissionRate"
-                inputMode="decimal"
-                value={draft.rate}
-                onChange={(e) =>
-                  setField("rate", e.target.value.replace(/[^\d.]/g, ""))
-                }
-                placeholder="0"
-                className="pr-8"
-              />
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 select-none text-sm text-muted-foreground"
-              >
-                %
-              </span>
-            </div>
-          </div>
-
-          {/* Worked out, never typed: the fees the client has actually paid
-              in the period, times the percentage beside it. */}
-          <div className="flex h-full flex-col justify-end gap-2">
-            <FieldLabel htmlFor="commissionAmount">
-              Commission Amount (OMR)
-            </FieldLabel>
-            <Input
+            {/* Worked out, never typed: a figure that could be typed could be
+                typed wrong. */}
+            <Locked
               id="commissionAmount"
-              readOnly
-              tabIndex={-1}
-              className="cursor-default bg-locked text-muted-foreground"
+              label="Commission Amount (OMR)"
               value={money(commission)}
+              highlight={commission > 0}
+              note="Calculated automatically."
             />
-          </div>
-        </div>
+          </Row>
+        </Group>
 
-        {/* Not a cell of the grid above: on its own it needs no stretching
-            to a row's height, which would only hold it off the bottom. */}
-        <div className="space-y-2">
-          <FieldLabel htmlFor="commissionNotes">Notes</FieldLabel>
-          <Textarea
+
+        <Group title="Employee Comment">
+          <Counted
             id="commissionNotes"
             rows={3}
+            limit={500}
             value={draft.notes}
-            onChange={(e) => setField("notes", e.target.value)}
-            placeholder="Enter any notes (optional)"
+            onChange={(value) => setField("notes", value)}
+            placeholder="Say what this commission is for (optional)"
           />
-        </div>
+        </Group>
         </>
         )}
         </>
         )}
 
-        {/* The rule is not written on the form - it is what the Commission
-            Amount field above is worked out by:
-            Legal Fees (Before VAT) x Commission Percentage = Commission Amount,
-            counted only on fees the client has actually paid. */}
-        {/* A refused commission says why, and stays as it is. */}
+        {/* A commission already refused says why, and stays as it is. */}
         {stage === "payment" && refused && (
           <div className="space-y-2">
             <FieldLabel htmlFor="commissionRefused">
@@ -909,56 +1247,27 @@ export default function CommissionForm({
           </div>
         )}
 
-        {stage === "payment" && rejecting && (
-          <div className="space-y-2">
-            <FieldLabel htmlFor="commissionReason" required>
-              Reason for Rejection
-            </FieldLabel>
-            <Textarea
-              id="commissionReason"
-              rows={2}
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="Say why this commission is refused"
-            />
-          </div>
-        )}
-
         <div className="flex flex-wrap justify-end gap-2">
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
 
-          {stage === "payment" && !refused && onReject && (
-            rejecting ? (
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={reject}
-                disabled={!reason.trim()}
-              >
-                Confirm Rejection
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                className="border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
-                onClick={() => setRejecting(true)}
-              >
-                Reject Request
-              </Button>
-            )
-          )}
-
+          {/* One button, whose name is whatever was decided: the decision is
+              made in the radio group above, so a second place to make it
+              could only disagree with the first. */}
           {stage === "payment" ? (
             !refused && (
               <Button
                 type="button"
+                variant={refusing ? "destructive" : "default"}
                 onClick={save}
-                disabled={!canPay || rejecting}
+                disabled={!canDecide}
               >
-                Confirm Commission Payment
+                {refusing
+                  ? "Confirm Rejection"
+                  : payment.decision
+                    ? "Approve and Disburse"
+                    : "Select a Decision"}
               </Button>
             )
           ) : (

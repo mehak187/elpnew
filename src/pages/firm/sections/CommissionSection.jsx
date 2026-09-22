@@ -6,7 +6,7 @@ import {
   feesFor,
   commissionOn,
   monthAndYear,
-  SPECIFIC_COMMISSION,
+  INVOICE_LINKED_COMMISSION,
 } from "../commissionData";
 
 const moneyValue = (amount) =>
@@ -70,14 +70,14 @@ export default function CommissionSection() {
         ]
           .filter(Boolean)
           .join(" - "),
-      // A specific commission is worked out from one invoice on one file, so
+      // An invoice-linked commission is worked out from one paid invoice, so
       // both are named under it and the figure can be traced. A fixed one runs
       // over a period - which the Period column already shows - and has no file
       // or invoice to name.
       render: (value, row) => (
         <div>
           <p>{value}</p>
-          {row.type === SPECIFIC_COMMISSION && (
+          {row.type === INVOICE_LINKED_COMMISSION && (
             <>
               <p className="text-xs text-muted-foreground">
                 File No.: {row.caseFileNo || "-"}
