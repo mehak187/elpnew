@@ -514,7 +514,22 @@ export default function EmployeeForm({ self }) {
   const orderedDocuments = [...documents].sort(
     (a, b) => String(b.uploadedAt).localeCompare(String(a.uploadedAt)) || b.id - a.id
   );
-  const shownDocuments = smartSearch(orderedDocuments, docQuery);
+  // The number is fixed by when the paper was filed, not by where it sits in
+  // the list, so it survives the papers needing attention being lifted up.
+  const serialOf = new Map(
+    orderedDocuments.map((document, index) => [
+      document.id,
+      orderedDocuments.length - index,
+    ])
+  );
+  // Papers that need chasing come first - expired, then expiring soon - and
+  // everything else keeps its newest-first order under them.
+  const URGENCY = { Expired: 0, "Expiring Soon": 1 };
+  const urgency = (document) => URGENCY[documentStatus(document)] ?? 2;
+  const shownDocuments = smartSearch(
+    [...orderedDocuments].sort((a, b) => urgency(a) - urgency(b)),
+    docQuery
+  );
 
   // Which papers this employee can file at all, and what decides it.
   const isOmani =
@@ -1327,12 +1342,12 @@ export default function EmployeeForm({ self }) {
                             <Th width="8%">Serial No.</Th>
                             <Th width="16%">Upload Date</Th>
                             <Th width="26%">Document Type &amp; Attachment</Th>
-                            <Th width="16%">Expiry Date &amp; Status</Th>
+                            <Th width="16%">Expiry Date</Th>
                             <Th width="26%">Notes</Th>
                             <Th width="8%">Delete</Th>
                           </HeadRow>
                           <tbody>
-                            {shownDocuments.map((document, index) => {
+                            {shownDocuments.map((document) => {
                               const Icon = fileIcon(document.fileName);
                               const status = documentStatus(document);
                               return (
@@ -1343,7 +1358,7 @@ export default function EmployeeForm({ self }) {
                                   <Td className="align-top">
                                     {readOnly ? (
                                       <span className="font-medium text-primary">
-                                        {shownDocuments.length - index}
+                                        {serialOf.get(document.id)}
                                       </span>
                                     ) : (
                                       <button
@@ -1351,8 +1366,27 @@ export default function EmployeeForm({ self }) {
                                         onClick={() => editDocument(document)}
                                         className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                                       >
-                                        {shownDocuments.length - index}
+                                        {serialOf.get(document.id)}
                                       </button>
+                                    )}
+                                    {/* Only a paper that needs chasing says so;
+                                        an active one is the normal case and
+                                        carries no badge. */}
+                                    {status && status !== "Active" && (
+                                      <span
+                                        className={cn(
+                                          "mt-1 flex w-fit items-center gap-1.5 whitespace-nowrap text-xs font-semibold",
+                                          status === "Expired"
+                                            ? "text-destructive"
+                                            : "text-amber-600"
+                                        )}
+                                      >
+                                        <span
+                                          aria-hidden="true"
+                                          className="h-2 w-2 shrink-0 rounded-full bg-current"
+                                        />
+                                        {status}
+                                      </span>
                                     )}
                                   </Td>
 
@@ -1381,28 +1415,13 @@ export default function EmployeeForm({ self }) {
                                     </button>
                                   </Td>
 
-                                  {/* When it runs out, and whether it has. */}
+                                  {/* When it runs out. Whether it has is
+                                      said under the serial number. */}
                                   <Td className="whitespace-nowrap align-top">
                                     {document.expiry ? (
-                                      <>
-                                        <span className="block">
-                                          {formatDate(document.expiry)}
-                                        </span>
-                                        <span
-                                          className={cn(
-                                            "mt-1 inline-flex items-center gap-1.5 text-xs font-semibold",
-                                            status === "Active"
-                                              ? "text-green-700"
-                                              : "text-destructive"
-                                          )}
-                                        >
-                                          <span
-                                            aria-hidden="true"
-                                            className="h-2 w-2 shrink-0 rounded-full bg-current"
-                                          />
-                                          {status}
-                                        </span>
-                                      </>
+                                      <span className="block">
+                                        {formatDate(document.expiry)}
+                                      </span>
                                     ) : (
                                       <span className="text-muted-foreground">
                                         -

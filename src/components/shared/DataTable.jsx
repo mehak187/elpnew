@@ -102,6 +102,9 @@ export default function DataTable({
   // The data already arrives in the order it should be read in (a schedule,
   // or a list sorted by its own date), so the table leaves it alone.
   keepOrder = false,
+  // No lines between rows or columns until the pointer is over them: the row
+  // under it is tinted and ruled, and the cell under it is framed.
+  hoverLines = false,
 }) {
   const [searchValue, setSearchValue] = useState("");
   const [columnFilters, setColumnFilters] = useState({});
@@ -334,7 +337,7 @@ export default function DataTable({
                   here so the pages that use this table cannot drift apart.
                   The outer edge is the card's own rounded border - a second,
                   square one inside it shows through at the corners. */}
-              <Table>
+              <Table className={cn(hoverLines && "table-hover-lines")}>
                 <TableHeader>
                   <TableRow className="border-b border-container-border bg-table-head hover:bg-table-head">
                     {columns.map((column) => (
@@ -413,7 +416,9 @@ export default function DataTable({
                       <TableRow
                         key={row.id || rowIndex}
                         className={cn(
-                          "border-b border-container-border align-top transition-colors last:border-0 hover:bg-table-head",
+                          hoverLines
+                            ? "border-0 align-top"
+                            : "border-b border-container-border align-top transition-colors last:border-0 hover:bg-table-head",
                           onRowClick && "cursor-pointer"
                         )}
                         onClick={() => onRowClick && onRowClick(row)}

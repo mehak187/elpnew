@@ -760,3 +760,24 @@
     cursor: pointer;
   }
 }
+/*
+ * A table ruled only where the pointer is.
+ *
+ * At rest the body has no lines at all. The row under the pointer is tinted
+ * and ruled above and below; the cell under it is framed on all four sides.
+ * Drawn as inset shadows rather than borders, so nothing moves by a pixel
+ * when the lines appear.
+ */
+.table-hover-lines tbody td {
+  transition: background-color 120ms, box-shadow 120ms;
+}
+.table-hover-lines tbody tr:hover > td {
+  background-color: var(--table-head);
+  box-shadow:
+    inset 0 1px 0 var(--field-border),
+    inset 0 -1px 0 var(--field-border);
+}
+.table-hover-lines tbody tr:hover > td:hover {
+  background-color: var(--secondary);
+  box-shadow: inset 0 0 0 1px var(--field-border);
+}

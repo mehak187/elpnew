@@ -14,16 +14,6 @@ import {
   amount,
 } from "./employeeData";
 
-/** A fact with its heading above it, where the pair needs the room. */
-function Fact({ label, children }) {
-  return (
-    <p className="leading-tight">
-      <span className="block font-semibold">{label}</span>
-      <span className="block">{children || "-"}</span>
-    </p>
-  );
-}
-
 /** A fact with its heading beside it, where the pair fits on one line. */
 function Inline({ label, children, strong }) {
   return (
@@ -67,38 +57,31 @@ export default function EmployeesList() {
       ),
     },
     {
+      // Who they are and where they work, read together: one person, one cell.
       key: "name",
       header: "Employee Name",
-      subHeader: "Nationality • Gender",
-      width: "18%",
+      subHeader: "(Nationality • Gender + Joining Date + Branch)",
+      width: "32%",
       exportValue: (row) =>
-        row.name + " (" + row.nationality + " · " + row.gender + ")",
+        row.name +
+        " (" +
+        row.nationality +
+        " · " +
+        row.gender +
+        ") · " +
+        new Date(row.dateOfJoining).toLocaleDateString("en-GB") +
+        " · " +
+        row.branch,
       render: (value, row) => (
-        <div>
+        <div className="space-y-1 text-sm">
           <span className="block font-semibold">{value}</span>
           <span className="block text-xs text-muted-foreground">
             {row.nationality} &bull; {row.gender}
           </span>
-        </div>
-      ),
-    },
-    {
-      key: "dateOfJoining",
-      header: "Employment Details",
-      subHeader: "(Joining Date + Branch)",
-      width: "18%",
-      exportValue: (row) =>
-        new Date(row.dateOfJoining).toLocaleDateString("en-GB") +
-        " · " +
-        row.branch,
-      render: (_, row) => (
-        <div className="space-y-2 text-sm">
-          <Fact label="Date of Joining:">
+          <Inline label="Date of Joining:">
             {new Date(row.dateOfJoining).toLocaleDateString("en-GB")}
-          </Fact>
-          <div className="border-t pt-2">
-            <Fact label="Branch:">{row.branch}</Fact>
-          </div>
+          </Inline>
+          <Inline label="Branch:">{row.branch}</Inline>
         </div>
       ),
     },
@@ -106,7 +89,7 @@ export default function EmployeesList() {
       key: "department",
       header: "Job Details",
       subHeader: "(Department + Designation + Role)",
-      width: "22%",
+      width: "26%",
       exportValue: (row) =>
         [row.department, row.designation, row.role].join(" · "),
       render: (_, row) => (
@@ -176,6 +159,7 @@ export default function EmployeesList() {
             searchPlaceholder="Search employee by name, ID, department..."
             enableColumnSearch={false}
             enableSorting
+            hoverLines
             onAdd={() => navigate("/employees/create")}
             addLabel="Add Employee"
             currentPage={currentPage}

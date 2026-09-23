@@ -1,3 +1,4 @@
+import { expiryState, EXPIRY_LABEL } from "@/lib/expiry";
 /**
  * The people the firm employs.
  *
@@ -83,15 +84,16 @@ export function documentTypesFor(employee) {
 }
 
 /**
- * Where a document stands: Active until the day it expires, Expired after.
+ * Where a document stands: Active, Expiring Soon inside the warning window,
+ * Expired after its date.
  *
  * Worked out from the date every time rather than stored, so a paper cannot
- * claim to be valid on a day its own expiry date has passed.
+ * claim to be valid on a day its own expiry date has passed. The window is
+ * the one every other paper in the system is chased by.
  */
 export function documentStatus(document) {
-  if (!document?.expiry) return "";
-  const today = new Date().toISOString().slice(0, 10);
-  return document.expiry >= today ? "Active" : "Expired";
+  const state = expiryState(document?.expiry);
+  return state === "none" ? "" : EXPIRY_LABEL[state];
 }
 
 /** "2026-08-26T10:30" as "26/08/2026  10:30 AM". */
