@@ -14,14 +14,24 @@ export const ENTITLEMENT_CATEGORY = "Allowance Request";
 export const ENTITLEMENT_SUBCATEGORY = {
   leaveEncashment: "Leave Encashment Request",
   overtime: "Overtime Pay Request",
-  medical: "Medical Allowance",
-  transport: "Transport Allowance Request",
+  medical: "Medical Allowance Request",
+  transport: "Transport Allowance",
   assignment: "Assignment Allowance Request",
   travel: "Travel Allowance Request",
   airTicket: "Air Ticket Allowance Request",
   notice: "Notice Pay Request",
   endOfService: "End of Service Request",
 };
+
+/**
+ * The two kinds of transport claim.
+ *
+ * General is travel on the firm's ordinary business, and needs only a sum.
+ * Court-linked is travel for a case, so it names the file and the day - which
+ * is what lets the trip be read back against the case it was for.
+ */
+export const TRANSPORT_GENERAL = "general";
+export const TRANSPORT_COURT = "court";
 
 /** Where a request stands. */
 export const ENTITLEMENT_PENDING = "Pending";
@@ -43,15 +53,14 @@ export const HOURS_IN_DAY = 8;
 /**
  * What each tab asks for beyond the classification it shares with the rest.
  *
- * "leaveDays" counts days off a leave balance, "hours" counts overtime,
- * "medical" counts what a bill cost less whatever the insurer met, and
- * everything else is a sum the employee names. The amount follows from the
+ * "leaveDays" counts days off a leave balance, "hours" counts overtime, and
+ * everything else - medical allowance included - is a sum the employee
+ * names. The amount follows from the
  * choice, so no tab asks for a figure it can work out.
  */
 export const ENTITLEMENT_MODE = {
   leaveEncashment: "leaveDays",
   overtime: "hours",
-  medical: "medical",
 };
 
 export const modeOf = (kind) => ENTITLEMENT_MODE[kind] || "amount";
@@ -78,17 +87,6 @@ export const encashmentAmount = (salary, days) =>
  */
 export const overtimeAmount = (salary, hours) =>
   Number((hourlyRate(salary) * Number(hours || 0)).toFixed(3));
-
-/**
- * What the firm is actually being asked for on a medical bill.
- *
- * The whole cost less whatever the insurer has already met: the firm meets
- * the part nobody else did. Never below nothing - an insurer paying more than
- * the bill is a refund, not a claim on the firm - and worked out rather than
- * typed, so the three figures on the form cannot contradict each other.
- */
-export const medicalAmount = (total, insured) =>
-  Number(Math.max(Number(total || 0) - Number(insured || 0), 0).toFixed(3));
 
 /** Everything one employee has claimed, newest first. */
 export const entitlementsFor = (records, name, kind) =>
@@ -266,8 +264,8 @@ export const initialEntitlements = [
 export const REQUEST_PREFIX = {
   leaveEncashment: "LER",
   overtime: "OTR",
-  medical: "MED",
-  transport: "TAR",
+  medical: "MAR",
+  transport: "TRA",
   assignment: "ASR",
   travel: "TVR",
   airTicket: "ATR",

@@ -38,6 +38,7 @@ import {
   Lock,
   Save,
   Clock,
+  Banknote,
   CalendarDays,
   User,
   Landmark,
@@ -57,6 +58,8 @@ import { PAYMENT_YEARS, SALARY_MONTHS } from "../payrollData";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
 import {
   ENTITLEMENT_EXPENSE_TYPE,
+  TRANSPORT_GENERAL,
+  TRANSPORT_COURT,
   ENTITLEMENT_CATEGORY,
   ENTITLEMENT_SUBCATEGORY,
   ENTITLEMENT_PENDING,
@@ -65,7 +68,6 @@ import {
   ENTITLEMENT_STATUS_CHIP,
   encashmentAmount,
   overtimeAmount,
-  medicalAmount,
   hourlyRate,
   nextKindRequestNo,
   entitlementsFor,
@@ -95,17 +97,13 @@ const emptyDraft = () => ({
   days: "",
   amount: "",
   reason: "",
-  // Overtime is claimed as the shift that was worked rather than as a number
-  // of hours: the hours follow from the clock, and a typed total can disagree
-  // with the times beside it.
   // Overtime is claimed as a month's hours, at the ordinary hourly rate.
   hours: "",
-  // A medical claim is made from the bill: what it cost, what the insurer
-  // met, and the invoice that proves both.
-  treatmentDate: todayIso(),
-  invoiceNo: "",
-  totalCost: "",
-  insuranceCovered: "",
+  // A transport claim is general, or made for a case - in which case it
+  // names the file and the day of the trip.
+  transportType: TRANSPORT_GENERAL,
+  fileNo: "",
+  travelDate: "",
 });
 
 const emptyPayment = () => ({
@@ -115,6 +113,9 @@ const emptyPayment = () => ({
   // for `approved` directly.
   approvedDays: "",
   approvedHours: "",
+  // What happened on the case the trip was for, recorded as the claim is paid.
+  updateDate: todayIso(),
+  updateText: "",
   method: "",
   // One choice for where it leaves from: the account carries its bank.
   bankAccount: "",
@@ -229,6 +230,9 @@ export default function EntitlementTab({
     setPayment((prev) => ({ ...prev, [name]: value }));
 
   const mode = modeOf(kind);
+  // The allowances whose sheets put the sum asked for beside the decision
+  // and at the head of the summary, rather than an account or a type.
+  const namesAmount = kind === "medical" || kind === "transport";
   const open = records.find((row) => row.id === openId) || null;
   const settled = open?.status === ENTITLEMENT_APPROVED;
   const refused = open?.status === ENTITLEMENT_REJECTED;
@@ -272,25 +276,22 @@ export default function EntitlementTab({
       ? encashmentAmount(employee?.salary, days)
       : mode === "hours"
         ? overtimeAmount(employee?.salary, workedHours)
-        : mode === "medical"
-          ? medicalAmount(draft.totalCost, draft.insuranceCovered)
-          : Number(draft.amount || 0);
-
-  // An insurer meeting more than the bill is a refund, not a claim, and the
-  // form says so rather than quietly showing nothing owed.
-  const overInsured =
-    mode === "medical" &&
-    Number(draft.totalCost || 0) > 0 &&
-    Number(draft.insuranceCovered || 0) > Number(draft.totalCost || 0);
+        : Number(draft.amount || 0);
 
   const counted =
     mode === "leaveDays"
       ? days > 0
       : mode === "hours"
         ? workedHours > 0
-        : mode === "medical"
-          ? amount > 0
-          : Number(draft.amount) > 0;
+        : Number(draft.amount) > 0;
+
+  // A court-linked trip names its file and its day; a general one does not.
+  const courtLinked =
+    kind === "transport" && draft.transportType === TRANSPORT_COURT;
+
+  // Transport asks for a comment but does not insist on one; every other
+  // request has to say why it is being made.
+  const reasonRequired = kind !== "transport";
 
   const canSubmit =
     draft.requestDate &&
@@ -298,9 +299,8 @@ export default function EntitlementTab({
     !exceeded &&
     (mode !== "hours" ||
       (draft.year && draft.month && workedHours > 0)) &&
-    (mode !== "medical" ||
-      (draft.treatmentDate && draft.invoiceNo.trim() && !overInsured)) &&
-    draft.reason.trim();
+    (!courtLinked || (draft.fileNo.trim() && draft.travelDate)) &&
+    (!reasonRequired || draft.reason.trim());
 
   // A full approval grants what was asked for; only a partial one names a
   // figure of its own, and a refusal grants nothing at all.
@@ -380,7 +380,9 @@ export default function EntitlementTab({
     payment.method &&
     payment.bankAccount &&
     payment.paymentDate &&
-    payment.reference.trim();
+    payment.reference.trim() &&
+    // A court-linked trip is paid together with what happened on the case.
+    (!courtLinked || (payment.updateDate && payment.updateText.trim()));
 
   const close = () => {
     setDraft(emptyDraft());
@@ -407,12 +409,11 @@ export default function EntitlementTab({
       leaveType: draft.leaveType,
       days,
       hours: workedHours,
-      treatmentDate: draft.treatmentDate,
-      invoiceNo: draft.invoiceNo.trim(),
-      totalCost: Number(draft.totalCost || 0),
-      insuranceCovered: Number(draft.insuranceCovered || 0),
       amount,
       reason: draft.reason.trim(),
+      transportType: kind === "transport" ? draft.transportType : undefined,
+      fileNo: courtLinked ? draft.fileNo.trim() : "",
+      travelDate: courtLinked ? draft.travelDate : "",
     };
 
     if (open) {
@@ -463,6 +464,8 @@ export default function EntitlementTab({
               paymentDate: payment.paymentDate,
               reference: payment.reference.trim(),
               receipt: receipt?.name || "",
+              fileUpdateDate: courtLinked ? payment.updateDate : undefined,
+              fileUpdate: courtLinked ? payment.updateText.trim() : undefined,
             }
           : row
       )
@@ -504,6 +507,9 @@ export default function EntitlementTab({
       leaveType: record.leaveType || "Annual Leave",
       days: String(record.days || ""),
       hours: String(record.hours || ""),
+      transportType: record.transportType || TRANSPORT_GENERAL,
+      fileNo: record.fileNo || "",
+      travelDate: record.travelDate || "",
       amount: String(record.amount || ""),
       reason: record.reason || "",
     });
@@ -525,6 +531,162 @@ export default function EntitlementTab({
       : modeOf(record.kind) === "hours"
         ? record.hours + " Hours"
         : "-";
+
+  /**
+   * The decision itself: when it was given, what it grants, and why.
+   *
+   * One row of four - the date, what was granted in the request's own unit,
+   * the money that comes to, and the comment - the way every one of the
+   * request sheets draws it. A refusal or a return grants nothing, so it has
+   * no figures to show and the comment takes the whole row.
+   */
+  const decisionFields = (
+    <div className="form-grid">
+      {!refusing && (
+        <>
+                  <Settled
+                    id="ent-decision-date"
+                    label="Decision Date"
+                    value={formatDate(decidedOn)}
+                  />
+
+                  {namesAmount && (
+                    <Settled
+                      id="ent-requested"
+                      label="Requested Amount (OMR)"
+                      value={amountValue(amount)}
+                    />
+                  )}
+
+                  {/* A partial approval is management cutting the count, so
+                      that is the field it opens. A full approval grants what
+                      was asked for and has nothing to type. */}
+                  {approvedDays !== null &&
+                    (amending ? (
+                      <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
+                        <FieldLabel htmlFor="ent-approved-days" required>
+                          Days Requested for Encashment
+                        </FieldLabel>
+                        <Input
+                          id="ent-approved-days"
+                          inputMode="numeric"
+                          value={payment.approvedDays}
+                          onChange={(e) =>
+                            setPay("approvedDays", e.target.value.replace(/\D/g, ""))
+                          }
+                          placeholder="0"
+                          className={cn(!grantIsSound && "border-destructive")}
+                        />
+                        {!grantIsSound && (
+                          <p role="alert" className="text-xs font-semibold text-destructive">
+                            {"Between 1 and " + days + " days"}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <Settled
+                        id="ent-approved-days"
+                        label="Days Requested for Encashment"
+                        value={approvedDays + " Days"}
+                      />
+                    ))}
+
+                  {approvedHours !== null &&
+                    (amending ? (
+                      <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
+                        <FieldLabel htmlFor="ent-approved-hours" required>
+                          Approved Overtime Hours
+                        </FieldLabel>
+                        <Input
+                          id="ent-approved-hours"
+                          inputMode="decimal"
+                          value={payment.approvedHours}
+                          onChange={(e) =>
+                            setPay("approvedHours", e.target.value.replace(/[^\d.]/g, ""))
+                          }
+                          placeholder="0"
+                          className={cn(!grantIsSound && "border-destructive")}
+                        />
+                        {!grantIsSound && (
+                          <p role="alert" className="text-xs font-semibold text-destructive">
+                            {"Between 0 and " + workedHours + " hours"}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <Settled
+                        id="ent-approved-hours"
+                        label="Approved Overtime Hours"
+                        value={approvedHours + " Hours"}
+                      />
+                    ))}
+
+                  {/* Worked out from whatever was granted above, except where
+                      the request is a sum in the first place. */}
+                  {amending && approvedDays === null && approvedHours === null ? (
+                    <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
+                      <FieldLabel htmlFor="ent-approved" required>
+                        Approved Amount (OMR)
+                      </FieldLabel>
+                      <Input
+                        id="ent-approved"
+                        inputMode="decimal"
+                        value={payment.approved}
+                        onChange={(e) =>
+                          setPay("approved", e.target.value.replace(/[^\d.]/g, ""))
+                        }
+                        placeholder="0.000"
+                        className={cn(!grantIsSound && "border-destructive")}
+                      />
+                    </div>
+                  ) : (
+                    <Settled
+                      id="ent-approved"
+                      label="Approved Amount (OMR)"
+                      value={amountValue(approvedAmount)}
+                    />
+                  )}
+        </>
+      )}
+
+      <div
+        className={cn(
+          "form-field flex h-full flex-col justify-end gap-2",
+          refusing ? "span-12" : "span-3"
+        )}
+      >
+        <FieldLabel htmlFor="ent-comment">
+          {returning
+            ? "What is Missing"
+            : refusing
+              ? "Reason for Rejection"
+              : "Management Comment"}
+        </FieldLabel>
+        <Textarea
+          id="ent-comment"
+          rows={refusing ? 3 : 1}
+          maxLength={NOTES_LIMIT}
+          required={refusing}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          disabled={!canDecide || settled || refused}
+          placeholder={
+            returning
+              ? "Say what the employee still has to supply"
+              : refusing
+                ? "Say why this request is refused"
+                : "Enter management comment"
+          }
+          className={cn(!refusing && "min-h-9 resize-none")}
+        />
+        {refusing && (
+          <p className="text-end text-xs text-muted-foreground">
+            {reason.length} / {NOTES_LIMIT}
+          </p>
+        )}
+      </div>
+    </div>
+  );
 
   const form = (
     <div className="space-y-6">
@@ -578,153 +740,59 @@ export default function EntitlementTab({
                   }
                 : {
                     full: "Approve the " + label.toLowerCase() + " as requested",
-                    partial: "Approve a portion of the " + label.toLowerCase(),
+                    partial:
+                      namesAmount
+                        ? "Approve an adjusted allowance amount"
+                        : "Approve a portion of the " + label.toLowerCase(),
                     completion: "Return for missing information or documents",
                     rejected: "Reject the " + label.toLowerCase() + " request",
                   }
             }
-          />
+          >
+            {kind === "medical" && decisionFields}
+          </DecisionChoice>
 
-          {/* The answer itself: when it was given, what it grants, and why.
-              A separate box from the choice above it, with room between. */}
-          <div className="space-y-4">
-            <h3 className={HEADING}>Decision</h3>
-
-            {/* A refusal grants nothing, so it has no day and no figure to
-                show - only a reason. Leaving an Approved Amount on screen
-                beside a rejection invites the question of what was approved,
-                and the answer is nothing. */}
-            {!refusing && (
-              <div className="form-grid">
-                <Settled
-                  id="ent-decision-date"
-                  label="Decision Date"
-                  value={formatDate(decidedOn)}
-                />
-
-                {/* A partial approval is management cutting the count, so
-                    that is the field it opens. A full approval grants what
-                    was asked for and has nothing to type. */}
-                {approvedDays !== null &&
-                  (amending ? (
-                    <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
-                      <FieldLabel htmlFor="ent-approved-days" required>
-                        Days Requested for Encashment
-                      </FieldLabel>
-                      <Input
-                        id="ent-approved-days"
-                        inputMode="numeric"
-                        value={payment.approvedDays}
-                        onChange={(e) =>
-                          setPay("approvedDays", e.target.value.replace(/\D/g, ""))
-                        }
-                        placeholder="0"
-                        className={cn(!grantIsSound && "border-destructive")}
-                      />
-                      {!grantIsSound && (
-                        <p role="alert" className="text-xs font-semibold text-destructive">
-                          {"Between 1 and " + days + " days"}
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <Settled
-                      id="ent-approved-days"
-                      label="Days Requested for Encashment"
-                      value={approvedDays + " Days"}
-                    />
-                  ))}
-
-                {approvedHours !== null &&
-                  (amending ? (
-                    <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
-                      <FieldLabel htmlFor="ent-approved-hours" required>
-                        Approved Overtime Hours
-                      </FieldLabel>
-                      <Input
-                        id="ent-approved-hours"
-                        inputMode="decimal"
-                        value={payment.approvedHours}
-                        onChange={(e) =>
-                          setPay("approvedHours", e.target.value.replace(/[^\d.]/g, ""))
-                        }
-                        placeholder="0"
-                        className={cn(!grantIsSound && "border-destructive")}
-                      />
-                      {!grantIsSound && (
-                        <p role="alert" className="text-xs font-semibold text-destructive">
-                          {"Between 0 and " + workedHours + " hours"}
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <Settled
-                      id="ent-approved-hours"
-                      label="Approved Overtime Hours"
-                      value={approvedHours + " Hours"}
-                    />
-                  ))}
-
-                {/* Worked out from whatever was granted above, except where
-                    the request is a sum in the first place. */}
-                {amending && approvedDays === null && approvedHours === null ? (
-                  <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
-                    <FieldLabel htmlFor="ent-approved" required>
-                      Approved Amount (OMR)
-                    </FieldLabel>
-                    <Input
-                      id="ent-approved"
-                      inputMode="decimal"
-                      value={payment.approved}
-                      onChange={(e) =>
-                        setPay("approved", e.target.value.replace(/[^\d.]/g, ""))
-                      }
-                      placeholder="0.000"
-                      className={cn(!grantIsSound && "border-destructive")}
-                    />
-                  </div>
-                ) : (
-                  <Settled
-                    id="ent-approved"
-                    label="Approved Amount (OMR)"
-                    value={amountValue(approvedAmount)}
-                  />
-                )}
-              </div>
-            )}
-
-            {/* The comment takes the whole width rather than a share of the
-                row above: it is prose, not a figure, and a box that stops
-                two thirds of the way across leaves the section looking like
-                it ran out of things to say. */}
-            <div className="space-y-2">
-              <FieldLabel htmlFor="ent-comment" required={refusing}>
-                {returning
-                  ? "What is Missing"
-                  : refusing
-                    ? "Reason for Rejection"
-                    : "Management Comment"}
-              </FieldLabel>
-              <Textarea
-                id="ent-comment"
-                rows={3}
-                maxLength={NOTES_LIMIT}
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                disabled={!canDecide || settled || refused}
-                placeholder={
-                  returning
-                    ? "Say what the employee still has to supply"
-                    : refusing
-                      ? "Say why this request is refused"
-                      : "Enter management comment"
-                }
-              />
-              <p className="text-end text-xs text-muted-foreground">
-                {reason.length} / {NOTES_LIMIT}
-              </p>
+          {kind !== "medical" && (
+            <div className="space-y-4">
+              <h3 className={HEADING}>Decision</h3>
+              {decisionFields}
             </div>
-          </div>
+          )}
+
+          {/* Where the case stands now. Only a trip made for a case has a
+              file to bring up to date, and only an approved one gets it. */}
+          {courtLinked && decision && !refusing && (
+            <div className="space-y-4">
+              <h3 className={HEADING}>File Update</h3>
+              <div className="form-grid">
+                <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
+                  <FieldLabel htmlFor="ent-update-date">Update Date</FieldLabel>
+                  <Input
+                    required
+                    id="ent-update-date"
+                    type="date"
+                    value={payment.updateDate}
+                    onChange={(e) => setPay("updateDate", e.target.value)}
+                    disabled={settled}
+                  />
+                </div>
+                <div className="form-field span-9 flex h-full flex-col justify-end gap-2">
+                  <FieldLabel htmlFor="ent-update">Update</FieldLabel>
+                  <Textarea
+                    required
+                    id="ent-update"
+                    rows={1}
+                    maxLength={NOTES_LIMIT}
+                    value={payment.updateText}
+                    onChange={(e) => setPay("updateText", e.target.value)}
+                    disabled={settled}
+                    placeholder="Enter the update on the file"
+                    className="min-h-9 resize-none"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* How the money actually reaches them. A refused request has none
               of this: there is nothing to pay, and so nothing to ask. */}
@@ -845,13 +913,24 @@ export default function EntitlementTab({
             )}
           >
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 lg:[&>*+*]:border-s">
-              <Fact icon={CalendarDays} label="Request Date">
-                {draft.requestDate ? formatDate(draft.requestDate) : "-"}
-                {attachedName && (
-                  <span className="mt-0.5 block text-primary">{attachedName}</span>
-                )}
-              </Fact>
-              {mode === "hours" ? (
+              {namesAmount && (
+                <Fact icon={FileText} label="Request No.">
+                  {requestNo}
+                </Fact>
+              )}
+              {courtLinked ? (
+                <Fact icon={FileText} label="File No.">
+                  {draft.fileNo || "-"}
+                </Fact>
+              ) : (
+                <Fact icon={CalendarDays} label="Request Date">
+                  {draft.requestDate ? formatDate(draft.requestDate) : "-"}
+                  {attachedName && (
+                    <span className="mt-0.5 block text-primary">{attachedName}</span>
+                  )}
+                </Fact>
+              )}
+              {namesAmount ? null : mode === "hours" ? (
                 <Fact icon={CalendarDays} label="Month">
                   {monthName ? monthName + " " + draft.year : "-"}
                 </Fact>
@@ -863,7 +942,15 @@ export default function EntitlementTab({
               <Fact icon={User} label="Employee Name">
                 {whose}
               </Fact>
-              {mode === "hours" ? (
+              {courtLinked ? (
+                <Fact icon={CalendarDays} label="Travel Date">
+                  {draft.travelDate ? formatDate(draft.travelDate) : "-"}
+                </Fact>
+              ) : namesAmount ? (
+                <Fact icon={Banknote} label="Requested Amount">
+                  {amountValue(amount) + " OMR"}
+                </Fact>
+              ) : mode === "hours" ? (
                 <Fact icon={Clock} label="Approved Hours">
                   {approvedHours ? approvedHours + " Hours" : "-"}
                 </Fact>
@@ -916,41 +1003,59 @@ export default function EntitlementTab({
                     value={requestNo}
                     className="min-w-0 flex-1 cursor-default"
                   />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    asChild
-                    title={
-                      receipt ? receipt.name + " attached" : "Upload a supporting document"
-                    }
-                    className={cn(
-                      "shrink-0",
-                      receipt && "border-green-600 text-green-600"
-                    )}
-                  >
-                    <label htmlFor="ent-request-file" className="cursor-pointer">
-                      {receipt ? (
-                        <FileCheck className="h-4 w-4" />
-                      ) : (
-                        <UploadIcon className="h-4 w-4" />
-                      )}
-                      <span className="sr-only">Upload a supporting document</span>
-                    </label>
-                  </Button>
-                  <Input
-                    id="ent-request-file"
-                    type="file"
-                    className="hidden"
-                    onChange={(e) => e.target.files[0] && setReceipt(e.target.files[0])}
-                  />
+                  {kind !== "transport" && (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        asChild
+                        title={
+                          receipt ? receipt.name + " attached" : "Upload a supporting document"
+                        }
+                        className={cn(
+                          "shrink-0",
+                          receipt && "border-green-600 text-green-600"
+                        )}
+                      >
+                        <label htmlFor="ent-request-file" className="cursor-pointer">
+                          {receipt ? (
+                            <FileCheck className="h-4 w-4" />
+                          ) : (
+                            <UploadIcon className="h-4 w-4" />
+                          )}
+                          <span className="sr-only">Upload a supporting document</span>
+                        </label>
+                      </Button>
+                      <Input
+                        id="ent-request-file"
+                        type="file"
+                        className="hidden"
+                        onChange={(e) => e.target.files[0] && setReceipt(e.target.files[0])}
+                      />
+                    </>
+                  )}
                 </div>
               </Field>
-              <Booked
-                id="ent-request-date"
-                label="Request Date"
-                value={formatDate(draft.requestDate)}
-              />
+              {kind === "medical" ? (
+                <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
+                  <FieldLabel htmlFor="ent-request-date">Request Date</FieldLabel>
+                  <Input
+                    required
+                    id="ent-request-date"
+                    type="date"
+                    value={draft.requestDate}
+                    max={todayIso()}
+                    onChange={(e) => set("requestDate", e.target.value)}
+                  />
+                </div>
+              ) : (
+                <Booked
+                  id="ent-request-date"
+                  label="Request Date"
+                  value={formatDate(draft.requestDate)}
+                />
+              )}
               <Booked id="ent-employee" label="Employee Name" value={whose} />
 
               {/* Which year the request belongs to: the balance being drawn
@@ -1065,123 +1170,13 @@ export default function EntitlementTab({
               </>
             )}
 
-            {/* A medical bill: what it came to, what the insurer met, and
-                what is therefore left for the firm. The last of the three is
-                not asked for - it is the first less the second, and a typed
-                figure could disagree with the two above it. */}
-            {mode === "medical" && (
-              <>
-                <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
-                  <FieldLabel htmlFor="ent-treatment-date" required>
-                    Date
-                  </FieldLabel>
-                  <Input
-                    id="ent-treatment-date"
-                    type="date"
-                    value={draft.treatmentDate}
-                    onChange={(e) => set("treatmentDate", e.target.value)}
-                  />
-                </div>
-
-                {/* The invoice, and the copy of it. The paperclip sits on the
-                    number because it is that invoice being attached, not some
-                    loose document belonging to the request at large. */}
-                <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
-                  <FieldLabel htmlFor="ent-invoice-no" required>
-                    Invoice No.
-                  </FieldLabel>
-                  <div className="flex w-full min-w-0 items-center gap-2">
-                    <Input
-                      id="ent-invoice-no"
-                      className="min-w-0 flex-1"
-                      value={draft.invoiceNo}
-                      onChange={(e) => set("invoiceNo", e.target.value)}
-                      placeholder="INV-00000"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      asChild
-                      title={
-                        receipt ? receipt.name + " attached" : "Upload the invoice"
-                      }
-                      className={cn(
-                        "shrink-0",
-                        receipt && "border-green-600 text-green-600"
-                      )}
-                    >
-                      <label htmlFor="ent-invoice-file" className="cursor-pointer">
-                        {receipt ? (
-                          <FileCheck className="h-4 w-4" />
-                        ) : (
-                          <UploadCloud className="h-4 w-4" />
-                        )}
-                        <span className="sr-only">Upload the invoice</span>
-                      </label>
-                    </Button>
-                    <Input
-                      id="ent-invoice-file"
-                      type="file"
-                      className="hidden"
-                      onChange={(e) =>
-                        e.target.files[0] && setReceipt(e.target.files[0])
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
-                  <FieldLabel htmlFor="ent-total-cost" required>
-                    Total Medical Cost (OMR)
-                  </FieldLabel>
-                  <Input
-                    id="ent-total-cost"
-                    inputMode="decimal"
-                    value={draft.totalCost}
-                    onChange={(e) =>
-                      set("totalCost", e.target.value.replace(/[^\d.]/g, ""))
-                    }
-                    placeholder="0.000"
-                  />
-                </div>
-
-                <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
-                  <FieldLabel htmlFor="ent-insured">
-                    Insurance Covered Amount (OMR)
-                  </FieldLabel>
-                  <Input
-                    id="ent-insured"
-                    inputMode="decimal"
-                    value={draft.insuranceCovered}
-                    onChange={(e) =>
-                      set("insuranceCovered", e.target.value.replace(/[^\d.]/g, ""))
-                    }
-                    placeholder="0.000"
-                    className={cn(overInsured && "border-destructive text-destructive")}
-                  />
-                  {overInsured && (
-                    <p role="alert" className="text-xs font-semibold text-destructive">
-                      More than the bill came to
-                    </p>
-                  )}
-                </div>
-
-                <Booked
-                  id="ent-requested"
-                  label="Requested Amount (OMR)"
-                  value={amountValue(amount)}
-                />
-              </>
-            )}
-
-            {/* A sum the employee names. */}
-            {mode === "amount" && (
-              <div className="space-y-2 sm:col-span-1">
-                <FieldLabel htmlFor="ent-amount" required>
-                  Requested Amount (OMR)
-                </FieldLabel>
+            {/* A sum the employee names. Transport asks for it in its own
+                section, under the choice of what kind of trip it was. */}
+            {mode === "amount" && kind !== "transport" && (
+              <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
+                <FieldLabel htmlFor="ent-amount">Requested Amount (OMR)</FieldLabel>
                 <Input
+                  required
                   id="ent-amount"
                   inputMode="decimal"
                   value={draft.amount}
@@ -1193,7 +1188,7 @@ export default function EntitlementTab({
               </div>
             )}
 
-            {mode !== "amount" && mode !== "medical" && (
+            {mode !== "amount" && (
               <Worked
                 id="ent-estimated"
                 label="Estimated Amount (OMR)"
@@ -1203,9 +1198,99 @@ export default function EntitlementTab({
             </div>
           </div>
 
+          {kind === "transport" && (
+            <div className="space-y-4">
+              <h3 className={HEADING}>{label} Details</h3>
+
+              {/* General or for a case. The choice decides what else is
+                  asked, so it comes first and the fields follow it. */}
+              <div
+                role="radiogroup"
+                aria-label="Kind of transport"
+                className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+              >
+                {[
+                  { value: TRANSPORT_GENERAL, title: "General" },
+                  { value: TRANSPORT_COURT, title: "Court-Linked" },
+                ].map((option) => {
+                  const picked = draft.transportType === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={picked}
+                      onClick={() => set("transportType", option.value)}
+                      className={cn(
+                        "flex items-center gap-3 rounded-field border px-4 py-3 text-start font-medium transition-colors",
+                        picked
+                          ? "border-primary bg-secondary text-primary"
+                          : "border-field-border hover:bg-muted/50"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2",
+                          picked ? "border-primary" : "border-muted-foreground/50"
+                        )}
+                      >
+                        {picked && <span className="h-2.5 w-2.5 rounded-full bg-primary" />}
+                      </span>
+                      {option.title}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="helper-text">
+                When General is selected, only Requested Amount is shown.
+              </p>
+
+              <div className="form-grid form-grid-3">
+                {courtLinked && (
+                  <>
+                    <div className="form-field flex h-full flex-col justify-end gap-2">
+                      <FieldLabel htmlFor="ent-file-no">File No.</FieldLabel>
+                      <Input
+                        required
+                        id="ent-file-no"
+                        value={draft.fileNo}
+                        onChange={(e) => set("fileNo", e.target.value)}
+                        placeholder="Enter the case file number"
+                      />
+                    </div>
+                    <div className="form-field flex h-full flex-col justify-end gap-2">
+                      <FieldLabel htmlFor="ent-travel-date">Travel Date</FieldLabel>
+                      <Input
+                        required
+                        id="ent-travel-date"
+                        type="date"
+                        value={draft.travelDate}
+                        max={todayIso()}
+                        onChange={(e) => set("travelDate", e.target.value)}
+                      />
+                    </div>
+                  </>
+                )}
+                <div className="form-field flex h-full flex-col justify-end gap-2">
+                  <FieldLabel htmlFor="ent-amount">Requested Amount (OMR)</FieldLabel>
+                  <Input
+                    required
+                    id="ent-amount"
+                    inputMode="decimal"
+                    value={draft.amount}
+                    onChange={(e) =>
+                      set("amount", e.target.value.replace(/[^\d.]/g, ""))
+                    }
+                    placeholder="0.000"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <h3 className={HEADING}>
-              Reason / Notes
+              {kind === "transport" ? "Employee Comment" : "Reason / Notes"}
             </h3>
             <Textarea
               id="ent-reason-notes"
@@ -1213,8 +1298,12 @@ export default function EntitlementTab({
               maxLength={NOTES_LIMIT}
               value={draft.reason}
               onChange={(e) => set("reason", e.target.value)}
-              required
-              placeholder="Enter the reason for this request"
+              required={reasonRequired}
+              placeholder={
+                kind === "transport"
+                  ? "Add details of the transport allowance request (optional)"
+                  : "Enter the reason for requesting " + label.toLowerCase()
+              }
             />
             <p className="text-end text-xs text-muted-foreground">
               {draft.reason.length} / {NOTES_LIMIT}

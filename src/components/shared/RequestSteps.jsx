@@ -191,6 +191,9 @@ export function DecisionChoice({
    * everywhere would put a choice on screens that have nothing to ask for.
    */
   offers = ["full", "partial", "rejected"],
+  // Whatever belongs to the decision itself - its date, what it grants -
+  // where a form draws that inside the same box as the choice.
+  children,
 }) {
   const shown = DECISIONS.filter((option) => offers.includes(option.key));
   return (
@@ -245,6 +248,7 @@ export function DecisionChoice({
           );
         })}
       </div>
+      {children}
     </Bordered>
   );
 }
