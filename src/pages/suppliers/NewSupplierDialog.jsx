@@ -18,6 +18,7 @@ import {
   emptySupplier,
   toSupplierRecord,
 } from "./supplierData";
+import { checkRequired } from "@/components/shared/formFields";
 
 export default function NewSupplierDialog({ open, onOpenChange, onCreated }) {
   const { addSupplier } = useSuppliers();
@@ -31,7 +32,7 @@ export default function NewSupplierDialog({ open, onOpenChange, onCreated }) {
   };
 
   const save = () => {
-    if (!canSaveSupplier(draft)) return;
+    if (!checkRequired() || !canSaveSupplier(draft)) return;
     const record = toSupplierRecord(draft);
     addSupplier(record);
     onCreated?.(record);
@@ -49,7 +50,7 @@ export default function NewSupplierDialog({ open, onOpenChange, onCreated }) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="form-grid form-grid-2">
           <SupplierFields
             draft={draft}
             set={set}
@@ -62,7 +63,7 @@ export default function NewSupplierDialog({ open, onOpenChange, onCreated }) {
           <Button variant="outline" onClick={close}>
             Cancel
           </Button>
-          <Button disabled={!canSaveSupplier(draft)} onClick={save}>
+          <Button onClick={save}>
             Save Supplier
           </Button>
         </DialogFooter>

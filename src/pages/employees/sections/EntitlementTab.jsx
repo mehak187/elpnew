@@ -17,7 +17,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/shared/panels";
-import { Settled, Choice } from "@/components/shared/formFields";
+import {
+  Settled, Choice,
+  checkRequired,
+} from "@/components/shared/formFields";
 import { PAYING_ACCOUNTS } from "@/pages/firm/firmData";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 import {
@@ -26,6 +29,7 @@ import {
   Th,
   Row,
   Td,
+  RecordLink,
 } from "@/components/shared/RecordTable";
 import { RequestSteps, DecisionChoice } from "@/components/shared/RequestSteps";
 import {
@@ -126,19 +130,19 @@ function FieldLabel({ htmlFor, children }) {
  */
 function Booked({ id, label, value }) {
   return (
-    <div className="flex h-full flex-col justify-end gap-2">
+    <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <div className="relative">
         <Lock
           aria-hidden="true"
-          className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+          className="pointer-events-none absolute start-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
         />
         <Input
           id={id}
           readOnly
           tabIndex={-1}
           value={value}
-          className="cursor-default bg-locked pl-9 text-muted-foreground"
+          className="cursor-default bg-locked ps-9 text-muted-foreground"
         />
       </div>
     </div>
@@ -154,7 +158,7 @@ function Booked({ id, label, value }) {
 function Fact({ icon, label, children }) {
   const Icon = icon;
   return (
-    <div className="px-0 lg:px-4 lg:first:pl-0">
+    <div className="px-0 lg:px-4 lg:first:ps-0">
       <p className="flex items-center gap-1.5 text-sm font-medium text-primary">
         <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
         {label}
@@ -169,7 +173,7 @@ function Fact({ icon, label, children }) {
 /** A figure the form works out rather than asks for. */
 function Worked({ id, label, value }) {
   return (
-    <div className="flex h-full flex-col justify-end gap-2">
+    <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <Input
         id={id}
@@ -355,7 +359,7 @@ export default function EntitlementTab({
    * number and waiting on a decision.
    */
   const submit = () => {
-    if (!canSubmit) return;
+    if (!checkRequired() || !canSubmit) return;
     const details = {
       requestDate: draft.requestDate,
       year: draft.year,
@@ -519,7 +523,7 @@ export default function EntitlementTab({
             <h3 className={HEADING}>
               Request Information
             </h3>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+            <div className="form-grid">
               <Booked id="dec-employee" label="Employee Name" value={whose} />
               <Booked id="dec-request-no" label="Request No." value={requestNo} />
               <Booked
@@ -581,14 +585,7 @@ export default function EntitlementTab({
                 eight, which is two rows of four, while leave encashment reads
                 back six and wants them on one. A row that leaves half itself
                 empty reads as a row with something missing from it. */}
-            <div
-              className={cn(
-                "grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6",
-                mode === "hours" || mode === "medical"
-                  ? "lg:grid-cols-4"
-                  : "lg:grid-cols-3 xl:grid-cols-6"
-              )}
-            >
+            <div className="form-grid">
               {mode === "leaveDays" ? (
                 <>
                   <Booked
@@ -686,7 +683,7 @@ export default function EntitlementTab({
                 beside a rejection invites the question of what was approved,
                 and the answer is nothing. */}
             {!refusing && (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+              <div className="form-grid">
                 <Settled
                   id="ent-decision-date"
                   label="Decision Date"
@@ -712,7 +709,7 @@ export default function EntitlementTab({
                 {/* Only a partial approval names a figure of its own; a full
                     one grants what was asked for. */}
                 {amending ? (
-                  <div className="flex h-full flex-col justify-end gap-2">
+                  <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
                     <FieldLabel htmlFor="ent-approved" required>
                       Approved Amount (OMR)
                     </FieldLabel>
@@ -760,7 +757,7 @@ export default function EntitlementTab({
                     : "Enter management comment"
                 }
               />
-              <p className="text-right text-xs text-muted-foreground">
+              <p className="text-end text-xs text-muted-foreground">
                 {reason.length} / {NOTES_LIMIT}
               </p>
             </div>
@@ -773,7 +770,7 @@ export default function EntitlementTab({
               <h3 className={HEADING}>
                 Payment Details
               </h3>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+              <div className="form-grid">
                 <Settled
                   id="ent-type"
                   label="Expense Type"
@@ -797,7 +794,7 @@ export default function EntitlementTab({
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+              <div className="form-grid">
                 <Choice
                   id="ent-method"
                   label="Payment Method"
@@ -805,7 +802,6 @@ export default function EntitlementTab({
                   onChange={(value) => value && setPay("method", value)}
                   placeholder="Select method"
                   options={PAYMENT_METHODS}
-                  disabled={!canDecide}
                 />
 
                 {/* One choice, not two: the account carries the bank it is
@@ -817,10 +813,9 @@ export default function EntitlementTab({
                   onChange={(value) => value && setPay("bankAccount", value)}
                   placeholder="Select bank account"
                   options={PAYING_ACCOUNTS}
-                  disabled={!canDecide}
                 />
 
-                <div className="flex h-full flex-col justify-end gap-2">
+                <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
                   <FieldLabel htmlFor="ent-payment-date" required>
                     Payment Date
                   </FieldLabel>
@@ -829,13 +824,12 @@ export default function EntitlementTab({
                     type="date"
                     value={payment.paymentDate}
                     onChange={(e) => setPay("paymentDate", e.target.value)}
-                    disabled={!canDecide}
                   />
                 </div>
 
                 {/* The proof of the transfer sits beside its reference as a
                     plain icon: nothing to press but the paperclip itself. */}
-                <div className="flex h-full flex-col justify-end gap-2">
+                <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
                   <FieldLabel htmlFor="ent-reference" required>
                     Payment Reference
                   </FieldLabel>
@@ -846,7 +840,6 @@ export default function EntitlementTab({
                       value={payment.reference}
                       onChange={(e) => setPay("reference", e.target.value)}
                       placeholder="TRX-0000-00000"
-                      disabled={!canDecide}
                     />
                     <label
                       className="shrink-0 cursor-pointer text-primary hover:text-primary/70"
@@ -886,18 +879,14 @@ export default function EntitlementTab({
               !decision && "bg-card"
             )}
           >
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:divide-x">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:[&>*+*]:border-s">
               <Fact icon={FileText} label="Supporting Document">
                 {attachedName || "None attached"}
               </Fact>
               <Fact icon={History} label="History">
-                <button
-                  type="button"
-                  className="text-primary no-underline hover:text-primary/70"
-                  onClick={() => setShowHistory(true)}
-                >
+                <RecordLink onClick={() => setShowHistory(true)}>
                   View history
-                </button>
+                  </RecordLink>
               </Fact>
             </div>
 
@@ -925,7 +914,7 @@ export default function EntitlementTab({
             <h3 className={HEADING}>
               Request Information
             </h3>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+            <div className="form-grid">
               <Booked id="ent-employee" label="Employee Name" value={whose} />
               <Booked id="ent-request-no" label="Request No." value={requestNo} />
               <Booked
@@ -947,7 +936,7 @@ export default function EntitlementTab({
 
               {/* Which year's balance is being drawn on. */}
               {mode === "leaveDays" && (
-                <div className="flex h-full flex-col justify-end gap-2">
+                <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
                   <FieldLabel htmlFor="ent-year" required>
                     Year
                   </FieldLabel>
@@ -974,7 +963,7 @@ export default function EntitlementTab({
           <h3 className={HEADING}>
             {label} Details
           </h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+          <div className="form-grid">
             {/* Days off a leave balance. */}
             {mode === "leaveDays" && (
               <>
@@ -999,7 +988,7 @@ export default function EntitlementTab({
                   value={balance ? available + " Days" : "-"}
                 />
 
-                <div className="flex h-full flex-col justify-end gap-2">
+                <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
                   <FieldLabel htmlFor="ent-days" required>
                     Days Requested for Encashment
                   </FieldLabel>
@@ -1033,7 +1022,7 @@ export default function EntitlementTab({
                 worth. */}
             {mode === "hours" && (
               <>
-                <div className="flex h-full flex-col justify-end gap-2">
+                <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
                   <FieldLabel htmlFor="ent-ot-date" required>
                     Overtime Date
                   </FieldLabel>
@@ -1045,7 +1034,7 @@ export default function EntitlementTab({
                   />
                 </div>
 
-                <div className="flex h-full flex-col justify-end gap-2">
+                <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
                   <FieldLabel htmlFor="ent-start" required>
                     Start Time
                   </FieldLabel>
@@ -1057,7 +1046,7 @@ export default function EntitlementTab({
                   />
                 </div>
 
-                <div className="flex h-full flex-col justify-end gap-2">
+                <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
                   <FieldLabel htmlFor="ent-end" required>
                     End Time
                   </FieldLabel>
@@ -1075,7 +1064,7 @@ export default function EntitlementTab({
                   value={workedHours ? workedHours + " Hours" : "-"}
                 />
 
-                <div className="flex h-full flex-col justify-end gap-2">
+                <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
                   <FieldLabel htmlFor="ent-ot-type" required>
                     Overtime Type
                   </FieldLabel>
@@ -1116,7 +1105,7 @@ export default function EntitlementTab({
                 figure could disagree with the two above it. */}
             {mode === "medical" && (
               <>
-                <div className="flex h-full flex-col justify-end gap-2">
+                <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
                   <FieldLabel htmlFor="ent-treatment-date" required>
                     Date
                   </FieldLabel>
@@ -1131,7 +1120,7 @@ export default function EntitlementTab({
                 {/* The invoice, and the copy of it. The paperclip sits on the
                     number because it is that invoice being attached, not some
                     loose document belonging to the request at large. */}
-                <div className="flex h-full flex-col justify-end gap-2">
+                <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
                   <FieldLabel htmlFor="ent-invoice-no" required>
                     Invoice No.
                   </FieldLabel>
@@ -1176,7 +1165,7 @@ export default function EntitlementTab({
                   </div>
                 </div>
 
-                <div className="flex h-full flex-col justify-end gap-2">
+                <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
                   <FieldLabel htmlFor="ent-total-cost" required>
                     Total Medical Cost (OMR)
                   </FieldLabel>
@@ -1191,7 +1180,7 @@ export default function EntitlementTab({
                   />
                 </div>
 
-                <div className="flex h-full flex-col justify-end gap-2">
+                <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
                   <FieldLabel htmlFor="ent-insured">
                     Insurance Covered Amount (OMR)
                   </FieldLabel>
@@ -1259,7 +1248,7 @@ export default function EntitlementTab({
               onChange={(e) => set("reason", e.target.value)}
               placeholder="Enter employee comment"
             />
-            <p className="text-right text-xs text-muted-foreground">
+            <p className="text-end text-xs text-muted-foreground">
               {draft.reason.length} / {NOTES_LIMIT}
             </p>
           </div>
@@ -1289,13 +1278,13 @@ export default function EntitlementTab({
             )
           ) : (
             !settled && (
-              <Button type="button" onClick={disburse} disabled={!canDisburse}>
+              <Button type="button" onClick={disburse}>
                 Approve &amp; Pay
               </Button>
             )
           )
         ) : (
-          <Button type="button" onClick={submit} disabled={!canSubmit}>
+          <Button type="button" onClick={submit}>
             Submit Request
           </Button>
         )}
@@ -1335,7 +1324,7 @@ export default function EntitlementTab({
                 <Th width="11%">Previous Status</Th>
                 <Th width="11%">New Status</Th>
                 <Th width="14%">Performed By</Th>
-                <Th width="10%" className="text-right">
+                <Th width="10%" className="text-end">
                   Amount
                 </Th>
                 <Th width="16%">Comment</Th>
@@ -1351,10 +1340,10 @@ export default function EntitlementTab({
                     <Td className="text-muted-foreground">{event.from}</Td>
                     <Td className="text-primary">{event.to}</Td>
                     <Td className="text-primary">{event.by}</Td>
-                    <Td className="whitespace-nowrap text-right font-semibold text-green-700">
+                    <Td className="whitespace-nowrap text-end font-semibold text-green-700">
                       {amountValue(event.amount)}
                     </Td>
-                    <Td className="text-left text-muted-foreground">
+                    <Td className="text-start text-muted-foreground">
                       {event.comment || "-"}
                     </Td>
                     <Td className="text-primary">{event.reference || "-"}</Td>
@@ -1377,7 +1366,7 @@ export default function EntitlementTab({
             <Th width="16%">Request Date</Th>
             <Th width="34%">Request Details</Th>
             <Th width="14%">Quantity</Th>
-            <Th width="24%" className="text-right">
+            <Th width="24%" className="text-end">
               Amount (OMR)
             </Th>
           </HeadRow>
@@ -1414,7 +1403,7 @@ export default function EntitlementTab({
                   {formatDate(record.requestDate)}
                 </Td>
 
-                <Td className="text-left">
+                <Td className="text-start">
                   <span className="block font-semibold text-primary">
                     {record.leaveType && modeOf(record.kind) === "leaveDays"
                       ? record.leaveType
@@ -1427,7 +1416,7 @@ export default function EntitlementTab({
 
                 <Td className="whitespace-nowrap">{measure(record)}</Td>
 
-                <Td className="whitespace-nowrap text-right font-bold text-green-700">
+                <Td className="whitespace-nowrap text-end font-bold text-green-700">
                   {amountValue(record.amount)}
                 </Td>
               </Row>

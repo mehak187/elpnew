@@ -4,19 +4,25 @@ import { cn } from "@/lib/utils";
 /**
  * How many columns the strip is divided into, by how many cells it holds.
  *
+ * Two, three, four and six sit on the system's twelve-column grid, since
+ * twelve divides by all of them. Five, seven, eight, nine and ten do not,
+ * so those keep a track count of their own rather than being forced onto a
+ * grid that cannot hold them evenly - a strip of seven figures with one of
+ * them wider than the rest reads as a mistake.
+ *
  * Written out rather than built up, because the class names have to be
  * readable in the file for the stylesheet to include them.
  */
 const COLUMNS = {
-  2: "sm:grid-cols-2",
-  3: "sm:grid-cols-2 lg:grid-cols-3",
-  4: "sm:grid-cols-2 lg:grid-cols-4",
-  5: "sm:grid-cols-2 lg:grid-cols-5",
-  6: "sm:grid-cols-2 lg:grid-cols-6",
-  7: "sm:grid-cols-3 lg:grid-cols-7",
-  8: "sm:grid-cols-4 lg:grid-cols-8",
-  9: "sm:grid-cols-3 lg:grid-cols-9",
-  10: "sm:grid-cols-5 lg:grid-cols-10",
+  2: "form-grid form-grid-2",
+  3: "form-grid form-grid-3",
+  4: "form-grid",
+  5: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5",
+  6: "form-grid [&>*]:col-span-2",
+  7: "grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-7",
+  8: "grid grid-cols-1 sm:grid-cols-4 lg:grid-cols-8",
+  9: "grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-9",
+  10: "grid grid-cols-1 sm:grid-cols-5 lg:grid-cols-10",
 };
 
 /**
@@ -53,11 +59,11 @@ export default function SummaryStrip({ items, className }) {
               type={item.onClick ? "button" : undefined}
               onClick={item.onClick}
               className={cn(
-                "relative px-4 py-3 text-left",
+                "relative px-4 py-3 text-start",
                 // A half-height dashed rule, centred: enough to separate
                 // the cells without ruling the strip into boxes. The first
                 // cell has nothing to its left to be separated from.
-                "sm:before:absolute sm:before:left-0 sm:before:top-1/2 sm:before:h-1/2 sm:before:-translate-y-1/2 sm:before:border-l sm:before:border-dashed sm:before:border-border sm:before:content-[''] sm:first:before:hidden",
+                "sm:before:absolute sm:before:start-0 sm:before:top-1/2 sm:before:h-1/2 sm:before:-translate-y-1/2 sm:before:border-s sm:before:border-dashed sm:before:border-border sm:before:content-[''] sm:first:before:hidden",
                 item.onClick &&
                   // focus-visible, not focus: a mouse click should not
                   // leave a ring drawn round the cell, but a keyboard
@@ -81,7 +87,7 @@ export default function SummaryStrip({ items, className }) {
                 {/* A figure that belongs to the name rather than to the
                     value below it - how many banks, not how much. */}
                 {item.trailing !== undefined && (
-                  <span className="ml-auto shrink-0">{item.trailing}</span>
+                  <span className="ms-auto shrink-0">{item.trailing}</span>
                 )}
               </p>
               <p className="mt-1 text-lg font-bold">{item.value}</p>

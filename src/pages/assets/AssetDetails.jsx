@@ -87,7 +87,7 @@ const decimal = (value) => value.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1
 const years = (count) => count + (count === 1 ? " Year" : " Years");
 
 /** A typed field, with anything that belongs beside the input (an upload) after it. */
-function TextField({ id, label, value, onChange, placeholder, type, inputMode, max, hint, children }) {
+function TextField({ id, label, required, value, onChange, placeholder, type, inputMode, max, hint, children }) {
   return (
     <Field>
       <FieldLabel htmlFor={id}>
@@ -100,6 +100,7 @@ function TextField({ id, label, value, onChange, placeholder, type, inputMode, m
       <div className={cn("relative", hint && "mb-5 sm:mb-0")}>
         <div className="flex gap-2">
           <Input
+            required={required}
             id={id}
             type={type}
             inputMode={inputMode}
@@ -113,7 +114,7 @@ function TextField({ id, label, value, onChange, placeholder, type, inputMode, m
           {children}
         </div>
         {hint && (
-          <p className="absolute left-0 top-full mt-1 text-xs text-muted-foreground">
+          <p className="absolute start-0 top-full mt-1 text-xs text-muted-foreground">
             {hint}
           </p>
         )}
@@ -165,7 +166,7 @@ function AssetExpenseForm({ asset, suppliers, onCancel, onSave }) {
   return (
     <Panel title="Add Expense" icon={ReceiptText}>
       <div className="space-y-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+        <div className="form-grid">
           <Worked id="assetExpenseType" label="Expense Type" value={FIXED_ASSET_EXPENSES} />
           <Choice
             id="assetExpenseCategory"
@@ -261,11 +262,11 @@ function AssetExpenseForm({ asset, suppliers, onCancel, onSave }) {
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onCancel}>
-            <X className="mr-2 h-4 w-4" />
+            <X className="me-2 h-4 w-4" />
             Cancel
           </Button>
           <Button type="button" onClick={save}>
-            <Save className="mr-2 h-4 w-4" />
+            <Save className="me-2 h-4 w-4" />
             Save
           </Button>
         </div>
@@ -289,21 +290,21 @@ function AssetExpensesTable({ expenses }) {
     <div className="overflow-x-auto rounded-lg border">
       <table className="w-full min-w-200 border text-sm">
         <thead>
-          <tr className="border-b bg-secondary/60 text-left text-primary">
-            <th className="border-r last:border-r-0 p-3 font-semibold">No.</th>
-            <th className="border-r last:border-r-0 p-3 font-semibold">Invoice Date / Number</th>
-            <th className="border-r last:border-r-0 p-3 font-semibold">Expense Details</th>
-            <th className="border-r last:border-r-0 p-3 font-semibold">Payee</th>
-            <th className="border-r last:border-r-0 p-3 text-right font-semibold">Before VAT</th>
-            <th className="border-r last:border-r-0 p-3 text-right font-semibold">VAT</th>
-            <th className="border-r last:border-r-0 p-3 text-right font-semibold">Total</th>
+          <tr className="border-b bg-secondary/60 text-start text-primary">
+            <th className="p-3 font-semibold">No.</th>
+            <th className="p-3 font-semibold">Invoice Date / Number</th>
+            <th className="p-3 font-semibold">Expense Details</th>
+            <th className="p-3 font-semibold">Payee</th>
+            <th className="p-3 text-end font-semibold">Before VAT</th>
+            <th className="p-3 text-end font-semibold">VAT</th>
+            <th className="p-3 text-end font-semibold">Total</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((expense, index) => (
             <tr key={expense.id} className="border-b align-top transition-colors hover:bg-primary/5">
-              <td className="border-r last:border-r-0 p-3 text-muted-foreground">{index + 1}</td>
-              <td className="border-r last:border-r-0 p-3">
+              <td className="p-3 text-muted-foreground">{index + 1}</td>
+              <td className="p-3">
                 <p className="font-semibold text-primary">{shortDate(expense.invoiceDate)}</p>
                 <p>{expense.invoiceNo}</p>
                 {expense.invoiceFile && (
@@ -313,23 +314,23 @@ function AssetExpensesTable({ expenses }) {
                   </p>
                 )}
               </td>
-              <td className="border-r last:border-r-0 p-3">
+              <td className="p-3">
                 <p className="font-semibold text-primary">{expense.category}</p>
                 <p className="text-muted-foreground">{expense.subcategory}</p>
               </td>
-              <td className="border-r last:border-r-0 p-3">{expense.payee}</td>
-              <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-right">{omr(expense.amount)}</td>
-              <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-right text-muted-foreground">{omr(expenseVat(expense))}</td>
-              <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-right font-semibold text-primary">{omr(expenseTotal(expense))}</td>
+              <td className="p-3">{expense.payee}</td>
+              <td className="whitespace-nowrap p-3 text-end">{omr(expense.amount)}</td>
+              <td className="whitespace-nowrap p-3 text-end text-muted-foreground">{omr(expenseVat(expense))}</td>
+              <td className="whitespace-nowrap p-3 text-end font-semibold text-primary">{omr(expenseTotal(expense))}</td>
             </tr>
           ))}
         </tbody>
         <tfoot>
           <tr className="bg-secondary/40 font-semibold text-primary">
-            <td className="border-r last:border-r-0 p-3" colSpan={4}>Total</td>
-            <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-right">{omr(sum((e) => Number(e.amount || 0)))}</td>
-            <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-right">{omr(sum(expenseVat))}</td>
-            <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-right">{omr(sum(expenseTotal))}</td>
+            <td className="p-3" colSpan={4}>Total</td>
+            <td className="whitespace-nowrap p-3 text-end">{omr(sum((e) => Number(e.amount || 0)))}</td>
+            <td className="whitespace-nowrap p-3 text-end">{omr(sum(expenseVat))}</td>
+            <td className="whitespace-nowrap p-3 text-end">{omr(sum(expenseTotal))}</td>
           </tr>
         </tfoot>
       </table>
@@ -484,7 +485,7 @@ export default function AssetDetails() {
         {/* Only where there are fields to save. */}
         {current.editable && (
           <Button type="button" onClick={save}>
-            <Save className="mr-2 h-4 w-4" />
+            <Save className="me-2 h-4 w-4" />
             Save Changes
           </Button>
         )}
@@ -509,7 +510,7 @@ export default function AssetDetails() {
                       setAddingExpense(false);
                     }}
                     className={cn(
-                      "flex items-center gap-2.5 text-nowrap rounded-md px-3 py-2 text-left text-sm font-medium transition-colors",
+                      "flex items-center gap-2.5 text-nowrap rounded-md px-3 py-2 text-start text-sm font-medium transition-colors",
                       section === option.key
                         ? "bg-primary text-primary-foreground"
                         : "text-primary hover:bg-secondary"
@@ -536,7 +537,7 @@ export default function AssetDetails() {
 
               {section === "information" && (
                 <div className="space-y-6">
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+                  <div className="form-grid">
                     <Worked id="assetNo" label="Asset No." value={asset.assetNo} />
                     <Choice
                       id="assetBranch"
@@ -565,7 +566,7 @@ export default function AssetDetails() {
                   </div>
 
                   {/* What kind of asset it is: the category and type it was booked under. */}
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+                  <div className="form-grid">
                     <Choice
                       id="assetCategory"
                       label="Category"
@@ -599,7 +600,7 @@ export default function AssetDetails() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+                  <div className="form-grid">
                     <TextField
                       id="assetInvoiceDate"
                       label="Invoice Date"
@@ -670,7 +671,7 @@ export default function AssetDetails() {
                           disabled={!documentName.trim() || !documentFile}
                           className="sm:justify-self-start"
                         >
-                          <Plus className="mr-2 h-4 w-4" />
+                          <Plus className="me-2 h-4 w-4" />
                           Add Document
                         </Button>
                       </div>
@@ -681,27 +682,27 @@ export default function AssetDetails() {
                         <div className="overflow-x-auto rounded-lg border">
                           <table className="w-full min-w-140 border text-sm">
                             <thead>
-                              <tr className="border-b bg-secondary/60 text-left text-primary">
-                                <th className="border-r last:border-r-0 p-3 font-semibold">No.</th>
-                                <th className="border-r last:border-r-0 p-3 font-semibold">Document</th>
-                                <th className="border-r last:border-r-0 p-3 font-semibold">File</th>
-                                <th className="border-r last:border-r-0 p-3 font-semibold">Uploaded On</th>
-                                <th className="border-r last:border-r-0 p-3" />
+                              <tr className="border-b bg-secondary/60 text-start text-primary">
+                                <th className="p-3 font-semibold">No.</th>
+                                <th className="p-3 font-semibold">Document</th>
+                                <th className="p-3 font-semibold">File</th>
+                                <th className="p-3 font-semibold">Uploaded On</th>
+                                <th className="p-3" />
                               </tr>
                             </thead>
                             <tbody>
                               {draft.documents.map((document, index) => (
                                 <tr key={document.id} className="border-b transition-colors last:border-0 hover:bg-primary/5">
-                                  <td className="border-r last:border-r-0 p-3 text-muted-foreground">{index + 1}</td>
-                                  <td className="border-r last:border-r-0 p-3 font-semibold text-primary">{document.name}</td>
-                                  <td className="border-r last:border-r-0 p-3">
+                                  <td className="p-3 text-muted-foreground">{index + 1}</td>
+                                  <td className="p-3 font-semibold text-primary">{document.name}</td>
+                                  <td className="p-3">
                                     <span className="inline-flex items-center gap-1.5">
                                       <FileText className="h-4 w-4 shrink-0 text-primary" />
                                       {document.file}
                                     </span>
                                   </td>
-                                  <td className="border-r last:border-r-0 whitespace-nowrap p-3">{shortDate(document.uploadedOn)}</td>
-                                  <td className="border-r last:border-r-0 p-3 text-right">
+                                  <td className="whitespace-nowrap p-3">{shortDate(document.uploadedOn)}</td>
+                                  <td className="p-3 text-end">
                                     <Button
                                       type="button"
                                       variant="ghost"
@@ -746,7 +747,7 @@ export default function AssetDetails() {
                         type="button"
                         onClick={() => setAddingExpense(true)}
                       >
-                        <Plus className="mr-2 h-4 w-4" />
+                        <Plus className="me-2 h-4 w-4" />
                         Add Expense
                       </Button>
                     </div>
@@ -786,7 +787,7 @@ export default function AssetDetails() {
                   </div>
 
                   {/* Where the asset stands today, from the settings above. */}
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+                  <div className="form-grid">
                     <Worked id="assetCost" label="Cost (OMR)" value={cost > 0 ? omr(cost) : ""} />
                     <Worked id="assetYearsInUse" label="Years in Use" value={draft.purchaseDate ? years(inUse) : ""} />
                     <Worked

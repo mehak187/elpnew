@@ -217,12 +217,12 @@ export default function Header({ onNavClick, activeNav }) {
       : isActive(section.key);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background">
+    <header className="fixed top-0 start-0 end-0 z-50 border-b bg-background">
       <div className="flex h-16 items-center px-4 md:px-6">
         {/* Mobile Menu */}
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="lg:hidden mr-2">
+            <Button variant="ghost" size="icon" className="lg:hidden me-2">
               <Menu className="h-5 w-5" />
               <span className="sr-only">Toggle menu</span>
             </Button>
@@ -304,7 +304,7 @@ export default function Header({ onNavClick, activeNav }) {
         </Link>
 
         {/* Desktop Navigation - left aligned, next to logo */}
-        <NavigationMenu className="hidden lg:flex ml-8" viewport={false}>
+        <NavigationMenu className="hidden lg:flex ms-8" viewport={false}>
           <NavigationMenuList className="gap-2">
             {navSections.map((section) => {
               const active = isSectionActive(section);
@@ -354,10 +354,13 @@ export default function Header({ onNavClick, activeNav }) {
                           <NavigationMenuLink
                             asChild
                             className={cn(
-                              "flex items-start gap-3 rounded-md p-3 transition-colors",
+                              // The rule runs down the item's logical start,
+                              // so it swaps sides with the language rather
+                              // than staying on the left in Arabic.
+                              "flex items-start gap-3 rounded-md border-s-[3px] border-transparent p-3 transition-colors",
                               isActive(item.key)
-                                ? "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground"
-                                : "text-primary hover:bg-secondary hover:text-primary focus:bg-secondary focus:text-primary"
+                                ? "border-s-primary bg-menu-selected text-menu-selected-ink hover:bg-menu-selected focus:bg-menu-selected"
+                                : "text-primary hover:bg-menu-hover focus:bg-menu-hover"
                             )}
                           >
                             <Link
@@ -366,12 +369,15 @@ export default function Header({ onNavClick, activeNav }) {
                             >
                               {/* Named colour on purpose: without a text-
                                   class the menu greys every icon it holds. */}
+                              {/* Navy on the selected item and grey on the
+                                  rest: with the block gone, the icon is half
+                                  of what says which one is open. */}
                               <item.icon
                                 className={cn(
                                   "mt-0.5 h-4 w-4 shrink-0",
                                   isActive(item.key)
-                                    ? "text-primary-foreground"
-                                    : "text-muted-foreground"
+                                    ? "text-primary"
+                                    : "text-menu-icon"
                                 )}
                               />
                               <span>
@@ -382,7 +388,7 @@ export default function Header({ onNavClick, activeNav }) {
                                   className={cn(
                                     "block text-xs",
                                     isActive(item.key)
-                                      ? "text-primary-foreground/80"
+                                      ? "text-menu-selected-ink/80"
                                       : "text-muted-foreground"
                                   )}
                                 >
@@ -410,7 +416,7 @@ export default function Header({ onNavClick, activeNav }) {
 
         {/* Which language the records are read in. Beside the user menu
             because it belongs to the person reading, not to the page. */}
-        <div className="mr-2 flex items-center gap-1 rounded-md border p-0.5">
+        <div className="me-2 flex items-center gap-1 rounded-md border p-0.5">
           {LANGUAGES.map((option) => (
             <button
               key={option.code}
@@ -447,13 +453,13 @@ export default function Header({ onNavClick, activeNav }) {
             <DropdownMenuSeparator className="sm:hidden" />
             <DropdownMenuItem className="cursor-pointer" asChild>
               <Link to="/settings/firm">
-                <Building2 className="mr-2 h-4 w-4" />
+                <Building2 className="me-2 h-4 w-4" />
                 Company Settings
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem className="cursor-pointer" asChild>
               <Link to="/settings/password">
-                <KeyRound className="mr-2 h-4 w-4" />
+                <KeyRound className="me-2 h-4 w-4" />
                 Change Password
               </Link>
             </DropdownMenuItem>
@@ -462,7 +468,7 @@ export default function Header({ onNavClick, activeNav }) {
               className="cursor-pointer text-destructive focus:text-destructive"
               onClick={() => navigate("/sign-in")}
             >
-              <LogOut className="mr-2 h-4 w-4" />
+              <LogOut className="me-2 h-4 w-4" />
               Sign Out
             </DropdownMenuItem>
           </DropdownMenuContent>

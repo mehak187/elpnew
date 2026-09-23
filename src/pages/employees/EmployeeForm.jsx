@@ -96,6 +96,7 @@ import {
   documentStatus,
   formatUploadedAt,
 } from "./employeeData";
+import { checkRequired } from "@/components/shared/formFields";
 
 /**
  * The employee record, section by section.
@@ -245,9 +246,9 @@ function IconField({ icon, id, label, ...props }) {
       <div className="relative">
         <Icon
           aria-hidden="true"
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+          className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
         />
-        <Input id={id} className="pl-9" {...props} />
+        <Input id={id} className="ps-9" {...props} />
       </div>
     </div>
   );
@@ -448,7 +449,7 @@ export default function EmployeeForm({ self }) {
     docDraft.type && docDraft.expiry && (docFile || editingDoc);
 
   const addDocument = () => {
-    if (!canSaveDocument) return;
+    if (!checkRequired() || !canSaveDocument) return;
     const now = new Date();
     const pad = (n) => String(n).padStart(2, "0");
     const uploadedAt =
@@ -599,7 +600,7 @@ export default function EmployeeForm({ self }) {
                     type="button"
                     onClick={() => setActiveSection(section.key)}
                     className={cn(
-                      "flex items-center gap-2.5 text-nowrap rounded-md px-3 py-2 text-left text-sm font-medium transition-colors",
+                      "flex items-center gap-2.5 text-nowrap rounded-md px-3 py-2 text-start text-sm font-medium transition-colors",
                       activeSection === section.key
                         ? "bg-primary text-primary-foreground"
                         : "text-primary hover:bg-secondary"
@@ -654,7 +655,7 @@ export default function EmployeeForm({ self }) {
                 {/* No standing beside the heading: it is already on the row
                     this record was opened from, and it is a field below. */}
                 <SectionCard title="Personal Details">
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+                  <div className="form-grid">
                     <div className="space-y-2">
                       <Label htmlFor="arabicName">
                         Full Name (Arabic)
@@ -845,7 +846,7 @@ export default function EmployeeForm({ self }) {
 
                 <SectionCard title="Employment Details">
                   <div className="space-y-6">
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+                    <div className="form-grid">
                       {/* Where the employee stands comes first: it decides
                           what else the record has to say. It is the firm's
                           business, so My Profile does not show it. */}
@@ -1067,7 +1068,7 @@ export default function EmployeeForm({ self }) {
                     {/* Asked for only once the status says somebody has left */}
                     {!self && hasLeft && (
                       <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
+                        <div className="form-grid form-grid-2">
                           <div className="space-y-2">
                             <Label htmlFor="reasonForLeaving">
                               Reason for Leaving
@@ -1250,7 +1251,7 @@ export default function EmployeeForm({ self }) {
                               id="docNotes"
                               maxLength={NOTES_LIMIT}
                               placeholder="Enter notes (optional)"
-                              className="pr-16"
+                              className="pe-16"
                               value={docDraft.notes}
                               onChange={(e) =>
                                 setDocDraft((prev) => ({
@@ -1259,7 +1260,7 @@ export default function EmployeeForm({ self }) {
                                 }))
                               }
                             />
-                            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                            <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
                               {docDraft.notes.length}/{NOTES_LIMIT}
                             </span>
                           </div>
@@ -1277,7 +1278,6 @@ export default function EmployeeForm({ self }) {
                         <Button
                           type="button"
                           onClick={addDocument}
-                          disabled={!canSaveDocument}
                         >
                           Save Document
                         </Button>
@@ -1303,10 +1303,10 @@ export default function EmployeeForm({ self }) {
                         {!readOnly && !addingDoc && (
                           <Button
                             type="button"
-                            className="ml-auto"
+                            className="ms-auto"
                             onClick={() => setAddingDoc(true)}
                           >
-                            <Plus className="mr-2 h-4 w-4" />
+                            <Plus className="me-2 h-4 w-4" />
                             Add Document
                           </Button>
                         )}
@@ -1519,7 +1519,7 @@ export default function EmployeeForm({ self }) {
                 {!current.noSave && !readOnly && (
                   <div className="flex justify-end">
                     <Button type="submit">
-                      <Save className="mr-2 h-4 w-4" />
+                      <Save className="me-2 h-4 w-4" />
                       {current.save || "Save"}
                     </Button>
                   </div>

@@ -41,6 +41,7 @@ import {
   invoices,
   money,
 } from "../firmData";
+import { checkRequired } from "@/components/shared/formFields";
 
 const ALL_BANKS = "all";
 
@@ -130,7 +131,7 @@ function readLogo(file, set) {
 /** The fields a bank account is made of. */
 function BankFields({ draft, set }) {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="form-grid">
       <div className="space-y-2">
         <FieldLabel htmlFor="bankName">Bank Name</FieldLabel>
         <div className="flex gap-2">
@@ -442,7 +443,7 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
     draft.accountType;
 
   const saveAccount = () => {
-    if (!canSaveAccount) return;
+    if (!checkRequired() || !canSaveAccount) return;
     addBankAccount({
       bankName: draft.bankName,
       bankBranch: draft.bankBranch,
@@ -471,7 +472,7 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
     Number(transfer.amount) > 0;
 
   const saveTransfer = () => {
-    if (!canTransfer) return;
+    if (!checkRequired() || !canTransfer) return;
     addTransfer({
       fromAccountId: Number(transfer.fromAccountId),
       toAccountId: Number(transfer.toAccountId),
@@ -512,7 +513,7 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
             <Button variant="outline" onClick={closeAddBank}>
               Cancel
             </Button>
-            <Button onClick={saveAccount} disabled={!canSaveAccount}>
+            <Button onClick={saveAccount}>
               Save Bank Account
             </Button>
           </div>
@@ -607,13 +608,13 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                 />
                 <div className="hidden flex-1 sm:block" />
                 <Button variant="outline" onClick={exportAccounts}>
-                  <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" />
+                  <FileSpreadsheet className="me-2 h-4 w-4 text-green-600" />
                   Export to Excel
                 </Button>
                 {/* The way to add, at the end of the row above the list. */}
                 {canEdit && (
                   <Button type="button" onClick={openAddBank}>
-                    <Plus className="mr-1.5 h-4 w-4" />
+                    <Plus className="me-1.5 h-4 w-4" />
                     Add New Bank
                   </Button>
                 )}
@@ -626,14 +627,14 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[920px] border text-sm">
                       <thead>
-                        <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
-                          <th className="border-r last:border-r-0 p-3 font-semibold">Bank Name</th>
-                          <th className="border-r last:border-r-0 p-3 font-semibold">Branch Details</th>
-                          <th className="border-r last:border-r-0 p-3 font-semibold">
+                        <tr className="border-b bg-muted/50 text-start text-xs text-muted-foreground">
+                          <th className="p-3 font-semibold">Bank Name</th>
+                          <th className="p-3 font-semibold">Branch Details</th>
+                          <th className="p-3 font-semibold">
                             Bank Account Details
                           </th>
-                          <th className="border-r last:border-r-0 p-3 font-semibold">Balance</th>
-                          <th className="border-r last:border-r-0 p-3 font-semibold">Actions</th>
+                          <th className="p-3 font-semibold">Balance</th>
+                          <th className="p-3 font-semibold">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -643,7 +644,7 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                             className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"
                           >
                             {/* The name opens the bank for editing */}
-                            <td className="border-r last:border-r-0 p-3">
+                            <td className="p-3">
                               <button
                                 type="button"
                                 onClick={() =>
@@ -654,7 +655,7 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                                 {account.bankName}
                               </button>
                             </td>
-                            <td className="border-r last:border-r-0 p-3">
+                            <td className="p-3">
                               <p className="font-semibold">
                                 {account.bankBranch || "-"}
                               </p>
@@ -669,7 +670,7 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                                 </p>
                               )}
                             </td>
-                            <td className="border-r last:border-r-0 p-3">
+                            <td className="p-3">
                               {/* Enough of the number to tell accounts apart */}
                               <Pair label="Account No.:">
                                 {maskAccountNumber(account.accountNumber)}
@@ -677,7 +678,7 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                               <Pair label="IBAN:">{account.iban}</Pair>
                               <Pair label="SWIFT Code:">{account.swift}</Pair>
                             </td>
-                            <td className="border-r last:border-r-0 p-3">
+                            <td className="p-3">
                               <Pair label="Opening Balance:">
                                 {money(account.openingBalance)}
                               </Pair>
@@ -685,7 +686,7 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                                 {money(balanceOf(account))}
                               </Pair>
                             </td>
-                            <td className="border-r last:border-r-0 p-3">
+                            <td className="p-3">
                               <div className="flex flex-wrap items-center gap-2 text-sm">
                                 <button
                                   type="button"
@@ -802,7 +803,7 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                   Transfer Between Accounts
                 </p>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
+                <div className="form-grid form-grid-3">
                   <div className="space-y-2">
                     <Label htmlFor="transferDate">Transfer Date</Label>
                     <Input
@@ -874,9 +875,9 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                         value={transfer.amount}
                         onChange={(e) => setMove("amount", e.target.value)}
                         placeholder="Enter amount"
-                        className="pr-10"
+                        className="pe-10"
                       />
-                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                         <Rial />
                       </span>
                     </div>
@@ -952,7 +953,7 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                 </div>
 
                 <div className="flex justify-end">
-                  <Button onClick={saveTransfer} disabled={!canTransfer}>
+                  <Button onClick={saveTransfer}>
                     Save Transfer
                   </Button>
                 </div>
@@ -971,14 +972,14 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                 ) : (
                   <table className="w-full min-w-[860px] border text-sm">
                     <thead>
-                      <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
-                        <th className="border-r last:border-r-0 p-3 font-semibold">Transfer No.</th>
-                        <th className="border-r last:border-r-0 p-3 font-semibold">Date</th>
-                        <th className="border-r last:border-r-0 p-3 font-semibold">From</th>
-                        <th className="border-r last:border-r-0 p-3 font-semibold">To</th>
-                        <th className="border-r last:border-r-0 p-3 font-semibold">Amount</th>
-                        <th className="border-r last:border-r-0 p-3 font-semibold">Reference</th>
-                        <th className="border-r last:border-r-0 p-3 font-semibold">Recorded By</th>
+                      <tr className="border-b bg-muted/50 text-start text-xs text-muted-foreground">
+                        <th className="p-3 font-semibold">Transfer No.</th>
+                        <th className="p-3 font-semibold">Date</th>
+                        <th className="p-3 font-semibold">From</th>
+                        <th className="p-3 font-semibold">To</th>
+                        <th className="p-3 font-semibold">Amount</th>
+                        <th className="p-3 font-semibold">Reference</th>
+                        <th className="p-3 font-semibold">Recorded By</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -987,10 +988,10 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                           key={move.id}
                           className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"
                         >
-                          <td className="border-r last:border-r-0 p-3 font-medium text-primary">
+                          <td className="p-3 font-medium text-primary">
                             {move.transferNo || "-"}
                           </td>
-                          <td className="border-r last:border-r-0 p-3">
+                          <td className="p-3">
                             {formatDate(move.date)}
                             {move.time && (
                               <span className="block text-xs text-muted-foreground">
@@ -998,16 +999,16 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                               </span>
                             )}
                           </td>
-                          <td className="border-r last:border-r-0 p-3">
+                          <td className="p-3">
                             {accountLine(accountById(move.fromAccountId))}
                           </td>
-                          <td className="border-r last:border-r-0 p-3">
+                          <td className="p-3">
                             {accountLine(accountById(move.toAccountId))}
                           </td>
-                          <td className="border-r last:border-r-0 p-3 font-semibold">
+                          <td className="p-3 font-semibold">
                             {money(move.amount)}
                           </td>
-                          <td className="border-r last:border-r-0 p-3 text-muted-foreground">
+                          <td className="p-3 text-muted-foreground">
                             {move.reference || "-"}
                             {move.receipt && (
                               <span className="mt-1 flex items-center gap-1.5 text-primary">
@@ -1016,7 +1017,7 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                               </span>
                             )}
                           </td>
-                          <td className="border-r last:border-r-0 p-3">
+                          <td className="p-3">
                             {move.byName || "-"}
                             {move.byRole && (
                               <span className="block text-xs text-muted-foreground">

@@ -32,6 +32,7 @@ import { ArrowRight, Check } from "lucide-react";
 import { useClients } from "@/lib/clients/context";
 import { clientDisplayName, mergedInto } from "../clientRecords";
 import { MERGE_TRANSFER_ITEMS } from "../clientMockData";
+import { checkRequired } from "@/components/shared/formFields";
 
 /** Which name the two clients are to carry once they are one. */
 const KEEP_MAIN = "main";
@@ -106,7 +107,7 @@ export default function MergeSection({ client }) {
     (!writingName || (newName.english.trim() && newName.arabic.trim()));
 
   const handleMerge = () => {
-    if (!canMerge) return;
+    if (!checkRequired() || !canMerge) return;
     mergeClients(other.clientNo, client.clientNo, {
       on: mergeDate,
       name: resulting.english,
@@ -176,7 +177,7 @@ export default function MergeSection({ client }) {
         <CardContent className="space-y-4 p-4 sm:space-y-6 sm:p-6">
           {/* The day it is booked, who is coming in, and - underneath - the
               name the two carry afterwards. */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+          <div className="form-grid form-grid-3">
             <div className="space-y-2">
               <FieldLabel htmlFor="mergeDate" required>
                 Merge Date
@@ -282,7 +283,6 @@ export default function MergeSection({ client }) {
           <div className="flex justify-end">
             <Button
               type="button"
-              disabled={!canMerge}
               onClick={() => setConfirmOpen(true)}
             >
               Merge Clients

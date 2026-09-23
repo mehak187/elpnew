@@ -34,6 +34,7 @@ import { cn } from "@/lib/utils";
 import { CONTRACT_TYPES } from "@/lib/constants";
 import { formatDate, dayOffset } from "@/pages/firm/firmData";
 import { clientContracts, clientLinkedCases } from "../clientMockData";
+import { checkRequired } from "@/components/shared/formFields";
 
 /**
  * A contract is spent once the end date it carries has arrived. Until then it
@@ -87,6 +88,7 @@ export default function ClientContractsSection() {
   };
 
   const handleSave = () => {
+    if (!checkRequired() || !canSave) return;
     setContracts((prev) => [
       ...prev,
       {
@@ -120,7 +122,7 @@ export default function ClientContractsSection() {
           <button
             type="button"
             onClick={() => setEditing({ ...row })}
-            className="rounded font-medium text-primary focus:outline-none focus:ring-2 focus:ring-ring"
+            className="numeric-value font-medium text-record-link underline-offset-2 hover:underline"
           >
             {value}
           </button>
@@ -178,7 +180,7 @@ export default function ClientContractsSection() {
           onClick={() =>
             window.open(row.fileUrl, "_blank", "noopener,noreferrer")
           }
-          className="flex items-start gap-2 rounded text-left text-primary focus:outline-none focus:ring-2 focus:ring-ring"
+          className="flex items-start gap-2 rounded text-start text-primary focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <FileText className="h-4 w-4 shrink-0" />
           {value}
@@ -223,9 +225,9 @@ export default function ClientContractsSection() {
             onBack={closeForm}
           />
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-2">
-              <Label htmlFor="contractType">Contract Type *</Label>
+          <div className="form-grid">
+            <div data-required="true" className="form-field space-y-2">
+              <Label htmlFor="contractType">Contract Type</Label>
               <div className="flex gap-2">
                 <Select
                   value={draft.contractType}
@@ -286,8 +288,8 @@ export default function ClientContractsSection() {
 
             {/* A specific contract is written for one case, so it names it */}
             {isSpecific && (
-              <div className="space-y-2">
-                <Label htmlFor="caseFileNo">Case File Number *</Label>
+              <div className="form-field space-y-2">
+                <Label htmlFor="caseFileNo">Case File Number</Label>
                 <SearchableSelect
                   id="caseFileNo"
                   value={draft.caseFileNo}
@@ -302,9 +304,10 @@ export default function ClientContractsSection() {
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="contractStart">Start Date *</Label>
+            <div className="form-field space-y-2">
+              <Label htmlFor="contractStart">Start Date</Label>
               <Input
+                required
                 id="contractStart"
                 type="date"
                 value={draft.startDate}
@@ -347,7 +350,7 @@ export default function ClientContractsSection() {
             <Button variant="outline" onClick={closeForm}>
               Cancel
             </Button>
-            <Button type="button" onClick={handleSave} disabled={!canSave}>
+            <Button type="button" onClick={handleSave}>
               Save Contract
             </Button>
           </div>
@@ -388,7 +391,7 @@ export default function ClientContractsSection() {
           </DialogHeader>
 
           {editing && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="form-grid form-grid-2">
               {/* The case file only exists for a specific contract, so the type
                   takes the whole row when there is nothing to sit beside it. */}
               <div
@@ -493,7 +496,7 @@ export default function ClientContractsSection() {
                   onClick={() =>
                     window.open(editing.fileUrl, "_blank", "noopener,noreferrer")
                   }
-                  className="flex h-9 w-full items-center gap-2 rounded-md border bg-muted/40 px-3 text-left text-sm text-primary focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="flex h-9 w-full items-center gap-2 rounded-md border bg-muted/40 px-3 text-start text-sm text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   <FileText className="h-4 w-4 shrink-0" />
                   <span className="truncate">{editing.fileName}</span>

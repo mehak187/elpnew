@@ -32,6 +32,7 @@ import {
   branchLabel,
   formatDate,
 } from "../firmData";
+import { checkRequired } from "@/components/shared/formFields";
 
 /**
  * An expiry date and what it means.
@@ -106,7 +107,7 @@ export default function DocumentsSection({ canEdit }) {
   const canSave = canEdit && file && draft.type;
 
   const handleSave = () => {
-    if (!canSave) return;
+    if (!checkRequired() || !canSave) return;
     addDocument({
       branchId: draft.branch === GENERAL_BRANCH ? null : Number(draft.branch),
       type: draft.type,
@@ -162,7 +163,7 @@ export default function DocumentsSection({ canEdit }) {
               title="Add Document"
             />
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="form-grid">
               <div className="space-y-2">
                 <Label htmlFor="documentBranch">Branch</Label>
                 <Select
@@ -184,8 +185,8 @@ export default function DocumentsSection({ canEdit }) {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="documentType">Document Type *</Label>
+              <div data-required="true" className="form-field space-y-2">
+                <Label htmlFor="documentType">Document Type</Label>
                 <div className="flex gap-2">
                   <Select
                     value={draft.type}
@@ -269,7 +270,7 @@ export default function DocumentsSection({ canEdit }) {
               <Button variant="outline" onClick={closeForm}>
                 Cancel
               </Button>
-              <Button type="button" onClick={handleSave} disabled={!canSave}>
+              <Button type="button" onClick={handleSave}>
                 Save Document
               </Button>
             </div>
@@ -281,7 +282,7 @@ export default function DocumentsSection({ canEdit }) {
       {canEdit && !adding && (
         <div className="flex justify-end">
           <Button type="button" onClick={() => setAdding(true)}>
-            <Plus className="mr-1.5 h-4 w-4" />
+            <Plus className="me-1.5 h-4 w-4" />
             Add Document
           </Button>
         </div>
@@ -298,13 +299,13 @@ export default function DocumentsSection({ canEdit }) {
           ) : (
             <table className="w-full min-w-[820px] border text-sm">
               <thead>
-                <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
-                  <th className="border-r last:border-r-0 p-3 font-semibold">Document ID</th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold">Branch</th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold">Document Type</th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold">Document</th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold">Expiry Date</th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold">Notes</th>
+                <tr className="border-b bg-muted/50 text-start text-xs text-muted-foreground">
+                  <th className="p-3 font-semibold">Document ID</th>
+                  <th className="p-3 font-semibold">Branch</th>
+                  <th className="p-3 font-semibold">Document Type</th>
+                  <th className="p-3 font-semibold">Document</th>
+                  <th className="p-3 font-semibold">Expiry Date</th>
+                  <th className="p-3 font-semibold">Notes</th>
 
                 </tr>
               </thead>
@@ -318,20 +319,20 @@ export default function DocumentsSection({ canEdit }) {
                       className="border-b transition-colors last:border-0 hover:bg-primary/10"
                     >
                       {/* The reference opens the document for editing */}
-                      <td className="border-r last:border-r-0 p-3">
+                      <td className="p-3">
                         <button
                           type="button"
                           onClick={() => setEditing({ ...document })}
-                          className="rounded font-medium text-primary focus:outline-none focus:ring-2 focus:ring-ring"
+                          className="numeric-value font-medium text-record-link underline-offset-2 hover:underline"
                         >
                           {document.docId}
                         </button>
                       </td>
-                      <td className="border-r last:border-r-0 p-3">
+                      <td className="p-3">
                         {branchLabel(branches, document.branchId)}
                       </td>
-                      <td className="border-r last:border-r-0 p-3 font-medium">{document.type}</td>
-                      <td className="border-r last:border-r-0 p-3">
+                      <td className="p-3 font-medium">{document.type}</td>
+                      <td className="p-3">
                         <button
                           type="button"
                           onClick={() => open(document)}
@@ -341,10 +342,10 @@ export default function DocumentsSection({ canEdit }) {
                           {document.fileName}
                         </button>
                       </td>
-                      <td className="border-r last:border-r-0 p-3">
+                      <td className="p-3">
                         <ExpiryDate date={document.expiryDate} />
                       </td>
-                      <td className="border-r last:border-r-0 p-3 text-muted-foreground">
+                      <td className="p-3 text-muted-foreground">
                         {document.notes || "-"}
                       </td>
 
@@ -369,7 +370,7 @@ export default function DocumentsSection({ canEdit }) {
           </DialogHeader>
 
           {editing && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="form-grid form-grid-2">
               <div className="space-y-2">
                 <Label htmlFor="editBranch">Branch</Label>
                 <Select
@@ -382,7 +383,6 @@ export default function DocumentsSection({ canEdit }) {
                       branchId: value === GENERAL_BRANCH ? null : Number(value),
                     })
                   }
-                  disabled={!canEdit}
                 >
                   <SelectTrigger id="editBranch">
                     <SelectValue />
@@ -405,7 +405,6 @@ export default function DocumentsSection({ canEdit }) {
                   onValueChange={(value) =>
                     setEditing({ ...editing, type: value })
                   }
-                  disabled={!canEdit}
                 >
                   <SelectTrigger id="editType">
                     <SelectValue />
@@ -429,7 +428,6 @@ export default function DocumentsSection({ canEdit }) {
                   onChange={(e) =>
                     setEditing({ ...editing, expiryDate: e.target.value })
                   }
-                  disabled={!canEdit}
                 />
               </div>
 
@@ -438,7 +436,7 @@ export default function DocumentsSection({ canEdit }) {
                 <button
                   type="button"
                   onClick={() => open(editing)}
-                  className="flex h-9 w-full items-center gap-2 rounded-md border bg-muted/40 px-3 text-left text-sm text-primary focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="flex h-9 w-full items-center gap-2 rounded-md border bg-muted/40 px-3 text-start text-sm text-primary focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   <FileText className="h-4 w-4 shrink-0" />
                   <span className="truncate">{editing.fileName}</span>
@@ -453,7 +451,6 @@ export default function DocumentsSection({ canEdit }) {
                   onChange={(e) =>
                     setEditing({ ...editing, notes: e.target.value })
                   }
-                  disabled={!canEdit}
                 />
               </div>
             </div>
@@ -472,7 +469,7 @@ export default function DocumentsSection({ canEdit }) {
                   setEditing(null);
                 }}
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="me-2 h-4 w-4" />
                 Delete Document
               </Button>
             ) : (

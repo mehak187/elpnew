@@ -27,7 +27,7 @@ export default function SuppliersPage() {
           <button
             type="button"
             onClick={() => navigate("/suppliers/" + row.id)}
-            className="rounded font-medium text-primary focus:outline-none focus:ring-2 focus:ring-ring"
+            className="numeric-value font-medium text-record-link underline-offset-2 hover:underline"
           >
             {value}
           </button>
@@ -113,7 +113,7 @@ export default function SuppliersPage() {
           variant="outline"
           onClick={() => downloadCsv(toCsv(columns, suppliers), "suppliers.csv")}
         >
-          <FileSpreadsheet className="mr-2 h-4 w-4 text-emerald-600" />
+          <FileSpreadsheet className="me-2 h-4 w-4 text-emerald-600" />
           Export
         </Button>
       </div>

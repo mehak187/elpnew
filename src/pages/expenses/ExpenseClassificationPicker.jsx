@@ -58,8 +58,8 @@ export default function ExpenseClassificationPicker({
 
   return (
     <>
-      <div className="space-y-2">
-        <Label htmlFor={idPrefix + "-type"}>{LEVEL_LABELS[0]} *</Label>
+      <div data-required="true" className="form-field space-y-2">
+        <Label htmlFor={idPrefix + "-type"}>{LEVEL_LABELS[0]}</Label>
         <Select value={value.typeKey || ""} onValueChange={setType}>
           <SelectTrigger id={idPrefix + "-type"}>
             <SelectValue placeholder="Please Select" />

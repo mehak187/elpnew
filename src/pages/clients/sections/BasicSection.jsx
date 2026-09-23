@@ -107,7 +107,7 @@ export default function BasicSection({
 
   return (
     // Three to a row, the width every form in the system is laid out on.
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+    <div className="form-grid form-grid-3">
       {/* Date of Registration - stamped by the system on creation.
           The day a client came on to the books is a record of what happened,
           not a choice, so it is shown rather than asked for. */}
@@ -123,8 +123,8 @@ export default function BasicSection({
       </div>
 
       {/* Client Type */}
-      <div className="space-y-2">
-        <Label htmlFor="clientType">Client Type *</Label>
+      <div data-required="true" className="form-field space-y-2">
+        <Label htmlFor="clientType">Client Type</Label>
         <Select value={clientType} onValueChange={onClientTypeChange}>
           <SelectTrigger id="clientType">
             <SelectValue placeholder="Select client type" />
@@ -140,8 +140,8 @@ export default function BasicSection({
       </div>
 
       {/* Client Name (Arabic) */}
-      <div className="space-y-2">
-        <Label htmlFor="arabicName">Client Name (Arabic) *</Label>
+      <div className="form-field space-y-2">
+        <Label htmlFor="arabicName">Client Name (Arabic)</Label>
         <Input
           id="arabicName"
           name="arabicName"
@@ -154,8 +154,8 @@ export default function BasicSection({
       </div>
 
       {/* Client Name (English) */}
-      <div className="space-y-2">
-        <Label htmlFor="englishName">Client Name (English) *</Label>
+      <div className="form-field space-y-2">
+        <Label htmlFor="englishName">Client Name (English)</Label>
         <Input
           id="englishName"
           name="englishName"
@@ -179,8 +179,8 @@ export default function BasicSection({
       />
 
       {/* Reference Expiry Date */}
-      <div className="space-y-2">
-        <Label htmlFor="referenceExpiryDate">Reference Expiry Date *</Label>
+      <div className="form-field space-y-2">
+        <Label htmlFor="referenceExpiryDate">Reference Expiry Date</Label>
         <Input
           id="referenceExpiryDate"
           name="referenceExpiryDate"
@@ -204,8 +204,8 @@ export default function BasicSection({
       />
 
       {/* POA Expiry Date */}
-      <div className="space-y-2">
-        <Label htmlFor="poaExpiryDate">POA Expiry Date *</Label>
+      <div className="form-field space-y-2">
+        <Label htmlFor="poaExpiryDate">POA Expiry Date</Label>
         <Input
           id="poaExpiryDate"
           name="poaExpiryDate"

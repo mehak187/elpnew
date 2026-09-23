@@ -361,7 +361,7 @@ export default function ClientDetails() {
         {/* Only the editable sections have something to save */}
         {current.form && (
           <Button type="submit" form="client-form">
-            <Save className="mr-2 h-4 w-4" />
+            <Save className="me-2 h-4 w-4" />
             {isExisting ? "Update Client" : "Save Client"}
           </Button>
         )}
@@ -383,7 +383,7 @@ export default function ClientDetails() {
                     type="button"
                     onClick={() => setActiveSection(section.key)}
                     className={cn(
-                      "flex items-center gap-2.5 text-nowrap rounded-md px-3 py-2 text-left text-sm font-medium transition-colors",
+                      "flex items-center gap-2.5 text-nowrap rounded-md px-3 py-2 text-start text-sm font-medium transition-colors",
                       activeSection === section.key
                         ? "bg-primary text-primary-foreground"
                         : "text-primary hover:bg-secondary"

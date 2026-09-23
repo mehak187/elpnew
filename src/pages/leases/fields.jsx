@@ -21,8 +21,17 @@ export function FieldLabel({ htmlFor, children }) {
   );
 }
 
-export function Field({ children }) {
-  return <div className="flex h-full flex-col justify-end gap-2">{children}</div>;
+export function Field({ className, children, ...rest }) {
+  // `form-field` is what the message under an empty required field anchors
+  // to, and `rest` carries the data-required that says a field is one.
+  return (
+    <div
+      className={cn("form-field flex h-full flex-col justify-end gap-2", className)}
+      {...rest}
+    >
+      {children}
+    </div>
+  );
 }
 
 /** A choice from a list. Empty values are ignored - nobody picks "nothing". */
@@ -73,7 +82,7 @@ export function Worked({ id, label, value }) {
 }
 
 /** A typed field, with anything that belongs beside the input (an upload) after it. */
-export function TextField({ id, label, value, onChange, placeholder, type, inputMode, max, children }) {
+export function TextField({ id, label, required, value, onChange, placeholder, type, inputMode, max, children }) {
   return (
     <Field>
       <FieldLabel htmlFor={id}>
@@ -81,6 +90,7 @@ export function TextField({ id, label, value, onChange, placeholder, type, input
       </FieldLabel>
       <div className="flex gap-2">
         <Input
+          required={required}
           id={id}
           type={type}
           inputMode={inputMode}

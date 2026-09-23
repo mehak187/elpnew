@@ -79,8 +79,8 @@ export default function ExpenseForm() {
             </p>
           </div>
         </div>
-        <Button type="submit" form="expense-form" disabled={!canSave}>
-          <Save className="mr-2 h-4 w-4" />
+        <Button type="submit" form="expense-form">
+          <Save className="me-2 h-4 w-4" />
           Save Expense
         </Button>
       </div>
@@ -92,7 +92,7 @@ export default function ExpenseForm() {
             onSubmit={handleSubmit}
             className="space-y-6"
           >
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+            <div className="form-grid">
               <ExpenseClassificationPicker
                 value={draft}
                 onChange={(next) => {
@@ -102,9 +102,10 @@ export default function ExpenseForm() {
               />
 
               {classified && (
-                <div className="space-y-2">
-                  <Label htmlFor="expenseDate">Date *</Label>
+                <div className="form-field space-y-2">
+                  <Label htmlFor="expenseDate">Date</Label>
                   <Input
+                    required
                     id="expenseDate"
                     type="date"
                     value={draft.date}
@@ -115,7 +116,7 @@ export default function ExpenseForm() {
 
               {classified && (
                 <div className="space-y-2">
-                  <Label htmlFor="expenseAmount">Amount (<Rial />) *</Label>
+                  <Label htmlFor="expenseAmount">Amount (<Rial />)</Label>
                   <Input
                     id="expenseAmount"
                     type="number"

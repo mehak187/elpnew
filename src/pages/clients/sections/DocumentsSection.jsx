@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { DOCUMENT_TYPES } from "@/lib/constants";
 import { expiryState, EXPIRY_LABEL } from "@/lib/expiry";
 import { clientDocuments } from "../clientMockData";
+import { checkRequired } from "@/components/shared/formFields";
 
 /**
  * Document types that carry fields the client record already holds.
@@ -181,6 +182,7 @@ export default function DocumentsSection({ formData, onChange }) {
   };
 
   const handleSave = () => {
+    if (!checkRequired() || !canSave) return;
     setDocuments((prev) => {
       const next = prev.reduce((max, d) => Math.max(max, d.serial), 0) + 1;
       return [
@@ -264,7 +266,7 @@ export default function DocumentsSection({ formData, onChange }) {
         <button
           type="button"
           onClick={() => openFile(row)}
-          className="flex items-start gap-2 rounded text-left text-primary focus:outline-none focus:ring-2 focus:ring-ring"
+          className="flex items-start gap-2 rounded text-start text-primary focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <FileText className="mt-0.5 h-4 w-4 shrink-0" />
           {value}
@@ -281,24 +283,17 @@ export default function DocumentsSection({ formData, onChange }) {
     },
   ];
 
-  return (
-    <div className="space-y-6">
-      {/* The section's own heading, so the way to add to it sits on the
-          same line rather than costing a row of its own. */}
-      {/* The section's own heading. The way to add is not here: it sits on
-          the row above the table, where every list in the system has it. */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-        <h2 className="border-s-4 border-primary ps-3 text-lg font-bold text-primary">Documents</h2>
-      </div>
-
-      {/* The form takes the place of the list while it is being filled
-          in. */}
-      {adding && (
-        <Card>
-          <CardContent className="space-y-4 p-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="space-y-2">
-                <Label htmlFor="documentType">Document Type *</Label>
+  /*
+   * Standard 08: the add form, drawn inside the table's own container
+   * rather than in a card above it. Held in a variable so its markup
+   * stays beside the state it is filled from, and handed to the table
+   * below as `addPanel`.
+   */
+  const addDocumentPanel = (
+    <div className="space-y-4">
+            <div className="form-grid">
+              <div data-required="true" className="form-field space-y-2">
+                <Label htmlFor="documentType">Document Type</Label>
                 <div className="flex gap-2">
                   <Select
                     value={draft.documentType}
@@ -356,9 +351,10 @@ export default function DocumentsSection({ formData, onChange }) {
               </div>
 
               {/* The date on the paper, not the day it reached the office. */}
-              <div className="space-y-2">
-                <Label htmlFor="documentDate">Document Date *</Label>
+              <div className="form-field space-y-2">
+                <Label htmlFor="documentDate">Document Date</Label>
                 <Input
+                  required
                   id="documentDate"
                   type="date"
                   max={todayIso()}
@@ -413,13 +409,23 @@ export default function DocumentsSection({ formData, onChange }) {
               <Button type="button" variant="outline" onClick={closeForm}>
                 Cancel
               </Button>
-              <Button type="button" onClick={handleSave} disabled={!canSave}>
+              <Button type="button" onClick={handleSave}>
                 Save Document
               </Button>
             </div>
-          </CardContent>
-        </Card>
-      )}
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* The section's own heading, so the way to add to it sits on the
+          same line rather than costing a row of its own. */}
+      {/* The section's own heading. The way to add is not here: it sits on
+          the row above the table, where every list in the system has it. */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+        <h2 className="border-s-4 border-primary ps-3 text-lg font-bold text-primary">Documents</h2>
+      </div>
+
 
       {/* The list stays under the form rather than making way for it: a
           new record is judged against the ones already there. */}
@@ -445,7 +451,7 @@ export default function DocumentsSection({ formData, onChange }) {
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="form-grid">
               <Detail label="Document Date">{opened.documentDate}</Detail>
               <Detail label="Expiry &amp; Status">
                 <ExpiryLine date={opened.expiryDate} />
@@ -474,7 +480,7 @@ export default function DocumentsSection({ formData, onChange }) {
                 className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
                 onClick={() => removeDocument(opened.id)}
               >
-                <Trash2 className="mr-1.5 h-4 w-4" />
+                <Trash2 className="me-1.5 h-4 w-4" />
                 Delete Document
               </Button>
             </div>
@@ -498,6 +504,10 @@ export default function DocumentsSection({ formData, onChange }) {
               }
         }
         addLabel="Add Document"
+        addPanel={adding ? addDocumentPanel : null}
+        addPanelTitle="Add Document"
+        addPanelNote={formData?.clientName}
+        onAddPanelClose={() => setAdding(false)}
         currentPage={currentPage}
         pageSize={pageSize}
         onPageChange={setCurrentPage}

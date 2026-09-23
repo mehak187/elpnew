@@ -159,13 +159,16 @@ export default function InvoiceForm({ onCancel, onSubmit, forSupplier }) {
       <FormSection icon={ReceiptText} title="Invoice Data">
         <div
           className={cn(
-            "grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6",
-            supplierKnown ? "lg:grid-cols-2" : "lg:grid-cols-4"
+            "form-grid",
+            // Two fields when the supplier is already known, four when the
+            // row has to ask who it is.
+            supplierKnown && "form-grid-2"
           )}
         >
-          <div className="space-y-2">
-            <Label htmlFor="invoiceDate">Invoice Date *</Label>
+          <div className="form-field space-y-2">
+            <Label htmlFor="invoiceDate">Invoice Date</Label>
             <Input
+              required
               id="invoiceDate"
               type="date"
               value={invoiceDate}
@@ -175,10 +178,11 @@ export default function InvoiceForm({ onCancel, onSubmit, forSupplier }) {
 
           {/* The invoice copy sits with the number it belongs to. Whether one
               is coming is settled here rather than deferred. */}
-          <div className="space-y-2">
-            <Label htmlFor="invoiceNumber">Invoice Number *</Label>
+          <div className="form-field space-y-2">
+            <Label htmlFor="invoiceNumber">Invoice Number</Label>
             <div className="flex flex-wrap gap-1.5">
               <Input
+                required
                 id="invoiceNumber"
                 value={invoiceNumber}
                 onChange={(e) => setInvoiceNumber(e.target.value)}
@@ -242,7 +246,7 @@ export default function InvoiceForm({ onCancel, onSubmit, forSupplier }) {
           {/* Not asked for on a supplier's own page: the page is the
               answer, and a second answer could contradict it. */}
           <div className={cn("space-y-2", supplierKnown && "hidden")}>
-            <Label htmlFor="supplierCategory">Category *</Label>
+            <Label htmlFor="supplierCategory">Category</Label>
             <SearchableSelect
               id="supplierCategory"
               value={category}
@@ -256,7 +260,7 @@ export default function InvoiceForm({ onCancel, onSubmit, forSupplier }) {
           </div>
 
           <div className={cn("space-y-2", supplierKnown && "hidden")}>
-            <Label htmlFor="supplier">Supplier *</Label>
+            <Label htmlFor="supplier">Supplier</Label>
             <div className="flex gap-2">
               <SearchableSelect
                 id="supplier"
@@ -343,7 +347,7 @@ export default function InvoiceForm({ onCancel, onSubmit, forSupplier }) {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+                  <div className="form-grid">
                     <ExpenseClassificationPicker
                       types={GENERAL_TYPES}
                       idPrefix={"line-" + line.id}

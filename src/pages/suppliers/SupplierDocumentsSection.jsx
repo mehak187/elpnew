@@ -20,6 +20,7 @@ import {
   SUPPLIER_DOCUMENT_TYPES,
   initialSupplierDocuments,
 } from "./supplierData";
+import { checkRequired } from "@/components/shared/formFields";
 
 /** Today as a plain YYYY-MM-DD in the user's own timezone. */
 const todayIso = () => {
@@ -129,7 +130,7 @@ export default function SupplierDocumentsSection({ supplier }) {
   const canSave = file && draft.type && draft.documentDate;
 
   const save = () => {
-    if (!canSave) return;
+    if (!checkRequired() || !canSave) return;
     setDocuments((prev) => {
       const next = prev.reduce((max, d) => Math.max(max, d.serial), 0) + 1;
       return [
@@ -202,7 +203,7 @@ export default function SupplierDocumentsSection({ supplier }) {
         <button
           type="button"
           onClick={() => openFile(row)}
-          className="flex items-start gap-2 rounded text-left text-primary focus:outline-none focus:ring-2 focus:ring-ring"
+          className="flex items-start gap-2 rounded text-start text-primary focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <FileText className="mt-0.5 h-4 w-4 shrink-0" />
           {value}
@@ -219,30 +220,20 @@ export default function SupplierDocumentsSection({ supplier }) {
     },
   ];
 
-  return (
-    <div className="space-y-6">
-      {/* One heading at a time: this row gives way to the form's own heading
-          while a paper is being filed. The way to add sits on the row above
-          the table, where every list in the system has it. */}
-      {!adding && (
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-          <h2 className="border-s-4 border-primary ps-3 text-lg font-bold text-primary">
-            Supplier Documents
-          </h2>
-        </div>
-      )}
-
-      {adding && (
-        <Card>
-          <CardContent className="space-y-4 p-4 sm:p-6">
+  /*
+   * Standard 08: drawn inside the table's own container rather than in
+   * a card above it, so the list stays visible while it is filled in.
+   */
+  const addDocumentPanel = (
+    <div className="space-y-4">
             <FormHeading
               icon={FileText}
               title="Add Document"
             />
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="supplierDocType">Document Type *</Label>
+            <div className="form-grid">
+              <div data-required="true" className="form-field space-y-2">
+                <Label htmlFor="supplierDocType">Document Type</Label>
                 <div className="flex gap-2">
                   <Select
                     value={draft.type}
@@ -301,9 +292,10 @@ export default function SupplierDocumentsSection({ supplier }) {
               </div>
 
               {/* The date on the paper, not the day it reached the office. */}
-              <div className="space-y-2">
-                <Label htmlFor="supplierDocDate">Document Date *</Label>
+              <div className="form-field space-y-2">
+                <Label htmlFor="supplierDocDate">Document Date</Label>
                 <Input
+                  required
                   id="supplierDocDate"
                   type="date"
                   max={todayIso()}
@@ -337,13 +329,26 @@ export default function SupplierDocumentsSection({ supplier }) {
               <Button variant="outline" onClick={closeForm}>
                 Cancel
               </Button>
-              <Button type="button" onClick={save} disabled={!canSave}>
+              <Button type="button" onClick={save}>
                 Save Document
               </Button>
             </div>
-          </CardContent>
-        </Card>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* One heading at a time: this row gives way to the form's own heading
+          while a paper is being filed. The way to add sits on the row above
+          the table, where every list in the system has it. */}
+      {!adding && (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+          <h2 className="border-s-4 border-primary ps-3 text-lg font-bold text-primary">
+            Supplier Documents
+          </h2>
+        </div>
       )}
+
 
       {/* The opened document, above the table it was opened from. */}
       {opened && (
@@ -366,7 +371,7 @@ export default function SupplierDocumentsSection({ supplier }) {
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="form-grid">
               <Detail label="Document Date">{opened.documentDate}</Detail>
               <Detail label="Expiry &amp; Status">
                 <ExpiryLine date={opened.expiryDate} />
@@ -395,7 +400,7 @@ export default function SupplierDocumentsSection({ supplier }) {
                 className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
                 onClick={() => removeDocument(opened.id)}
               >
-                <Trash2 className="mr-1.5 h-4 w-4" />
+                <Trash2 className="me-1.5 h-4 w-4" />
                 Delete Document
               </Button>
             </div>
@@ -411,6 +416,10 @@ export default function SupplierDocumentsSection({ supplier }) {
         enableColumnSearch={false}
         onAdd={adding ? null : () => setAdding(true)}
         addLabel="Add Document"
+        addPanel={adding ? addDocumentPanel : null}
+        addPanelTitle="Add Document"
+        addPanelNote={supplier?.name}
+        onAddPanelClose={() => setAdding(false)}
         currentPage={currentPage}
         pageSize={pageSize}
         onPageChange={setCurrentPage}

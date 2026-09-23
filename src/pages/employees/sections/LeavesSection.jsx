@@ -231,7 +231,7 @@ export default function LeavesSection({ employee, canReview = true }) {
               rather than a column repeated down every row. Empty values are
               ignored: Radix reports "" whenever its list changes. */}
           <Select value={year} onValueChange={(value) => value && setYear(value)}>
-            <SelectTrigger className="ml-auto w-28" aria-label="Leave year">
+            <SelectTrigger className="ms-auto w-28" aria-label="Leave year">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -249,7 +249,7 @@ export default function LeavesSection({ employee, canReview = true }) {
       {!adding && !open && (
         <div className="flex justify-end">
           <Button type="button" onClick={() => setAdding(true)}>
-            <Plus className="mr-1.5 h-4 w-4" />
+            <Plus className="me-1.5 h-4 w-4" />
             Add New Leave
           </Button>
         </div>

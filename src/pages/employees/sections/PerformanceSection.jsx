@@ -225,7 +225,7 @@ export default function PerformanceSection() {
       </div>
 
       {/* The headline figures */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="form-grid">
         <Tile
           label="Average Daily Working Hours"
           value={hours(current.avgDailyMinutes) + " h"}
@@ -308,13 +308,13 @@ export default function PerformanceSection() {
         <div className="overflow-x-auto p-4">
           <table className="w-full min-w-[860px] border text-sm">
             <thead>
-              <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
-                <th className="border-r last:border-r-0 p-3 font-semibold">Metric</th>
-                <th className="border-r last:border-r-0 p-3 font-semibold">Current Period</th>
-                <th className="border-r last:border-r-0 p-3 font-semibold">Previous Period</th>
-                <th className="border-r last:border-r-0 p-3 font-semibold">Change</th>
-                <th className="border-r last:border-r-0 p-3 font-semibold">Change %</th>
-                <th className="border-r last:border-r-0 p-3 font-semibold">Description</th>
+              <tr className="border-b bg-muted/50 text-start text-xs text-muted-foreground">
+                <th className="p-3 font-semibold">Metric</th>
+                <th className="p-3 font-semibold">Current Period</th>
+                <th className="p-3 font-semibold">Previous Period</th>
+                <th className="p-3 font-semibold">Change</th>
+                <th className="p-3 font-semibold">Change %</th>
+                <th className="p-3 font-semibold">Description</th>
               </tr>
             </thead>
             <tbody>
@@ -327,21 +327,21 @@ export default function PerformanceSection() {
                     key={row.label}
                     className="border-b transition-colors last:border-0 hover:bg-primary/10"
                   >
-                    <td className="border-r last:border-r-0 p-3 font-medium">{row.label}</td>
-                    <td className="border-r last:border-r-0 whitespace-nowrap p-3">{row.format(now)}</td>
-                    <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-muted-foreground">
+                    <td className="p-3 font-medium">{row.label}</td>
+                    <td className="whitespace-nowrap p-3">{row.format(now)}</td>
+                    <td className="whitespace-nowrap p-3 text-muted-foreground">
                       {row.format(before)}
                     </td>
-                    <td className="border-r last:border-r-0 whitespace-nowrap p-3">
+                    <td className="whitespace-nowrap p-3">
                       <Change
                         difference={moved.difference}
                         format={row.format}
                       />
                     </td>
-                    <td className="border-r last:border-r-0 whitespace-nowrap p-3">
+                    <td className="whitespace-nowrap p-3">
                       <Percent difference={moved.difference} percent={moved.percent} />
                     </td>
-                    <td className="border-r last:border-r-0 p-3 text-muted-foreground">{row.describe}</td>
+                    <td className="p-3 text-muted-foreground">{row.describe}</td>
                   </tr>
                 );
               })}

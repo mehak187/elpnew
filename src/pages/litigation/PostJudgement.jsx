@@ -93,9 +93,9 @@ export default function PostJudgement() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <h3 className="font-semibold text-primary">Judgement Details</h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="judgement_date">Judgement Date *</Label>
+            <div className="form-grid">
+              <div className="form-field space-y-2">
+                <Label htmlFor="judgement_date">Judgement Date</Label>
                 <Input
                   id="judgement_date"
                   name="judgement_date"
@@ -106,8 +106,8 @@ export default function PostJudgement() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="judgement_type">Judgement Type *</Label>
+              <div data-required="true" className="form-field space-y-2">
+                <Label htmlFor="judgement_type">Judgement Type</Label>
                 <Select
                   value={formData.judgement_type}
                   onValueChange={(value) =>
@@ -218,7 +218,7 @@ export default function PostJudgement() {
                 Cancel
               </Button>
               <Button type="submit">
-                <Save className="mr-2 h-4 w-4" />
+                <Save className="me-2 h-4 w-4" />
                 Save Details
               </Button>
             </div>

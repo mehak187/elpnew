@@ -64,13 +64,13 @@ export default function SignIn() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"
-                  className="pr-10"
+                  className="pe-10"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setVisible((v) => !v)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="absolute end-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   {visible ? (
                     <EyeOff className="h-4 w-4" />
@@ -85,7 +85,7 @@ export default function SignIn() {
             </div>
 
             <Button type="submit" className="w-full">
-              <LogIn className="mr-2 h-4 w-4" />
+              <LogIn className="me-2 h-4 w-4" />
               Sign In
             </Button>
           </form>

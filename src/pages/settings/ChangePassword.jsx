@@ -53,12 +53,12 @@ function PasswordField({ id, label, value, onChange, autoComplete, error, hint }
           value={value}
           onChange={onChange}
           autoComplete={autoComplete}
-          className={cn("h-11 pr-11", error && "border-destructive")}
+          className={cn("h-11 pe-11", error && "border-destructive")}
         />
         <button
           type="button"
           onClick={() => setVisible((v) => !v)}
-          className="absolute right-1 top-1/2 -translate-y-1/2 rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          className="absolute end-1 top-1/2 -translate-y-1/2 rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         >
           {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           <span className="sr-only">

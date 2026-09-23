@@ -79,7 +79,7 @@ export function UpcomingHearings() {
                   </p>
                 </div>
               </div>
-              <span className="w-20 shrink-0 text-right text-xs text-muted-foreground">
+              <span className="w-20 shrink-0 text-end text-xs text-muted-foreground">
                 {days === 0 ? "Today" : "in " + days + (days === 1 ? " day" : " days")}
               </span>
             </Row>

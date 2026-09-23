@@ -180,7 +180,7 @@ export default function LawFirmProfile() {
                     type="button"
                     onClick={() => goToSection(section.key)}
                     className={cn(
-                      "flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium text-nowrap transition-colors",
+                      "flex items-center gap-2.5 rounded-md px-3 py-2 text-start text-sm font-medium text-nowrap transition-colors",
                       activeSection === section.key
                         ? "bg-primary text-primary-foreground"
                         : "text-primary hover:bg-secondary"

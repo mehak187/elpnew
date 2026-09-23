@@ -25,6 +25,7 @@ import {
   leaveDays,
   remainingBalance,
 } from "../leaveData";
+import { checkRequired } from "@/components/shared/formFields";
 
 /** A reason has to fit on the request, so the form says how much room. */
 const NOTES_LIMIT = 500;
@@ -152,7 +153,7 @@ export default function LeaveForm({
 
             {/* What is being decided, read off the request rather than asked
                 for again. */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+            <div className="form-grid">
               <Worked id="leave-review-no" label="Leave No." value={record?.leaveNo || ""} />
               <Worked id="leave-review-employee" label="Employee Name" value={employee.name} />
               <Worked id="leave-review-period" label="Leave Period" value={period} />
@@ -296,7 +297,7 @@ export default function LeaveForm({
           </>
         ) : (
         <>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+        <div className="form-grid">
           {/* The year first: a balance belongs to a year, and asking for next
               year's days is what makes a request an advance. */}
           <div className="space-y-2">
@@ -485,7 +486,16 @@ export default function LeaveForm({
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="button" onClick={onSubmit} disabled={!canSave}>
+          {/* Submitting is what checks the form: the button is never
+              disabled, so an incomplete request is refused here and the
+              fields say which ones are missing. */}
+          <Button
+            type="button"
+            onClick={() => {
+              if (!checkRequired() || !canSave) return;
+              onSubmit();
+            }}
+          >
             Submit Leave Request
           </Button>
         </div>

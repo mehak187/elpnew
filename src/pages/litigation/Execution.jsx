@@ -46,11 +46,12 @@ const columns = [
     )
   },
   // The figure carries the currency, so the heading does not repeat it.
-  { key: "amount", header: "Amount", width: "12%", className: "text-right", cellClassName: "text-right", render: (value) => withRial(value) },
-  { key: "notes", header: "Notes", width: "34%", cellClassName: "text-left" },
+  { key: "amount", header: "Amount", width: "12%", className: "text-end", cellClassName: "text-end", render: (value) => withRial(value) },
+  { key: "notes", header: "Notes", width: "34%", cellClassName: "text-start" },
 ];
 
-export default function Execution() {  const { id } = useParams();
+export default function Execution() {
+  const { id } = useParams();
   const [pageSize, setPageSize] = useState(100);
   const [currentPage, setCurrentPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
@@ -162,9 +163,9 @@ export default function Execution() {  const { id } = useParams();
                 <BackButton onBack={() => setShowForm(false)} />
                 <h3 className="font-semibold text-primary">Add Execution Action</h3>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="date">Date *</Label>
+              <div className="form-grid">
+                <div className="form-field space-y-2">
+                  <Label htmlFor="date">Date</Label>
                   <Input
                     id="date"
                     name="date"
@@ -175,8 +176,8 @@ export default function Execution() {  const { id } = useParams();
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="action">Action Type *</Label>
+                <div data-required="true" className="form-field space-y-2">
+                  <Label htmlFor="action">Action Type</Label>
                   <Select
                     value={formData.action}
                     onValueChange={(value) =>
@@ -197,8 +198,8 @@ export default function Execution() {  const { id } = useParams();
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status *</Label>
+                <div data-required="true" className="form-field space-y-2">
+                  <Label htmlFor="status">Status</Label>
                   <Select
                     value={formData.status}
                     onValueChange={(value) =>
@@ -245,7 +246,7 @@ export default function Execution() {  const { id } = useParams();
                   Cancel
                 </Button>
                 <Button type="submit">
-                  <Save className="mr-2 h-4 w-4" />
+                  <Save className="me-2 h-4 w-4" />
                   Save Action
                 </Button>
               </div>

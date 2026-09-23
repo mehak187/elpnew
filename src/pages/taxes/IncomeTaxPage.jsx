@@ -149,7 +149,7 @@ function IncomeTaxForm({ record, takenYears, onCancel, onSave }) {
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+        <div className="form-grid">
           <TextField
             id="taxFiledOn"
             label="Filed On"
@@ -191,11 +191,11 @@ function IncomeTaxForm({ record, takenYears, onCancel, onSave }) {
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onCancel}>
-            <X className="mr-2 h-4 w-4" />
+            <X className="me-2 h-4 w-4" />
             Cancel
           </Button>
           <Button type="button" onClick={save}>
-            <Save className="mr-2 h-4 w-4" />
+            <Save className="me-2 h-4 w-4" />
             Save
           </Button>
         </div>

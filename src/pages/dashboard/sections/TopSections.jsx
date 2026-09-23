@@ -48,7 +48,7 @@ export function QuickSearch() {
 
   return (
     <div className="relative">
-      <Sparkles className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+      <Sparkles className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
       <Input
         type="search"
         value={query}
@@ -59,11 +59,11 @@ export function QuickSearch() {
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         placeholder="Search case no., execution no., client, phone, civil ID, CR, opponent, court or lawyer"
-        className="pl-9"
+        className="ps-9"
       />
 
       {open && term.length > 0 && (
-        <Card className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto">
+        <Card className="absolute start-0 end-0 top-full z-50 mt-1 max-h-80 overflow-y-auto">
           <CardContent className="p-1">
             {matches.length === 0 ? (
               <p className="px-3 py-4 text-sm text-muted-foreground">
@@ -76,7 +76,7 @@ export function QuickSearch() {
                   key={entry.label}
                   type="button"
                   onMouseDown={() => navigate(entry.to)}
-                  className="flex w-full flex-col items-start rounded-md px-3 py-2 text-left transition-colors hover:bg-muted focus:outline-none focus:bg-muted"
+                  className="flex w-full flex-col items-start rounded-md px-3 py-2 text-start transition-colors hover:bg-muted focus:outline-none focus:bg-muted"
                 >
                   <span className="text-sm font-medium">{entry.label}</span>
                   <span className="text-xs text-muted-foreground">
@@ -113,7 +113,7 @@ export function QuickActions() {
           size="sm"
           onClick={() => navigate(action.to)}
         >
-          <action.icon className="mr-1.5 h-4 w-4" />
+          <action.icon className="me-1.5 h-4 w-4" />
           {action.label}
         </Button>
       ))}
@@ -152,7 +152,7 @@ export function TodaysBrief({ currentUser }) {
               type="button"
               onClick={() => navigate(item.to)}
               className={cn(
-                "flex flex-1 min-w-[120px] items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-muted/60 focus:outline-none focus:ring-2 focus:ring-ring",
+                "flex flex-1 min-w-[120px] items-center gap-3 rounded-lg border p-3 text-start transition-colors hover:bg-muted/60 focus:outline-none focus:ring-2 focus:ring-ring",
                 item.alert && item.count > 0 && "border-red-200 bg-red-50 hover:bg-red-100"
               )}
             >

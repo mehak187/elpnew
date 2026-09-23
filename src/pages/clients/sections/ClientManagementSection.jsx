@@ -21,6 +21,7 @@ import { Plus,
 import { useFirm } from "@/lib/firm/context";
 import { useLanguage, inLanguage } from "@/lib/language/context";
 import { BRANCH_ROLES, staffFor } from "@/pages/firm/firmData";
+import { checkRequired } from "@/components/shared/formFields";
 
 /**
  * Who runs this client's work at each branch.
@@ -121,7 +122,7 @@ export default function ClientManagementSection() {
   const canSave = branchId && BRANCH_ROLES.every((role) => draft[role]);
 
   const save = () => {
-    if (!canSave) return;
+    if (!checkRequired() || !canSave) return;
     setTeams((prev) => ({ ...prev, [branchId]: { ...draft } }));
     close();
   };
@@ -165,7 +166,7 @@ export default function ClientManagementSection() {
                     (editingBranch ? branchName(editingBranch) : "")}
             />
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 sm:gap-6">
+            <div className="form-grid form-grid-3">
               <div className="space-y-2">
                 <Label htmlFor="managementBranch">
                   Branch Name
@@ -248,8 +249,8 @@ export default function ClientManagementSection() {
               <Button variant="outline" onClick={close}>
                 Cancel
               </Button>
-              <Button onClick={save} disabled={!canSave}>
-                <Save className="mr-2 h-4 w-4" />
+              <Button onClick={save}>
+                <Save className="me-2 h-4 w-4" />
                 Save
               </Button>
             </div>
@@ -261,7 +262,7 @@ export default function ClientManagementSection() {
       {!mode && (
         <div className="flex justify-end">
           <Button type="button" onClick={openAdd}>
-            <Plus className="mr-1.5 h-4 w-4" />
+            <Plus className="me-1.5 h-4 w-4" />
             Add Client Team
           </Button>
         </div>
@@ -282,14 +283,14 @@ export default function ClientManagementSection() {
             <div className="overflow-x-auto">
               <table className="w-full min-w-[720px] border text-sm">
                 <thead>
-                  <tr className="border-b bg-secondary/60 text-left text-primary">
-                    <th className="border-r p-3 font-semibold last:border-r-0">
+                  <tr className="border-b bg-secondary/60 text-start text-primary">
+                    <th className="p-3 font-semibold">
                       Branch Name
                     </th>
                     {BRANCH_ROLES.map((role) => (
                       <th
                         key={role}
-                        className="border-r p-3 font-semibold last:border-r-0"
+                        className="p-3 font-semibold"
                       >
                         {role}
                       </th>
@@ -302,19 +303,19 @@ export default function ClientManagementSection() {
                       key={branch.id}
                       className="border-b transition-colors last:border-0 hover:bg-primary/10"
                     >
-                      <td className="border-r p-3 last:border-r-0">
+                      <td className="p-3">
                         {/* The way into an existing team: the branch name
                             opens it in the form above. */}
                         <button
                           type="button"
                           onClick={() => openBranch(String(branch.id))}
-                          className="rounded font-medium text-primary focus:outline-none focus:ring-2 focus:ring-ring"
+                          className="numeric-value font-medium text-record-link underline-offset-2 hover:underline"
                         >
                           {branch.branchNumber} - {branchName(branch)}
                         </button>
                       </td>
                       {team.map(({ role, person }) => (
-                        <td key={role} className="border-r p-3 last:border-r-0">
+                        <td key={role} className="p-3">
                           {person ? (
                             person.name
                           ) : (

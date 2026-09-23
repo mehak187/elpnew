@@ -28,7 +28,7 @@ function FormSection({ title, children }) {
         <h2 className="font-semibold text-primary">{title}</h2>
       </div>
       <CardContent className="p-4 sm:p-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+        <div className="form-grid">
           {children}
         </div>
       </CardContent>
@@ -123,16 +123,16 @@ export default function JudicialExpenseForm() {
             </p>
           </div>
         </div>
-        <Button type="submit" form="judicial-form" disabled={!canSave}>
-          <Save className="mr-2 h-4 w-4" />
+        <Button type="submit" form="judicial-form">
+          <Save className="me-2 h-4 w-4" />
           Save Expense
         </Button>
       </div>
 
       <form id="judicial-form" onSubmit={submit} className="space-y-4 sm:space-y-6">
         <FormSection title="Case Details">
-          <div className="space-y-2">
-            <Label htmlFor="branch">Branch *</Label>
+          <div className="form-field space-y-2">
+            <Label htmlFor="branch">Branch</Label>
             <SearchableSelect
               id="branch"
               value={draft.branch}
@@ -142,9 +142,10 @@ export default function JudicialExpenseForm() {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="client">Client *</Label>
+          <div className="form-field space-y-2">
+            <Label htmlFor="client">Client</Label>
             <Input
+              required
               id="client"
               name="client"
               value={draft.client}
@@ -164,9 +165,10 @@ export default function JudicialExpenseForm() {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="caseNo">Case No. *</Label>
+          <div className="form-field space-y-2">
+            <Label htmlFor="caseNo">Case No.</Label>
             <Input
+              required
               id="caseNo"
               name="caseNo"
               value={draft.caseNo}
@@ -211,8 +213,8 @@ export default function JudicialExpenseForm() {
         </FormSection>
 
         <FormSection title="Expense Details">
-          <div className="space-y-2">
-            <Label htmlFor="expenseType">Expense Type *</Label>
+          <div className="form-field space-y-2">
+            <Label htmlFor="expenseType">Expense Type</Label>
             <SearchableSelect
               id="expenseType"
               value={draft.expenseType}

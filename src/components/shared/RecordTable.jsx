@@ -3,22 +3,28 @@ import { cn } from "@/lib/utils";
 /**
  * The one table every list of records is drawn with.
  *
- * The salary history settled what such a table looks like - bordered cells, a
- * tinted single-line header, sub-headings folded into the heading in brackets -
- * and every other list in the system follows it rather than inventing its own.
+ * Standard 07: the body is frameless. There are no lines between columns -
+ * only a rule under each row - because the padding already separates one
+ * column from the next, and a full grid of lines competes with the data it
+ * is supposed to be organising. The frame is a single outer border with the
+ * container radius, and no shadow: a list is part of the page, not something
+ * floating over it.
+ *
  * Anything a particular table needs on top of that is passed as a class; the
  * frame itself is not re-described in each file.
  *
- * Text reads from the left and money from the right, the way a ledger is read:
- * that is what `text-right` on an amount column is for, and it is put on the
- * heading and the cells together so the figures line up under their name.
+ * Text reads from the logical start and money from the logical end, the way a
+ * ledger is read - `text-end` on an amount column is for that, and it goes on
+ * the heading and the cells together so the figures line up under their name.
+ * Logical rather than left and right, so the whole thing turns round in
+ * Arabic instead of staying put.
  */
 export function RecordTable({ minWidth = 1040, children, className }) {
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto rounded-container border border-container-border bg-card">
       <table
         style={{ minWidth }}
-        className={cn("w-full border text-left text-sm", className)}
+        className={cn("w-full text-start text-sm", className)}
       >
         {children}
       </table>
@@ -30,7 +36,9 @@ export function RecordTable({ minWidth = 1040, children, className }) {
 export function HeadRow({ children }) {
   return (
     <thead>
-      <tr className="border-b bg-secondary/60 text-primary">{children}</tr>
+      <tr className="border-b border-container-border bg-table-head">
+        {children}
+      </tr>
     </thead>
   );
 }
@@ -38,26 +46,37 @@ export function HeadRow({ children }) {
 /**
  * One column heading: the title and nothing else.
  *
- * What a column is made of is plain from the cells under it, so no bracketed
- * explanation follows the title. A `note` passed in is not shown.
+ * Title Case as written, never forced to capitals - "Employee Name" is read
+ * faster than "EMPLOYEE NAME", and shouting every heading tells nobody which
+ * one matters. What a column is made of is plain from the cells under it, so
+ * no bracketed explanation follows the title.
  */
 export function Th({ width, className, children }) {
   return (
     <th
       style={width ? { width } : undefined}
-      className={cn("border-r p-3 font-semibold last:border-r-0", className)}
+      className={cn(
+        "px-4 py-3 text-start text-xs font-semibold text-table-head-ink",
+        className
+      )}
     >
       {children}
     </th>
   );
 }
 
-/** One record. Cells are top-aligned, since some of them run to several lines. */
+/**
+ * One record.
+ *
+ * White, like every other row: stripes say a row is different when the only
+ * thing different about it is that it is even-numbered. Hover is the one
+ * tint, and it says where the pointer is - not what state the record is in.
+ */
 export function Row({ className, children }) {
   return (
     <tr
       className={cn(
-        "border-b align-top transition-colors last:border-0 hover:bg-primary/5",
+        "border-b border-container-border align-top transition-colors last:border-0 hover:bg-table-head",
         className
       )}
     >
@@ -68,8 +87,35 @@ export function Row({ className, children }) {
 
 export function Td({ className, colSpan, children }) {
   return (
-    <td className={cn("border-r p-3 last:border-r-0", className)} colSpan={colSpan}>
+    <td
+      className={cn("px-4 py-3 align-top text-start", className)}
+      colSpan={colSpan}
+    >
       {children}
     </td>
+  );
+}
+
+/**
+ * The first cell of a row: the record's own number, and the way into it.
+ *
+ * Standard 07 puts the way in on the reference itself rather than in a View
+ * column of its own - the number is what somebody looks for anyway, and a
+ * column holding one repeated word is a column of nothing.
+ */
+export function RecordLink({ onClick, className, children, ...rest }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "numeric-value rounded text-start font-medium text-record-link underline-offset-2",
+        "hover:underline focus:outline-none focus:ring-2 focus:ring-ring",
+        className
+      )}
+      {...rest}
+    >
+      {children}
+    </button>
   );
 }

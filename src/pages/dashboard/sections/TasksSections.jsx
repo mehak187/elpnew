@@ -103,7 +103,7 @@ export function OverdueTasks() {
           <Row
             key={task.id}
             to="/profile/tasks?overdue=1"
-            className="border-l-4 border-l-red-500 bg-red-50 hover:bg-red-100"
+            className="border-s-4 border-s-red-500 bg-red-50 hover:bg-red-100"
           >
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-red-800">
@@ -114,7 +114,7 @@ export function OverdueTasks() {
                 {formatDate(task.dueDate)}
               </p>
             </div>
-            <span className="w-20 shrink-0 text-right text-xs font-semibold text-red-700">
+            <span className="w-20 shrink-0 text-end text-xs font-semibold text-red-700">
               {task.daysOverdue} {task.daysOverdue === 1 ? "day" : "days"} late
             </span>
           </Row>

@@ -10,6 +10,7 @@ import {
   Said,
   Choice,
   Attach,
+  checkRequired,
 } from "@/components/shared/formFields";
 import { smartSearch } from "@/lib/search/smartSearch";
 import { amountValue, money } from "@/lib/money";
@@ -155,7 +156,7 @@ export default function AssistanceSection({
    * decision, and the form moves on to the stage that gives one.
    */
   const saveRecord = () => {
-    if (!canSave) return;
+    if (!checkRequired() || !canSave) return;
     const id = records.reduce((max, r) => Math.max(max, r.id), 0) + 1;
     setRecords((prev) => [
       {
@@ -194,6 +195,7 @@ export default function AssistanceSection({
    * Paid until a payment is actually recorded against it.
    */
   const confirmDecision = () => {
+    if (!checkRequired() || !canConfirm) return;
     if (!decision || !openId || !canDecide) return;
     const granted = decision !== "rejected";
     setRecords((prev) =>
@@ -309,7 +311,7 @@ export default function AssistanceSection({
             {/* Who asked, and for what. Read off the request rather than
                 asked for again. */}
             <Bordered title="Request Information">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+              <div className="form-grid">
                 <div className="flex h-full flex-col justify-end gap-2">
                   <Settled
                     id="decision-no"
@@ -365,7 +367,6 @@ export default function AssistanceSection({
             <DecisionChoice
               value={decision}
               onChange={setDecision}
-              disabled={!canDecide}
               notes={{
                 full: "Approve the assistance as requested",
                 rejected: "Reject the assistance request",
@@ -376,7 +377,7 @@ export default function AssistanceSection({
                 so both are asked about only once something is approved. */}
             {granting && (
               <Bordered title="Assistance Approval & Disbursement">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+                <div className="form-grid">
                   <Settled
                     id="decision-expense-type"
                     label="Expense Type"
@@ -439,7 +440,6 @@ export default function AssistanceSection({
                     onChange={(value) => value && setReviewField("method", value)}
                     placeholder="Select method"
                     options={PAYMENT_METHODS}
-                    disabled={!canDecide}
                   />
 
                   {/* One choice, not two: the account carries the bank it is
@@ -451,7 +451,6 @@ export default function AssistanceSection({
                     onChange={(value) => value && setReviewField("bankAccount", value)}
                     placeholder="Select bank account"
                     options={PAYING_ACCOUNTS}
-                    disabled={!canDecide}
                   />
 
                   <div className="flex h-full flex-col justify-end gap-2">
@@ -463,7 +462,6 @@ export default function AssistanceSection({
                       type="date"
                       value={review.paymentDate}
                       onChange={(e) => setReviewField("paymentDate", e.target.value)}
-                      disabled={!canDecide}
                     />
                   </div>
 
@@ -479,7 +477,6 @@ export default function AssistanceSection({
                         value={review.reference}
                         onChange={(e) => setReviewField("reference", e.target.value)}
                         placeholder="TRX-0000-00000"
-                        disabled={!canDecide}
                       />
                       <Attach
                         file={receipt}
@@ -514,14 +511,13 @@ export default function AssistanceSection({
                   maxLength={NOTES_LIMIT}
                   value={review.notes}
                   onChange={(e) => setReviewField("notes", e.target.value)}
-                  disabled={!canDecide}
                   placeholder={
                     refusing
                       ? "Enter the reason for rejection"
                       : "Add management comment (optional)"
                   }
                 />
-                <p className="text-right text-xs text-muted-foreground">
+                <p className="text-end text-xs text-muted-foreground">
                   {review.notes.length} / {NOTES_LIMIT}
                 </p>
               </div>
@@ -538,7 +534,7 @@ export default function AssistanceSection({
                   />
                   Assistance Approval &amp; Transfer Summary
                 </p>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:divide-x">
+                <div className="form-grid lg:[&>*+*]:border-s">
                   <Said label="Employee Name" value={employee?.name || ""} />
                   <Said label="Bank Name" value={employee?.bankName || ""} />
                   <Said
@@ -560,7 +556,7 @@ export default function AssistanceSection({
               paper that backs the request hangs under the number, so it
               costs no field of its own. */}
           <Bordered title="Request Information">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+            <div className="form-grid">
               <div className="flex h-full flex-col justify-end gap-2">
                 <FieldLabel htmlFor="assistance-no">Request No.</FieldLabel>
                 <div className="flex w-full min-w-0 items-center gap-2">
@@ -616,14 +612,14 @@ export default function AssistanceSection({
                   <Input
                     id="assistance-amount"
                     inputMode="decimal"
-                    className="pr-12"
+                    className="pe-12"
                     value={draft.amount}
                     onChange={(e) =>
                       set("amount", e.target.value.replace(/[^\d.]/g, ""))
                     }
                     placeholder="0.000"
                   />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                     <Rial />
                   </span>
                 </div>
@@ -644,7 +640,7 @@ export default function AssistanceSection({
                 onChange={(e) => set("notes", e.target.value)}
                 placeholder="Explain the reason for this assistance request"
               />
-              <p className="text-right text-xs text-muted-foreground">
+              <p className="text-end text-xs text-muted-foreground">
                 {draft.notes.length} / {NOTES_LIMIT}
               </p>
             </div>
@@ -657,11 +653,11 @@ export default function AssistanceSection({
         <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-4">
           {/* What has been given before is the list behind this form. */}
           <Button type="button" variant="ghost" onClick={closeForm}>
-            <History className="mr-2 h-4 w-4" />
+            <History className="me-2 h-4 w-4" />
             History
           </Button>
 
-          <div className="ml-auto flex flex-wrap items-center gap-2">
+          <div className="ms-auto flex flex-wrap items-center gap-2">
             <Button type="button" variant="outline" onClick={closeForm}>
               Cancel
             </Button>
@@ -669,12 +665,11 @@ export default function AssistanceSection({
               <Button
                 type="button"
                 onClick={confirmDecision}
-                disabled={!canConfirm}
               >
                 Save
               </Button>
             ) : (
-              <Button type="button" onClick={saveRecord} disabled={!canSave}>
+              <Button type="button" onClick={saveRecord}>
                 Save
               </Button>
             )}
@@ -712,8 +707,8 @@ export default function AssistanceSection({
           placeholder="Ask about assistance..."
         />
         {addLabel && !adding && (
-          <Button type="button" className="ml-auto" onClick={onOpenAdd}>
-            <Plus className="mr-2 h-4 w-4" />
+          <Button type="button" className="ms-auto" onClick={onOpenAdd}>
+            <Plus className="me-2 h-4 w-4" />
             {addLabel}
           </Button>
         )}
@@ -733,7 +728,7 @@ export default function AssistanceSection({
                   <Th width="24%">Assistance Details</Th>
                   {/* The unit is said once, in the heading, so the figures
                       under it can be read against each other. */}
-                  <Th width="13%" className="text-right">
+                  <Th width="13%" className="text-end">
                     Amount (OMR)
                   </Th>
                   <Th width="25%">Payment Details</Th>
@@ -780,7 +775,7 @@ export default function AssistanceSection({
 
                       {/* What was asked for, who for, and why. Where it has
                           got to is said under its number. */}
-                      <Td className="text-left">
+                      <Td className="text-start">
                         <span className="flex flex-wrap items-center gap-2">
                           <span className="font-semibold text-primary">
                             {record.subcategory}
@@ -810,13 +805,13 @@ export default function AssistanceSection({
                         </span>
                       </Td>
 
-                      <Td className="whitespace-nowrap text-right font-bold text-green-700">
+                      <Td className="whitespace-nowrap text-end font-bold text-green-700">
                         {amountValue(record.amount)}
                       </Td>
 
                       {/* Nothing is shown here until a payment has been
                           settled on: a request nobody has decided has none. */}
-                      <Td className="text-left">
+                      <Td className="text-start">
                         {record.method ? (
                           <>
                             <span className="block font-semibold text-primary">
@@ -838,7 +833,7 @@ export default function AssistanceSection({
                         )}
                       </Td>
 
-                      <Td className="text-left text-muted-foreground">
+                      <Td className="text-start text-muted-foreground">
                         {record.notes || "-"}
                       </Td>
                     </Row>

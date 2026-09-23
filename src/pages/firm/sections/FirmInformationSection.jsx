@@ -43,25 +43,25 @@ export default function FirmInformationSection({ canEdit }) {
 
   return (
     <div className="space-y-6">
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-      <div className="space-y-2">
-        <Label htmlFor="firmNameEn">Law Firm Name &ndash; English *</Label>
+    <div className="form-grid">
+      <div className="form-field space-y-2">
+        <Label htmlFor="firmNameEn">Law Firm Name &ndash; English</Label>
         <Input
+          required
           id="firmNameEn"
           value={firmInfo.nameEn}
           onChange={set("nameEn")}
-          disabled={!canEdit}
           placeholder="Enter name in English"
         />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="firmNameAr">Law Firm Name &ndash; Arabic *</Label>
+      <div className="form-field space-y-2">
+        <Label htmlFor="firmNameAr">Law Firm Name &ndash; Arabic</Label>
         <Input
+          required
           id="firmNameAr"
           value={firmInfo.nameAr}
           onChange={set("nameAr")}
-          disabled={!canEdit}
           placeholder="أدخل اسم المكتب بالعربية"
           dir="rtl"
         />
@@ -74,7 +74,6 @@ export default function FirmInformationSection({ canEdit }) {
           id="tradeName"
           value={firmInfo.tradeName}
           onChange={set("tradeName")}
-          disabled={!canEdit}
           placeholder="Enter trade name"
         />
       </div>
@@ -85,7 +84,6 @@ export default function FirmInformationSection({ canEdit }) {
           id="mojLicenseNo"
           value={firmInfo.mojLicenseNo}
           onChange={set("mojLicenseNo")}
-          disabled={!canEdit}
           placeholder="Enter licence number"
         />
       </div>
@@ -96,7 +94,6 @@ export default function FirmInformationSection({ canEdit }) {
           id="crNumber"
           value={firmInfo.crNumber}
           onChange={set("crNumber")}
-          disabled={!canEdit}
           placeholder="Enter CR number"
         />
       </div>
@@ -107,7 +104,6 @@ export default function FirmInformationSection({ canEdit }) {
           id="firmAddress"
           value={firmInfo.address}
           onChange={set("address")}
-          disabled={!canEdit}
           placeholder="Enter the company address"
         />
       </div>
@@ -119,7 +115,6 @@ export default function FirmInformationSection({ canEdit }) {
           type="date"
           value={firmInfo.crExpiryDate}
           onChange={set("crExpiryDate")}
-          disabled={!canEdit}
         />
         {/* Only worth saying when something is wrong - a registration that is
             simply in date needs no badge, the date itself says so. */}
@@ -144,7 +139,6 @@ export default function FirmInformationSection({ canEdit }) {
           onValueChange={(value) =>
             setDraft((prev) => ({ ...prev, primaryBranchId: Number(value) }))
           }
-          disabled={!canEdit}
         >
           <SelectTrigger id="primaryBranch">
             <SelectValue placeholder="Please Select" />
@@ -163,7 +157,7 @@ export default function FirmInformationSection({ canEdit }) {
     {canEdit && (
       <div className="flex justify-end">
         <Button type="button" onClick={save} disabled={!dirty}>
-          <Save className="mr-2 h-4 w-4" />
+          <Save className="me-2 h-4 w-4" />
           Save Changes
         </Button>
       </div>

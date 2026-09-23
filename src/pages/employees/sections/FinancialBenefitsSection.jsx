@@ -214,8 +214,8 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd }) {
               placeholder="Ask about commission..."
             />
             {!adding && (
-              <Button type="button" className="ml-auto" onClick={onOpenAdd}>
-                <Plus className="mr-2 h-4 w-4" />
+              <Button type="button" className="ms-auto" onClick={onOpenAdd}>
+                <Plus className="me-2 h-4 w-4" />
                 Add Commission
               </Button>
             )}
@@ -270,12 +270,12 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd }) {
                     <Td className="whitespace-nowrap text-primary">
                       {commissionDate(record)}
                     </Td>
-                    <Td className="text-left">{record.clientName}</Td>
-                    <Td className="text-left">{record.paidTo}</Td>
+                    <Td className="text-start">{record.clientName}</Td>
+                    <Td className="text-start">{record.paidTo}</Td>
 
                     {/* What it was worked out from, then what it came to:
                         the fees before VAT, the rate, and the commission. */}
-                    <Td className="text-left">
+                    <Td className="text-start">
                       <span className="block">
                         <span className="text-muted-foreground">
                           Before VAT:{" "}
@@ -296,7 +296,7 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd }) {
                       </span>
                     </Td>
 
-                    <Td className="text-left text-muted-foreground">
+                    <Td className="text-start text-muted-foreground">
                       {record.notes || "-"}
                     </Td>
                   </Row>
@@ -389,12 +389,12 @@ export default function FinancialBenefitsSection({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <FormHeading title={current.label} note={current.note} icon={current.icon} />
 
-        {/* ml-auto keeps the tabs to the right even when they wrap onto a
+        {/* ms-auto keeps the tabs at the logical end even when they wrap onto a
             line of their own: a wrapped line is laid out on its own, so
             justify-between above would otherwise drop them back to the left. */}
         {/* No Add up here: every list carries it on the row above its own
             table, opposite the search. */}
-        <div className="ml-auto">
+        <div className="ms-auto">
           <TabBar options={tabs} value={open} onChange={onTabChange} />
         </div>
       </div>

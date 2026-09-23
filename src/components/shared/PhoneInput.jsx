@@ -109,16 +109,16 @@ export default function PhoneInput({
       </div>
 
       {open && (
-        <Card className="absolute left-0 right-0 top-full z-50 mt-1">
+        <Card className="absolute start-0 end-0 top-full z-50 mt-1">
           <CardContent className="p-1">
             <div className="relative mb-1">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute start-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 ref={searchRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search +968, Oman..."
-                className="h-8 pl-8 text-sm"
+                className="h-8 ps-8 text-sm"
               />
             </div>
 
@@ -134,7 +134,7 @@ export default function PhoneInput({
                     type="button"
                     onClick={() => choose(country)}
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors",
+                      "flex w-full items-center gap-2 rounded-md px-3 py-2 text-start text-sm transition-colors",
                       country.dial === code
                         ? "bg-secondary text-secondary-foreground"
                         : "hover:bg-muted"
@@ -143,7 +143,7 @@ export default function PhoneInput({
                     <span className="shrink-0">{country.flag}</span>
                     <span className="w-14 shrink-0 font-medium">{country.dial}</span>
                     <span className="truncate opacity-70">{country.name}</span>
-                    {country.dial === code && <Check className="ml-auto h-4 w-4 shrink-0" />}
+                    {country.dial === code && <Check className="ms-auto h-4 w-4 shrink-0" />}
                   </button>
                 ))
               )}

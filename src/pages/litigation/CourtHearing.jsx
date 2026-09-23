@@ -35,10 +35,11 @@ const columns = [
     )
   },
   { key: "next_date", header: "Next Date", width: "15%" },
-  { key: "notes", header: "Notes", width: "30%", cellClassName: "text-left" },
+  { key: "notes", header: "Notes", width: "30%", cellClassName: "text-start" },
 ];
 
-export default function CourtHearing() {  const { id } = useParams();
+export default function CourtHearing() {
+  const { id } = useParams();
   const [pageSize, setPageSize] = useState(100);
   const [currentPage, setCurrentPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
@@ -124,9 +125,9 @@ export default function CourtHearing() {  const { id } = useParams();
                 <BackButton onBack={() => setShowForm(false)} />
                 <h3 className="font-semibold text-primary">Add New Hearing</h3>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="date">Hearing Date *</Label>
+              <div className="form-grid">
+                <div className="form-field space-y-2">
+                  <Label htmlFor="date">Hearing Date</Label>
                   <Input
                     id="date"
                     name="date"
@@ -137,8 +138,8 @@ export default function CourtHearing() {  const { id } = useParams();
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="type">Hearing Type *</Label>
+                <div data-required="true" className="form-field space-y-2">
+                  <Label htmlFor="type">Hearing Type</Label>
                   <Select
                     value={formData.type}
                     onValueChange={(value) =>
@@ -205,7 +206,7 @@ export default function CourtHearing() {  const { id } = useParams();
                   Cancel
                 </Button>
                 <Button type="submit">
-                  <Save className="mr-2 h-4 w-4" />
+                  <Save className="me-2 h-4 w-4" />
                   Save Hearing
                 </Button>
               </div>

@@ -135,7 +135,7 @@ export default function AnalyticsSection() {
       />
 
       {/* Where the files stand: how far through, and before which court. */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 sm:gap-6">
+      <div className="form-grid form-grid-2">
         <SectionCard
           title="Cases by Stage"
           icon={Layers}
@@ -215,7 +215,7 @@ export default function AnalyticsSection() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="form-grid">
             <Tile label="Received in Period" value={inPeriod.length} />
             <Tile label="Closed in Period" value={closedInPeriod} />
             <Tile label="Open Cases" value={open.length} />
@@ -243,7 +243,7 @@ export default function AnalyticsSection() {
 
       {/* The standing periods, so the common questions need no dates typed */}
       <SectionCard title="Cases Received" icon={Inbox}>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="form-grid form-grid-3">
           {periods.map((period) => (
             <button
               key={period.label}
@@ -252,7 +252,7 @@ export default function AnalyticsSection() {
                 setFromDate(period.from);
                 setToDate(period.to);
               }}
-              className="rounded-lg border p-3 text-left transition-colors hover:bg-muted/60 focus:outline-none focus:ring-2 focus:ring-ring"
+              className="rounded-lg border p-3 text-start transition-colors hover:bg-muted/60 focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <p className="text-sm font-medium">{period.label}</p>
               <p className="mt-0.5 text-xs text-muted-foreground">

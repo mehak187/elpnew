@@ -23,6 +23,7 @@ import {
   Counted,
   Decision,
   useRequiredFields,
+  checkRequired,
 } from "@/components/shared/formFields";
 import { RequestSteps } from "@/components/shared/RequestSteps";
 import { REQUEST_REJECTED } from "@/pages/employees/requestFlow";
@@ -184,7 +185,7 @@ function CommissionPayment({
   return (
     <div className="space-y-6">
       <Group title="Request Information">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+        <div className="form-grid">
           <Locked id="payRequestNo" label="Request No." value={commissionNo} />
           <Locked
             id="payRequestDate"
@@ -204,7 +205,7 @@ function CommissionPayment({
           the fees are beside the amount so the figure can be checked rather
           than taken on trust. */}
       <Group title="Commission Details">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+        <div className="form-grid">
           <Locked id="payClient" label="Client Name" value={clientName} />
           <Locked
             id="payInvoice"
@@ -420,7 +421,7 @@ function CommissionPayment({
           transfer is actually made from, gathered where they can be checked
           in one look before the money moves. */}
       {decided && !refusing && (
-        <div className="grid grid-cols-1 gap-4 rounded-md border border-green-600/40 bg-green-50 px-4 py-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="form-grid rounded-md border border-green-600/40 bg-green-50 px-4 py-3">
           {[
             ["Employee Name", payee],
             ["Bank Name", beneficiaryBank || "-"],
@@ -702,7 +703,7 @@ export default function CommissionForm({
         (!partial || partialIsSound));
 
   const save = () => {
-    if (!canDecide) return;
+    if (!checkRequired() || !canDecide) return;
     if (refusing) {
       onReject?.((payment.notes || "").trim());
       return;
@@ -794,7 +795,7 @@ export default function CommissionForm({
         <>
         {/* What is being asked for, before anything about the money. */}
         <Group title="Request Information">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+          <div className="form-grid">
             <Locked id="commissionNo" label="Request No." value={commissionNo} />
             <Locked
               id="commissionRequestDate"
@@ -861,7 +862,7 @@ export default function CommissionForm({
           }
         >
           {/* Whose fees the commission runs on. */}
-          <Row>
+          <Row cols={3}>
             <Field error={asked.errorFor("commissionClientType")} id="commissionClientType" label="Client Type" required>
               <Select value={draft.clientType} onValueChange={chooseClientType}>
                 <SelectTrigger id="commissionClientType">
@@ -972,7 +973,7 @@ export default function CommissionForm({
           {isInvoiceLinked && (
             <>
             {/* Facts about the invoice, read back rather than asked for. */}
-            <Row>
+            <Row cols={3}>
               <Locked
                 id="commissionInvoiceDate"
                 label="Invoice Date"
@@ -1000,7 +1001,7 @@ export default function CommissionForm({
 
           {/* The whole calculation on one row, so the amount is never read
               apart from the two numbers it came from. */}
-          <Row>
+          <Row cols={3}>
             {/* A fixed commission does not show the fees it runs on: they are
                 every invoice paid inside the period rather than one named
                 sum, so a single figure beside the dates would read as a total
@@ -1043,11 +1044,11 @@ export default function CommissionForm({
                   value={draft.rate}
                   onChange={(e) => setField("rate", asRate(e.target.value))}
                   placeholder="0"
-                  className="pr-8"
+                  className="pe-8"
                 />
                 <span
                   aria-hidden="true"
-                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 select-none text-sm text-muted-foreground"
+                  className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 select-none text-sm text-muted-foreground"
                 >
                   %
                 </span>
@@ -1113,7 +1114,6 @@ export default function CommissionForm({
                 type="button"
                 variant={refusing ? "destructive" : "default"}
                 onClick={save}
-                disabled={!canDecide}
               >
                 {refusing
                   ? "Confirm Rejection"
@@ -1125,7 +1125,7 @@ export default function CommissionForm({
           ) : (
             <Button type="button" onClick={saveAndContinue}>
               Save and Continue
-              <ArrowRight className="ml-2 h-4 w-4" />
+              <ArrowRight className="ms-2 h-4 w-4" />
             </Button>
           )}
         </div>

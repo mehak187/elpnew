@@ -35,7 +35,7 @@ export default function ActiveFilters({ filters, onClear, resultCount }) {
       <Button
         variant="ghost"
         size="sm"
-        className="ml-auto h-7 text-xs"
+        className="ms-auto h-7 text-xs"
         onClick={() => onClear()}
       >
         Clear all

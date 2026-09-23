@@ -73,7 +73,7 @@ const columns = [
       <Checkbox checked={value} className="mx-auto" />
     ),
   },
-  { key: "task", header: "Task", width: "35%", cellClassName: "text-left" },
+  { key: "task", header: "Task", width: "35%", cellClassName: "text-start" },
   { key: "case_no", header: "Case No.", width: "12%" },
   {
     key: "due_date",

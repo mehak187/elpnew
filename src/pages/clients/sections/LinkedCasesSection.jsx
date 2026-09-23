@@ -103,7 +103,7 @@ export default function LinkedCasesSection() {
           <button
             type="button"
             onClick={() => navigate("/litigation")}
-            className="rounded font-medium text-primary focus:outline-none focus:ring-2 focus:ring-ring"
+            className="numeric-value font-medium text-record-link underline-offset-2 hover:underline"
           >
             {value}
           </button>
@@ -208,7 +208,7 @@ export default function LinkedCasesSection() {
             {option.label}
             {/* Dimmed rather than a second colour, so it reads as part of
                 the label on both the selected tab and the rest. */}
-            <span className="ml-1.5 opacity-70">
+            <span className="ms-1.5 opacity-70">
               ({clientLinkedCases.filter(matcher(option)).length})
             </span>
           </button>

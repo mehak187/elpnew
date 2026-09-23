@@ -95,10 +95,10 @@ function Route({ invoice }) {
     return (
       <div
         className={cn(
-          "rounded-md border-l-4 px-3 py-2 text-xs",
+          "rounded-md border-s-4 px-3 py-2 text-xs",
           invoice.status === "rejected"
-            ? "border-l-red-500 bg-red-50 text-red-800"
-            : "border-l-amber-500 bg-amber-50 text-amber-900"
+            ? "border-s-red-500 bg-red-50 text-red-800"
+            : "border-s-amber-500 bg-amber-50 text-amber-900"
         )}
       >
         <span className="font-semibold">{STATUS[invoice.status]}: </span>
@@ -258,7 +258,7 @@ function InfoBox({ icon, label, action, children }) {
 /** The strip the panels sit in, so every card lines up the same way. */
 function InfoRow({ children }) {
   return (
-    <div className="grid grid-cols-1 divide-y rounded-lg border sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x">
+    <div className="form-grid [&>*+*]:border-t rounded-lg border sm:[&>*+*]:border-t-0 lg:[&>*+*]:border-s">
       {children}
     </div>
   );
@@ -277,7 +277,7 @@ function StageTile({ label, count, amount, note, active, onClick }) {
       type={onClick ? "button" : undefined}
       onClick={onClick}
       className={cn(
-        "rounded-lg border bg-card p-4 text-left",
+        "rounded-lg border bg-card p-4 text-start",
         onClick && "hover:border-primary/50 hover:bg-muted/40",
         active && "border-primary ring-1 ring-primary"
       )}
@@ -314,8 +314,8 @@ function AccountantReview({ invoiceId, onDecide }) {
       </p>
 
       <div className="grid grid-cols-1 gap-4 sm:max-w-md">
-        <div className="space-y-2">
-          <Label htmlFor={"review-" + invoiceId}>Review Result *</Label>
+        <div data-required="true" className="form-field space-y-2">
+          <Label htmlFor={"review-" + invoiceId}>Review Result</Label>
           <Select
             value={result}
             onValueChange={(value) => {
@@ -337,9 +337,10 @@ function AccountantReview({ invoiceId, onDecide }) {
         </div>
 
         {noteRequired && (
-          <div className="space-y-2">
-            <Label htmlFor={"note-" + invoiceId}>Accountant&apos;s Note *</Label>
+          <div className="form-field space-y-2">
+            <Label htmlFor={"note-" + invoiceId}>Accountant&apos;s Note</Label>
             <Textarea
+              required
               id={"note-" + invoiceId}
               value={note}
               onChange={(e) => setNote(e.target.value)}
@@ -355,7 +356,7 @@ function AccountantReview({ invoiceId, onDecide }) {
           disabled={!ready}
           onClick={() => onDecide(chosen, note.trim())}
         >
-          <Check className="mr-1.5 h-4 w-4" />
+          <Check className="me-1.5 h-4 w-4" />
           Submit Review
         </Button>
       </div>
@@ -399,8 +400,8 @@ function FinanceApproval({ invoice, supplierAccount, outstanding, onDecide }) {
       </p>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="space-y-2">
-          <Label htmlFor={id("financeAction")}>Finance Manager Action *</Label>
+        <div data-required="true" className="form-field space-y-2">
+          <Label htmlFor={id("financeAction")}>Finance Manager Action</Label>
           <Select
             value={action}
             onValueChange={(value) => {
@@ -439,8 +440,8 @@ function FinanceApproval({ invoice, supplierAccount, outstanding, onDecide }) {
 
       {chosen?.needsTransfer && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="space-y-2">
-            <Label htmlFor={id("fromBank")}>Withdrawal Bank *</Label>
+          <div data-required="true" className="form-field space-y-2">
+            <Label htmlFor={id("fromBank")}>Withdrawal Bank</Label>
             <Select
               value={transfer.bankId}
               onValueChange={(value) => setTransfer({ ...transfer, bankId: value })}
@@ -470,9 +471,10 @@ function FinanceApproval({ invoice, supplierAccount, outstanding, onDecide }) {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor={id("withdrawnAt")}>Date of Withdrawal *</Label>
+          <div className="form-field space-y-2">
+            <Label htmlFor={id("withdrawnAt")}>Date of Withdrawal</Label>
             <Input
+              required
               id={id("withdrawnAt")}
               type="date"
               value={transfer.date}
@@ -525,9 +527,10 @@ function FinanceApproval({ invoice, supplierAccount, outstanding, onDecide }) {
       )}
 
       {chosen?.needsNote && (
-        <div className="space-y-2 sm:max-w-md">
-          <Label htmlFor={id("financeNote")}>Notes *</Label>
+        <div className="form-field space-y-2 sm:max-w-md">
+          <Label htmlFor={id("financeNote")}>Notes</Label>
           <Textarea
+            required
             id={id("financeNote")}
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -543,7 +546,7 @@ function FinanceApproval({ invoice, supplierAccount, outstanding, onDecide }) {
           </span>
         )}
         <Button size="sm" disabled={!ready} onClick={() => onDecide(chosen, note.trim(), { ...transfer, account })}>
-          <Check className="mr-1.5 h-4 w-4" />
+          <Check className="me-1.5 h-4 w-4" />
           Submit Decision
         </Button>
       </div>
@@ -578,14 +581,14 @@ function SupplierHistoryDialog({ invoice, invoices, accountFor, onOpenChange }) 
           <div className="max-h-[60vh] overflow-auto">
             <table className="w-full min-w-[720px] border text-sm">
               <thead>
-                <tr className="border-b text-left text-xs text-muted-foreground">
-                  <th className="border-r last:border-r-0 pb-2 font-medium">Id</th>
-                  <th className="border-r last:border-r-0 pb-2 font-medium">Supplier</th>
-                  <th className="border-r last:border-r-0 pb-2 font-medium">Invoice Date / Number</th>
-                  <th className="border-r last:border-r-0 pb-2 font-medium">Expense Details</th>
-                  <th className="border-r last:border-r-0 pb-2 text-right font-medium">Invoice Amount</th>
-                  <th className="border-r last:border-r-0 pb-2 font-medium">Invoice Status</th>
-                  <th className="border-r last:border-r-0 pb-2 font-medium">Match</th>
+                <tr className="border-b text-start text-xs text-muted-foreground">
+                  <th className="pb-2 font-medium">Id</th>
+                  <th className="pb-2 font-medium">Supplier</th>
+                  <th className="pb-2 font-medium">Invoice Date / Number</th>
+                  <th className="pb-2 font-medium">Expense Details</th>
+                  <th className="pb-2 text-end font-medium">Invoice Amount</th>
+                  <th className="pb-2 font-medium">Invoice Status</th>
+                  <th className="pb-2 font-medium">Match</th>
                 </tr>
               </thead>
               <tbody>
@@ -593,7 +596,7 @@ function SupplierHistoryDialog({ invoice, invoices, accountFor, onOpenChange }) 
                   const account = accountFor(past.supplier);
                   return (
                     <tr key={past.id} className="border-b align-top transition-colors last:border-0 hover:bg-primary/10">
-                      <td className="border-r last:border-r-0 py-2 font-medium">
+                      <td className="py-2 font-medium">
                         {past.reference}
                         {past.requestNo && (
                           <span className="block text-xs font-normal text-muted-foreground">
@@ -602,7 +605,7 @@ function SupplierHistoryDialog({ invoice, invoices, accountFor, onOpenChange }) 
                         )}
                       </td>
 
-                      <td className="border-r last:border-r-0 py-2">
+                      <td className="py-2">
                         <span className="block">{past.supplier}</span>
                         <span className="block text-xs text-muted-foreground">
                           {account?.bank || "-"}
@@ -612,7 +615,7 @@ function SupplierHistoryDialog({ invoice, invoices, accountFor, onOpenChange }) 
                         </span>
                       </td>
 
-                      <td className="border-r last:border-r-0 py-2 text-muted-foreground">
+                      <td className="py-2 text-muted-foreground">
                         <span className="block">{formatDate(past.invoiceDate)}</span>
                         <span className="block text-xs">{past.invoiceNumber}</span>
                         {past.invoiceFile ? (
@@ -628,7 +631,7 @@ function SupplierHistoryDialog({ invoice, invoices, accountFor, onOpenChange }) 
                         )}
                       </td>
 
-                      <td className="border-r last:border-r-0 py-2 text-xs text-muted-foreground">
+                      <td className="py-2 text-xs text-muted-foreground">
                         {past.lines.map((line) => (
                           <span key={line.id} className="block">
                             {findType(line.typeKey)?.name} · {line.path.join(" / ")}
@@ -636,7 +639,7 @@ function SupplierHistoryDialog({ invoice, invoices, accountFor, onOpenChange }) 
                         ))}
                       </td>
 
-                      <td className="border-r last:border-r-0 py-2 text-right">
+                      <td className="py-2 text-end">
                         <span className="block font-semibold">
                           {money(invoiceTotal(past))}
                         </span>
@@ -648,13 +651,13 @@ function SupplierHistoryDialog({ invoice, invoices, accountFor, onOpenChange }) 
                         </span>
                       </td>
 
-                      <td className="border-r last:border-r-0 py-2">
+                      <td className="py-2">
                         <Badge variant={STATUS_VARIANT[past.status]}>
                           {STATUS[past.status]}
                         </Badge>
                       </td>
 
-                      <td className="border-r last:border-r-0 py-2">
+                      <td className="py-2">
                         <div className="flex flex-wrap gap-1">
                           {sameSupplier && <Badge variant="outline">Same supplier</Badge>}
                           {sameKind && <Badge variant="outline">Same expense</Badge>}
@@ -868,14 +871,14 @@ export default function GeneralInvoices({ partnersOnly = false }) {
             </>
           )}
           <Button onClick={() => navigate("/expense-requests/create")}>
-            <Plus className="mr-1.5 h-4 w-4" />
+            <Plus className="me-1.5 h-4 w-4" />
             New Payment Request
           </Button>
         </div>
       </div>
 
       {/* What is waiting at each stage of the route */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="form-grid form-grid-3">
         {/* Nothing on the partners' page waits on the accountant. */}
         {!partnersOnly && (
           <StageTile
@@ -1076,45 +1079,45 @@ export default function GeneralInvoices({ partnersOnly = false }) {
                   <div className="overflow-x-auto">
                   <table className="w-full min-w-[720px] border text-sm">
                     <thead>
-                      <tr className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
-                        <th className="border-r last:border-r-0 px-4 py-2 font-medium">#</th>
-                        <th className="border-r last:border-r-0 px-4 py-2 font-medium">
+                      <tr className="border-b bg-muted/40 text-start text-xs text-muted-foreground">
+                        <th className="px-4 py-2 font-medium">#</th>
+                        <th className="px-4 py-2 font-medium">
                           <span className="inline-flex items-center gap-1.5">
                             <Building2 className="h-3.5 w-3.5" />
                             Expense Type
                           </span>
                         </th>
-                        <th className="border-r last:border-r-0 px-4 py-2 font-medium">
+                        <th className="px-4 py-2 font-medium">
                           <span className="inline-flex items-center gap-1.5">
                             <Tag className="h-3.5 w-3.5" />
                             Category
                           </span>
                         </th>
-                        <th className="border-r last:border-r-0 px-4 py-2 font-medium">
+                        <th className="px-4 py-2 font-medium">
                           <span className="inline-flex items-center gap-1.5">
                             <ListTree className="h-3.5 w-3.5" />
                             Subcategory
                           </span>
                         </th>
-                        <th className="border-r last:border-r-0 px-4 py-2 font-medium">
+                        <th className="px-4 py-2 font-medium">
                           <span className="inline-flex items-center gap-1.5">
                             <AlignLeft className="h-3.5 w-3.5" />
                             Description
                           </span>
                         </th>
-                        <th className="border-r last:border-r-0 px-4 py-2 text-right font-medium">
+                        <th className="px-4 py-2 text-end font-medium">
                           <span className="inline-flex items-center gap-1.5">
                             <Calculator className="h-3.5 w-3.5" />
                             Before VAT
                           </span>
                         </th>
-                        <th className="border-r last:border-r-0 px-4 py-2 text-right font-medium">
+                        <th className="px-4 py-2 text-end font-medium">
                           <span className="inline-flex items-center gap-1.5">
                             <Percent className="h-3.5 w-3.5" />
                             VAT
                           </span>
                         </th>
-                        <th className="border-r last:border-r-0 px-4 py-2 text-right font-medium">
+                        <th className="px-4 py-2 text-end font-medium">
                           <span className="inline-flex items-center gap-1.5">
                             <ClipboardList className="h-3.5 w-3.5" />
                             Total
@@ -1125,28 +1128,28 @@ export default function GeneralInvoices({ partnersOnly = false }) {
                     <tbody>
                       {invoice.lines.map((line, i) => (
                         <tr key={line.id} className="border-b transition-colors last:border-0 hover:bg-primary/10">
-                          <td className="border-r last:border-r-0 px-4 py-2 text-muted-foreground">
+                          <td className="px-4 py-2 text-muted-foreground">
                             {i + 1}
                           </td>
-                          <td className="border-r last:border-r-0 px-4 py-2 font-medium">
+                          <td className="px-4 py-2 font-medium">
                             {findType(line.typeKey)?.name}
                           </td>
-                          <td className="border-r last:border-r-0 px-4 py-2 text-muted-foreground">
+                          <td className="px-4 py-2 text-muted-foreground">
                             {line.path[0]}
                           </td>
-                          <td className="border-r last:border-r-0 px-4 py-2 text-muted-foreground">
+                          <td className="px-4 py-2 text-muted-foreground">
                             {line.path[1] || "-"}
                           </td>
-                          <td className="border-r last:border-r-0 px-4 py-2 text-muted-foreground">
+                          <td className="px-4 py-2 text-muted-foreground">
                             {line.description || "-"}
                           </td>
-                          <td className="border-r last:border-r-0 px-4 py-2 text-right">
+                          <td className="px-4 py-2 text-end">
                             {money(line.amountBeforeTax)}
                           </td>
-                          <td className="border-r last:border-r-0 px-4 py-2 text-right text-muted-foreground">
+                          <td className="px-4 py-2 text-end text-muted-foreground">
                             {money(line.taxAmount)}
                           </td>
-                          <td className="border-r last:border-r-0 px-4 py-2 text-right font-semibold">
+                          <td className="px-4 py-2 text-end font-semibold">
                             {money(lineTotal(line))}
                           </td>
                         </tr>
@@ -1168,7 +1171,7 @@ export default function GeneralInvoices({ partnersOnly = false }) {
                             {p.reference && " · " + p.reference}
                             {p.fromAccount && " · from " + p.fromAccount}
                             {p.document && (
-                              <span className="ml-1 inline-flex items-center gap-1 text-primary">
+                              <span className="ms-1 inline-flex items-center gap-1 text-primary">
                                 <Paperclip className="h-3 w-3" />
                                 {p.document}
                               </span>
@@ -1232,7 +1235,7 @@ export default function GeneralInvoices({ partnersOnly = false }) {
                           setReason("");
                         }}
                       >
-                        <Undo2 className="mr-1.5 h-4 w-4" />
+                        <Undo2 className="me-1.5 h-4 w-4" />
                         Return for Correction
                       </Button>
                       <Button
@@ -1244,11 +1247,11 @@ export default function GeneralInvoices({ partnersOnly = false }) {
                           setReason("");
                         }}
                       >
-                        <X className="mr-1.5 h-4 w-4" />
+                        <X className="me-1.5 h-4 w-4" />
                         Reject
                       </Button>
                       <Button size="sm" onClick={() => approve(invoice)}>
-                        <Check className="mr-1.5 h-4 w-4" />
+                        <Check className="me-1.5 h-4 w-4" />
                         {invoice.status === "accountant"
                           ? "Approve"
                           : "Approve for Payment"}
@@ -1269,7 +1272,7 @@ export default function GeneralInvoices({ partnersOnly = false }) {
                         });
                       }}
                     >
-                      <Banknote className="mr-1.5 h-4 w-4" />
+                      <Banknote className="me-1.5 h-4 w-4" />
                       Record Payment
                     </Button>
                   )}
@@ -1343,9 +1346,10 @@ export default function GeneralInvoices({ partnersOnly = false }) {
               raised it.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="decisionReason">Reason *</Label>
+          <div className="form-field space-y-2">
+            <Label htmlFor="decisionReason">Reason</Label>
             <Textarea
+              required
               id="decisionReason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -1406,10 +1410,11 @@ export default function GeneralInvoices({ partnersOnly = false }) {
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="paymentDate">Payment Date *</Label>
+          <div className="form-grid form-grid-2">
+            <div className="form-field space-y-2">
+              <Label htmlFor="paymentDate">Payment Date</Label>
               <Input
+                required
                 id="paymentDate"
                 type="date"
                 value={payment.date}
@@ -1417,7 +1422,7 @@ export default function GeneralInvoices({ partnersOnly = false }) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="paymentAmount">Amount Paid (<Rial />) *</Label>
+              <Label htmlFor="paymentAmount">Amount Paid (<Rial />)</Label>
               <Input
                 id="paymentAmount"
                 type="number"
@@ -1428,8 +1433,8 @@ export default function GeneralInvoices({ partnersOnly = false }) {
                 }
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="paymentMethod">Payment Method *</Label>
+            <div data-required="true" className="form-field space-y-2">
+              <Label htmlFor="paymentMethod">Payment Method</Label>
               <Select
                 value={payment.method}
                 onValueChange={(value) =>

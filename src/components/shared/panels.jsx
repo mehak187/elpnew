@@ -156,7 +156,7 @@ export function Row({ to, onClick, children, className }) {
       onClick={go}
       disabled={!go}
       className={cn(
-        "flex w-full items-center justify-between gap-3 rounded-lg bg-muted/50 p-3 text-left transition-colors",
+        "flex w-full items-center justify-between gap-3 rounded-lg bg-muted/50 p-3 text-start transition-colors",
         "[&>*:first-child]:min-w-0 [&>*:first-child]:flex-1",
         go && "hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring",
         className
@@ -185,7 +185,7 @@ export function Tile({ label, value, to, onClick, tone }) {
       onClick={go}
       disabled={!go}
       className={cn(
-        "flex h-full flex-col justify-between rounded-lg border p-3 text-left transition-colors",
+        "flex h-full flex-col justify-between rounded-lg border p-3 text-start transition-colors",
         go && "hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring"
       )}
     >

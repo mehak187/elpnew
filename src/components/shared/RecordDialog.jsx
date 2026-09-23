@@ -48,7 +48,7 @@ export default function RecordDialog({
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="form-grid form-grid-2">
           {fields.map((field) => (
             <div key={field.key} className="space-y-2">
               <Label htmlFor={"record-" + field.key}>{field.label}</Label>

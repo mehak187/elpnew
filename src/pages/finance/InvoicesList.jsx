@@ -25,10 +25,10 @@ const invoices = [
 ];
 
 const buildColumns = (onView, onDownload) => [
-  { key: "invoice_no", header: "Invoice No.", width: "12%", cellClassName: "text-left font-medium" },
+  { key: "invoice_no", header: "Invoice No.", width: "12%", cellClassName: "text-start font-medium" },
   { key: "client", header: "Client", width: "20%" },
   // The figure carries the currency, so the heading does not repeat it.
-  { key: "amount", header: "Amount", width: "12%", className: "text-right", cellClassName: "text-right font-medium", render: (value) => withRial(value) },
+  { key: "amount", header: "Amount", width: "12%", className: "text-end", cellClassName: "text-end font-medium", render: (value) => withRial(value) },
   { key: "date", header: "Invoice Date", width: "12%" },
   { key: "due_date", header: "Due Date", width: "12%" },
   {

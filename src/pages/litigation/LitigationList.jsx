@@ -62,7 +62,7 @@ const columns = [
     key: "case_no",
     header: "Case No.",
     width: "12%",
-    cellClassName: "text-left font-medium",
+    cellClassName: "text-start font-medium",
     exportValue: (row) => row.case_no + " (" + row.status + ")",
     render: (value, row) => (
       <span className="flex flex-wrap items-center gap-2">
@@ -147,7 +147,7 @@ export default function LitigationList() {
           </div>
         </div>
         <Button onClick={() => navigate('/litigation/register')}>
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="me-2 h-4 w-4" />
           Register Case
         </Button>
       </div>

@@ -36,7 +36,7 @@ export default function CountBars({ rows, onSelect, labelWidth = "w-44" }) {
                 style={{ width: (row.count / peak) * 100 + "%" }}
               />
             </span>
-            <span className="w-10 shrink-0 text-right text-sm font-semibold">
+            <span className="w-10 shrink-0 text-end text-sm font-semibold">
               {row.count}
             </span>
           </>
@@ -47,7 +47,7 @@ export default function CountBars({ rows, onSelect, labelWidth = "w-44" }) {
             key={row.label}
             type="button"
             onClick={() => onSelect(row)}
-            className="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted/60 focus:outline-none focus:ring-2 focus:ring-ring"
+            className="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-start transition-colors hover:bg-muted/60 focus:outline-none focus:ring-2 focus:ring-ring"
           >
             {bar}
           </button>

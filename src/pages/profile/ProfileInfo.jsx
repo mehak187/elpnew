@@ -54,7 +54,7 @@ export default function ProfileInfo() {
                 <User className="h-10 w-10 sm:h-12 sm:w-12" />
               </AvatarFallback>
             </Avatar>
-            <div className="text-center sm:text-left">
+            <div className="text-center sm:text-start">
               <h2 className="text-lg sm:text-xl font-bold">
                 {formData.name_en}
               </h2>
@@ -69,7 +69,7 @@ export default function ProfileInfo() {
           <Separator className="mb-6" />
 
           {/* Form Fields */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="form-grid">
             <div className="space-y-2">
               <Label htmlFor="name_en" className="text-xs sm:text-sm font-medium">
                 Full Name (English)
@@ -197,7 +197,7 @@ export default function ProfileInfo() {
               className="w-full sm:w-auto"
               onClick={() => setSaved(true)}
             >
-              <Save className="mr-2 h-4 w-4" />
+              <Save className="me-2 h-4 w-4" />
               {saved ? "Saved" : "Save Changes"}
             </Button>
           </div>

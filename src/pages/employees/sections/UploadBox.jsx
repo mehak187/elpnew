@@ -22,7 +22,7 @@ export default function UploadBox({ file, onSelect, accept = ".pdf,.jpg,.jpeg,.p
         title={file.name + " - click to remove"}
         onClick={() => onSelect(null)}
       >
-        <FileCheck className="mr-2 h-4 w-4 shrink-0" />
+        <FileCheck className="me-2 h-4 w-4 shrink-0" />
         <span className="truncate">{file.name}</span>
       </Button>
     );

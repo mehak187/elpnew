@@ -11,15 +11,23 @@
       table data, 500 for labels and buttons, 600 for titles and active
       elements, 700 only where something must shout.
 
-      Served from the CDN for now. Standard 02 asks for the files to be
-      hosted locally before go-live, so that a slow or blocked connection
-      cannot drop the whole system back to a browser default.
+      The files are served from this application, not a CDN - see the
+      @font-face block in src/index.css. Preloaded here in the two weights
+      every page uses first, so text is not painted twice.
     -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="/fonts/IBMPlexSansArabic-400-latin.woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="/fonts/IBMPlexSansArabic-500-latin.woff2"
+      crossorigin
     />
     <title>yands</title>
   </head>

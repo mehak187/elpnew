@@ -98,7 +98,7 @@ export default function NotificationBell() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative mr-1"
+          className="relative me-1"
           title={
             hasUnread
               ? unread.length + " documents expiring or expired"
@@ -112,7 +112,7 @@ export default function NotificationBell() {
             )}
           />
           {hasUnread && (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+            <span className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
               {unread.length}
             </span>
           )}
@@ -128,7 +128,7 @@ export default function NotificationBell() {
       >
         <p className="border-b px-4 py-3 text-sm font-semibold text-primary">
           Expiry Alerts
-          <span className="ml-1 font-normal text-muted-foreground">
+          <span className="ms-1 font-normal text-muted-foreground">
             ({alerts.length})
           </span>
         </p>
@@ -143,7 +143,7 @@ export default function NotificationBell() {
               key={alert.id}
               type="button"
               onClick={() => openClient(alert)}
-              className="block w-full border-b px-4 py-3 text-left last:border-0 hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-ring"
+              className="block w-full border-b px-4 py-3 text-start last:border-0 hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-ring"
             >
               <p className="text-sm font-medium text-primary">
                 {alert.clientName}

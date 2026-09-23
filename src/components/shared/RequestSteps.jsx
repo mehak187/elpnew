@@ -75,9 +75,9 @@ export function RequestSteps({ steps, active, onChange, compact = false }) {
             // the last ends in an arrow, and every one but the first takes the
             // notch that arrow sits in. Stacked on a phone they are plain bars.
             className={cn(
-              "flex flex-1 items-center gap-4 rounded-md px-5 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              !last && "sm:pr-10",
-              !first && "sm:-ml-3.5 sm:pl-10",
+              "flex flex-1 items-center gap-4 rounded-md px-5 py-3 text-start transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              !last && "sm:pe-10",
+              !first && "sm:-ms-3.5 sm:ps-10",
               first && !last && "sm:[clip-path:polygon(0_0,calc(100%_-_20px)_0,100%_50%,calc(100%_-_20px)_100%,0_100%)]",
               !first && !last && "sm:[clip-path:polygon(0_0,calc(100%_-_20px)_0,100%_50%,calc(100%_-_20px)_100%,0_100%,20px_50%)]",
               last && !first && "sm:[clip-path:polygon(0_0,100%_0,100%_100%,0_100%,20px_50%)]",
@@ -193,7 +193,7 @@ export function DecisionChoice({
               disabled={disabled}
               onClick={() => onChange(decision.key)}
               className={cn(
-                "flex items-center gap-4 rounded-md border-2 px-5 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default",
+                "flex items-center gap-4 rounded-md border-2 px-5 py-3 text-start transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default",
                 decision.tone,
                 chosen && decision.chosen,
                 !chosen && !disabled && "hover:brightness-95",

@@ -29,6 +29,7 @@ import {
   Loader2,
   Plus,
   Sparkles,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toCsv, downloadCsv } from "@/lib/csv";
@@ -74,6 +75,23 @@ export default function DataTable({
   exportFileName = "export.csv",
   onAdd,
   addLabel = "Add",
+  /**
+   * Standard 08: a short Add or Edit form, opened inside this container
+   * rather than in a card above it or a window over it.
+   *
+   * `addPanel` is what the form draws, `addPanelTitle` names the action and
+   * `addPanelNote` carries whatever context the person needs while filling
+   * it in. While it is open the Add button is hidden, so the same form
+   * cannot be opened twice, and the table stays where it was - same search,
+   * same filters, same page, same scroll.
+   *
+   * For short forms only. Anything longer than two rows belongs on a page of
+   * its own with a way back.
+   */
+  addPanel,
+  addPanelTitle,
+  addPanelNote,
+  onAddPanelClose,
   filters,
   onRowClick,
   enableColumnSearch = true,
@@ -199,8 +217,15 @@ export default function DataTable({
 
   return (
     <div className="space-y-4">
-      {/* Filters and Search Row */}
-      <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
+      {/*
+        Standard 07: the toolbar and the table are one container. Searching,
+        filtering and adding all act on the list below, so they sit inside its
+        frame with a rule under them, not on a separate bar floating above it.
+        Search takes the logical start of the row and the actions the logical
+        end, which swap sides with the language.
+      */}
+      <Card className="overflow-hidden">
+      <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 border-b border-container-border p-3">
 
         {/* Global Search, first on the row wherever it appears */}
         <AiSearch
@@ -251,22 +276,51 @@ export default function DataTable({
             </Button>
           )}
 
-          {/* The way to add, at the end of the row above the table it adds
-              to - where every list in the system carries it. */}
-          {onAdd && (
+          {/* The way to add, at the logical end of the toolbar. It goes
+              while the panel is open: two of the same form on one page is
+              two records nobody meant to make. */}
+          {onAdd && !addPanel && (
             <Button type="button" className="shrink-0" onClick={onAdd}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               {addLabel}
             </Button>
           )}
         </div>
       </div>
 
-      {/* Table Layout - Always show table on all screen sizes */}
+      {/* The panel sits between the toolbar and the table, inside the same
+          frame, with a rule under it and the accent that marks a section
+          heading beside its title. */}
+      {addPanel && (
+        <div className="animate-in slide-in-from-top-2 border-b border-container-border p-4 duration-200">
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div className="border-s-[3px] border-primary ps-3">
+              <p className="text-[15px] font-semibold text-primary">
+                {addPanelTitle}
+              </p>
+              {addPanelNote && (
+                <p className="text-xs text-muted-foreground">{addPanelNote}</p>
+              )}
+            </div>
+            {onAddPanelClose && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="shrink-0"
+                onClick={onAddPanelClose}
+                title="Close"
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </Button>
+            )}
+          </div>
+          {addPanel}
+        </div>
+      )}
+
       <div className="block">
-        {/* overflow-hidden: the header's tint and the cell rules stop at the
-            card's rounded corner instead of squaring it off. */}
-        <Card className="overflow-hidden">
           <div className="relative">
             {isLoading && (
               <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-lg">
@@ -282,14 +336,14 @@ export default function DataTable({
                   square one inside it shows through at the corners. */}
               <Table>
                 <TableHeader>
-                  <TableRow className="border-b bg-secondary/60 hover:bg-secondary/60">
+                  <TableRow className="border-b border-container-border bg-table-head hover:bg-table-head">
                     {columns.map((column) => (
                       <TableHead
                         key={column.key}
                         className={cn(
                           // Top, not middle: where one heading wraps, the
                           // short ones beside it still start on its first line.
-                          "border-r p-3 text-left align-top font-semibold text-primary last:border-r-0",
+                          "px-4 py-3 text-start align-top text-xs font-semibold text-table-head-ink",
                           column.className
                         )}
                         style={{ width: column.width }}
@@ -298,7 +352,7 @@ export default function DataTable({
                           <button
                             type="button"
                             onClick={() => toggleSort(column.key)}
-                            className="inline-flex items-start gap-1 rounded text-left hover:text-primary/80 focus:outline-none focus:ring-2 focus:ring-ring"
+                            className="inline-flex items-start gap-1 rounded text-start hover:text-primary/80 focus:outline-none focus:ring-2 focus:ring-ring"
                           >
                             <span>
                               <ColumnHeading
@@ -322,11 +376,11 @@ export default function DataTable({
                     ))}
                   </TableRow>
                   {enableColumnSearch && (
-                    <TableRow className="bg-secondary/30 hover:bg-secondary/30">
+                    <TableRow className="border-b border-container-border bg-table-head hover:bg-table-head">
                       {columns.map((column) => (
                         <TableHead
                           key={`filter-${column.key}`}
-                          className="border-r p-2 last:border-r-0"
+                          className="px-4 py-2"
                           style={{ width: column.width }}
                         >
                           {column.filterComponent ? (
@@ -359,7 +413,7 @@ export default function DataTable({
                       <TableRow
                         key={row.id || rowIndex}
                         className={cn(
-                          "align-top hover:bg-primary/5",
+                          "border-b border-container-border align-top transition-colors last:border-0 hover:bg-table-head",
                           onRowClick && "cursor-pointer"
                         )}
                         onClick={() => onRowClick && onRowClick(row)}
@@ -368,7 +422,7 @@ export default function DataTable({
                           <TableCell
                             key={column.key}
                             className={cn(
-                              "border-r p-3 text-left text-sm last:border-r-0",
+                              "px-4 py-3 align-top text-start text-sm",
                               column.cellClassName
                             )}
                           >
@@ -385,8 +439,8 @@ export default function DataTable({
               <ScrollBar orientation="horizontal" />
             </ScrollArea>
           </div>
-        </Card>
       </div>
+      </Card>
 
       {/* Pagination */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -410,7 +464,7 @@ export default function DataTable({
             disabled={currentPage <= 1}
             className="h-9"
           >
-            <ChevronLeft className="h-4 w-4 mr-1" />
+            <ChevronLeft className="h-4 w-4 me-1" />
             <span className="hidden sm:inline">Previous</span>
           </Button>
 
@@ -449,7 +503,7 @@ export default function DataTable({
             className="h-9"
           >
             <span className="hidden sm:inline">Next</span>
-            <ChevronRight className="h-4 w-4 ml-1" />
+            <ChevronRight className="h-4 w-4 ms-1" />
           </Button>
         </div>
       </div>

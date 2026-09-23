@@ -62,11 +62,11 @@ export default function EntitlementsSection({
         <AiSearch value={query} onChange={setQuery} placeholder="Search..." />
         <Button
           type="button"
-          className="ml-auto"
+          className="ms-auto"
           onClick={() => setAdding(tab)}
           disabled={adding === tab}
         >
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="me-2 h-4 w-4" />
           {"Request " + current.label}
         </Button>
       </div>

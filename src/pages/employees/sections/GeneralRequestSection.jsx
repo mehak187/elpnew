@@ -29,6 +29,7 @@ import {
   Th,
   Row as TableRow,
   Td,
+  RecordLink,
 } from "@/components/shared/RecordTable";
 import { Send, History, Paperclip } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -319,7 +320,7 @@ export default function GeneralRequestSection({ employee }) {
                   reads as broken, so once decided it stops being a box. */}
               <Group title="Management Decision">
                 {settled ? (
-                  <Row>
+                  <Row cols={3}>
                     <Locked
                       id="grAnswer"
                       label="Decision"
@@ -373,7 +374,7 @@ export default function GeneralRequestSection({ employee }) {
                       )}
                     </div>
 
-                    <Row>
+                    <Row cols={3}>
                       <Locked
                         id="grDecisionDate"
                         label="Decision Date"
@@ -465,16 +466,12 @@ export default function GeneralRequestSection({ employee }) {
                     <Td className="font-medium text-primary">{index + 1}</Td>
                     {/* The number is the way back into the request. */}
                     <Td className="whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => track(request)}
-                        className="font-medium text-primary underline-offset-2 hover:underline"
-                      >
+                      <RecordLink onClick={() => track(request)}>
                         {request.requestNo}
-                      </button>
+                        </RecordLink>
                     </Td>
-                    <Td className="text-left">{request.requestType}</Td>
-                    <Td className="text-left">
+                    <Td className="text-start">{request.requestType}</Td>
+                    <Td className="text-start">
                       <span className="inline-flex items-start gap-1.5">
                         {request.document && (
                           <Paperclip
@@ -500,7 +497,7 @@ export default function GeneralRequestSection({ employee }) {
                     </Td>
                     {/* Blank until someone has decided, so nothing
                         suggests an answer that has not been given. */}
-                    <Td className="text-left text-muted-foreground">
+                    <Td className="text-start text-muted-foreground">
                       {request.remarks || "-"}
                     </Td>
                     <Td className="text-muted-foreground">

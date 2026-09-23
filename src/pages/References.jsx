@@ -41,7 +41,7 @@ const buildColumns = (onEdit, onDelete) => [
     key: "name",
     header: "Name",
     width: "36%",
-    cellClassName: "text-left font-medium",
+    cellClassName: "text-start font-medium",
     exportValue: (row) => row.name + " (" + row.status + ")",
     render: (value, row) => (
       <span className="flex flex-wrap items-center gap-2">

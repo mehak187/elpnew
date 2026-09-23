@@ -12,6 +12,7 @@ import {
   Said,
   Choice,
   Attach,
+  checkRequired,
 } from "@/components/shared/formFields";
 import {
   RecordTable,
@@ -19,6 +20,7 @@ import {
   Th,
   Row,
   Td,
+  RecordLink,
 } from "@/components/shared/RecordTable";
 import { Rial } from "@/components/shared/Rial";
 import { FileText, History, Plus } from "lucide-react";
@@ -145,7 +147,7 @@ export default function BonusSection({
    * number and waiting on a decision.
    */
   const submit = () => {
-    if (!canSubmit) return;
+    if (!checkRequired() || !canSubmit) return;
     const details = {
       subcategory: draft.subcategory,
       bonusType: isOther ? draft.bonusType.trim() : "",
@@ -171,7 +173,7 @@ export default function BonusSection({
 
   /** Paid out: the bonus is disbursed, and the record says how. */
   const disburse = () => {
-    if (!canPay || !open) return;
+    if (!checkRequired() || !canPay || !open) return;
     updateBonus(open.id, {
       status: BONUS_DISBURSED,
       rejectionReason: "",
@@ -211,7 +213,7 @@ export default function BonusSection({
   // employee's own record and the register's next number.
   const requestInformation = (
     <Bordered title="Request Information">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+      <div className="form-grid">
         <div className="flex h-full flex-col justify-end gap-2">
           <FieldLabel htmlFor="bonus-no">Request No.</FieldLabel>
           <div className="flex w-full min-w-0 items-center gap-2">
@@ -298,7 +300,7 @@ export default function BonusSection({
           {/* What is being paid, read off the request rather than asked for
               again. */}
           <Bordered title="Bonus Information">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+            <div className="form-grid">
               <Settled id="bonus-no-said" label="Bonus No." value={requestNo} />
               <Settled
                 id="bonus-date-said"
@@ -321,7 +323,7 @@ export default function BonusSection({
 
           {/* Where it is booked, and how it actually leaves. */}
           <Bordered title="Expense & Disbursement Details">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+            <div className="form-grid">
               <Settled
                 id="bonus-expense-type"
                 label="Expense Type"
@@ -412,7 +414,7 @@ export default function BonusSection({
               />
               Employee &amp; Transfer Summary
             </p>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:divide-x">
+            <div className="form-grid lg:[&>*+*]:border-s">
               <Said label="Employee No." value={employee?.empNo || ""} />
               <Said label="Employee Name" value={employee?.name || ""} />
               <Said label="Bank Account" value={payment.bankAccount} />
@@ -429,7 +431,7 @@ export default function BonusSection({
           {requestInformation}
 
           <Bordered title="Bonus Details">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+            <div className="form-grid">
               <Choice
                 id="bonus-subcategory-pick"
                 label="Bonus Type"
@@ -491,7 +493,7 @@ export default function BonusSection({
                 onChange={(e) => set("comment", e.target.value)}
                 placeholder="Explain the reason and basis for requesting this bonus"
               />
-              <p className="text-right text-xs text-muted-foreground">
+              <p className="text-end text-xs text-muted-foreground">
                 {draft.comment.length} / {COMMENT_LIMIT}
               </p>
             </div>
@@ -506,12 +508,12 @@ export default function BonusSection({
             where a payment is being made, not where one is being asked for. */}
         {stage === "disbursement" && (
           <Button type="button" variant="ghost" onClick={close}>
-            <History className="mr-2 h-4 w-4" />
+            <History className="me-2 h-4 w-4" />
             History
           </Button>
         )}
 
-        <div className="ml-auto flex flex-wrap items-center gap-2">
+        <div className="ms-auto flex flex-wrap items-center gap-2">
           <Button type="button" variant="outline" onClick={close}>
             Cancel
           </Button>
@@ -519,12 +521,12 @@ export default function BonusSection({
             <Button
               type="button"
               onClick={disburse}
-              disabled={!canPay || settled || refused}
+              disabled={settled || refused}
             >
               Save
             </Button>
           ) : (
-            <Button type="button" onClick={submit} disabled={!canSubmit}>
+            <Button type="button" onClick={submit}>
               Save
             </Button>
           )}
@@ -557,8 +559,8 @@ export default function BonusSection({
             placeholder="Ask about bonuses..."
           />
           {addLabel && !adding && (
-            <Button type="button" className="ml-auto" onClick={onOpenAdd}>
-              <Plus className="mr-2 h-4 w-4" />
+            <Button type="button" className="ms-auto" onClick={onOpenAdd}>
+              <Plus className="me-2 h-4 w-4" />
               {addLabel}
             </Button>
           )}
@@ -574,7 +576,7 @@ export default function BonusSection({
               <Th width="28%">Bonus Details</Th>
               {/* The unit is said once, in the heading, so the figures under
                   it can be read against each other. */}
-              <Th width="18%" className="text-right">
+              <Th width="18%" className="text-end">
                 Bonus Amount (OMR)
               </Th>
               <Th width="28%">Employee Comment</Th>
@@ -586,13 +588,9 @@ export default function BonusSection({
                       stands is said under the number rather than in a column
                       of its own. */}
                   <Td className="whitespace-nowrap font-medium text-primary">
-                    <button
-                      type="button"
-                      onClick={() => track(bonus)}
-                      className="font-medium text-primary no-underline hover:text-primary/70"
-                    >
+                    <RecordLink onClick={() => track(bonus)}>
                       {bonus.requestNo}
-                    </button>
+                      </RecordLink>
                     <span
                       className={cn(
                         "mt-1 block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold",
@@ -606,7 +604,7 @@ export default function BonusSection({
                   <Td className="whitespace-nowrap text-primary">
                     {formatDate(bonusDate(bonus))}
                   </Td>
-                  <Td className="text-left">
+                  <Td className="text-start">
                     <span className="block font-semibold text-primary">
                       {bonusReason(bonus)}
                     </span>
@@ -614,10 +612,10 @@ export default function BonusSection({
                       {bonus.expenseType} &rarr; {bonus.category}
                     </span>
                   </Td>
-                  <Td className="whitespace-nowrap text-right font-bold text-green-700">
+                  <Td className="whitespace-nowrap text-end font-bold text-green-700">
                     {amountValue(bonus.amount)}
                   </Td>
-                  <Td className="text-left text-muted-foreground">
+                  <Td className="text-start text-muted-foreground">
                     {bonus.notes || "-"}
                   </Td>
                 </Row>

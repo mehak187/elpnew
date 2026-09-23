@@ -40,6 +40,7 @@ import {
   accumulatedDepreciation,
   netBookValue,
 } from "./assetData";
+import { RecordLink } from "@/components/shared/RecordTable";
 
 const emptyDraft = {
   purchaseDate: "",
@@ -68,7 +69,7 @@ function IconSelect({ id, label, required, icon, value, onChange, options, disab
       <Select value={value} onValueChange={(next) => next && onChange(next)} disabled={disabled}>
         {/* The icon sits straight inside the trigger: a wrapping span would take
             the trigger's one-line clamp and stack the icon over the value. */}
-        <SelectTrigger id={id} className="justify-start gap-3 [&>svg:last-child]:ml-auto">
+        <SelectTrigger id={id} className="justify-start gap-3 [&>svg:last-child]:ms-auto">
           {Icon && <Icon className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />}
           <SelectValue placeholder="Please select" />
         </SelectTrigger>
@@ -217,14 +218,13 @@ export default function AssetsPage() {
         <div className="flex items-start gap-3">
           <div>
             {/* The number opens the asset itself. */}
-            <button
-              type="button"
+            <RecordLink
               onClick={() => navigate("/assets/" + row.id)}
               title={"Open " + value}
-              className="rounded text-base font-semibold text-primary hover:text-primary/70 focus:outline-none focus:ring-2 focus:ring-ring"
+              className="text-base"
             >
               {value}
-            </button>
+            </RecordLink>
             <p className="whitespace-nowrap text-primary/80">{row.branchLabel}</p>
           </div>
           <IdStatusDot status={ASSET_STATUS[row.state].label} />
@@ -273,8 +273,8 @@ export default function AssetsPage() {
       key: "cost",
       header: "Cost",
       width: "9%",
-      className: "text-right",
-      cellClassName: "text-right",
+      className: "text-end",
+      cellClassName: "text-end",
       exportValue: (row) => (row.hasCost ? omr(row.cost) : "-"),
       sortValue: (row) => (row.hasCost ? row.cost : null),
       render: (value, row) => figure(row.hasCost ? value : null),
@@ -284,8 +284,8 @@ export default function AssetsPage() {
       header: "Depreciation Rate",
       subHeader: "(Per Annum)",
       width: "9%",
-      className: "text-right",
-      cellClassName: "text-right",
+      className: "text-end",
+      cellClassName: "text-end",
       exportValue: (row) => (row.rate ? row.rate + "%" : "-"),
       sortValue: (row) => row.rate || null,
       render: (value) => (value ? <span className="text-primary/80">{value}%</span> : <Missing />),
@@ -295,8 +295,8 @@ export default function AssetsPage() {
       key: "accumulated",
       header: "Accumulated Depreciation",
       width: "10%",
-      className: "text-right",
-      cellClassName: "text-right",
+      className: "text-end",
+      cellClassName: "text-end",
       disableSort: true,
       exportValue: (row) => (row.hasCost ? omr(row.accumulated) : "-"),
       render: (value) => figure(value),
@@ -305,8 +305,8 @@ export default function AssetsPage() {
       key: "netBookValue",
       header: "Net Book Value",
       width: "9%",
-      className: "text-right",
-      cellClassName: "text-right",
+      className: "text-end",
+      cellClassName: "text-end",
       exportValue: (row) => (row.hasCost ? omr(row.netBookValue) : "-"),
       sortValue: (row) => row.netBookValue,
       render: (value) => figure(value),
@@ -470,11 +470,11 @@ export default function AssetsPage() {
 
             <div className="flex justify-between gap-2">
               <Button type="button" variant="outline" onClick={close}>
-                <X className="mr-2 h-4 w-4" />
+                <X className="me-2 h-4 w-4" />
                 Cancel
               </Button>
               <Button type="button" onClick={save}>
-                <Save className="mr-2 h-4 w-4" />
+                <Save className="me-2 h-4 w-4" />
                 Save
               </Button>
             </div>

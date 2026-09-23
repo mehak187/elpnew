@@ -58,19 +58,20 @@ function BranchFields({ draft, set, idPrefix, assignedNumber }) {
             value={assignedNumber}
             readOnly
             disabled
-            className="bg-locked pr-9"
+            className="bg-locked pe-9"
           />
           {/* Locked on purpose: case files are numbered from it */}
           <Lock
             aria-hidden="true"
-            className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+            className="pointer-events-none absolute end-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
           />
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor={id("name")}>Branch Name &ndash; English *</Label>
+      <div className="form-field space-y-2">
+        <Label htmlFor={id("name")}>Branch Name &ndash; English</Label>
         <Input
+          required
           id={id("name")}
           value={draft.name}
           onChange={(e) => set("name", e.target.value)}
@@ -211,7 +212,7 @@ export default function BranchesSection({ canEdit }) {
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
           <h2 className="border-s-4 border-primary ps-3 text-lg font-bold text-primary">
             Branches
-            <span className="ml-2 text-sm font-normal text-muted-foreground">
+            <span className="ms-2 text-sm font-normal text-muted-foreground">
               {branches.length} {branches.length === 1 ? "branch" : "branches"}
             </span>
           </h2>
@@ -229,7 +230,7 @@ export default function BranchesSection({ canEdit }) {
               onBack={() => setAdding(false)}
             />
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="form-grid">
               <BranchFields
                 draft={draft}
                 set={set}
@@ -254,7 +255,7 @@ export default function BranchesSection({ canEdit }) {
       {canEdit && !adding && (
         <div className="flex justify-end">
           <Button type="button" onClick={() => setAdding(true)}>
-            <Plus className="mr-1.5 h-4 w-4" />
+            <Plus className="me-1.5 h-4 w-4" />
             Add Branch
           </Button>
         </div>
@@ -267,11 +268,11 @@ export default function BranchesSection({ canEdit }) {
         <CardContent className="overflow-x-auto p-0">
           <table className="w-full min-w-[720px] border text-sm">
             <thead>
-              <tr className="border-b bg-secondary/60 text-left text-primary">
-                <th className="border-r last:border-r-0 p-3 font-semibold">Branch No.</th>
-                <th className="border-r last:border-r-0 p-3 font-semibold">Branch Name</th>
-                <th className="border-r last:border-r-0 p-3 font-semibold">Address</th>
-                <th className="border-r last:border-r-0 p-3 font-semibold">Branch Manager</th>
+              <tr className="border-b bg-secondary/60 text-start text-primary">
+                <th className="p-3 font-semibold">Branch No.</th>
+                <th className="p-3 font-semibold">Branch Name</th>
+                <th className="p-3 font-semibold">Address</th>
+                <th className="p-3 font-semibold">Branch Manager</th>
               </tr>
             </thead>
             <tbody>
@@ -291,7 +292,7 @@ export default function BranchesSection({ canEdit }) {
                   {/* The number opens the branch for editing. A branch that
                       has been closed says so beside it; an open one says
                       nothing, so there is no status column. */}
-                  <td className="border-r last:border-r-0 p-3">
+                  <td className="p-3">
                     <span className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
@@ -306,16 +307,16 @@ export default function BranchesSection({ canEdit }) {
                   {/* One language, not both: the list is read in whichever
                       language the interface is set to. Both are still held
                       on the record and both are still entered on the form. */}
-                  <td className="border-r last:border-r-0 p-3">
+                  <td className="p-3">
                     <span className="block font-medium" dir={dir}>
                       {inLanguage(language, branch.name, branch.nameAr)}
                     </span>
                   </td>
-                  <td className="border-r last:border-r-0 p-3" dir={dir}>
+                  <td className="p-3" dir={dir}>
                     {inLanguage(language, branch.address, branch.addressAr) ||
                       "-"}
                   </td>
-                  <td className="border-r last:border-r-0 p-3">
+                  <td className="p-3">
                     {managerName(branch.managerId) || (
                       <span className="text-muted-foreground">Not assigned</span>
                     )}
@@ -341,7 +342,7 @@ export default function BranchesSection({ canEdit }) {
           </DialogHeader>
 
           {editing && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="form-grid form-grid-2">
               <BranchFields
                 draft={editing}
                 set={setEdit}

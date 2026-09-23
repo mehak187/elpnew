@@ -11,6 +11,7 @@ import {
   Settled,
   Choice,
   Attach,
+  checkRequired,
 } from "@/components/shared/formFields";
 import {
   RecordTable,
@@ -18,6 +19,7 @@ import {
   Th,
   Row,
   Td,
+  RecordLink,
 } from "@/components/shared/RecordTable";
 import { Rial } from "@/components/shared/Rial";
 import { cn } from "@/lib/utils";
@@ -147,7 +149,7 @@ export function AdvanceSalaryForm({
         pay.reference.trim());
 
   const submit = () => {
-    if (!canSubmit) return;
+    if (!checkRequired() || !canSubmit) return;
     addAdvance({
       requestNo,
       employee: employee?.name || "",
@@ -217,7 +219,7 @@ export function AdvanceSalaryForm({
           {/* Who asked, and under what number. Whatever was attached hangs
               under the number it belongs to rather than in a field of its own. */}
           <Bordered title="Request Information">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+            <div className="form-grid">
               <div className="flex h-full flex-col justify-end gap-2">
                 <Settled id="advance-no" label="Request No." value={requestNo} />
                 {attachedName && (
@@ -252,7 +254,7 @@ export function AdvanceSalaryForm({
           {/* What was asked for, read off the request rather than asked for
               again. */}
           <Bordered title="Salary Advance Request Details">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+            <div className="form-grid">
               <Settled
                 id="advance-requested"
                 label="Requested Advance Amount"
@@ -279,14 +281,13 @@ export function AdvanceSalaryForm({
           <DecisionChoice
             value={decision}
             onChange={setDecision}
-            disabled={!canDecide}
           />
 
           {/* Nothing leaves the firm on a refusal, so the transfer is asked
               about only once something has been approved. */}
           {decision && !rejected && (
             <Bordered title="Expense & Disbursement Details">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+              <div className="form-grid">
                 <Settled
                   id="advance-expense-type"
                   label="Expense Type"
@@ -339,7 +340,6 @@ export function AdvanceSalaryForm({
                   onChange={(value) => value && setPaid("method", value)}
                   placeholder="Select method"
                   options={PAYMENT_METHODS}
-                  disabled={!canDecide}
                 />
 
                 {/* One choice, not two: the account carries the bank it is
@@ -351,7 +351,6 @@ export function AdvanceSalaryForm({
                   onChange={(value) => value && setPaid("bankAccount", value)}
                   placeholder="Select bank account"
                   options={PAYING_ACCOUNTS}
-                  disabled={!canDecide}
                 />
 
                 <div className="flex h-full flex-col justify-end gap-2">
@@ -363,7 +362,6 @@ export function AdvanceSalaryForm({
                     type="date"
                     value={pay.paymentDate}
                     onChange={(e) => setPaid("paymentDate", e.target.value)}
-                    disabled={!canDecide}
                   />
                 </div>
 
@@ -379,7 +377,6 @@ export function AdvanceSalaryForm({
                       value={pay.reference}
                       onChange={(e) => setPaid("reference", e.target.value)}
                       placeholder="TRX-0000-00000"
-                      disabled={!canDecide}
                     />
                     <Attach
                       file={receipt}
@@ -408,14 +405,13 @@ export function AdvanceSalaryForm({
                 maxLength={REASON_LIMIT}
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                disabled={!canDecide}
                 placeholder={
                   rejected
                     ? "Enter the reason for rejection"
                     : "Enter a note on this decision"
                 }
               />
-              <p className="text-right text-xs text-muted-foreground">
+              <p className="text-end text-xs text-muted-foreground">
                 {comment.length} / {REASON_LIMIT}
               </p>
             </div>
@@ -426,7 +422,7 @@ export function AdvanceSalaryForm({
           {/* Who is asking, and under what number. None of it is typed: it is
               the employee's own record and the register's next number. */}
           <Bordered title="Request Information">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+            <div className="form-grid">
               {/* The number, and whatever backs the request up. The file name
                   lives in the tooltip, so the control stays icon-sized. */}
               <div className="flex h-full flex-col justify-end gap-2">
@@ -468,7 +464,7 @@ export function AdvanceSalaryForm({
           {/* What may be asked for, and what the month looks like afterwards.
               Only three of these eight are typed; the rest follow. */}
           <Bordered title="Salary Advance Details">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+            <div className="form-grid">
               <Settled
                 id="advance-basic"
                 label="Current Basic Salary"
@@ -545,7 +541,7 @@ export function AdvanceSalaryForm({
                 onChange={(e) => set("reason", e.target.value)}
                 placeholder="Enter the reason for requesting a salary advance"
               />
-              <p className="text-right text-xs text-muted-foreground">
+              <p className="text-end text-xs text-muted-foreground">
                 {draft.reason.length} / {REASON_LIMIT}
               </p>
             </div>
@@ -560,21 +556,21 @@ export function AdvanceSalaryForm({
             where a decision is being read, not where one is being written. */}
         {stage === "decision" && (
           <Button type="button" variant="ghost" onClick={onClose}>
-            <History className="mr-2 h-4 w-4" />
+            <History className="me-2 h-4 w-4" />
             History
           </Button>
         )}
 
-        <div className="ml-auto flex flex-wrap items-center gap-2">
+        <div className="ms-auto flex flex-wrap items-center gap-2">
           <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
           {stage === "decision" ? (
-            <Button type="button" onClick={saveDecision} disabled={!canSave}>
+            <Button type="button" onClick={saveDecision}>
               Save
             </Button>
           ) : (
-            <Button type="button" onClick={submit} disabled={!canSubmit}>
+            <Button type="button" onClick={submit}>
               Save
             </Button>
           )}
@@ -615,8 +611,8 @@ export function AdvanceRequests({
             placeholder="Ask about salary advances..."
           />
           {onAdd && (
-            <Button type="button" className="ml-auto" onClick={onAdd}>
-              <Plus className="mr-2 h-4 w-4" />
+            <Button type="button" className="ms-auto" onClick={onAdd}>
+              <Plus className="me-2 h-4 w-4" />
               {addLabel}
             </Button>
           )}
@@ -634,7 +630,7 @@ export function AdvanceRequests({
               <Th width="14%">Request No.</Th>
               <Th width="14%">Request Date</Th>
               {/* No unit in the heading: every figure below carries it. */}
-              <Th width="16%" className="text-right">
+              <Th width="16%" className="text-end">
                 Requested Amount
               </Th>
               <Th width="16%">Deducted From</Th>
@@ -647,13 +643,9 @@ export function AdvanceRequests({
                       rather than in a column of its own. */}
                   <Td className="whitespace-nowrap font-medium text-primary">
                     {onOpenRequest ? (
-                      <button
-                        type="button"
-                        className="font-medium text-primary no-underline hover:text-primary/70"
-                        onClick={() => onOpenRequest(advance)}
-                      >
+                      <RecordLink onClick={() => onOpenRequest(advance)}>
                         {advance.requestNo}
-                      </button>
+                        </RecordLink>
                     ) : (
                       advance.requestNo
                     )}
@@ -670,13 +662,13 @@ export function AdvanceRequests({
                   <Td className="whitespace-nowrap text-primary">
                     {formatDate(advance.requestedOn)}
                   </Td>
-                  <Td className="whitespace-nowrap text-right font-bold text-green-700">
+                  <Td className="whitespace-nowrap text-end font-bold text-green-700">
                     {amount(advance.amount)}
                   </Td>
                   <Td className="whitespace-nowrap text-primary">
                     {deductedFrom(advance)}
                   </Td>
-                  <Td className="text-left text-muted-foreground">
+                  <Td className="text-start text-muted-foreground">
                     {advance.reason}
                   </Td>
                 </Row>

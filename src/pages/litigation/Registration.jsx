@@ -63,9 +63,9 @@ export default function Registration() {
       <Card>
         <CardContent className="p-4 sm:p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="case_no">Case Number *</Label>
+            <div className="form-grid">
+              <div className="form-field space-y-2">
+                <Label htmlFor="case_no">Case Number</Label>
                 <Input
                   id="case_no"
                   name="case_no"
@@ -76,8 +76,8 @@ export default function Registration() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="client">Client *</Label>
+              <div data-required="true" className="form-field space-y-2">
+                <Label htmlFor="client">Client</Label>
                 <Select
                   value={formData.client}
                   onValueChange={(value) =>
@@ -96,8 +96,8 @@ export default function Registration() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="case_type">Case Type *</Label>
+              <div data-required="true" className="form-field space-y-2">
+                <Label htmlFor="case_type">Case Type</Label>
                 <Select
                   value={formData.case_type}
                   onValueChange={(value) =>
@@ -117,8 +117,8 @@ export default function Registration() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="court">Court *</Label>
+              <div data-required="true" className="form-field space-y-2">
+                <Label htmlFor="court">Court</Label>
                 <Select
                   value={formData.court}
                   onValueChange={(value) =>
@@ -138,8 +138,8 @@ export default function Registration() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="opponent">Opponent Name *</Label>
+              <div className="form-field space-y-2">
+                <Label htmlFor="opponent">Opponent Name</Label>
                 <Input
                   id="opponent"
                   name="opponent"
@@ -161,8 +161,8 @@ export default function Registration() {
                 />
               </div>
 
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="subject">Case Subject *</Label>
+              <div className="form-field space-y-2 sm:col-span-2">
+                <Label htmlFor="subject">Case Subject</Label>
                 <Input
                   id="subject"
                   name="subject"
@@ -173,8 +173,8 @@ export default function Registration() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="filing_date">Filing Date *</Label>
+              <div className="form-field space-y-2">
+                <Label htmlFor="filing_date">Filing Date</Label>
                 <Input
                   id="filing_date"
                   name="filing_date"
@@ -185,8 +185,8 @@ export default function Registration() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="assigned_lawyer">Assigned Lawyer *</Label>
+              <div data-required="true" className="form-field space-y-2">
+                <Label htmlFor="assigned_lawyer">Assigned Lawyer</Label>
                 <Select
                   value={formData.assigned_lawyer}
                   onValueChange={(value) =>
@@ -210,7 +210,7 @@ export default function Registration() {
                 Cancel
               </Button>
               <Button type="submit">
-                <Save className="mr-2 h-4 w-4" />
+                <Save className="me-2 h-4 w-4" />
                 Register Case
               </Button>
             </div>

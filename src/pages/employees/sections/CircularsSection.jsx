@@ -160,26 +160,26 @@ export default function EmployeeCircularsSection({ employee }) {
           ) : (
             <table className="w-full min-w-[880px] border text-sm">
               <thead>
-                <tr className="border-b bg-secondary/60 text-left text-primary">
-                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "12%" }}>
+                <tr className="border-b bg-secondary/60 text-start text-primary">
+                  <th className="p-3 font-semibold" style={{ width: "12%" }}>
                     Circular No.
                   </th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "20%" }}>
+                  <th className="p-3 font-semibold" style={{ width: "20%" }}>
                     Subject / Content
                   </th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "11%" }}>
+                  <th className="p-3 font-semibold" style={{ width: "11%" }}>
                     Date
                   </th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "13%" }}>
+                  <th className="p-3 font-semibold" style={{ width: "13%" }}>
                     Target Group
                   </th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "14%" }}>
+                  <th className="p-3 font-semibold" style={{ width: "14%" }}>
                     Issued By
                   </th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "18%" }}>
+                  <th className="p-3 font-semibold" style={{ width: "18%" }}>
                     Acknowledgement
                   </th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "12%" }}>
+                  <th className="p-3 font-semibold" style={{ width: "12%" }}>
                     Status
                   </th>
                 </tr>
@@ -192,17 +192,17 @@ export default function EmployeeCircularsSection({ employee }) {
                       key={circular.id}
                       className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"
                     >
-                      <td className="border-r last:border-r-0 whitespace-nowrap p-3 font-semibold text-primary">
+                      <td className="whitespace-nowrap p-3 font-semibold text-primary">
                         {circular.circularNo}
                       </td>
-                      <td className="border-r last:border-r-0 p-3">{circular.content}</td>
-                      <td className="border-r last:border-r-0 whitespace-nowrap p-3">
+                      <td className="p-3">{circular.content}</td>
+                      <td className="whitespace-nowrap p-3">
                         {formatDate(circular.date)}
                       </td>
-                      <td className="border-r last:border-r-0 p-3">{circular.targetGroup}</td>
-                      <td className="border-r last:border-r-0 p-3">{circular.issuedBy}</td>
+                      <td className="p-3">{circular.targetGroup}</td>
+                      <td className="p-3">{circular.issuedBy}</td>
                       {/* Their own acknowledgement, and nobody else's */}
-                      <td className="border-r last:border-r-0 p-3">
+                      <td className="p-3">
                         {mineAck ? (
                           <span className="flex items-start gap-1.5 text-green-700">
                             <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -233,7 +233,7 @@ export default function EmployeeCircularsSection({ employee }) {
                       </td>
                       {/* A circular still in force says nothing: only one
                           that has been superseded or cancelled does. */}
-                      <td className="border-r last:border-r-0 p-3">
+                      <td className="p-3">
                         {circular.status !== ACTIVE && (
                           <span
                             className={cn(

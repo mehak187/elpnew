@@ -19,13 +19,13 @@ export default function AiSearch({
 }) {
   return (
     <div className={cn("relative w-full sm:w-80 lg:w-96", className)}>
-      <Sparkles className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+      <Sparkles className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
       <Input
         type="search"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="pl-9"
+        className="ps-9"
       />
     </div>
   );

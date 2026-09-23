@@ -43,6 +43,7 @@ import {
   nextStage,
   violationsFor,
 } from "../violationData";
+import { checkRequired } from "@/components/shared/formFields";
 
 const DESCRIPTION_LIMIT = 1000;
 
@@ -118,13 +119,19 @@ function Settled({ id, label, value }) {
   );
 }
 
-function DateField({ id, label, value, onChange }) {
+function DateField({ id, label, required, value, onChange }) {
   return (
     <div className="space-y-2">
       <FieldLabel htmlFor={id}>
         {label}
       </FieldLabel>
-      <Input id={id} type="date" value={value} onChange={(e) => onChange(e.target.value)} />
+      <Input
+        required={required}
+        id={id}
+        type="date"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
     </div>
   );
 }
@@ -158,13 +165,14 @@ function FileField({ id, label, value, onChange }) {
   );
 }
 
-function LongText({ id, label, value, onChange, placeholder, className }) {
+function LongText({ id, label, required, value, onChange, placeholder, className }) {
   return (
     <div className={cn("space-y-2", className)}>
       <FieldLabel htmlFor={id}>
         {label}
       </FieldLabel>
       <Textarea
+        required={required}
         id={id}
         rows={4}
         maxLength={DESCRIPTION_LIMIT}
@@ -244,7 +252,7 @@ export default function ViolationsSection({ employee, canEdit = true }) {
   const canStart = draft.date && draft.type && draft.description.trim() && draft.investigationStart;
 
   const saveViolation = () => {
-    if (!canStart) return;
+    if (!checkRequired() || !canStart) return;
     const part = {
       date: draft.date,
       type: draft.type,
@@ -377,7 +385,7 @@ export default function ViolationsSection({ employee, canEdit = true }) {
   const stageBody = {
     violation: (
       <>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+        <div className="form-grid">
           <div className="space-y-2">
             <FieldLabel htmlFor="violation-no">Violation No.</FieldLabel>
             <Input
@@ -423,7 +431,7 @@ export default function ViolationsSection({ employee, canEdit = true }) {
 
     response: (
       <>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+        <div className="form-grid">
           <LongText
             id="violation-response"
             label="Employee Response"
@@ -441,7 +449,7 @@ export default function ViolationsSection({ employee, canEdit = true }) {
 
     decision: (
       <>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+        <div className="form-grid">
           <Choice
             id="violation-result"
             label="Investigation Result"
@@ -469,7 +477,7 @@ export default function ViolationsSection({ employee, canEdit = true }) {
               <Input
                 id="violation-deduction"
                 inputMode="decimal"
-                className="text-right"
+                className="text-end"
                 value={draft.deductionAmount}
                 onChange={(e) => set("deductionAmount", e.target.value.replace(/[^\d.]/g, ""))}
                 placeholder="0.000"
@@ -505,7 +513,7 @@ export default function ViolationsSection({ employee, canEdit = true }) {
 
     appeal: (
       <>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+        <div className="form-grid">
           {/* What is being appealed against, read off the decision rather than
               asked for again. */}
           <Settled id="violation-appeal-no" label="Violation No." value={record?.violationNo} />
@@ -549,7 +557,7 @@ export default function ViolationsSection({ employee, canEdit = true }) {
 
     outcome: (
       <>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+        <div className="form-grid">
           {/* What is being answered, read off the appeal itself. */}
           <Settled id="violation-outcome-no" label="Violation No." value={record?.violationNo} />
           <Settled
@@ -631,8 +639,8 @@ export default function ViolationsSection({ employee, canEdit = true }) {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <AiSearch value={query} onChange={setQuery} placeholder="Ask AI" />
             {canEdit && !openId && (
-              <Button type="button" className="ml-auto" onClick={openNew}>
-                <Plus className="mr-2 h-4 w-4" />
+              <Button type="button" className="ms-auto" onClick={openNew}>
+                <Plus className="me-2 h-4 w-4" />
                 Add Violation
               </Button>
             )}

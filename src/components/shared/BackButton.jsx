@@ -24,7 +24,7 @@ export default function BackButton({
   if (label) {
     return (
       <Button variant="outline" onClick={goBack} className={className}>
-        <ArrowLeft className="mr-2 h-4 w-4" />
+        <ArrowLeft className="me-2 h-4 w-4" />
         {label}
       </Button>
     );

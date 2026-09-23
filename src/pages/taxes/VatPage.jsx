@@ -79,7 +79,7 @@ function VatFilingForm({ vatReturn, onCancel, onSave }) {
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+        <div className="form-grid">
           <TextField
             id="vatFiledOn"
             label="Filed On"
@@ -120,11 +120,11 @@ function VatFilingForm({ vatReturn, onCancel, onSave }) {
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onCancel}>
-            <X className="mr-2 h-4 w-4" />
+            <X className="me-2 h-4 w-4" />
             Cancel
           </Button>
           <Button type="button" onClick={save}>
-            <Save className="mr-2 h-4 w-4" />
+            <Save className="me-2 h-4 w-4" />
             Save
           </Button>
         </div>
@@ -230,8 +230,8 @@ export default function VatPage() {
       key: "net",
       header: "Before VAT",
       width: "13%",
-      className: "text-right",
-      cellClassName: "text-right",
+      className: "text-end",
+      cellClassName: "text-end",
       exportValue: (row) => omr(row.net),
       sortValue: (row) => row.net,
       render: money,
@@ -240,8 +240,8 @@ export default function VatPage() {
       key: "vat",
       header: "VAT",
       width: "12%",
-      className: "text-right",
-      cellClassName: "text-right font-semibold text-primary",
+      className: "text-end",
+      cellClassName: "text-end font-semibold text-primary",
       exportValue: (row) => omr(row.vat),
       sortValue: (row) => row.vat,
       render: money,
@@ -250,8 +250,8 @@ export default function VatPage() {
       key: "total",
       header: "Total",
       width: "13%",
-      className: "text-right",
-      cellClassName: "text-right",
+      className: "text-end",
+      cellClassName: "text-end",
       exportValue: (row) => omr(row.total),
       sortValue: (row) => row.total,
       render: money,
@@ -333,15 +333,15 @@ export default function VatPage() {
           <div className="overflow-x-auto rounded-lg border">
             <table className="w-full min-w-240 border text-sm">
               <thead>
-                <tr className="border-b bg-secondary/60 text-left text-primary">
-                  <th className="border-r last:border-r-0 p-3 font-semibold">Period</th>
-                  <th className="border-r last:border-r-0 p-3 text-right font-semibold">Output VAT</th>
-                  <th className="border-r last:border-r-0 p-3 text-right font-semibold">Input VAT</th>
-                  <th className="border-r last:border-r-0 p-3 text-right font-semibold">Net VAT</th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold">Due Date</th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold">Status</th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold">Filing Details</th>
-                  <th className="border-r last:border-r-0 p-3" />
+                <tr className="border-b bg-secondary/60 text-start text-primary">
+                  <th className="p-3 font-semibold">Period</th>
+                  <th className="p-3 text-end font-semibold">Output VAT</th>
+                  <th className="p-3 text-end font-semibold">Input VAT</th>
+                  <th className="p-3 text-end font-semibold">Net VAT</th>
+                  <th className="p-3 font-semibold">Due Date</th>
+                  <th className="p-3 font-semibold">Status</th>
+                  <th className="p-3 font-semibold">Filing Details</th>
+                  <th className="p-3" />
                 </tr>
               </thead>
               <tbody>
@@ -356,24 +356,24 @@ export default function VatPage() {
                         filingFor === row.quarter && "bg-primary/5"
                       )}
                     >
-                      <td className="border-r last:border-r-0 p-3">
+                      <td className="p-3">
                         <p className="font-semibold text-primary">{periodLabel(year, row.quarter)}</p>
                         <p className="whitespace-nowrap text-xs text-muted-foreground">{periodRange(year, row.quarter)}</p>
                       </td>
-                      <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-right">{omr(row.output)}</td>
-                      <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-right">{omr(row.input)}</td>
-                      <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-right">
+                      <td className="whitespace-nowrap p-3 text-end">{omr(row.output)}</td>
+                      <td className="whitespace-nowrap p-3 text-end">{omr(row.input)}</td>
+                      <td className="whitespace-nowrap p-3 text-end">
                         <p className="font-semibold text-primary">{omr(Math.abs(row.net))}</p>
                         <p className="text-xs text-muted-foreground">{netWord(row.net)}</p>
                       </td>
-                      <td className="border-r last:border-r-0 whitespace-nowrap p-3">{shortDate(vatDueDate(year, row.quarter))}</td>
-                      <td className="border-r last:border-r-0 p-3">
+                      <td className="whitespace-nowrap p-3">{shortDate(vatDueDate(year, row.quarter))}</td>
+                      <td className="p-3">
                         <span className={cn("inline-flex items-center gap-2 whitespace-nowrap font-medium", status.text)}>
                           <span className={cn("h-2.5 w-2.5 rounded-full", status.dot)} />
                           {status.label}
                         </span>
                       </td>
-                      <td className="border-r last:border-r-0 p-3">
+                      <td className="p-3">
                         {row.filing?.filedOn ? (
                           <div className="text-xs">
                             <p>
@@ -395,7 +395,7 @@ export default function VatPage() {
                           <span className="text-muted-foreground">-</span>
                         )}
                       </td>
-                      <td className="border-r last:border-r-0 p-3 text-right">
+                      <td className="p-3 text-end">
                         {(row.status === "due" || row.status === "overdue" || row.status === "filed") && (
                           <Button
                             type="button"
@@ -415,14 +415,14 @@ export default function VatPage() {
               </tbody>
               <tfoot>
                 <tr className="bg-secondary/40 font-semibold text-primary">
-                  <td className="border-r last:border-r-0 p-3">{year}</td>
-                  <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-right">{omr(yearOutput)}</td>
-                  <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-right">{omr(yearInput)}</td>
-                  <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-right">
+                  <td className="p-3">{year}</td>
+                  <td className="whitespace-nowrap p-3 text-end">{omr(yearOutput)}</td>
+                  <td className="whitespace-nowrap p-3 text-end">{omr(yearInput)}</td>
+                  <td className="whitespace-nowrap p-3 text-end">
                     {omr(Math.abs(yearNet))}
                     <span className="block text-xs font-normal text-muted-foreground">{netWord(yearNet)}</span>
                   </td>
-                  <td className="border-r last:border-r-0 p-3" colSpan={4} />
+                  <td className="p-3" colSpan={4} />
                 </tr>
               </tfoot>
             </table>

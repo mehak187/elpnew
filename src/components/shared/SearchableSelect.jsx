@@ -78,16 +78,16 @@ export default function SearchableSelect({
       </button>
 
       {open && (
-        <Card className="absolute left-0 right-0 top-full z-50 mt-1">
+        <Card className="absolute start-0 end-0 top-full z-50 mt-1">
           <CardContent className="p-1">
             <div className="relative mb-1">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute start-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 ref={searchRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="h-8 pl-8 text-sm"
+                className="h-8 ps-8 text-sm"
               />
             </div>
 
@@ -103,7 +103,7 @@ export default function SearchableSelect({
                     type="button"
                     onClick={() => choose(option)}
                     className={cn(
-                      "flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors",
+                      "flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-start text-sm transition-colors",
                       option.value === value
                         ? "bg-secondary text-secondary-foreground"
                         : "hover:bg-muted"

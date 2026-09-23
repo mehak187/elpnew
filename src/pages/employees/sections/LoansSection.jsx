@@ -19,6 +19,7 @@ import {
   Said,
   Choice,
   Attach,
+  checkRequired,
 } from "@/components/shared/formFields";
 import AiSearch from "@/components/shared/AiSearch";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
@@ -106,13 +107,14 @@ function Detail({ label, children }) {
 }
 
 /** An amount field, with the currency named in its label. */
-function AmountField({ id, label, value, onChange, readOnly }) {
+function AmountField({ id, label, required, value, onChange, readOnly }) {
   return (
     <div className="space-y-2">
       <FieldLabel htmlFor={id}>
         {label} (<Rial />)
       </FieldLabel>
       <Input
+        required={required && !readOnly}
         id={id}
         type={readOnly ? "text" : "number"}
         min={readOnly ? undefined : "0"}
@@ -261,7 +263,7 @@ export default function LoansSection({
    * decision, and the form moves on to the stage that gives one.
    */
   const save = () => {
-    if (!canSave) return;
+    if (!checkRequired() || !canSave) return;
     const id = records.reduce((max, r) => Math.max(max, r.id), 0) + 1;
     setRecords((prev) => [
       {
@@ -305,7 +307,7 @@ export default function LoansSection({
    * request is left as it was asked for and marked refused.
    */
   const confirmDecision = () => {
-    if (!decision || !openId) return;
+    if (!checkRequired() || !canConfirm || !decision || !openId) return;
     const amended = decision === "partial";
     setRecords((prev) =>
       prev.map((record) =>
@@ -454,7 +456,7 @@ export default function LoansSection({
               {/* Who asked, and under what number. Whatever backs the request
                   up hangs under the number it belongs to. */}
               <Bordered title="Request Information">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+                <div className="form-grid">
                   <div className="flex h-full flex-col justify-end gap-2">
                     <Settled id="decision-no" label="Request No." value={requestNo} />
                     {attachedName && (
@@ -494,7 +496,6 @@ export default function LoansSection({
               <DecisionChoice
                 value={decision}
                 onChange={setDecision}
-                disabled={!canDecide}
                 // A loan is granted on terms, not only on an amount.
                 notes={{
                   full: "Approve the loan as requested",
@@ -511,7 +512,7 @@ export default function LoansSection({
                       unless management is amending them, which only a partial
                       approval does. */}
                   <Bordered title="Loan Approval & Repayment">
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+                    <div className="form-grid">
                       <Settled
                         id="decision-requested"
                         label="Requested Loan Amount"
@@ -572,7 +573,7 @@ export default function LoansSection({
 
                   {/* Where the loan is booked, and how it actually leaves. */}
                   <Bordered title="Expense & Disbursement Details">
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+                    <div className="form-grid">
                       <Settled
                         id="decision-expense-type"
                         label="Expense Type"
@@ -596,7 +597,6 @@ export default function LoansSection({
                         onChange={(value) => value && setPayoutField("method", value)}
                         placeholder="Select method"
                         options={PAYMENT_METHODS}
-                        disabled={!canDecide}
                       />
 
                       {/* One choice, not two: the account carries the bank it
@@ -608,7 +608,6 @@ export default function LoansSection({
                         onChange={(value) => value && setPayoutField("bankAccount", value)}
                         placeholder="Select bank account"
                         options={PAYING_ACCOUNTS}
-                        disabled={!canDecide}
                       />
 
                       <div className="flex h-full flex-col justify-end gap-2">
@@ -620,7 +619,6 @@ export default function LoansSection({
                           type="date"
                           value={payout.paymentDate}
                           onChange={(e) => setPayoutField("paymentDate", e.target.value)}
-                          disabled={!canDecide}
                         />
                       </div>
 
@@ -636,7 +634,6 @@ export default function LoansSection({
                             value={payout.reference}
                             onChange={(e) => setPayoutField("reference", e.target.value)}
                             placeholder="TRX-0000-00000"
-                            disabled={!canDecide}
                           />
                           <Attach
                             file={receipt}
@@ -673,14 +670,13 @@ export default function LoansSection({
                     maxLength={COMMENT_LIMIT}
                     value={review.notes}
                     onChange={(e) => setReviewField("notes", e.target.value)}
-                    disabled={!canDecide}
                     placeholder={
                       refusing
                         ? "Enter the reason for rejection"
                         : "Add management comment (optional)"
                     }
                   />
-                  <p className="text-right text-xs text-muted-foreground">
+                  <p className="text-end text-xs text-muted-foreground">
                     {review.notes.length} / {COMMENT_LIMIT}
                   </p>
                 </div>
@@ -697,7 +693,7 @@ export default function LoansSection({
                     />
                     Loan Approval &amp; Transfer Summary
                   </p>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:divide-x">
+                  <div className="form-grid lg:[&>*+*]:border-s">
                     <Said label="Employee Name" value={borrower} />
                     <Said
                       label="Approved Loan Amount"
@@ -725,7 +721,7 @@ export default function LoansSection({
                   addition to the one running. */}
               <Bordered title="Request Information">
                 {/* The bottom padding is the room the status hint hangs in. */}
-                <div className="grid grid-cols-1 gap-4 pb-8 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+                <div className="form-grid pb-8">
                   <div className="flex h-full flex-col justify-end gap-2">
                     <FieldLabel htmlFor="loan-no">Request No.</FieldLabel>
                     <div className="flex w-full min-w-0 items-center gap-2">
@@ -771,7 +767,7 @@ export default function LoansSection({
               {/* How much, how fast, and from when. Everything else about the
                   schedule is counted from these three. */}
               <Bordered title="Repayment Schedule">
-                <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-3">
+                <div className="form-grid form-grid-3">
                   <AmountField
                     id="loan-requested"
                     label="Requested Loan Amount"
@@ -813,7 +809,7 @@ export default function LoansSection({
                     onChange={(e) => set("comment", e.target.value)}
                     placeholder="Add a comment supporting this loan request (optional)"
                   />
-                  <p className="text-right text-xs text-muted-foreground">
+                  <p className="text-end text-xs text-muted-foreground">
                     {draft.comment.length} / {COMMENT_LIMIT}
                   </p>
                 </div>
@@ -829,7 +825,7 @@ export default function LoansSection({
                   />
                   Loan &amp; Repayment Summary
                 </p>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:divide-x">
+                <div className="form-grid lg:[&>*+*]:border-s">
                   <Said label="Loan Amount" value={amount(totalLoan)} settled />
                   <Said
                     label="Monthly Installment"
@@ -859,11 +855,11 @@ export default function LoansSection({
           <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-4">
             {/* What has been borrowed before is the list behind this form. */}
             <Button type="button" variant="ghost" onClick={closeAdd}>
-              <History className="mr-2 h-4 w-4" />
+              <History className="me-2 h-4 w-4" />
               History
             </Button>
 
-            <div className="ml-auto flex flex-wrap items-center gap-2">
+            <div className="ms-auto flex flex-wrap items-center gap-2">
               <Button type="button" variant="outline" onClick={closeAdd}>
                 Cancel
               </Button>
@@ -871,12 +867,15 @@ export default function LoansSection({
                 <Button
                   type="button"
                   onClick={confirmDecision}
-                  disabled={!canConfirm || !canDecide}
+                  // Not a completeness check: somebody without the permission
+                  // to decide a loan may not press this at all. What the form
+                  // is missing is said by the fields when it is pressed.
+                  disabled={!canDecide}
                 >
                   Save
                 </Button>
               ) : (
-                <Button type="button" onClick={save} disabled={!canSave}>
+                <Button type="button" onClick={save}>
                   Save
                 </Button>
               )}
@@ -932,8 +931,8 @@ export default function LoansSection({
             </div>
 
             {addLabel && !adding && (
-              <Button type="button" className="ml-auto" onClick={onOpenAdd}>
-                <Plus className="mr-2 h-4 w-4" />
+              <Button type="button" className="ms-auto" onClick={onOpenAdd}>
+                <Plus className="me-2 h-4 w-4" />
                 {addLabel}
               </Button>
             )}
@@ -945,20 +944,20 @@ export default function LoansSection({
             <RecordTable minWidth={1140}>
               <HeadRow>
                 <Th width="5%">No.</Th>
-                <Th width="27%" className="text-left">
+                <Th width="27%" className="text-start">
                   Loan / Installment Details
                 </Th>
                 <Th width="11%">Due Date</Th>
                 {/* The unit is said once, in the heading, so the figures under
                     it can be read against each other. */}
-                <Th width="13%" className="text-right">
+                <Th width="13%" className="text-end">
                   Installment Amount (OMR)
                 </Th>
-                <Th width="12%" className="text-right">
+                <Th width="12%" className="text-end">
                   Paid Amount (OMR)
                 </Th>
                 <Th width="14%">Installment Status</Th>
-                <Th width="13%" className="text-right">
+                <Th width="13%" className="text-end">
                   Remaining Balance (OMR)
                 </Th>
                 <Th width="5%">
@@ -1009,7 +1008,7 @@ export default function LoansSection({
                             {record.status}
                           </span>
                         </Td>
-                        <Td className="text-left">
+                        <Td className="text-start">
                           <span className="block font-bold text-primary">
                             {record.kind}
                             {record.merged > 0 && (
@@ -1040,12 +1039,12 @@ export default function LoansSection({
                           )}
                         </Td>
                         <Td className="text-center text-muted-foreground">-</Td>
-                        <Td className="text-right text-muted-foreground">-</Td>
-                        <Td className="text-right text-muted-foreground">-</Td>
+                        <Td className="text-end text-muted-foreground">-</Td>
+                        <Td className="text-end text-muted-foreground">-</Td>
                         {/* The instalment columns say nothing about the loan
                             itself, so nothing is put in them. */}
                         <Td className="text-center text-muted-foreground">-</Td>
-                        <Td className="text-right text-muted-foreground">-</Td>
+                        <Td className="text-end text-muted-foreground">-</Td>
                         <Td className="text-center">
                           <button
                             type="button"
@@ -1071,16 +1070,16 @@ export default function LoansSection({
                             <Td className="text-muted-foreground">
                               {index + 1}.{row.no}
                             </Td>
-                            <Td className="text-left font-medium text-primary">
+                            <Td className="text-start font-medium text-primary">
                               Installment {row.no} of {row.of}
                             </Td>
                             <Td className="whitespace-nowrap">
                               {formatDate(row.due)}
                             </Td>
-                            <Td className="text-right">
+                            <Td className="text-end">
                               {amountValue(row.installment)}
                             </Td>
-                            <Td className="text-right">
+                            <Td className="text-end">
                               {amountValue(row.paid)}
                             </Td>
                             <Td className="text-center">
@@ -1093,7 +1092,7 @@ export default function LoansSection({
                                 {row.status}
                               </span>
                             </Td>
-                            <Td className="text-right font-medium">
+                            <Td className="text-end font-medium">
                               {amountValue(row.remaining)}
                             </Td>
                             <Td />

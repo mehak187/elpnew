@@ -280,19 +280,19 @@ export default function InstallmentPanel({ id, className, row, lease, branchName
             onChange={(e) => set("note", e.target.value)}
             placeholder="Enter notes for this installment..."
             autoComplete="off"
-            className="pr-20"
+            className="pe-20"
           />
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+          <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
             {entry.note.length}/{NOTE_LIMIT}
           </span>
         </div>
         <div className="flex gap-2">
           <Button type="button" onClick={save}>
-            <Save className="mr-2 h-4 w-4" />
+            <Save className="me-2 h-4 w-4" />
             Save
           </Button>
           <Button type="button" variant="outline" onClick={clear}>
-            <X className="mr-2 h-4 w-4" />
+            <X className="me-2 h-4 w-4" />
             Clear
           </Button>
         </div>

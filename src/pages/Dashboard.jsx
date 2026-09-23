@@ -59,7 +59,7 @@ function Pair({ children }) {
   const visible = children.filter(Boolean);
   if (visible.length === 0) return null;
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 sm:gap-6">{visible}</div>
+    <div className="form-grid form-grid-2">{visible}</div>
   );
 }
 
@@ -151,7 +151,7 @@ export default function Dashboard() {
                     type="button"
                     onClick={() => setView(option.key)}
                     className={cn(
-                      "flex items-center gap-2.5 text-nowrap rounded-md px-3 py-2 text-left text-sm font-medium transition-colors lg:text-wrap",
+                      "flex items-center gap-2.5 text-nowrap rounded-md px-3 py-2 text-start text-sm font-medium transition-colors lg:text-wrap",
                       current.key === option.key
                         ? "bg-primary text-primary-foreground"
                         : "text-primary hover:bg-secondary"
@@ -182,7 +182,7 @@ export default function Dashboard() {
 
               {/* Top summary cards */}
               {can(K.summary) && (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                <div className="form-grid form-grid-3">
                   <StatCard label="Active Cases" value={summaryStats.activeCases.value} previous={summaryStats.activeCases.previous} to={summaryStats.activeCases.to} icon={Scale} />
                   <StatCard label="Total Clients" value={summaryStats.totalClients.value} previous={summaryStats.totalClients.previous} to={summaryStats.totalClients.to} icon={Users} />
                   <StatCard label="Cases Received This Month" value={summaryStats.casesReceivedThisMonth.value} previous={summaryStats.casesReceivedThisMonth.previous} to={summaryStats.casesReceivedThisMonth.to} icon={Inbox} />

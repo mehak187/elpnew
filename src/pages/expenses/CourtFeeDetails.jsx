@@ -118,7 +118,7 @@ export default function CourtFeeDetails() {
 
       <Card>
         <CardContent className="space-y-4 p-4 sm:p-6">
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="form-grid form-grid-2">
             <Panel title="Case Parties" icon={Users}>
               <div className="grid grid-cols-2 gap-4">
                 <Fact label="Client">{expense.client}</Fact>
@@ -169,7 +169,7 @@ export default function CourtFeeDetails() {
           </div>
 
           <Panel title="Transaction Tracking" icon={Activity}>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="form-grid">
               <Stamp
                 label="Submitted By:"
                 name={expense.submittedBy}

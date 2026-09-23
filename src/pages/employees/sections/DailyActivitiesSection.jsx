@@ -23,6 +23,7 @@ import {
   longDate,
   recordedDays,
 } from "../activityData";
+import { checkRequired } from "@/components/shared/formFields";
 
 /** A field's label. */
 function FieldLabel({ htmlFor, children }) {
@@ -92,7 +93,7 @@ export default function DailyActivitiesSection() {
     activity.type && activity.from && activity.to && spanMinutes(activity.from, activity.to) > 0;
 
   const addActivity = () => {
-    if (!canAddActivity) return;
+    if (!checkRequired() || !canAddActivity) return;
     setActivities((prev) => [...prev, { ...activity, id: prev.length + 1 }]);
     setActivity(emptyActivity);
   };
@@ -100,7 +101,7 @@ export default function DailyActivitiesSection() {
   const canAddDocument = document.type && Number(document.count) > 0;
 
   const addDocument = () => {
-    if (!canAddDocument) return;
+    if (!checkRequired() || !canAddDocument) return;
     setDocuments((prev) => [
       ...prev,
       { ...document, count: Number(document.count), id: prev.length + 1 },
@@ -142,7 +143,7 @@ export default function DailyActivitiesSection() {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+        <div className="form-grid">
           <div className="space-y-2">
             <FieldLabel htmlFor="day-start" required>
               Start Time / Check-in
@@ -196,7 +197,7 @@ export default function DailyActivitiesSection() {
         <p className="mb-4 font-semibold text-primary">Daily Activities</p>
 
         <Block title="Add Activity">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
+          <div className="form-grid form-grid-3">
             <div className="space-y-2">
               <FieldLabel htmlFor="activity-type" required>
                 Activity Type
@@ -292,9 +293,8 @@ export default function DailyActivitiesSection() {
               type="button"
               variant="outline"
               onClick={addActivity}
-              disabled={!canAddActivity}
             >
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               Add Activity
             </Button>
           </div>
@@ -306,14 +306,14 @@ export default function DailyActivitiesSection() {
           ) : (
             <table className="w-full min-w-[720px] border text-sm">
               <thead>
-                <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
-                  <th className="border-r last:border-r-0 p-3 font-semibold">Activity Type</th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold">Case / File</th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold">Court / Location</th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold">Client / Expert</th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold">From - To</th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold">Duration</th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold">Remove</th>
+                <tr className="border-b bg-muted/50 text-start text-xs text-muted-foreground">
+                  <th className="p-3 font-semibold">Activity Type</th>
+                  <th className="p-3 font-semibold">Case / File</th>
+                  <th className="p-3 font-semibold">Court / Location</th>
+                  <th className="p-3 font-semibold">Client / Expert</th>
+                  <th className="p-3 font-semibold">From - To</th>
+                  <th className="p-3 font-semibold">Duration</th>
+                  <th className="p-3 font-semibold">Remove</th>
                 </tr>
               </thead>
               <tbody>
@@ -322,17 +322,17 @@ export default function DailyActivitiesSection() {
                     key={row.id}
                     className="border-b transition-colors last:border-0 hover:bg-primary/10"
                   >
-                    <td className="border-r last:border-r-0 p-3 font-medium">{row.type}</td>
-                    <td className="border-r last:border-r-0 p-3">{row.caseNo || "-"}</td>
-                    <td className="border-r last:border-r-0 p-3">{row.location || "-"}</td>
-                    <td className="border-r last:border-r-0 p-3">{row.person || "-"}</td>
-                    <td className="border-r last:border-r-0 whitespace-nowrap p-3">
+                    <td className="p-3 font-medium">{row.type}</td>
+                    <td className="p-3">{row.caseNo || "-"}</td>
+                    <td className="p-3">{row.location || "-"}</td>
+                    <td className="p-3">{row.person || "-"}</td>
+                    <td className="whitespace-nowrap p-3">
                       {row.from} - {row.to}
                     </td>
-                    <td className="border-r last:border-r-0 whitespace-nowrap p-3">
+                    <td className="whitespace-nowrap p-3">
                       {formatDuration(spanMinutes(row.from, row.to))}
                     </td>
-                    <td className="border-r last:border-r-0 p-3">
+                    <td className="p-3">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -362,7 +362,7 @@ export default function DailyActivitiesSection() {
         </p>
 
         <Block title="Add Document">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+          <div className="form-grid">
             <div className="space-y-2">
               <FieldLabel htmlFor="document-type" required>
                 Document Type
@@ -434,9 +434,8 @@ export default function DailyActivitiesSection() {
               type="button"
               variant="outline"
               onClick={addDocument}
-              disabled={!canAddDocument}
             >
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               Add Document
             </Button>
           </div>
@@ -448,12 +447,12 @@ export default function DailyActivitiesSection() {
           ) : (
             <table className="w-full min-w-[640px] border text-sm">
               <thead>
-                <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
-                  <th className="border-r last:border-r-0 p-3 font-semibold">Document Type</th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold">Case / File</th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold">Short Description</th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold">Number</th>
-                  <th className="border-r last:border-r-0 p-3 font-semibold">Remove</th>
+                <tr className="border-b bg-muted/50 text-start text-xs text-muted-foreground">
+                  <th className="p-3 font-semibold">Document Type</th>
+                  <th className="p-3 font-semibold">Case / File</th>
+                  <th className="p-3 font-semibold">Short Description</th>
+                  <th className="p-3 font-semibold">Number</th>
+                  <th className="p-3 font-semibold">Remove</th>
                 </tr>
               </thead>
               <tbody>
@@ -462,13 +461,13 @@ export default function DailyActivitiesSection() {
                     key={row.id}
                     className="border-b transition-colors last:border-0 hover:bg-primary/10"
                   >
-                    <td className="border-r last:border-r-0 p-3 font-medium">{row.type}</td>
-                    <td className="border-r last:border-r-0 p-3">{row.caseNo || "-"}</td>
-                    <td className="border-r last:border-r-0 p-3 text-muted-foreground">
+                    <td className="p-3 font-medium">{row.type}</td>
+                    <td className="p-3">{row.caseNo || "-"}</td>
+                    <td className="p-3 text-muted-foreground">
                       {row.description || "-"}
                     </td>
-                    <td className="border-r last:border-r-0 p-3">{row.count}</td>
-                    <td className="border-r last:border-r-0 p-3">
+                    <td className="p-3">{row.count}</td>
+                    <td className="p-3">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -529,7 +528,7 @@ export default function DailyActivitiesSection() {
 
       <div className="flex justify-end">
         <Button type="button" onClick={save} disabled={!startTime || !endTime}>
-          <Save className="mr-2 h-4 w-4" />
+          <Save className="me-2 h-4 w-4" />
           Save Daily Activity
         </Button>
       </div>

@@ -5,9 +5,9 @@ import { SectionCard, Row, PriorityDot, EmptyState } from "@/components/shared/p
 import { deadlines, appealDeadlines, daysUntil, formatDate } from "../dashboardData";
 
 const BORDER = {
-  High: "border-l-4 border-l-red-500",
-  Medium: "border-l-4 border-l-amber-500",
-  Information: "border-l-4 border-l-blue-500",
+  High: "border-s-4 border-s-red-500",
+  Medium: "border-s-4 border-s-amber-500",
+  Information: "border-s-4 border-s-blue-500",
 };
 
 export function Deadlines() {

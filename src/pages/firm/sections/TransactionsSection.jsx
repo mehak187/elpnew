@@ -30,6 +30,7 @@ import {
   formatDate,
   dayOffset,
 } from "../firmData";
+import { checkRequired } from "@/components/shared/formFields";
 
 
 // An outgoing payment and an office expense both leave the account, so they
@@ -116,6 +117,7 @@ export default function TransactionsSection({
       : Boolean(toAccountId) && toAccountId !== accountId);
 
   const handleRecord = () => {
+    if (!checkRequired() || !canSubmit) return;
     const value = Number(amount);
     if (mode === "income") {
       addPayment({
@@ -198,16 +200,16 @@ export default function TransactionsSection({
                     reset();
                   }}
                 >
-                  <option.icon className="mr-1.5 h-4 w-4" />
+                  <option.icon className="me-1.5 h-4 w-4" />
                   {option.label}
                 </Button>
               ))}
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="form-grid">
               {mode === "income" && (
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="txInvoice">Invoice *</Label>
+                <div data-required="true" className="form-field space-y-2 sm:col-span-2">
+                  <Label htmlFor="txInvoice">Invoice</Label>
                   <Select value={invoiceId} onValueChange={setInvoiceId}>
                     <SelectTrigger id="txInvoice">
                       <SelectValue placeholder="Select invoice" />
@@ -231,9 +233,10 @@ export default function TransactionsSection({
 
               {OUTGOING[mode] && (
                 <>
-                  <div className="space-y-2">
-                    <Label htmlFor="txDescription">Description *</Label>
+                  <div className="form-field space-y-2">
+                    <Label htmlFor="txDescription">Description</Label>
                     <Input
+                      required
                       id="txDescription"
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
@@ -258,8 +261,8 @@ export default function TransactionsSection({
 
               {mode === "transfer" && (
                 <>
-                  <div className="space-y-2">
-                    <Label htmlFor="txTo">Transfer To *</Label>
+                  <div data-required="true" className="form-field space-y-2">
+                    <Label htmlFor="txTo">Transfer To</Label>
                     <Select value={toAccountId} onValueChange={setToAccountId}>
                       <SelectTrigger id="txTo">
                         <SelectValue placeholder="Select account" />
@@ -288,7 +291,7 @@ export default function TransactionsSection({
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="txAmount">Amount (<Rial />) *</Label>
+                <Label htmlFor="txAmount">Amount (<Rial />)</Label>
                 <Input
                   id="txAmount"
                   type="number"
@@ -299,9 +302,10 @@ export default function TransactionsSection({
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="txDate">Date *</Label>
+              <div className="form-field space-y-2">
+                <Label htmlFor="txDate">Date</Label>
                 <Input
+                  required
                   id="txDate"
                   type="date"
                   value={date}
@@ -311,7 +315,7 @@ export default function TransactionsSection({
             </div>
 
             <div className="flex justify-end">
-              <Button onClick={handleRecord} disabled={!canSubmit}>
+              <Button onClick={handleRecord}>
                 Record {RECORD_MODES.find((m) => m.key === mode).label}
               </Button>
             </div>
@@ -324,13 +328,13 @@ export default function TransactionsSection({
         <CardContent className="overflow-x-auto p-0">
           <table className="w-full min-w-[900px] border text-sm">
             <thead>
-              <tr className="border-b bg-secondary text-left text-sm font-bold text-primary">
-                <th className="border-r last:border-r-0 p-3">Date</th>
-                <th className="border-r last:border-r-0 p-3">Transaction Details</th>
-                <th className="border-r last:border-r-0 p-3">Document / Reference No.</th>
-                <th className="border-r last:border-r-0 p-3 text-right">Money In</th>
-                <th className="border-r last:border-r-0 p-3 text-right">Money Out</th>
-                <th className="border-r last:border-r-0 p-3 text-right">Balance</th>
+              <tr className="border-b bg-secondary text-start text-sm font-bold text-primary">
+                <th className="p-3">Date</th>
+                <th className="p-3">Transaction Details</th>
+                <th className="p-3">Document / Reference No.</th>
+                <th className="p-3 text-end">Money In</th>
+                <th className="p-3 text-end">Money Out</th>
+                <th className="p-3 text-end">Balance</th>
               </tr>
             </thead>
             <tbody>
@@ -349,10 +353,10 @@ export default function TransactionsSection({
                     key={row.id}
                     className="border-b align-top transition-colors last:border-0 hover:bg-primary/10"
                   >
-                    <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-muted-foreground">
+                    <td className="whitespace-nowrap p-3 text-muted-foreground">
                       {formatDate(row.date)}
                     </td>
-                    <td className="border-r last:border-r-0 p-3">
+                    <td className="p-3">
                       <span className="block font-semibold">{row.title}</span>
                       {row.details.map((line) => (
                         <span
@@ -363,7 +367,7 @@ export default function TransactionsSection({
                         </span>
                       ))}
                     </td>
-                    <td className="border-r last:border-r-0 p-3">
+                    <td className="p-3">
                       {row.reference ? (
                         <>
                           <span className="block font-semibold">
@@ -390,20 +394,20 @@ export default function TransactionsSection({
                         movement did not go that way. */}
                     <td
                       className={cn(
-                        "whitespace-nowrap p-3 text-right font-semibold",
+                        "whitespace-nowrap p-3 text-end font-semibold",
                         opening ? "text-muted-foreground" : "text-green-600"
                       )}
                     >
                       {incoming ? money(row.amount) : <span className="text-muted-foreground">&ndash;</span>}
                     </td>
-                    <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-right font-semibold text-red-600">
+                    <td className="whitespace-nowrap p-3 text-end font-semibold text-red-600">
                       {incoming ? (
                         <span className="text-muted-foreground">&ndash;</span>
                       ) : (
                         money(Math.abs(row.amount))
                       )}
                     </td>
-                    <td className="border-r last:border-r-0 whitespace-nowrap p-3 text-right font-bold">
+                    <td className="whitespace-nowrap p-3 text-end font-bold">
                       {money(row.balance)}
                     </td>
                   </tr>

@@ -134,7 +134,7 @@ export default function ClientsList() {
               e.stopPropagation();
               navigate(`/clients/${row.id}`);
             }}
-            className="rounded font-medium text-primary focus:outline-none focus:ring-2 focus:ring-ring"
+            className="numeric-value font-medium text-record-link underline-offset-2 hover:underline"
           >
             {value}
           </button>

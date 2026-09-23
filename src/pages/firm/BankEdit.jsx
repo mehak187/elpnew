@@ -19,6 +19,7 @@ import { Save, Landmark, FileCheck } from "lucide-react";
 import { RECEIVING_BANKS, BANK_BRANCHES, ACCOUNT_TYPES } from "@/lib/constants";
 import { useFirm } from "@/lib/firm/context";
 import { accountBalance, invoices, money } from "./firmData";
+import { checkRequired } from "@/components/shared/formFields";
 
 /**
  * A field's label.
@@ -107,7 +108,7 @@ export default function BankEdit() {
     draft.accountType;
 
   const save = () => {
-    if (!canSave) return;
+    if (!checkRequired() || !canSave) return;
     updateBankAccount(account.id, {
       bankName: draft.bankName,
       bankBranch: draft.bankBranch,
@@ -151,7 +152,7 @@ export default function BankEdit() {
             <p className="border-b pb-2 text-sm font-semibold text-primary">
               1. Bank &amp; Branch
             </p>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="form-grid">
               <div className="space-y-2">
                 <FieldLabel htmlFor="bankName">Bank Name</FieldLabel>
                 <div className="flex gap-2">
@@ -267,7 +268,7 @@ export default function BankEdit() {
             <p className="border-b pb-2 text-sm font-semibold text-primary">
               2. Account
             </p>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="form-grid">
               <div className="space-y-2">
                 <FieldLabel htmlFor="accountName">Account Name</FieldLabel>
                 <Input
@@ -388,8 +389,8 @@ export default function BankEdit() {
             <Button variant="outline" onClick={goBack}>
               Cancel
             </Button>
-            <Button onClick={save} disabled={!canSave}>
-              <Save className="mr-2 h-4 w-4" />
+            <Button onClick={save}>
+              <Save className="me-2 h-4 w-4" />
               Save Changes
             </Button>
           </div>

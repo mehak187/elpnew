@@ -16,7 +16,7 @@ const corporateMatters = [
 ];
 
 const buildColumns = (openRecord) => [
-  { key: "ref_no", header: "Reference No.", width: "15%", cellClassName: "text-left font-medium" },
+  { key: "ref_no", header: "Reference No.", width: "15%", cellClassName: "text-start font-medium" },
   { key: "client", header: "Client", width: "20%" },
   { key: "matter_type", header: "Matter Type", width: "18%" },
   { key: "created_date", header: "Created Date", width: "12%" },

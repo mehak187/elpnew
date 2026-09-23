@@ -28,9 +28,10 @@ export default function SupplierFields({
 
   return (
     <>
-      <div className="space-y-2">
-        <Label htmlFor={id("name")}>Supplier Name *</Label>
+      <div className="form-field space-y-2">
+        <Label htmlFor={id("name")}>Supplier Name</Label>
         <Input
+          required
           id={id("name")}
           name="name"
           value={draft.name}
@@ -39,8 +40,8 @@ export default function SupplierFields({
         />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor={id("category")}>Category *</Label>
+      <div data-required="true" className="form-field space-y-2">
+        <Label htmlFor={id("category")}>Category</Label>
         <Select
           value={draft.category}
           onValueChange={(value) => set("category", value)}

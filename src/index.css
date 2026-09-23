@@ -3,6 +3,148 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * IBM Plex Sans Arabic, served from this application rather than a CDN.
+ *
+ * Standard 02 asks for the files to be hosted locally: a slow, blocked or
+ * absent connection would otherwise drop the whole system back to a browser
+ * default part-way through loading, and the interface would change shape
+ * under the reader. Hosting them here also keeps the system working on an
+ * internal network with no route out.
+ *
+ * Split by script, with each file carrying the range of characters it
+ * covers, so a page of English never fetches the Arabic glyphs and a page
+ * of Arabic never fetches the Cyrillic ones.
+ */
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/IBMPlexSansArabic-400-arabic.woff2") format("woff2");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC, U+102E0-102FB, U+10E60-10E7E, U+10EC2-10EC4, U+10EFC-10EFF, U+1EE00-1EE03, U+1EE05-1EE1F, U+1EE21-1EE22, U+1EE24, U+1EE27, U+1EE29-1EE32, U+1EE34-1EE37, U+1EE39, U+1EE3B, U+1EE42, U+1EE47, U+1EE49, U+1EE4B, U+1EE4D-1EE4F, U+1EE51-1EE52, U+1EE54, U+1EE57, U+1EE59, U+1EE5B, U+1EE5D, U+1EE5F, U+1EE61-1EE62, U+1EE64, U+1EE67-1EE6A, U+1EE6C-1EE72, U+1EE74-1EE77, U+1EE79-1EE7C, U+1EE7E, U+1EE80-1EE89, U+1EE8B-1EE9B, U+1EEA1-1EEA3, U+1EEA5-1EEA9, U+1EEAB-1EEBB, U+1EEF0-1EEF1;
+}
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/IBMPlexSansArabic-400-cyrillic-ext.woff2") format("woff2");
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/IBMPlexSansArabic-400-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/IBMPlexSansArabic-400-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/IBMPlexSansArabic-500-arabic.woff2") format("woff2");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC, U+102E0-102FB, U+10E60-10E7E, U+10EC2-10EC4, U+10EFC-10EFF, U+1EE00-1EE03, U+1EE05-1EE1F, U+1EE21-1EE22, U+1EE24, U+1EE27, U+1EE29-1EE32, U+1EE34-1EE37, U+1EE39, U+1EE3B, U+1EE42, U+1EE47, U+1EE49, U+1EE4B, U+1EE4D-1EE4F, U+1EE51-1EE52, U+1EE54, U+1EE57, U+1EE59, U+1EE5B, U+1EE5D, U+1EE5F, U+1EE61-1EE62, U+1EE64, U+1EE67-1EE6A, U+1EE6C-1EE72, U+1EE74-1EE77, U+1EE79-1EE7C, U+1EE7E, U+1EE80-1EE89, U+1EE8B-1EE9B, U+1EEA1-1EEA3, U+1EEA5-1EEA9, U+1EEAB-1EEBB, U+1EEF0-1EEF1;
+}
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/IBMPlexSansArabic-500-cyrillic-ext.woff2") format("woff2");
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/IBMPlexSansArabic-500-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/IBMPlexSansArabic-500-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/IBMPlexSansArabic-600-arabic.woff2") format("woff2");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC, U+102E0-102FB, U+10E60-10E7E, U+10EC2-10EC4, U+10EFC-10EFF, U+1EE00-1EE03, U+1EE05-1EE1F, U+1EE21-1EE22, U+1EE24, U+1EE27, U+1EE29-1EE32, U+1EE34-1EE37, U+1EE39, U+1EE3B, U+1EE42, U+1EE47, U+1EE49, U+1EE4B, U+1EE4D-1EE4F, U+1EE51-1EE52, U+1EE54, U+1EE57, U+1EE59, U+1EE5B, U+1EE5D, U+1EE5F, U+1EE61-1EE62, U+1EE64, U+1EE67-1EE6A, U+1EE6C-1EE72, U+1EE74-1EE77, U+1EE79-1EE7C, U+1EE7E, U+1EE80-1EE89, U+1EE8B-1EE9B, U+1EEA1-1EEA3, U+1EEA5-1EEA9, U+1EEAB-1EEBB, U+1EEF0-1EEF1;
+}
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/IBMPlexSansArabic-600-cyrillic-ext.woff2") format("woff2");
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/IBMPlexSansArabic-600-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/IBMPlexSansArabic-600-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/IBMPlexSansArabic-700-arabic.woff2") format("woff2");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC, U+102E0-102FB, U+10E60-10E7E, U+10EC2-10EC4, U+10EFC-10EFF, U+1EE00-1EE03, U+1EE05-1EE1F, U+1EE21-1EE22, U+1EE24, U+1EE27, U+1EE29-1EE32, U+1EE34-1EE37, U+1EE39, U+1EE3B, U+1EE42, U+1EE47, U+1EE49, U+1EE4B, U+1EE4D-1EE4F, U+1EE51-1EE52, U+1EE54, U+1EE57, U+1EE59, U+1EE5B, U+1EE5D, U+1EE5F, U+1EE61-1EE62, U+1EE64, U+1EE67-1EE6A, U+1EE6C-1EE72, U+1EE74-1EE77, U+1EE79-1EE7C, U+1EE7E, U+1EE80-1EE89, U+1EE8B-1EE9B, U+1EEA1-1EEA3, U+1EEA5-1EEA9, U+1EEAB-1EEBB, U+1EEF0-1EEF1;
+}
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/IBMPlexSansArabic-700-cyrillic-ext.woff2") format("woff2");
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/IBMPlexSansArabic-700-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/IBMPlexSansArabic-700-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 @theme inline {
   /*
    * One family does the whole interface, told apart by weight rather than by
@@ -26,9 +168,18 @@
   --color-field-border: var(--field-border);
   --color-container-border: var(--container-border);
   --color-disabled: var(--disabled-background);
+  --color-readonly: var(--readonly-background);
+  --color-readonly-border: var(--readonly-border);
   --color-disabled-border: var(--disabled-border);
   --color-disabled-text: var(--disabled-text);
   --color-error-text: var(--error-text);
+  --color-table-head: var(--table-head);
+  --color-table-head-ink: var(--table-head-ink);
+  --color-record-link: var(--record-link);
+  --color-menu-selected: var(--menu-selected);
+  --color-menu-selected-ink: var(--menu-selected-ink);
+  --color-menu-hover: var(--menu-hover);
+  --color-menu-icon: var(--menu-icon);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -87,7 +238,7 @@
   /* The background of a field the system fills in: a figure worked out, or a
      record being read rather than written. One tint for all of them, so "you
      cannot type here" is the same colour wherever it appears. */
-  --locked: #f3f5f7;
+  --locked: #f8fafc;
 
   /* ---- Standard 01: borders, radii and field states -------------------- */
   /*
@@ -104,10 +255,24 @@
   --field-border: #a8b4c3;
   --focus-navy: #142f5f;
   --focus-ring: 0 0 0 3px rgba(20, 47, 95, 0.14);
-  /* A field the system fills in, or one that cannot be used. */
-  --disabled-background: #f3f5f7;
-  --disabled-border: #d5dce5;
-  --disabled-text: #667085;
+  /*
+   * ---- Standard 05: the four states a field can be in ------------------
+   *
+   * Standards 01 and 05 give different values for these. 01 argues that the
+   * field border is too faint to see on a bright screen, so its darker
+   * #A8B4C3 is kept for the editable border above. 05 is the document about
+   * states, and its point is that read-only and disabled must not look like
+   * each other: one holds a value you may copy, the other holds one you may
+   * not use. So its two tints are taken, which 01 had collapsed into one.
+   */
+  /* Read-only: the system filled it in, but the value is yours to read. */
+  --readonly-background: #f8fafc;
+  --readonly-border: #cbd5e1;
+  --readonly-text: #475569;
+  /* Disabled: nothing here is for you at all. */
+  --disabled-background: #f1f5f9;
+  --disabled-border: #e2e8f0;
+  --disabled-text: #94a3b8;
   --error-border: #dc2626;
   --error-ring: 0 0 0 3px rgba(220, 38, 38, 0.12);
   --error-text: #b42318;
@@ -119,6 +284,23 @@
   --accent-navy: #1e3a8a;   /* the rule beside a section title */
   --text-success: #15803d;
   --text-warning: #b45309;
+
+  /* ---- Standard 07: tables --------------------------------------------- */
+  /* The header is told apart by a tint, not by a colour block; the same tint
+     marks the row under the pointer, because both mean "this one" and the
+     system should not have two ways of saying it. */
+  --table-head: #f8fafc;
+  --table-head-ink: #475569;
+  /* The reference in the first column is the way into the record. */
+  --record-link: #1e3a8a;
+
+  /* ---- Standard 06: the menu's selected item --------------------------- */
+  /* A pale tint and a rule down its start, not a navy block: the selected
+     item should be findable, not the loudest thing on the page. */
+  --menu-selected: #f1f5f9;
+  --menu-selected-ink: #334155;
+  --menu-hover: #f8fafc;
+  --menu-icon: #64748b;
   /* The three answers a request can be given. Each carries its own tint
      wherever the decision is shown, so what was decided is read from the
      colour before a word of it. */
@@ -207,10 +389,20 @@
   --container-border: oklch(0.30 0 0);
   --field-background: oklch(0.20 0 0);
   --field-border: oklch(0.42 0 0);
+  --readonly-background: oklch(0.22 0 0);
+  --readonly-border: oklch(0.38 0 0);
+  --readonly-text: oklch(0.75 0 0);
   --disabled-background: oklch(0.24 0 0);
   --disabled-border: oklch(0.32 0 0);
   --disabled-text: oklch(0.68 0 0);
   --locked: oklch(0.24 0 0);
+  --table-head: oklch(0.24 0 0);
+  --table-head-ink: oklch(0.75 0 0);
+  --record-link: oklch(0.72 0.11 258);
+  --menu-selected: oklch(0.28 0.03 260);
+  --menu-selected-ink: oklch(0.93 0.01 258);
+  --menu-hover: oklch(0.25 0.02 260);
+  --menu-icon: oklch(0.70 0 0);
 }
 
 @layer base {
@@ -232,9 +424,9 @@
    */
   input[readonly],
   textarea[readonly] {
-    background-color: var(--disabled-background);
-    border-color: var(--disabled-border);
-    color: var(--disabled-text);
+    background-color: var(--readonly-background);
+    border-color: var(--readonly-border);
+    color: var(--readonly-text);
     box-shadow: none;
   }
 
@@ -361,6 +553,127 @@
     white-space: nowrap;
   }
 
+  /* ==========================================================================
+     Standard 03 - the form grid.
+
+     Twelve columns underneath, four fields to a row on top. The twelve are
+     the technical foundation; they exist so that a field which genuinely
+     needs more room can have it without anybody inventing a width. Only the
+     approved spans are offered - 3, 4, 6 and 12 - because a grid that can
+     express 5 + 2 + 5 will eventually be asked to.
+     ========================================================================== */
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 20px;
+    row-gap: 16px;
+    width: 100%;
+  }
+
+  /*
+   * A grid item will not shrink below its content unless it is told it may,
+   * and a long unbroken value in a narrow column is exactly what forces a
+   * form to scroll sideways.
+   */
+  .form-field {
+    min-width: 0;
+  }
+
+  .form-field > input,
+  .form-field > textarea,
+  .form-field > select,
+  .form-field > button[role="combobox"] {
+    width: 100%;
+  }
+
+  /*
+   * Four fields to a row unless the row says otherwise. Written as a default
+   * on the children rather than a class each one must carry, so a form moves
+   * onto the grid by changing its wrapper and nothing else.
+   */
+  .form-grid > * { grid-column: span 3 / span 3; }
+  .form-grid-3 > * { grid-column: span 4 / span 4; }
+  .form-grid-2 > * { grid-column: span 6 / span 6; }
+  .form-grid-1 > * { grid-column: span 12 / span 12; }
+
+  .span-3 { grid-column: span 3 / span 3; }
+  .span-4 { grid-column: span 4 / span 4; }
+  .span-6 { grid-column: span 6 / span 6; }
+  .span-12 { grid-column: span 12 / span 12; }
+
+  /*
+   * Narrower screens change how many columns a field takes and nothing else.
+   * Two to a row on a tablet, one on a phone - the radii, borders and type
+   * stay exactly as they are on a desktop.
+   */
+  @media (max-width: 1023px) {
+    .form-grid > *,
+    .form-grid-3 > *,
+    .form-grid-2 > *,
+    .span-3,
+    .span-4,
+    .span-6 {
+      grid-column: span 6 / span 6;
+    }
+  }
+
+  @media (max-width: 639px) {
+    .form-grid > *,
+    .form-grid-3 > *,
+    .form-grid-2 > *,
+    .span-3,
+    .span-4,
+    .span-6 {
+      grid-column: span 12 / span 12;
+    }
+  }
+
+  /* ==========================================================================
+     Standard 04 - required fields, checked when somebody tries to save.
+
+     Nothing below applies until an ancestor carries data-checked, which the
+     save button sets. Before that first attempt the form says nothing at all:
+     no asterisk, no red, no notice that a field will be wanted.
+
+     Emptiness is read from the control itself - a native `required` input is
+     :invalid while it is blank, and a Radix select carries data-placeholder
+     while nothing is chosen - so a field stops complaining the moment it is
+     filled, with no re-render needed and no second list of what is mandatory
+     to fall out of step with the first.
+     ========================================================================== */
+  [data-checked="true"] input:required:invalid,
+  [data-checked="true"] textarea:required:invalid,
+  [data-checked="true"] select:required:invalid,
+  [data-checked="true"] [data-required="true"] button[role="combobox"][data-placeholder] {
+    border-color: var(--error-border);
+  }
+
+  [data-checked="true"] input:required:invalid:focus-visible,
+  [data-checked="true"] textarea:required:invalid:focus-visible,
+  [data-checked="true"] select:required:invalid:focus-visible {
+    border-color: var(--error-border);
+    box-shadow: var(--error-ring);
+  }
+
+  /*
+   * The message sits under whichever field is empty, written by the
+   * stylesheet rather than added to every field by hand - there is only one
+   * thing an empty required field has to say, and one place it says it.
+   */
+  [data-checked="true"] .form-field:has(input:required:invalid)::after,
+  [data-checked="true"] .form-field:has(textarea:required:invalid)::after,
+  [data-checked="true"] .form-field:has(select:required:invalid)::after,
+  [data-checked="true"]
+    .form-field[data-required="true"]:has(button[role="combobox"][data-placeholder])::after {
+    content: "Required field";
+    display: block;
+    margin-top: 4px;
+    color: var(--error-border);
+    font-size: 12px;
+    line-height: 1.5;
+    text-align: start;
+  }
+
   .field-error {
     margin-top: 4px;
     color: var(--error-border);
@@ -374,7 +687,7 @@
   input[readonly]:focus-visible,
   textarea[readonly]:focus,
   textarea[readonly]:focus-visible {
-    border-color: var(--disabled-border);
+    border-color: var(--readonly-border);
     box-shadow: none;
   }
   body {

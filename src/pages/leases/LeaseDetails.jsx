@@ -91,12 +91,12 @@ function InstallmentTable({ rows, byCheque, onCheque, editable }) {
     <div className="overflow-x-auto rounded-lg border">
       <table className="w-full min-w-[640px] border text-sm">
         <thead>
-          <tr className="border-b bg-secondary/60 text-left text-primary">
-            <th className="border-r last:border-r-0 p-3 font-semibold">No.</th>
-            <th className="border-r last:border-r-0 p-3 font-semibold">Due Date</th>
-            <th className="border-r last:border-r-0 p-3 text-right font-semibold">Amount</th>
-            {byCheque && <th className="border-r last:border-r-0 p-3 font-semibold">Cheque No.</th>}
-            <th className="border-r last:border-r-0 p-3 font-semibold">Status</th>
+          <tr className="border-b bg-secondary/60 text-start text-primary">
+            <th className="p-3 font-semibold">No.</th>
+            <th className="p-3 font-semibold">Due Date</th>
+            <th className="p-3 text-end font-semibold">Amount</th>
+            {byCheque && <th className="p-3 font-semibold">Cheque No.</th>}
+            <th className="p-3 font-semibold">Status</th>
           </tr>
         </thead>
         <tbody>
@@ -108,11 +108,11 @@ function InstallmentTable({ rows, byCheque, onCheque, editable }) {
                 row.isNext && "bg-blue-50/60"
               )}
             >
-              <td className="border-r last:border-r-0 p-3">{row.no}</td>
-              <td className="border-r last:border-r-0 whitespace-nowrap p-3">{shortDate(row.due)}</td>
-              <td className="border-r last:border-r-0 p-3 text-right font-semibold">{omr(row.amount)}</td>
+              <td className="p-3">{row.no}</td>
+              <td className="whitespace-nowrap p-3">{shortDate(row.due)}</td>
+              <td className="p-3 text-end font-semibold">{omr(row.amount)}</td>
               {byCheque && (
-                <td className="border-r last:border-r-0 p-3">
+                <td className="p-3">
                   {editable ? (
                     <Input
                       id={"chequeNo-" + row.no}
@@ -127,7 +127,7 @@ function InstallmentTable({ rows, byCheque, onCheque, editable }) {
                   )}
                 </td>
               )}
-              <td className="border-r last:border-r-0 p-3">
+              <td className="p-3">
                 <span
                   className={cn(
                     "inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium",
@@ -164,13 +164,13 @@ function PaymentScheduleTable({ rows, lease, bankAccounts, openNo, onOpen }) {
       <div className="overflow-x-auto rounded-lg border">
         <table className="w-full min-w-250 border text-sm">
           <thead>
-            <tr className="border-b bg-secondary/60 text-left text-primary">
-              <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "13%" }}>Installment No.</th>
-              <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "16%" }}>Due Date / Payment Date</th>
-              <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "15%" }}>Payment Details</th>
-              <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "20%" }}>Rental Amount</th>
-              <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "20%" }}>Payment Method &amp; Details</th>
-              <th className="border-r last:border-r-0 p-3 font-semibold" style={{ width: "16%" }}>Notes</th>
+            <tr className="border-b bg-secondary/60 text-start text-primary">
+              <th className="p-3 font-semibold" style={{ width: "13%" }}>Installment No.</th>
+              <th className="p-3 font-semibold" style={{ width: "16%" }}>Due Date / Payment Date</th>
+              <th className="p-3 font-semibold" style={{ width: "15%" }}>Payment Details</th>
+              <th className="p-3 font-semibold" style={{ width: "20%" }}>Rental Amount</th>
+              <th className="p-3 font-semibold" style={{ width: "20%" }}>Payment Method &amp; Details</th>
+              <th className="p-3 font-semibold" style={{ width: "16%" }}>Notes</th>
             </tr>
           </thead>
           <tbody>
@@ -185,25 +185,23 @@ function PaymentScheduleTable({ rows, lease, bankAccounts, openNo, onOpen }) {
                     openNo === row.no && "bg-primary/5"
                   )}
                 >
-                  <td className="border-r last:border-r-0 p-3">
+                  <td className="p-3">
                     <span className="inline-flex items-center gap-2 whitespace-nowrap">
                       <span
                         title={status.label}
                         className={cn("h-3 w-3 shrink-0 rounded-full", status.dot)}
                       />
-                      <button
-                        type="button"
+                      <RecordLink
                         onClick={() => onOpen(row.no)}
                         aria-expanded={openNo === row.no}
-                        className="font-semibold text-primary hover:text-primary/70"
                       >
                         <span className="sr-only">{status.label}: </span>
                         Installment {row.no}
-                      </button>
+                      </RecordLink>
                     </span>
                   </td>
 
-                  <td className="border-r last:border-r-0 p-3">
+                  <td className="p-3">
                     {row.payment ? (
                       <>
                         <p className="text-muted-foreground">Payment Date:</p>
@@ -221,13 +219,13 @@ function PaymentScheduleTable({ rows, lease, bankAccounts, openNo, onOpen }) {
                     )}
                   </td>
 
-                  <td className="border-r last:border-r-0 p-3">
+                  <td className="p-3">
                     <p>{expenseTypeName(booking.typeKey)}</p>
                     <p>{booking.path[0] || "-"}</p>
                     <p>{booking.path[1] || "-"}</p>
                   </td>
 
-                  <td className="border-r last:border-r-0 p-3">
+                  <td className="p-3">
                     <AmountLine label="Rental Amount" value={omr(row.rentPart)} />
                     <AmountLine
                       label={lease.vatApplied === false ? "VAT (exempt)" : "VAT (5%)"}
@@ -236,7 +234,7 @@ function PaymentScheduleTable({ rows, lease, bankAccounts, openNo, onOpen }) {
                     <AmountLine label="Total Amount" value={omr(row.amount)} strong />
                   </td>
 
-                  <td className="border-r last:border-r-0 p-3">
+                  <td className="p-3">
                     <p className="font-semibold text-primary">{lease.method || "-"}</p>
                     {paymentFacts(lease, row, bankAccounts, rows.length).map((fact) => (
                       <p key={fact.label}>
@@ -245,7 +243,7 @@ function PaymentScheduleTable({ rows, lease, bankAccounts, openNo, onOpen }) {
                     ))}
                   </td>
 
-                  <td className="border-r last:border-r-0 p-3 text-muted-foreground">{row.note || "-"}</td>
+                  <td className="p-3 text-muted-foreground">{row.note || "-"}</td>
                 </tr>
               );
             })}
@@ -483,7 +481,7 @@ export default function LeaseDetails() {
         {/* Only where there are fields to save. */}
         {current.editable && (
           <Button type="button" onClick={save}>
-            <Save className="mr-2 h-4 w-4" />
+            <Save className="me-2 h-4 w-4" />
             Save Changes
           </Button>
         )}
@@ -508,7 +506,7 @@ export default function LeaseDetails() {
                       setInstallmentNo(null);
                     }}
                     className={cn(
-                      "flex items-center gap-2.5 text-nowrap rounded-md px-3 py-2 text-left text-sm font-medium transition-colors",
+                      "flex items-center gap-2.5 text-nowrap rounded-md px-3 py-2 text-start text-sm font-medium transition-colors",
                       section === option.key
                         ? "bg-primary text-primary-foreground"
                         : "text-primary hover:bg-secondary"
@@ -534,7 +532,7 @@ export default function LeaseDetails() {
               )}
 
               {section === "property" && (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+                <div className="form-grid">
                   <Choice
                     id="detailLandlord"
                     label="Landlord"
@@ -579,7 +577,7 @@ export default function LeaseDetails() {
 
               {section === "contract" && (
                 <div className="space-y-6">
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+                  <div className="form-grid">
                     <Choice
                       id="detailContractStatus"
                       label="Contract Status"
@@ -642,7 +640,7 @@ export default function LeaseDetails() {
                   </div>
 
                   {/* The duration the heading promises, counted from the two dates. */}
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+                  <div className="form-grid">
                     <Worked
                       id="detailDuration"
                       label="Duration"
@@ -654,7 +652,7 @@ export default function LeaseDetails() {
 
               {section === "rental" && (
                 <div className="space-y-6">
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+                  <div className="form-grid">
                     {/* The monthly rent. The button beside it says whether VAT is
                         charged on it: residential lettings are exempt, so a flat
                         for staff is entered with it off. */}
@@ -724,7 +722,7 @@ export default function LeaseDetails() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+                  <div className="form-grid">
                     <Choice
                       id="detailInstallments"
                       label="Number of Installments"
@@ -798,7 +796,7 @@ export default function LeaseDetails() {
                 ))}
 
               {section === "nonRenewal" && (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+                <div className="form-grid">
                   {/* The day notice was asked for, with the letter it was given in. */}
                   <Field>
                     <FieldLabel htmlFor="detailNonRenewalDate">Request Date</FieldLabel>

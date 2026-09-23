@@ -21,7 +21,7 @@ export default function FinancialSection({
 
   return (
     // Three to a row, the width every form in the system is laid out on.
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+    <div className="form-grid form-grid-3">
       {/* VATIN No. */}
       <div className="space-y-2">
         <Label htmlFor="vatinNo">VATIN No.{vatinRequired && " *"}</Label>
@@ -36,8 +36,8 @@ export default function FinancialSection({
       </div>
 
       {/* Receiving Bank */}
-      <div className="space-y-2">
-        <Label htmlFor="receivingBank">Receiving Bank *</Label>
+      <div data-required="true" className="form-field space-y-2">
+        <Label htmlFor="receivingBank">Receiving Bank</Label>
         <Select
           value={formData.receivingBank}
           onValueChange={(value) => onSelectChange("receivingBank", value)}
@@ -56,8 +56,8 @@ export default function FinancialSection({
       </div>
 
       {/* Receiving Account No. */}
-      <div className="space-y-2">
-        <Label htmlFor="receivingAccount">Receiving Account No. *</Label>
+      <div className="form-field space-y-2">
+        <Label htmlFor="receivingAccount">Receiving Account No.</Label>
         <Input
           id="receivingAccount"
           name="receivingAccount"
@@ -69,8 +69,8 @@ export default function FinancialSection({
       </div>
 
       {/* Pay Fees on Their Behalf */}
-      <div className="space-y-2">
-        <Label htmlFor="payFeesOnBehalf">Pay Fees on Their Behalf? *</Label>
+      <div data-required="true" className="form-field space-y-2">
+        <Label htmlFor="payFeesOnBehalf">Pay Fees on Their Behalf?</Label>
         <Select
           value={formData.payFeesOnBehalf}
           onValueChange={(value) => onSelectChange("payFeesOnBehalf", value)}
@@ -86,8 +86,8 @@ export default function FinancialSection({
       </div>
 
       {/* Payment Delay Period - standard terms plus a custom number of days */}
-      <div className="space-y-2">
-        <Label htmlFor="paymentDelayPeriod">Payment Delay Period *</Label>
+      <div data-required="true" className="form-field space-y-2">
+        <Label htmlFor="paymentDelayPeriod">Payment Delay Period</Label>
         <Select
           value={formData.paymentDelayPeriod}
           onValueChange={(value) => onSelectChange("paymentDelayPeriod", value)}
@@ -107,8 +107,8 @@ export default function FinancialSection({
       </div>
 
       {formData.paymentDelayPeriod === "custom" && (
-        <div className="space-y-2">
-          <Label htmlFor="paymentDelayCustomDays">Custom Days *</Label>
+        <div className="form-field space-y-2">
+          <Label htmlFor="paymentDelayCustomDays">Custom Days</Label>
           <Input
             id="paymentDelayCustomDays"
             name="paymentDelayCustomDays"

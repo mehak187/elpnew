@@ -30,6 +30,7 @@ import {
   omr,
   shortDate,
 } from "./leaseData";
+import { checkRequired } from "@/components/shared/formFields";
 
 const emptyDraft = {
   landlord: "",
@@ -119,7 +120,7 @@ export default function LeasesPage() {
   };
 
   const save = () => {
-    if (!canSave) return;
+    if (!checkRequired() || !canSave) return;
     // The number and the empty contract are filled in where leases are kept.
     addLease({
       landlord: draft.landlord,
@@ -158,7 +159,7 @@ export default function LeasesPage() {
             type="button"
             onClick={() => navigate("/leases/" + row.id)}
             title={"Open " + (row.contractNo || "this lease")}
-            className="rounded font-medium text-primary focus:outline-none focus:ring-2 focus:ring-ring"
+            className="numeric-value font-medium text-record-link underline-offset-2 hover:underline"
           >
             {value}
           </button>
@@ -317,7 +318,7 @@ export default function LeasesPage() {
               icon={Home}
             />
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+            <div className="form-grid">
               <Choice
                 id="leaseLandlord"
                 label="Landlord"
@@ -360,7 +361,7 @@ export default function LeasesPage() {
               <Button type="button" variant="outline" onClick={close}>
                 Cancel
               </Button>
-              <Button type="button" onClick={save} disabled={!canSave}>
+              <Button type="button" onClick={save}>
                 Save
               </Button>
             </div>

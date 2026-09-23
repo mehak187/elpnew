@@ -163,8 +163,8 @@ export default function SupplierForm() {
         {/* Payments are a record of what happened, so there is nothing to
             save while they are on screen. */}
         {isInformation && (
-          <Button type="submit" form="supplier-form" disabled={!canSave}>
-            <Save className="mr-2 h-4 w-4" />
+          <Button type="submit" form="supplier-form">
+            <Save className="me-2 h-4 w-4" />
             {isEdit ? "Save Changes" : "Save Supplier"}
           </Button>
         )}
@@ -186,7 +186,7 @@ export default function SupplierForm() {
                     type="button"
                     onClick={() => setActiveSection(section.key)}
                     className={cn(
-                      "flex items-center gap-2.5 text-nowrap rounded-md px-3 py-2 text-left text-sm font-medium transition-colors",
+                      "flex items-center gap-2.5 text-nowrap rounded-md px-3 py-2 text-start text-sm font-medium transition-colors",
                       activeSection === section.key
                         ? "bg-primary text-primary-foreground"
                         : "text-primary hover:bg-secondary"
@@ -210,10 +210,11 @@ export default function SupplierForm() {
       <Card>
         <CardContent className="p-4 sm:p-6">
           <form id="supplier-form" onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="supplierName">Supplier Name *</Label>
+            <div className="form-grid">
+              <div className="form-field space-y-2">
+                <Label htmlFor="supplierName">Supplier Name</Label>
                 <Input
+                  required
                   id="supplierName"
                   name="name"
                   value={draft.name}
@@ -222,8 +223,8 @@ export default function SupplierForm() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="supplierCategory">Category *</Label>
+              <div data-required="true" className="form-field space-y-2">
+                <Label htmlFor="supplierCategory">Category</Label>
                 <Select
                   value={draft.category}
                   onValueChange={(value) => set("category", value)}

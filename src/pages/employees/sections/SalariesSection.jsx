@@ -39,7 +39,10 @@ import {
 } from "lucide-react";
 import Panel from "@/components/shared/Panel";
 import { Bordered } from "@/components/shared/panels";
-import { Said } from "@/components/shared/formFields";
+import {
+  Said,
+  checkRequired,
+} from "@/components/shared/formFields";
 import {
   RecordTable,
   HeadRow,
@@ -117,7 +120,7 @@ function Group({ title, children }) {
   return (
     <div className="space-y-4">
       <p className="text-sm font-semibold text-primary">{title}</p>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+      <div className="form-grid">
         {children}
       </div>
       <div className="border-b" />
@@ -131,14 +134,15 @@ function Group({ title, children }) {
  * `readOnly` marks a figure that is worked out rather than entered; `highlight`
  * marks the one figure the whole page is for.
  */
-function Amount({ id, label, value, onChange, readOnly, highlight }) {
+function Amount({ id, label, required, value, onChange, readOnly, highlight }) {
   return (
-    <div className="flex h-full flex-col justify-end gap-2">
+    <div className="form-field flex h-full flex-col justify-end gap-2">
       <Label htmlFor={id}>
         {label}
       </Label>
       <div className="relative">
         <Input
+          required={required && !readOnly}
           id={id}
           type={readOnly ? "text" : "number"}
           min={readOnly ? undefined : "0"}
@@ -147,7 +151,7 @@ function Amount({ id, label, value, onChange, readOnly, highlight }) {
           tabIndex={readOnly ? -1 : undefined}
           placeholder="0.000"
           className={cn(
-            !readOnly && "pr-12",
+            !readOnly && "pe-12",
             readOnly && "text-muted-foreground",
             readOnly && !highlight && "bg-locked",
             highlight && "border-green-600 bg-green-50 font-bold text-green-700"
@@ -158,7 +162,7 @@ function Amount({ id, label, value, onChange, readOnly, highlight }) {
         {/* A figure that is typed needs the box to say what it is in; one that
             is worked out arrives with the currency already on it. */}
         {!readOnly && (
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+          <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground">
             <Rial />
           </span>
         )}
@@ -532,7 +536,7 @@ export default function SalariesSection({
    * transfer that settles it.
    */
   const saveSalary = () => {
-    if (!canSaveSalary) return;
+    if (!checkRequired() || !canSaveSalary) return;
     if (openRequest) {
       setHistory((prev) =>
         prev.map((row) => (row.id === openId ? { ...row, ...figures() } : row))
@@ -561,7 +565,7 @@ export default function SalariesSection({
 
   /** Approved: the request takes the next salary number and is transferred. */
   const savePayment = () => {
-    if (!canPay || !openId) return;
+    if (!checkRequired() || !canPay || !openId) return;
     setHistory((prev) =>
       prev.map((row) =>
         row.id === openId
@@ -635,7 +639,7 @@ export default function SalariesSection({
             {/* Which month is being paid. The number and the figures are not
                 asked for: they follow from the record. */}
             <Bordered title="Salary Information">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+              <div className="form-grid">
                 <div className="space-y-2">
                   <Label htmlFor="pay-no">Salary No.</Label>
                   <div className="relative">
@@ -644,9 +648,9 @@ export default function SalariesSection({
                       readOnly
                       tabIndex={-1}
                       value={salaryNo}
-                      className="cursor-default bg-locked pr-16 text-muted-foreground"
+                      className="cursor-default bg-locked pe-16 text-muted-foreground"
                     />
-                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded bg-secondary px-2 py-0.5 text-xs font-medium text-primary">
+                    <span className="pointer-events-none absolute end-2 top-1/2 -translate-y-1/2 rounded bg-secondary px-2 py-0.5 text-xs font-medium text-primary">
                       Auto
                     </span>
                   </div>
@@ -683,7 +687,7 @@ export default function SalariesSection({
             </Bordered>
 
             {/* What goes onto the pay and what comes off it, side by side. */}
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+            <div className="form-grid form-grid-2">
               <Bordered title="Earnings">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <Amount
@@ -705,7 +709,7 @@ export default function SalariesSection({
               </Bordered>
 
               <Bordered title="Deductions" held>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="form-grid form-grid-2">
                   <Amount
                     id="pay-loan"
                     label="Loan Installment"
@@ -724,7 +728,7 @@ export default function SalariesSection({
 
             {/* What it all comes to, in the order it is worked out. */}
             <Bordered title="Salary Summary">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="form-grid">
                 <Sum label="Total Earnings" value={amount(earnings)} />
                 <Sum label="Total Deductions" value={amount(deductions)} held />
                 <Sum label="Net Salary" value={amount(net)} />
@@ -737,15 +741,15 @@ export default function SalariesSection({
             <div className="flex flex-wrap items-center justify-between gap-2">
               {/* What has been paid before is the list behind this window. */}
               <Button type="button" variant="ghost" onClick={closeAdd}>
-                <History className="mr-2 h-4 w-4" />
+                <History className="me-2 h-4 w-4" />
                 History
               </Button>
 
-              <div className="ml-auto flex flex-wrap items-center gap-2">
+              <div className="ms-auto flex flex-wrap items-center gap-2">
                 <Button type="button" variant="outline" onClick={closeAdd}>
                   Cancel
                 </Button>
-                <Button type="button" onClick={saveSalary} disabled={!canSaveSalary}>
+                <Button type="button" onClick={saveSalary}>
                   Save
                 </Button>
               </div>
@@ -756,7 +760,7 @@ export default function SalariesSection({
             {/* What is being transferred, read off the salary just settled
                 rather than asked for again. */}
             <Bordered title="Salary Information">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+              <div className="form-grid">
                 <Locked id="pay-no" label="Salary No." value={salaryNo} />
                 <Locked id="pay-period" label="Salary Period" value={period} />
                 <Locked
@@ -776,7 +780,7 @@ export default function SalariesSection({
 
             {/* Where it is booked, and how it actually leaves. */}
             <Bordered title="Expense & Disbursement Details">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+              <div className="form-grid">
                 <Locked
                   id="pay-type"
                   label="Expense Type"
@@ -909,7 +913,7 @@ export default function SalariesSection({
                 />
                 Employee &amp; Transfer Summary
               </p>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:divide-x">
+              <div className="form-grid lg:[&>*+*]:border-s">
                 <Said label="Employee No." value={employee?.empNo || ""} />
                 <Said label="Employee Name" value={employee?.name || ""} />
                 <Said label="Bank Account" value={payment.bankAccount} />
@@ -952,11 +956,11 @@ export default function SalariesSection({
             <div className="flex flex-wrap items-center justify-between gap-2">
               {/* What has been paid before is the list behind this window. */}
               <Button type="button" variant="ghost" onClick={closeAdd}>
-                <History className="mr-2 h-4 w-4" />
+                <History className="me-2 h-4 w-4" />
                 History
               </Button>
 
-              <div className="ml-auto flex flex-wrap items-center gap-2">
+              <div className="ms-auto flex flex-wrap items-center gap-2">
                 <Button type="button" variant="outline" onClick={closeAdd}>
                   Cancel
                 </Button>
@@ -988,7 +992,7 @@ export default function SalariesSection({
                   <Button
                     type="button"
                     onClick={savePayment}
-                    disabled={!canPay || rejecting}
+                    disabled={rejecting}
                   >
                     Save
                   </Button>
@@ -1066,7 +1070,7 @@ export default function SalariesSection({
 
         {/* What comes off the pay is not typed here: it is what the loans
             and the penalties on record say it is. */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+        <div className="form-grid form-grid-2">
           <Panel title="Debt Installments" icon={Landmark}>
             <RecordTable minWidth={320}>
               <HeadRow>
@@ -1125,7 +1129,7 @@ export default function SalariesSection({
         </div>
 
         {/* What it all comes to, in the order it is worked out. */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="form-grid">
           <Tile
             icon={Wallet}
             title="Total Earnings"
@@ -1163,7 +1167,7 @@ export default function SalariesSection({
               onClick={savePayslip}
               disabled={!(Number(payslip.basic) > 0)}
             >
-              <Save className="mr-2 h-4 w-4" />
+              <Save className="me-2 h-4 w-4" />
               Save
             </Button>
           </div>

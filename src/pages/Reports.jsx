@@ -131,7 +131,7 @@ export default function Reports() {
           </div>
 
           {/* Date Range Filter */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="form-grid">
             <div className="space-y-2">
               <Label htmlFor="dateFrom" className="text-xs">From Date</Label>
               <Input
@@ -155,7 +155,7 @@ export default function Reports() {
       </Card>
 
       {/* Reports Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4">
+      <div className="form-grid">
         {filteredReports.map((report) => (
           <Card key={report.id} className="hover:shadow-lg transition-shadow">
             <CardContent className="p-4 sm:p-6">
@@ -180,7 +180,7 @@ export default function Reports() {
                     className="flex-1"
                     onClick={() => handleGenerate(report.name)}
                   >
-                    <FileText className="mr-1 h-3 w-3" />
+                    <FileText className="me-1 h-3 w-3" />
                     Generate
                   </Button>
                   <Button
