@@ -204,6 +204,7 @@
   --color-locked: var(--locked);
   --color-decision-full: var(--decision-full);
   --color-decision-partial: var(--decision-partial);
+  --color-decision-partial-ink: var(--decision-partial-ink);
   --color-decision-rejected: var(--decision-rejected);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
@@ -305,7 +306,14 @@
      wherever the decision is shown, so what was decided is read from the
      colour before a word of it. */
   --decision-full: #eaf8ee;
-  --decision-partial: #f2ecf6;
+  /*
+   * Partial approval is amber wherever it appears - the tone the Leave
+   * Request page settled on, now the system's. It reads as "granted, but not
+   * as asked", which is neither the green of a full approval nor the red of a
+   * refusal, and it must not drift back towards either.
+   */
+  --decision-partial: #fef3c7;
+  --decision-partial-ink: #d97706;
   --decision-rejected: #fff0f0;
   --background: oklch(0.99 0 0);
   --foreground: oklch(0.20 0 0);

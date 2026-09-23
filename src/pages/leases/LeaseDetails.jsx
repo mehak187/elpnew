@@ -43,6 +43,7 @@ import {
   omr,
   shortDate,
 } from "./leaseData";
+import { RecordLink } from "@/components/shared/RecordTable";
 
 /**
  * The parts of a lease, in the order it is put together: the property, the

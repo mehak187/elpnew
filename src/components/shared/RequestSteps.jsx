@@ -143,11 +143,20 @@ const DECISIONS = [
   {
     key: "partial",
     title: "Partial Approval",
-    // Plain until it is the answer given: the middle card is the one that
-    // has to be chosen deliberately.
-    tone: "border-border bg-card",
-    chosen: "border-violet-400 bg-decision-partial",
-    mark: "border-muted-foreground/40 text-violet-600",
+    tone: "border-decision-partial-ink bg-decision-partial text-decision-partial-ink",
+    mark: "border-decision-partial-ink text-decision-partial-ink",
+  },
+  {
+    /**
+     * Not an answer to the request so much as a question back: something is
+     * missing, and the employee is asked to supply it. Nothing is granted and
+     * nothing is refused, so like a refusal it pays nothing - but unlike one
+     * it leaves the request alive.
+     */
+    key: "completion",
+    title: "Request Completion",
+    tone: "border-frame-alt bg-decision-partial/40 text-frame-alt",
+    mark: "border-frame-alt text-frame-alt",
   },
   {
     key: "rejected",
@@ -172,17 +181,29 @@ export function DecisionChoice({
   title = "Management Decision",
   // What each card says under its name, where the answer needs saying in
   // the request's own words: a loan is granted on terms, not only on an
-  // amount. A request that needs none leaves the cards as three plain names.
+  // amount. A request that needs none leaves the cards as plain names.
   notes = {},
+  /**
+   * Which answers this kind of request can be given.
+   *
+   * Three by default - granted, granted in part, refused. A request that can
+   * also be handed back for something missing names the fourth; offering it
+   * everywhere would put a choice on screens that have nothing to ask for.
+   */
+  offers = ["full", "partial", "rejected"],
 }) {
+  const shown = DECISIONS.filter((option) => offers.includes(option.key));
   return (
     <Bordered title={title}>
       <div
         role="radiogroup"
         aria-label={title}
-        className="grid grid-cols-1 gap-3 md:grid-cols-3"
+        className={cn(
+          "grid grid-cols-1 gap-3",
+          shown.length > 3 ? "md:grid-cols-2 xl:grid-cols-4" : "md:grid-cols-3"
+        )}
       >
-        {DECISIONS.map((decision) => {
+        {shown.map((decision) => {
           const chosen = value === decision.key;
           return (
             <button

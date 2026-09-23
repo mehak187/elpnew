@@ -18,7 +18,9 @@ import {
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/shared/panels";
 import {
-  Settled, Choice,
+  Settled,
+  Choice,
+  Field,
   checkRequired,
 } from "@/components/shared/formFields";
 import { PAYING_ACCOUNTS } from "@/pages/firm/firmData";
@@ -34,18 +36,24 @@ import {
 import { RequestSteps, DecisionChoice } from "@/components/shared/RequestSteps";
 import {
   Lock,
+  Save,
+  Clock,
+  CalendarDays,
+  User,
+  Landmark,
   FileText,
   FileCheck,
   History,
   UploadCloud,
 } from "lucide-react";
+import UploadIcon from "@/components/shared/UploadIcon";
 import { cn } from "@/lib/utils";
 import { amountValue } from "@/lib/money";
 import { smartSearch } from "@/lib/search/smartSearch";
 import { useLeaves } from "@/lib/leaves/context";
 import { formatDate } from "@/pages/firm/firmData";
-import { remainingBalance, entitlementOf } from "../leaveData";
-import { PAYMENT_YEARS } from "../payrollData";
+import { remainingBalance } from "../leaveData";
+import { PAYMENT_YEARS, SALARY_MONTHS } from "../payrollData";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
 import {
   ENTITLEMENT_EXPENSE_TYPE,
@@ -57,12 +65,8 @@ import {
   ENTITLEMENT_STATUS_CHIP,
   encashmentAmount,
   overtimeAmount,
-  overtimeRate,
   medicalAmount,
   hourlyRate,
-  hoursBetween,
-  clockTime,
-  OVERTIME_TYPES,
   nextKindRequestNo,
   entitlementsFor,
   nextEntitlementNo,
@@ -94,10 +98,8 @@ const emptyDraft = () => ({
   // Overtime is claimed as the shift that was worked rather than as a number
   // of hours: the hours follow from the clock, and a typed total can disagree
   // with the times beside it.
-  overtimeDate: todayIso(),
-  startTime: "",
-  endTime: "",
-  overtimeType: "",
+  // Overtime is claimed as a month's hours, at the ordinary hourly rate.
+  hours: "",
   // A medical claim is made from the bill: what it cost, what the insurer
   // met, and the invoice that proves both.
   treatmentDate: todayIso(),
@@ -108,6 +110,11 @@ const emptyDraft = () => ({
 
 const emptyPayment = () => ({
   approved: "",
+  // What a partial approval grants, in the unit the request was counted in.
+  // The money follows from these; only a request already made in money asks
+  // for `approved` directly.
+  approvedDays: "",
+  approvedHours: "",
   method: "",
   // One choice for where it leaves from: the account carries its bank.
   bankAccount: "",
@@ -228,6 +235,10 @@ export default function EntitlementTab({
 
   const mine = smartSearch(entitlementsFor(records, employee?.name, kind), query);
 
+  // "January" rather than "01", as the card under the decision writes it.
+  const monthName =
+    SALARY_MONTHS.find((month) => month.value === draft.month)?.label || "";
+
   // The number it already carries, or the one it is about to be given. Shown
   // before it is saved so the employee can quote it.
   const requestNo = open?.requestNo || nextKindRequestNo(records, kind);
@@ -236,10 +247,6 @@ export default function EntitlementTab({
   // identifier, and two people can share one.
   const whose =
     (employee?.name || "") + (employee?.empNo ? " \u2014 " + employee.empNo : "");
-
-  // What the leave being encashed is worth in a year, read off the leave type
-  // rather than stored: it is a rule of the type, not a fact of the request.
-  const yearlyEntitlement = entitlementOf(draft.leaveType) || "-";
 
   // What is left of the leave being encashed - counted off the leave already
   // taken, never stored.
@@ -253,21 +260,18 @@ export default function EntitlementTab({
   const exceeded = mode === "leaveDays" && days > available;
 
   // How long the overtime shift ran, counted off the clock rather than typed.
-  const workedHours =
-    mode === "hours" ? hoursBetween(draft.startTime, draft.endTime) : 0;
+  // The overtime hours the employee is claiming for the month.
+  const workedHours = mode === "hours" ? Number(draft.hours || 0) : 0;
 
   // What an hour of it is worth: the ordinary hourly rate, lifted by however
   // much the kind of day it fell on is worth.
-  const otRate =
-    mode === "hours" ? overtimeRate(employee?.salary, draft.overtimeType) : 0;
-
   // What the request comes to. Days and hours are worth what the salary says
   // they are worth; anything else is the sum that was asked for.
   const amount =
     mode === "leaveDays"
       ? encashmentAmount(employee?.salary, days)
       : mode === "hours"
-        ? overtimeAmount(employee?.salary, workedHours, draft.overtimeType)
+        ? overtimeAmount(employee?.salary, workedHours)
         : mode === "medical"
           ? medicalAmount(draft.totalCost, draft.insuranceCovered)
           : Number(draft.amount || 0);
@@ -293,7 +297,7 @@ export default function EntitlementTab({
     counted &&
     !exceeded &&
     (mode !== "hours" ||
-      (draft.overtimeDate && draft.startTime && draft.endTime && draft.overtimeType)) &&
+      (draft.year && draft.month && workedHours > 0)) &&
     (mode !== "medical" ||
       (draft.treatmentDate && draft.invoiceNo.trim() && !overInsured)) &&
     draft.reason.trim();
@@ -301,40 +305,76 @@ export default function EntitlementTab({
   // A full approval grants what was asked for; only a partial one names a
   // figure of its own, and a refusal grants nothing at all.
   const amending = decision === "partial";
-  const refusing = decision === "rejected";
-  const approvedAmount = amending ? Number(payment.approved || 0) : amount;
+  /**
+   * Nothing is disbursed on either of these. A refusal ends the request; a
+   * return keeps it alive and asks the employee for what is missing. Both
+   * want a comment and neither wants a payment, so the form treats them the
+   * same from here on.
+   */
+  const returning = decision === "completion";
+  const refusing = decision === "rejected" || returning;
 
   /**
-   * How many days a decision actually grants.
+   * What a decision actually grants, in the unit the request was made in.
    *
-   * A full approval grants the days asked for. A partial one grants whatever
-   * the amount was cut to, so the days are read back off that figure rather
-   * than asked for a second time - two fields for one decision can disagree,
-   * and the money is the half that gets paid.
+   * A full approval grants what was asked for. A partial one is management
+   * cutting the count - days of leave, or hours of overtime - so that is the
+   * figure they type, and the money follows from it. The other way round
+   * would have them working out a sum to arrive at a number of days, which is
+   * the calculation the form is there to do.
    */
   const approvedDays =
-    mode !== "leaveDays" || amount <= 0
+    mode !== "leaveDays"
       ? null
       : amending
-        ? Math.round((approvedAmount / amount) * days * 10) / 10
+        ? Number(payment.approvedDays || 0)
         : days;
 
-  /** The same, in hours, for a request counted in hours. */
   const approvedHours =
-    mode !== "hours" || amount <= 0
+    mode !== "hours"
       ? null
       : amending
-        ? Math.round((approvedAmount / amount) * workedHours * 10) / 10
+        ? Number(payment.approvedHours || 0)
         : workedHours;
+
+  /**
+   * What that comes to. Worked out from whatever was granted, never typed
+   * beside it: a sum and a count that disagree is a record nobody can settle.
+   * Only the kinds counted in money are asked for a figure directly.
+   */
+  const approvedAmount =
+    mode === "leaveDays"
+      ? encashmentAmount(employee?.salary, approvedDays)
+      : mode === "hours"
+        ? overtimeAmount(employee?.salary, approvedHours)
+        : amending
+          ? Number(payment.approved || 0)
+          : amount;
   const decidedOn = open?.decisionDate || todayIso();
   const attachedName = open?.attachment || "";
   // What this person was given last time, where there was a last time.
   const previous = lastSimilar(records, employee?.name, kind, openId);
 
+  /**
+   * Whether a partial approval grants something possible.
+   *
+   * More than nothing, and never more than was asked for: an office that may
+   * grant less than the request may not use the same answer to grant more.
+   * Checked in the unit that was actually typed, so the message can name it.
+   */
+  const grantIsSound =
+    !amending ||
+    (approvedDays !== null
+      ? approvedDays > 0 && approvedDays <= days
+      : approvedHours !== null
+        ? approvedHours > 0 && approvedHours <= workedHours
+        : approvedAmount > 0 && approvedAmount <= amount);
+
   const canDisburse =
     Boolean(decision) &&
     !refusing &&
     canDecide &&
+    grantIsSound &&
     approvedAmount > 0 &&
     approvedAmount <= amount &&
     payment.method &&
@@ -363,12 +403,9 @@ export default function EntitlementTab({
     const details = {
       requestDate: draft.requestDate,
       year: draft.year,
+      month: draft.month,
       leaveType: draft.leaveType,
       days,
-      overtimeDate: draft.overtimeDate,
-      startTime: draft.startTime,
-      endTime: draft.endTime,
-      overtimeType: draft.overtimeType,
       hours: workedHours,
       treatmentDate: draft.treatmentDate,
       invoiceNo: draft.invoiceNo.trim(),
@@ -516,161 +553,36 @@ export default function EntitlementTab({
 
       {stage === "decision" ? (
         <>
-          {/* What is being answered, read back and unanswerable-with: a
-              decision is taken against what was asked for, so what was asked
-              for has to be on the same screen as the answer. */}
-          <div className="space-y-4">
-            <h3 className={HEADING}>
-              Request Information
-            </h3>
-            <div className="form-grid">
-              <Booked id="dec-employee" label="Employee Name" value={whose} />
-              <Booked id="dec-request-no" label="Request No." value={requestNo} />
-              <Booked
-                id="dec-request-date"
-                label="Request Date"
-                value={draft.requestDate ? formatDate(draft.requestDate) : "-"}
-              />
-              {mode === "leaveDays" && (
-                <Booked id="dec-year" label="Year" value={draft.year} />
-              )}
-              {mode === "hours" && (
-                <Booked
-                  id="dec-ot-year"
-                  label="Year"
-                  value={String(draft.overtimeDate || "").slice(0, 4) || "-"}
-                />
-              )}
+          {/* The request is not read back here. What it was for is on
+              the stage behind this one, and the four facts a decision
+              actually needs - who, when, what kind, which account - are
+              on the card at the foot of the page. Saying them twice on
+              one screen is what the drawing takes out. */}
 
-              {mode === "medical" && (
-                <>
-                  <Booked
-                    id="dec-treatment-date"
-                    label="Date"
-                    value={
-                      draft.treatmentDate ? formatDate(draft.treatmentDate) : "-"
-                    }
-                  />
-                  <Booked
-                    id="dec-invoice-no"
-                    label="Invoice No."
-                    value={draft.invoiceNo || "-"}
-                  />
-                  <Booked
-                    id="dec-total-cost"
-                    label="Total Medical Cost (OMR)"
-                    value={amountValue(draft.totalCost)}
-                  />
-                  <Booked
-                    id="dec-insured"
-                    label="Insurance Covered Amount (OMR)"
-                    value={amountValue(draft.insuranceCovered)}
-                  />
-                  <Booked
-                    id="dec-requested"
-                    label="Requested Amount (OMR)"
-                    value={amountValue(amount)}
-                  />
-                </>
-              )}
-            </div>
-          </div>
-
-          {mode !== "medical" && (
-          <div className="space-y-4">
-            <h3 className={HEADING}>
-              {label} Summary
-            </h3>
-            {/* As wide as the summary has fields to fill: overtime reads back
-                eight, which is two rows of four, while leave encashment reads
-                back six and wants them on one. A row that leaves half itself
-                empty reads as a row with something missing from it. */}
-            <div className="form-grid">
-              {mode === "leaveDays" ? (
-                <>
-                  <Booked
-                    id="dec-leave-type"
-                    label="Leave Type"
-                    value={draft.leaveType}
-                  />
-                  <Booked
-                    id="dec-entitlement"
-                    label="Annual Leave Entitlement"
-                    value={yearlyEntitlement}
-                  />
-                  <Booked
-                    id="dec-balance"
-                    label="Remaining Leave Balance"
-                    value={balance ? available + " Days" : "-"}
-                  />
-                  <Booked
-                    id="dec-days"
-                    label="Days Requested for Encashment"
-                    value={days + " Days"}
-                  />
-                  <Booked
-                    id="dec-after"
-                    label="Balance After Request"
-                    value={balance ? after + " Days" : "-"}
-                  />
-                </>
-              ) : (
-                mode === "hours" && (
-                  <>
-                    <Booked
-                      id="dec-ot-date"
-                      label="Overtime Date"
-                      value={
-                        draft.overtimeDate ? formatDate(draft.overtimeDate) : "-"
-                      }
-                    />
-                    <Booked
-                      id="dec-start"
-                      label="Start Time"
-                      value={clockTime(draft.startTime)}
-                    />
-                    <Booked
-                      id="dec-end"
-                      label="End Time"
-                      value={clockTime(draft.endTime)}
-                    />
-                    <Booked
-                      id="dec-total-hours"
-                      label="Total Overtime Hours"
-                      value={workedHours ? workedHours + " Hours" : "-"}
-                    />
-                    <Booked
-                      id="dec-ot-type"
-                      label="Overtime Type"
-                      value={draft.overtimeType || "-"}
-                    />
-                    <Booked
-                      id="dec-rate"
-                      label="Hourly Rate (OMR)"
-                      value={amountValue(hourlyRate(employee?.salary))}
-                    />
-                    <Booked
-                      id="dec-ot-rate"
-                      label="Overtime Rate (OMR)"
-                      value={draft.overtimeType ? amountValue(otRate) : "-"}
-                    />
-                  </>
-                )
-              )}
-
-              <Booked
-                id="dec-estimated"
-                label="Estimated Amount (OMR)"
-                value={amountValue(amount)}
-              />
-            </div>
-          </div>
-          )}
-
+          {/* Each answer says what it does, in the name of the thing being
+              decided - "approve the leave encashment", not "approve" - so the
+              three cards cannot be told apart only by their colour. Built
+              from the tab's own label rather than written out nine times. */}
           <DecisionChoice
             value={decision}
             onChange={setDecision}
             disabled={!canDecide || settled || refused}
+            offers={["full", "partial", "completion", "rejected"]}
+            notes={
+              mode === "hours"
+                ? {
+                    full: "Approve the overtime request as submitted",
+                    partial: "Approve adjusted overtime hours or amount",
+                    completion: "Return for missing information or documents",
+                    rejected: "Reject the overtime request",
+                  }
+                : {
+                    full: "Approve the " + label.toLowerCase() + " as requested",
+                    partial: "Approve a portion of the " + label.toLowerCase(),
+                    completion: "Return for missing information or documents",
+                    rejected: "Reject the " + label.toLowerCase() + " request",
+                  }
+            }
           />
 
           {/* The answer itself: when it was given, what it grants, and why.
@@ -690,25 +602,72 @@ export default function EntitlementTab({
                   value={formatDate(decidedOn)}
                 />
 
-                {approvedDays !== null && (
-                  <Settled
-                    id="ent-approved-days"
-                    label="Approved Days"
-                    value={approvedDays + " Days"}
-                  />
-                )}
+                {/* A partial approval is management cutting the count, so
+                    that is the field it opens. A full approval grants what
+                    was asked for and has nothing to type. */}
+                {approvedDays !== null &&
+                  (amending ? (
+                    <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
+                      <FieldLabel htmlFor="ent-approved-days" required>
+                        Days Requested for Encashment
+                      </FieldLabel>
+                      <Input
+                        id="ent-approved-days"
+                        inputMode="numeric"
+                        value={payment.approvedDays}
+                        onChange={(e) =>
+                          setPay("approvedDays", e.target.value.replace(/\D/g, ""))
+                        }
+                        placeholder="0"
+                        className={cn(!grantIsSound && "border-destructive")}
+                      />
+                      {!grantIsSound && (
+                        <p role="alert" className="text-xs font-semibold text-destructive">
+                          {"Between 1 and " + days + " days"}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <Settled
+                      id="ent-approved-days"
+                      label="Days Requested for Encashment"
+                      value={approvedDays + " Days"}
+                    />
+                  ))}
 
-                {approvedHours !== null && (
-                  <Settled
-                    id="ent-approved-hours"
-                    label="Approved Hours"
-                    value={approvedHours + " Hours"}
-                  />
-                )}
+                {approvedHours !== null &&
+                  (amending ? (
+                    <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
+                      <FieldLabel htmlFor="ent-approved-hours" required>
+                        Approved Overtime Hours
+                      </FieldLabel>
+                      <Input
+                        id="ent-approved-hours"
+                        inputMode="decimal"
+                        value={payment.approvedHours}
+                        onChange={(e) =>
+                          setPay("approvedHours", e.target.value.replace(/[^\d.]/g, ""))
+                        }
+                        placeholder="0"
+                        className={cn(!grantIsSound && "border-destructive")}
+                      />
+                      {!grantIsSound && (
+                        <p role="alert" className="text-xs font-semibold text-destructive">
+                          {"Between 0 and " + workedHours + " hours"}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <Settled
+                      id="ent-approved-hours"
+                      label="Approved Overtime Hours"
+                      value={approvedHours + " Hours"}
+                    />
+                  ))}
 
-                {/* Only a partial approval names a figure of its own; a full
-                    one grants what was asked for. */}
-                {amending ? (
+                {/* Worked out from whatever was granted above, except where
+                    the request is a sum in the first place. */}
+                {amending && approvedDays === null && approvedHours === null ? (
                   <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
                     <FieldLabel htmlFor="ent-approved" required>
                       Approved Amount (OMR)
@@ -721,9 +680,7 @@ export default function EntitlementTab({
                         setPay("approved", e.target.value.replace(/[^\d.]/g, ""))
                       }
                       placeholder="0.000"
-                      className={cn(
-                        approvedAmount > amount && "border-destructive"
-                      )}
+                      className={cn(!grantIsSound && "border-destructive")}
                     />
                   </div>
                 ) : (
@@ -742,7 +699,11 @@ export default function EntitlementTab({
                 it ran out of things to say. */}
             <div className="space-y-2">
               <FieldLabel htmlFor="ent-comment" required={refusing}>
-                {refusing ? "Reason for Rejection" : "Management Comment"}
+                {returning
+                  ? "What is Missing"
+                  : refusing
+                    ? "Reason for Rejection"
+                    : "Management Comment"}
               </FieldLabel>
               <Textarea
                 id="ent-comment"
@@ -752,9 +713,11 @@ export default function EntitlementTab({
                 onChange={(e) => setReason(e.target.value)}
                 disabled={!canDecide || settled || refused}
                 placeholder={
-                  refusing
-                    ? "Say why this request is refused"
-                    : "Enter management comment"
+                  returning
+                    ? "Say what the employee still has to supply"
+                    : refusing
+                      ? "Say why this request is refused"
+                      : "Enter management comment"
                 }
               />
               <p className="text-end text-xs text-muted-foreground">
@@ -768,7 +731,7 @@ export default function EntitlementTab({
           {decision && !refusing && (
             <div className="space-y-4 sm:space-y-6">
               <h3 className={HEADING}>
-                Payment Details
+                Expense &amp; Disbursement Details
               </h3>
               <div className="form-grid">
                 <Settled
@@ -874,15 +837,43 @@ export default function EntitlementTab({
             className={cn(
               "rounded-lg border p-4",
               decision === "full" && "border-green-600/50 bg-decision-full",
-              decision === "partial" && "border-violet-400 bg-decision-partial",
-              refusing && "border-red-500/50 bg-decision-rejected",
+              decision === "partial" &&
+                "border-decision-partial-ink bg-decision-partial",
+              returning && "border-frame-alt/50 bg-decision-partial/40",
+              decision === "rejected" && "border-red-500/50 bg-decision-rejected",
               !decision && "bg-card"
             )}
           >
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:[&>*+*]:border-s">
-              <Fact icon={FileText} label="Supporting Document">
-                {attachedName || "None attached"}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 lg:[&>*+*]:border-s">
+              <Fact icon={CalendarDays} label="Request Date">
+                {draft.requestDate ? formatDate(draft.requestDate) : "-"}
+                {attachedName && (
+                  <span className="mt-0.5 block text-primary">{attachedName}</span>
+                )}
               </Fact>
+              {mode === "hours" ? (
+                <Fact icon={CalendarDays} label="Month">
+                  {monthName ? monthName + " " + draft.year : "-"}
+                </Fact>
+              ) : (
+                <Fact icon={FileText} label="Request Type">
+                  {label}
+                </Fact>
+              )}
+              <Fact icon={User} label="Employee Name">
+                {whose}
+              </Fact>
+              {mode === "hours" ? (
+                <Fact icon={Clock} label="Approved Hours">
+                  {approvedHours ? approvedHours + " Hours" : "-"}
+                </Fact>
+              ) : (
+                <Fact icon={Landmark} label="Bank / Account">
+                  {employee?.bankName
+                    ? employee.bankName + " - " + employee.accountNumber
+                    : "-"}
+                </Fact>
+              )}
               <Fact icon={History} label="History">
                 <RecordLink onClick={() => setShowHistory(true)}>
                   View history
@@ -915,27 +906,56 @@ export default function EntitlementTab({
               Request Information
             </h3>
             <div className="form-grid">
-              <Booked id="ent-employee" label="Employee Name" value={whose} />
-              <Booked id="ent-request-no" label="Request No." value={requestNo} />
+              {/* The paper the request is made on hangs off its number. */}
+              <Field id="ent-request-no" label="Request No.">
+                <div className="flex w-full min-w-0 items-center gap-2">
+                  <Input
+                    id="ent-request-no"
+                    readOnly
+                    tabIndex={-1}
+                    value={requestNo}
+                    className="min-w-0 flex-1 cursor-default"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    asChild
+                    title={
+                      receipt ? receipt.name + " attached" : "Upload a supporting document"
+                    }
+                    className={cn(
+                      "shrink-0",
+                      receipt && "border-green-600 text-green-600"
+                    )}
+                  >
+                    <label htmlFor="ent-request-file" className="cursor-pointer">
+                      {receipt ? (
+                        <FileCheck className="h-4 w-4" />
+                      ) : (
+                        <UploadIcon className="h-4 w-4" />
+                      )}
+                      <span className="sr-only">Upload a supporting document</span>
+                    </label>
+                  </Button>
+                  <Input
+                    id="ent-request-file"
+                    type="file"
+                    className="hidden"
+                    onChange={(e) => e.target.files[0] && setReceipt(e.target.files[0])}
+                  />
+                </div>
+              </Field>
               <Booked
                 id="ent-request-date"
                 label="Request Date"
                 value={formatDate(draft.requestDate)}
               />
+              <Booked id="ent-employee" label="Employee Name" value={whose} />
 
-              {/* The year the overtime falls in, read off its own date -
-                  asking for it again is asking to be told something the form
-                  already knows, and can be told wrong. */}
-              {mode === "hours" && (
-                <Booked
-                  id="ent-ot-year"
-                  label="Year"
-                  value={String(draft.overtimeDate || "").slice(0, 4) || "-"}
-                />
-              )}
-
-              {/* Which year's balance is being drawn on. */}
-              {mode === "leaveDays" && (
+              {/* Which year the request belongs to: the balance being drawn
+                  on, or the month the overtime was worked in. */}
+              {(mode === "leaveDays" || mode === "hours") && (
                 <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
                   <FieldLabel htmlFor="ent-year" required>
                     Year
@@ -957,13 +977,6 @@ export default function EntitlementTab({
                   </Select>
                 </div>
               )}
-            </div>
-          </div>
-
-          <h3 className={HEADING}>
-            {label} Details
-          </h3>
-          <div className="form-grid">
             {/* Days off a leave balance. */}
             {mode === "leaveDays" && (
               <>
@@ -971,20 +984,8 @@ export default function EntitlementTab({
                     is there to be taken and unpaid leave is worth nothing, so
                     offering either would be offering a mistake. */}
                 <Booked
-                  id="ent-leave-type"
-                  label="Leave Type"
-                  value={draft.leaveType}
-                />
-
-                <Booked
-                  id="ent-entitlement"
-                  label="Annual Leave Entitlement"
-                  value={yearlyEntitlement}
-                />
-
-                <Booked
                   id="ent-available"
-                  label="Remaining Leave Balance"
+                  label="Available Leave Balance"
                   value={balance ? available + " Days" : "-"}
                 />
 
@@ -1015,86 +1016,51 @@ export default function EntitlementTab({
               </>
             )}
 
-            {/* The shift that was worked. The hours are not asked for: they
-                are the distance between the two clock times, and a typed
-                total could disagree with them. Nor is the rate, which is the
-                salary's own hourly rate lifted by whatever the kind of day is
-                worth. */}
+            {/* A month's overtime, at the employee's ordinary hourly rate.
+                The rate is read off the salary, never typed, so the amount
+                below cannot disagree with the pay it is worked out from. */}
             {mode === "hours" && (
               <>
-                <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
-                  <FieldLabel htmlFor="ent-ot-date" required>
-                    Overtime Date
-                  </FieldLabel>
-                  <Input
-                    id="ent-ot-date"
-                    type="date"
-                    value={draft.overtimeDate}
-                    onChange={(e) => set("overtimeDate", e.target.value)}
-                  />
-                </div>
-
-                <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
-                  <FieldLabel htmlFor="ent-start" required>
-                    Start Time
-                  </FieldLabel>
-                  <Input
-                    id="ent-start"
-                    type="time"
-                    value={draft.startTime}
-                    onChange={(e) => set("startTime", e.target.value)}
-                  />
-                </div>
-
-                <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
-                  <FieldLabel htmlFor="ent-end" required>
-                    End Time
-                  </FieldLabel>
-                  <Input
-                    id="ent-end"
-                    type="time"
-                    value={draft.endTime}
-                    onChange={(e) => set("endTime", e.target.value)}
-                  />
-                </div>
-
-                <Booked
-                  id="ent-total-hours"
-                  label="Total Overtime Hours"
-                  value={workedHours ? workedHours + " Hours" : "-"}
-                />
-
-                <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
-                  <FieldLabel htmlFor="ent-ot-type" required>
-                    Overtime Type
-                  </FieldLabel>
+                <div
+                  data-required="true"
+                  className="form-field span-3 flex h-full flex-col justify-end gap-2"
+                >
+                  <FieldLabel htmlFor="ent-month">Month</FieldLabel>
                   <Select
-                    value={draft.overtimeType}
-                    onValueChange={(value) => value && set("overtimeType", value)}
+                    value={draft.month}
+                    onValueChange={(value) => value && set("month", value)}
                   >
-                    <SelectTrigger id="ent-ot-type">
-                      <SelectValue placeholder="Select overtime type" />
+                    <SelectTrigger id="ent-month">
+                      <SelectValue placeholder="Select month" />
                     </SelectTrigger>
                     <SelectContent>
-                      {OVERTIME_TYPES.map((option) => (
-                        <SelectItem key={option.name} value={option.name}>
-                          {option.name}
+                      {SALARY_MONTHS.map((month) => (
+                        <SelectItem key={month.value} value={month.value}>
+                          {month.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
+                <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
+                  <FieldLabel htmlFor="ent-hours">Overtime Hours</FieldLabel>
+                  <Input
+                    required
+                    id="ent-hours"
+                    inputMode="decimal"
+                    value={draft.hours}
+                    onChange={(e) =>
+                      set("hours", e.target.value.replace(/[^\d.]/g, ""))
+                    }
+                    placeholder="0"
+                  />
+                </div>
+
                 <Booked
                   id="ent-rate"
                   label="Hourly Rate (OMR)"
                   value={amountValue(hourlyRate(employee?.salary))}
-                />
-
-                <Booked
-                  id="ent-ot-rate"
-                  label="Overtime Rate (OMR)"
-                  value={draft.overtimeType ? amountValue(otRate) : "-"}
                 />
               </>
             )}
@@ -1234,11 +1200,12 @@ export default function EntitlementTab({
                 value={amountValue(amount)}
               />
             )}
+            </div>
           </div>
 
           <div className="space-y-2">
             <h3 className={HEADING}>
-              Employee Comment
+              Reason / Notes
             </h3>
             <Textarea
               id="ent-reason-notes"
@@ -1246,7 +1213,8 @@ export default function EntitlementTab({
               maxLength={NOTES_LIMIT}
               value={draft.reason}
               onChange={(e) => set("reason", e.target.value)}
-              placeholder="Enter employee comment"
+              required
+              placeholder="Enter the reason for this request"
             />
             <p className="text-end text-xs text-muted-foreground">
               {draft.reason.length} / {NOTES_LIMIT}
@@ -1269,23 +1237,30 @@ export default function EntitlementTab({
             !refused && (
               <Button
                 type="button"
-                variant="destructive"
+                variant={returning ? "outline" : "destructive"}
+                className={cn(
+                  returning &&
+                    "border-frame-alt text-frame-alt hover:bg-decision-partial/40"
+                )}
                 onClick={reject}
                 disabled={!reason.trim()}
               >
-                Confirm Rejection
+                <Save className="me-2 h-4 w-4" />
+                {returning ? "Return to Employee" : "Confirm Rejection"}
               </Button>
             )
           ) : (
             !settled && (
               <Button type="button" onClick={disburse}>
+                <Save className="me-2 h-4 w-4" />
                 Approve &amp; Pay
               </Button>
             )
           )
         ) : (
           <Button type="button" onClick={submit}>
-            Submit Request
+            <Save className="me-2 h-4 w-4" />
+            Save
           </Button>
         )}
       </div>

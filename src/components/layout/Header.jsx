@@ -313,23 +313,30 @@ export default function Header({ onNavClick, activeNav }) {
               if (!section.items) {
                 return (
                   <NavigationMenuItem key={section.key}>
-                    <Link
-                      to={section.path}
-                      onClick={() => onNavClick && onNavClick(section.key)}
+                    {/* One link, not two. NavigationMenuLink draws an <a> of
+                        its own, so wrapping it in the router's Link put an
+                        anchor inside an anchor - invalid HTML, and two
+                        targets for one click. `asChild` hands the menu's
+                        styling and keyboard handling to the router's link
+                        instead, the way the dropdown items below already do. */}
+                    <NavigationMenuLink
+                      asChild
+                      className={cn(
+                        "inline-flex items-center gap-2 h-9 rounded-md px-3 py-2 text-sm text-nowrap font-medium transition-colors",
+                        "text-primary hover:bg-secondary",
+                        "focus:bg-secondary focus:text-secondary-foreground focus:outline-none",
+                        active
+                          ? "bg-primary text-primary-foreground font-semibold"
+                          : "text-muted-foreground"
+                      )}
                     >
-                      <NavigationMenuLink
-                        className={cn(
-                          "inline-flex items-center gap-2 h-9 rounded-md px-3 py-2 text-sm text-nowrap font-medium transition-colors",
-                          "text-primary hover:bg-secondary",
-                          "focus:bg-secondary focus:text-secondary-foreground focus:outline-none",
-                          active
-                            ? "bg-primary text-primary-foreground font-semibold"
-                            : "text-muted-foreground"
-                        )}
+                      <Link
+                        to={section.path}
+                        onClick={() => onNavClick && onNavClick(section.key)}
                       >
                         <span>{section.name}</span>
-                      </NavigationMenuLink>
-                    </Link>
+                      </Link>
+                    </NavigationMenuLink>
                   </NavigationMenuItem>
                 );
               }

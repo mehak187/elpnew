@@ -1126,14 +1126,21 @@ export default function EmployeeForm({ self }) {
                     {/* No heading: the page above is already called Documents.
                         The firm files the papers on an employee's record; on My
                         Profile they are read, not added to. */}
-                    {addingDoc && (
-                    <div className="rounded-lg border p-4">
-                      <div className="mb-4">
-                        <FormHeading
-                          title={editingDoc ? "Edit Document" : "Add Document"}
-                          icon={FileText}
-                        />
-                      </div>
+                    {/* Opened over the list rather than pushed in above it,
+                        the way every other form on this record opens: the
+                        papers already on file stay where they were, and the
+                        page does not grow a second frame while one is being
+                        added. */}
+                    <Dialog
+                      open={addingDoc}
+                      onOpenChange={(next) => !next && closeDocForm()}
+                    >
+                      <DialogContent className="max-h-[90vh] w-[95vw] max-w-4xl overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>
+                            {editingDoc ? "Edit Document" : "Add Document"}
+                          </DialogTitle>
+                        </DialogHeader>
 
                       {/* What decides which papers can be filed: an Omani
                           carries an ID card, a foreigner a resident card and
@@ -1267,7 +1274,7 @@ export default function EmployeeForm({ self }) {
                         </div>
                       </div>
 
-                      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+                      <DialogFooter className="mt-4">
                         <Button
                           type="button"
                           variant="outline"
@@ -1275,15 +1282,12 @@ export default function EmployeeForm({ self }) {
                         >
                           Cancel
                         </Button>
-                        <Button
-                          type="button"
-                          onClick={addDocument}
-                        >
+                        <Button type="button" onClick={addDocument}>
                           Save Document
                         </Button>
-                      </div>
-                    </div>
-                    )}
+                      </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
 
                     {/* What is already on file */}
                     <div className="space-y-4 rounded-lg border p-4">
@@ -1300,7 +1304,10 @@ export default function EmployeeForm({ self }) {
                           onChange={setDocQuery}
                           placeholder="Ask about documents..."
                         />
-                        {!readOnly && !addingDoc && (
+                        {/* Kept on the row while the window is open: it is
+                            behind the overlay and cannot be pressed anyway,
+                            and taking it away shifts the row underneath. */}
+                        {!readOnly && (
                           <Button
                             type="button"
                             className="ms-auto"

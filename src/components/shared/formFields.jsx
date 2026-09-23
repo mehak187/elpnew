@@ -522,7 +522,9 @@ export function Decision({ value, chosen, onChoose, tone }) {
         picked
           ? tone === "bad"
             ? "border-destructive bg-destructive/5 font-medium text-destructive"
-            : "border-green-600 bg-green-50 font-medium text-green-800"
+            : tone === "part"
+              ? "border-decision-partial-ink bg-decision-partial font-medium text-decision-partial-ink"
+              : "border-green-600 bg-green-50 font-medium text-green-800"
           : "hover:bg-muted/50"
       )}
     >
@@ -532,7 +534,9 @@ export function Decision({ value, chosen, onChoose, tone }) {
           picked
             ? tone === "bad"
               ? "border-destructive"
-              : "border-green-600"
+              : tone === "part"
+                ? "border-decision-partial-ink"
+                : "border-green-600"
             : "border-muted-foreground/50"
         )}
       >
@@ -540,7 +544,11 @@ export function Decision({ value, chosen, onChoose, tone }) {
           <span
             className={cn(
               "h-2 w-2 rounded-full",
-              tone === "bad" ? "bg-destructive" : "bg-green-600"
+              tone === "bad"
+                ? "bg-destructive"
+                : tone === "part"
+                  ? "bg-decision-partial-ink"
+                  : "bg-green-600"
             )}
           />
         )}
