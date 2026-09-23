@@ -12,7 +12,7 @@ export const ENTITLEMENT_TABS = [
   { key: "overtime", label: "Overtime Pay" },
   { key: "medical", label: "Medical Allowance" },
   { key: "transport", label: "Transport Allowance" },
-  { key: "assignment", label: "Assignment Allowance" },
+  { key: "assistance", label: "Assistance" },
   { key: "travel", label: "Travel Allowance" },
   { key: "airTicket", label: "Air Ticket Allowance" },
   { key: "notice", label: "Notice Pay" },

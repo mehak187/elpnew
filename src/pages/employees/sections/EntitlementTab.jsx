@@ -60,6 +60,8 @@ import {
   ENTITLEMENT_EXPENSE_TYPE,
   TRANSPORT_GENERAL,
   TRANSPORT_COURT,
+  ASSISTANCE_CATEGORY,
+  ASSISTANCE_TYPES,
   ENTITLEMENT_CATEGORY,
   ENTITLEMENT_SUBCATEGORY,
   ENTITLEMENT_PENDING,
@@ -104,6 +106,8 @@ const emptyDraft = () => ({
   transportType: TRANSPORT_GENERAL,
   fileNo: "",
   travelDate: "",
+  // What kind of help an assistance request is for.
+  assistanceType: "",
 });
 
 const emptyPayment = () => ({
@@ -232,7 +236,22 @@ export default function EntitlementTab({
   const mode = modeOf(kind);
   // The allowances whose sheets put the sum asked for beside the decision
   // and at the head of the summary, rather than an account or a type.
-  const namesAmount = kind === "medical" || kind === "transport";
+  const namesAmount =
+    kind === "medical" ||
+    kind === "transport" ||
+    kind === "travel" ||
+    kind === "airTicket" ||
+    kind === "notice";
+  // Where the decision's own row sits inside the box of decisions, and the
+  // day of the request is the employee's to set.
+  const medicalLayout =
+    kind === "medical" || kind === "travel" || kind === "airTicket";
+  // Notice pay dates its own request too, but keeps its decision row under
+  // a heading of its own.
+  const ownDate = medicalLayout || kind === "notice";
+  // Assistance has a sheet of its own for the decision, and a shorter note.
+  const assisting = kind === "assistance";
+  const notesLimit = assisting || kind === "notice" ? 300 : NOTES_LIMIT;
   const open = records.find((row) => row.id === openId) || null;
   const settled = open?.status === ENTITLEMENT_APPROVED;
   const refused = open?.status === ENTITLEMENT_REJECTED;
@@ -300,6 +319,7 @@ export default function EntitlementTab({
     (mode !== "hours" ||
       (draft.year && draft.month && workedHours > 0)) &&
     (!courtLinked || (draft.fileNo.trim() && draft.travelDate)) &&
+    (!assisting || draft.assistanceType) &&
     (!reasonRequired || draft.reason.trim());
 
   // A full approval grants what was asked for; only a partial one names a
@@ -352,6 +372,11 @@ export default function EntitlementTab({
           : amount;
   const decidedOn = open?.decisionDate || todayIso();
   const attachedName = open?.attachment || "";
+  // Its category and subcategory: assistance is filed under the kind of help.
+  const category = assisting ? ASSISTANCE_CATEGORY : ENTITLEMENT_CATEGORY;
+  const subcategory = assisting
+    ? draft.assistanceType
+    : ENTITLEMENT_SUBCATEGORY[kind] || label + " Request";
   // What this person was given last time, where there was a last time.
   const previous = lastSimilar(records, employee?.name, kind, openId);
 
@@ -414,6 +439,9 @@ export default function EntitlementTab({
       transportType: kind === "transport" ? draft.transportType : undefined,
       fileNo: courtLinked ? draft.fileNo.trim() : "",
       travelDate: courtLinked ? draft.travelDate : "",
+      assistanceType: assisting ? draft.assistanceType : undefined,
+      // The paper the request was made on, kept by name with the request.
+      attachment: receipt?.name || open?.attachment || "",
     };
 
     if (open) {
@@ -438,6 +466,8 @@ export default function EntitlementTab({
       setOpenId(id);
     }
     setPay("approved", String(amount));
+    // The upload beside the transfer is a different paper from the request's.
+    setReceipt(null);
     setStage("decision");
   };
 
@@ -510,6 +540,7 @@ export default function EntitlementTab({
       transportType: record.transportType || TRANSPORT_GENERAL,
       fileNo: record.fileNo || "",
       travelDate: record.travelDate || "",
+      assistanceType: record.assistanceType || "",
       amount: String(record.amount || ""),
       reason: record.reason || "",
     });
@@ -688,6 +719,218 @@ export default function EntitlementTab({
     </div>
   );
 
+  /**
+   * Assistance, decided. Its sheet reads the request back before the
+   * decision - the number, the day, who and what kind, and the employee's own
+   * words - then puts the decision, the payment and the transfer summary
+   * under it.
+   */
+  const assistanceDecision = (
+    <>
+      <div className="space-y-4">
+        <h3 className={HEADING}>Request Information</h3>
+        <div className="form-grid">
+          <div className="relative">
+            <Settled id="ent-request-no" label="Request No." value={requestNo} />
+            {attachedName && (
+              <p className="absolute start-0 top-full mt-1 text-xs text-record-link underline">
+                {attachedName}
+              </p>
+            )}
+          </div>
+          <Settled
+            id="ent-request-date"
+            label="Request Date"
+            value={formatDate(draft.requestDate)}
+          />
+          <Settled id="ent-employee" label="Employee Name" value={whose} />
+          <Settled
+            id="ent-assistance-type"
+            label="Assistance Type"
+            value={draft.assistanceType || "-"}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <h3 className={HEADING}>Employee Comment</h3>
+        <p className="rounded-field border border-field-border bg-locked px-3 py-2 text-sm text-muted-foreground">
+          {draft.reason || "-"}
+        </p>
+      </div>
+
+      <DecisionChoice
+        value={decision}
+        onChange={setDecision}
+        disabled={!canDecide || settled || refused}
+        offers={["full", "partial", "rejected"]}
+        notes={{
+          full: "Approve the assistance as requested",
+          rejected: "Reject the assistance request",
+        }}
+      />
+
+      {decision && !refusing && (
+        <div className="space-y-4">
+          <h3 className={HEADING}>Assistance Approval &amp; Disbursement</h3>
+          <div className="form-grid">
+            <Settled id="ent-type" label="Expense Type" value={ENTITLEMENT_EXPENSE_TYPE} />
+            <Settled id="ent-category" label="Category" value={category} />
+            <Settled id="ent-subcategory" label="Subcategory" value={subcategory} />
+            <Settled
+              id="ent-requested"
+              label="Requested Amount"
+              value={amountValue(amount) + " OMR"}
+            />
+
+            {/* A partial approval is the one place a figure is typed. */}
+            {amending ? (
+              <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
+                <FieldLabel htmlFor="ent-approved">Approved Amount (OMR)</FieldLabel>
+                <Input
+                  required
+                  id="ent-approved"
+                  inputMode="decimal"
+                  value={payment.approved}
+                  onChange={(e) =>
+                    setPay("approved", e.target.value.replace(/[^\d.]/g, ""))
+                  }
+                  placeholder="0.000"
+                  className={cn(!grantIsSound && "border-destructive")}
+                />
+                {!grantIsSound && (
+                  <p role="alert" className="text-xs font-semibold text-destructive">
+                    {"More than 0 and at most " + amountValue(amount) + " OMR"}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <Settled
+                id="ent-approved"
+                label="Approved Amount"
+                value={amountValue(approvedAmount) + " OMR"}
+                payable
+              />
+            )}
+            <Choice
+              id="ent-method"
+              label="Payment Method"
+              value={payment.method}
+              onChange={(value) => value && setPay("method", value)}
+              placeholder="Select method"
+              options={PAYMENT_METHODS}
+            />
+            <Choice
+              id="ent-bank"
+              label="Bank Account"
+              value={payment.bankAccount}
+              onChange={(value) => value && setPay("bankAccount", value)}
+              placeholder="Select bank account"
+              options={PAYING_ACCOUNTS}
+            />
+            <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
+              <FieldLabel htmlFor="ent-payment-date">Payment Date</FieldLabel>
+              <Input
+                required
+                id="ent-payment-date"
+                type="date"
+                value={payment.paymentDate}
+                onChange={(e) => setPay("paymentDate", e.target.value)}
+              />
+            </div>
+
+            <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
+              <FieldLabel htmlFor="ent-reference">Transfer No.</FieldLabel>
+              <div className="flex w-full min-w-0 items-center gap-2">
+                <Input
+                  required
+                  id="ent-reference"
+                  className="min-w-0 flex-1"
+                  value={payment.reference}
+                  onChange={(e) => setPay("reference", e.target.value)}
+                  placeholder="TRX-0000-00000"
+                />
+                <label
+                  className="shrink-0 cursor-pointer text-primary hover:text-primary/70"
+                  title={receipt ? receipt.name + " attached" : "Upload transfer receipt"}
+                >
+                  {receipt ? (
+                    <FileCheck className="h-5 w-5 text-green-600" />
+                  ) : (
+                    <UploadCloud className="h-5 w-5" />
+                  )}
+                  <span className="sr-only">Upload transfer receipt</span>
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={(e) => e.target.files[0] && setReceipt(e.target.files[0])}
+                  />
+                </label>
+              </div>
+            </div>
+            <Settled
+              id="ent-decision-date"
+              label="Decision Date"
+              value={formatDate(decidedOn)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Optional on an approval; a rejection has to say why. */}
+      <div className="space-y-2">
+        <h3 className={HEADING}>
+          {refusing ? "Reason for Rejection" : "Management Comment"}
+        </h3>
+        <Textarea
+          id="ent-comment"
+          rows={refusing ? 3 : 1}
+          maxLength={notesLimit}
+          required={refusing}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          disabled={!canDecide || settled || refused}
+          placeholder={
+            refusing
+              ? "Say why the assistance is refused"
+              : "Add management comment (optional)"
+          }
+          className={cn(!refusing && "min-h-9 resize-none")}
+        />
+        <p className="text-end text-xs text-muted-foreground">
+          {reason.length} / {notesLimit}
+        </p>
+      </div>
+
+      {/* Who is paid, into what, and how much - wearing the decision's colour. */}
+      {decision && !refusing && (
+        <div
+          className={cn(
+            "rounded-lg border p-4",
+            decision === "full" && "border-green-600/50 bg-decision-full",
+            decision === "partial" && "border-decision-partial-ink bg-decision-partial"
+          )}
+        >
+          <h3 className={HEADING}>Assistance Approval &amp; Transfer Summary</h3>
+          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:[&>*+*]:border-s">
+            <Fact icon={User} label="Employee Name">
+              {employee?.name || "-"}
+            </Fact>
+            <Fact icon={Landmark} label="Bank Name">
+              {employee?.bankName || "-"}
+            </Fact>
+            <Fact icon={FileText} label="Employee Account Number">
+              {employee?.accountNumber || "-"}
+            </Fact>
+            <Fact icon={Banknote} label="Approved Amount">
+              {amountValue(approvedAmount) + " OMR"}
+            </Fact>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
   const form = (
     <div className="space-y-6">
       {/* The two stages of the request. Either header opens its stage. */}
@@ -698,9 +941,13 @@ export default function EntitlementTab({
           {
             key: "request",
             title: label + " Request",
-            note: canSubmit
-              ? label + " details completed"
-              : "Enter " + label.toLowerCase() + " details",
+            note: assisting
+              ? canSubmit
+                ? "Assistance details and supporting document completed"
+                : "Enter assistance details and supporting document"
+              : canSubmit
+                ? label + " details completed"
+                : "Enter " + label.toLowerCase() + " details",
             done: Boolean(canSubmit),
           },
           {
@@ -713,7 +960,9 @@ export default function EntitlementTab({
         ]}
       />
 
-      {stage === "decision" ? (
+      {stage === "decision" && assisting ? (
+        assistanceDecision
+      ) : stage === "decision" ? (
         <>
           {/* The request is not read back here. What it was for is on
               the stage behind this one, and the four facts a decision
@@ -741,7 +990,7 @@ export default function EntitlementTab({
                 : {
                     full: "Approve the " + label.toLowerCase() + " as requested",
                     partial:
-                      namesAmount
+                      namesAmount && kind !== "notice"
                         ? "Approve an adjusted allowance amount"
                         : "Approve a portion of the " + label.toLowerCase(),
                     completion: "Return for missing information or documents",
@@ -749,10 +998,10 @@ export default function EntitlementTab({
                   }
             }
           >
-            {kind === "medical" && decisionFields}
+            {medicalLayout && decisionFields}
           </DecisionChoice>
 
-          {kind !== "medical" && (
+          {!medicalLayout && (
             <div className="space-y-4">
               <h3 className={HEADING}>Decision</h3>
               {decisionFields}
@@ -810,12 +1059,12 @@ export default function EntitlementTab({
                 <Settled
                   id="ent-category"
                   label="Category"
-                  value={ENTITLEMENT_CATEGORY}
+                  value={category}
                 />
                 <Settled
                   id="ent-subcategory"
                   label="Subcategory"
-                  value={ENTITLEMENT_SUBCATEGORY[kind] || label + " Request"}
+                  value={subcategory}
                 />
                 <Settled
                   id="ent-disbursed"
@@ -912,6 +1161,9 @@ export default function EntitlementTab({
               !decision && "bg-card"
             )}
           >
+            {kind === "notice" && (
+              <h3 className={cn(HEADING, "mb-3")}>{label} Request Summary</h3>
+            )}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 lg:[&>*+*]:border-s">
               {namesAmount && (
                 <Fact icon={FileText} label="Request No.">
@@ -939,7 +1191,7 @@ export default function EntitlementTab({
                   {label}
                 </Fact>
               )}
-              <Fact icon={User} label="Employee Name">
+              <Fact icon={User} label={kind === "notice" ? "Employee" : "Employee Name"}>
                 {whose}
               </Fact>
               {courtLinked ? (
@@ -995,7 +1247,7 @@ export default function EntitlementTab({
             <div className="form-grid">
               {/* The paper the request is made on hangs off its number. */}
               <Field id="ent-request-no" label="Request No.">
-                <div className="flex w-full min-w-0 items-center gap-2">
+                <div className="relative flex w-full min-w-0 items-center gap-2">
                   <Input
                     id="ent-request-no"
                     readOnly
@@ -1035,9 +1287,15 @@ export default function EntitlementTab({
                       />
                     </>
                   )}
+                  {/* Hung below the box, so the row's boxes stay in line. */}
+                  {assisting && (receipt || attachedName) && (
+                    <p className="absolute start-0 top-full mt-1 text-xs text-record-link underline">
+                      {receipt?.name || attachedName}
+                    </p>
+                  )}
                 </div>
               </Field>
-              {kind === "medical" ? (
+              {ownDate ? (
                 <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
                   <FieldLabel htmlFor="ent-request-date">Request Date</FieldLabel>
                   <Input
@@ -1056,7 +1314,33 @@ export default function EntitlementTab({
                   value={formatDate(draft.requestDate)}
                 />
               )}
-              <Booked id="ent-employee" label="Employee Name" value={whose} />
+              {!assisting && (
+                <Booked id="ent-employee" label="Employee Name" value={whose} />
+              )}
+
+              {assisting && (
+                <div
+                  data-required="true"
+                  className="form-field span-3 flex h-full flex-col justify-end gap-2"
+                >
+                  <FieldLabel htmlFor="ent-assistance-type">Assistance Type</FieldLabel>
+                  <Select
+                    value={draft.assistanceType}
+                    onValueChange={(value) => value && set("assistanceType", value)}
+                  >
+                    <SelectTrigger id="ent-assistance-type">
+                      <SelectValue placeholder="Select assistance type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ASSISTANCE_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {/* Which year the request belongs to: the balance being drawn
                   on, or the month the overtime was worked in. */}
@@ -1174,17 +1458,27 @@ export default function EntitlementTab({
                 section, under the choice of what kind of trip it was. */}
             {mode === "amount" && kind !== "transport" && (
               <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
-                <FieldLabel htmlFor="ent-amount">Requested Amount (OMR)</FieldLabel>
-                <Input
-                  required
-                  id="ent-amount"
-                  inputMode="decimal"
-                  value={draft.amount}
-                  onChange={(e) =>
-                    set("amount", e.target.value.replace(/[^\d.]/g, ""))
-                  }
-                  placeholder="0.000"
-                />
+                <FieldLabel htmlFor="ent-amount">
+                  {assisting ? "Requested Amount" : "Requested Amount (OMR)"}
+                </FieldLabel>
+                <div className="relative">
+                  <Input
+                    required
+                    id="ent-amount"
+                    inputMode="decimal"
+                    value={draft.amount}
+                    onChange={(e) =>
+                      set("amount", e.target.value.replace(/[^\d.]/g, ""))
+                    }
+                    placeholder="0.000"
+                    className={cn(assisting && "pe-14")}
+                  />
+                  {assisting && (
+                    <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                      OMR
+                    </span>
+                  )}
+                </div>
               </div>
             )}
 
@@ -1289,30 +1583,80 @@ export default function EntitlementTab({
           )}
 
           <div className="space-y-2">
+            {kind === "travel" || kind === "airTicket" || kind === "notice" ? (
+              <FieldLabel htmlFor="ent-reason-notes">Reason / Notes</FieldLabel>
+            ) : (
             <h3 className={HEADING}>
-              {kind === "transport" ? "Employee Comment" : "Reason / Notes"}
+              {assisting
+                ? "Request Details"
+                : kind === "transport"
+                  ? "Employee Comment"
+                  : "Reason / Notes"}
             </h3>
+            )}
+            {assisting && (
+              <FieldLabel htmlFor="ent-reason-notes">Employee Comment</FieldLabel>
+            )}
             <Textarea
               id="ent-reason-notes"
               rows={3}
-              maxLength={NOTES_LIMIT}
+              maxLength={notesLimit}
               value={draft.reason}
               onChange={(e) => set("reason", e.target.value)}
               required={reasonRequired}
               placeholder={
-                kind === "transport"
+                assisting
+                  ? "Describe what the assistance is for"
+                  : kind === "transport"
                   ? "Add details of the transport allowance request (optional)"
                   : "Enter the reason for requesting " + label.toLowerCase()
               }
             />
             <p className="text-end text-xs text-muted-foreground">
-              {draft.reason.length} / {NOTES_LIMIT}
+              {draft.reason.length} / {notesLimit}
             </p>
           </div>
         </>
       )}
 
-      {/* The way back and the answer, with clear room above them. */}
+      {/* Assistance keeps its history at the foot of both stages, beside a
+          plain Cancel and Save. */}
+      {assisting ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-6">
+          <button
+            type="button"
+            onClick={() => setShowHistory(true)}
+            className="flex items-center gap-2 rounded font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <History className="h-5 w-5" />
+            History
+          </button>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={close}>
+              Cancel
+            </Button>
+            {stage !== "decision" ? (
+              <Button type="button" onClick={submit}>
+                <Save className="me-2 h-4 w-4" />
+                Save
+              </Button>
+            ) : (
+              !settled &&
+              !refused && (
+                <Button
+                  type="button"
+                  variant={refusing ? "destructive" : "default"}
+                  onClick={refusing ? reject : disburse}
+                  disabled={!decision || (refusing && !reason.trim())}
+                >
+                  <Save className="me-2 h-4 w-4" />
+                  Save
+                </Button>
+              )
+            )}
+          </div>
+        </div>
+      ) : (
       <div className="flex flex-wrap justify-end gap-2 pt-6">
         <Button
           type="button"
@@ -1353,6 +1697,7 @@ export default function EntitlementTab({
           </Button>
         )}
       </div>
+      )}
     </div>
   );
 
@@ -1362,7 +1707,11 @@ export default function EntitlementTab({
       <Dialog open={Boolean(adding)} onOpenChange={(o) => !o && close()}>
         <DialogContent className="max-h-[90vh] w-[95vw] max-w-[1700px] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{label + " Request"}</DialogTitle>
+            <DialogTitle>
+              {(assisting || kind === "notice") && stage === "decision"
+                ? label + " Management Decision"
+                : label + " Request"}
+            </DialogTitle>
           </DialogHeader>
           {form}
         </DialogContent>
@@ -1471,7 +1820,7 @@ export default function EntitlementTab({
                   <span className="block font-semibold text-primary">
                     {record.leaveType && modeOf(record.kind) === "leaveDays"
                       ? record.leaveType
-                      : label}
+                      : record.assistanceType || label}
                   </span>
                   <span className="block text-xs text-muted-foreground">
                     {record.reason}

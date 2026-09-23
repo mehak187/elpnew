@@ -16,7 +16,7 @@ export const ENTITLEMENT_SUBCATEGORY = {
   overtime: "Overtime Pay Request",
   medical: "Medical Allowance Request",
   transport: "Transport Allowance",
-  assignment: "Assignment Allowance Request",
+  assistance: "Assistance",
   travel: "Travel Allowance Request",
   airTicket: "Air Ticket Allowance Request",
   notice: "Notice Pay Request",
@@ -32,6 +32,19 @@ export const ENTITLEMENT_SUBCATEGORY = {
  */
 export const TRANSPORT_GENERAL = "general";
 export const TRANSPORT_COURT = "court";
+
+/**
+ * Assistance is help the firm gives, not an allowance it owes, so it is booked
+ * under a category of its own and filed under the kind of help it was.
+ */
+export const ASSISTANCE_CATEGORY = "Assistance";
+export const ASSISTANCE_TYPES = [
+  "Medical Assistance",
+  "Financial Assistance",
+  "Emergency Assistance",
+  "Bereavement Assistance",
+  "Education Assistance",
+];
 
 /** Where a request stands. */
 export const ENTITLEMENT_PENDING = "Pending";
@@ -266,9 +279,9 @@ export const REQUEST_PREFIX = {
   overtime: "OTR",
   medical: "MAR",
   transport: "TRA",
-  assignment: "ASR",
-  travel: "TVR",
-  airTicket: "ATR",
+  assistance: "ASR",
+  travel: "TAR",
+  airTicket: "ATA",
   notice: "NPR",
   endOfService: "EOS",
 };
