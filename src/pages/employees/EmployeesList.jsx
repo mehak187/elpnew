@@ -120,7 +120,10 @@ export default function EmployeesList() {
           <Inline label="Basic Salary:">{money(row.salary)}</Inline>
           <Inline label="Allowances:">{money(totalAllowances(row))}</Inline>
           <Inline label="Deductions:">{money(totalDeductions(row))}</Inline>
-          <div className="mt-2 border-t pt-2">
+          {/* Set apart by the space above it and the weight it is written
+              in: a rule inside a cell reads as a line of the table, and the
+              table has none until the pointer is on it. */}
+          <div className="pt-2">
             <Inline label="Net Salary:" strong>
               {money(netSalary(row))}
             </Inline>
@@ -159,7 +162,6 @@ export default function EmployeesList() {
             searchPlaceholder="Search employee by name, ID, department..."
             enableColumnSearch={false}
             enableSorting
-            hoverLines
             onAdd={() => navigate("/employees/create")}
             addLabel="Add Employee"
             currentPage={currentPage}

@@ -147,7 +147,7 @@ export default function CourtFeePayments() {
             <p className="text-muted-foreground">{row.subcategory}</p>
           </div>
           {/* What the court gave back, kept with what it was given for */}
-          <div className="space-y-1 border-t pt-2">
+          <div className="space-y-1 pt-2">
             <DocumentLink file={row.registrationReceipt}>
               View Registration Receipt
             </DocumentLink>
@@ -173,12 +173,12 @@ export default function CourtFeePayments() {
           <p className="text-center text-lg font-bold text-primary">
             {money(row.amount)}
           </p>
-          <div className="space-y-1 border-t pt-2 text-xs">
+          <div className="space-y-1 pt-2 text-xs">
             <Pair label="Payment Method:">{row.paymentMethod}</Pair>
             <Pair label="Bank Name:">{row.bank}</Pair>
             <Pair label="Account No.:">{row.accountNo}</Pair>
           </div>
-          <div className="space-y-1 border-t pt-2 text-xs">
+          <div className="space-y-1 pt-2 text-xs">
             <p className="text-muted-foreground">Payment Receipt:</p>
             <DocumentLink file={row.receipt}>View Payment Receipt</DocumentLink>
           </div>
@@ -217,7 +217,7 @@ export default function CourtFeePayments() {
             date={row.approvedAt}
             time={row.approvedTime}
           />
-          <p className="border-t pt-2">
+          <p className="pt-2">
             <span className="text-muted-foreground">Status: </span>
             <span
               className={cn(

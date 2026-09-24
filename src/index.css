@@ -761,23 +761,17 @@
   }
 }
 /*
- * A table ruled only where the pointer is.
+ * A table with no lines in it at all.
  *
- * At rest the body has no lines at all. The row under the pointer is tinted
- * and ruled above and below; the cell under it is framed on all four sides.
- * Drawn as inset shadows rather than borders, so nothing moves by a pixel
- * when the lines appear.
+ * The body is never ruled - not between rows, not between columns, and not
+ * around the row under the pointer. Where the pointer is, is said with a tint
+ * and nothing else, and the tint takes the whole row: a record is one thing,
+ * so picking out the cell the pointer happens to be over would only break it
+ * into pieces.
  */
 .table-hover-lines tbody td {
-  transition: background-color 120ms, box-shadow 120ms;
+  transition: background-color 120ms;
 }
 .table-hover-lines tbody tr:hover > td {
-  background-color: var(--table-head);
-  box-shadow:
-    inset 0 1px 0 var(--field-border),
-    inset 0 -1px 0 var(--field-border);
-}
-.table-hover-lines tbody tr:hover > td:hover {
   background-color: var(--secondary);
-  box-shadow: inset 0 0 0 1px var(--field-border);
 }
