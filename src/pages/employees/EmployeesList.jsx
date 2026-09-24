@@ -15,11 +15,26 @@ import {
 } from "./employeeData";
 
 /** A fact with its heading beside it, where the pair fits on one line. */
+/**
+ * A label and its value, side by side on one line.
+ *
+ * Laid out rather than run together as text: a value set with a space after
+ * the label can be pushed onto a line of its own when the column narrows, and
+ * a date sitting under "Date of Joining:" reads as two facts rather than one.
+ * The value keeps to one line for the same reason.
+ */
 function Inline({ label, children, strong }) {
   return (
-    <p className={cn("leading-tight", strong && "text-primary")}>
-      <span className="font-semibold">{label} </span>
-      <span className={cn(strong && "font-semibold")}>{children || "-"}</span>
+    <p
+      className={cn(
+        "flex flex-wrap items-baseline gap-x-1 leading-tight",
+        strong && "text-primary"
+      )}
+    >
+      <span className="font-semibold">{label}</span>
+      <span className={cn("whitespace-nowrap", strong && "font-semibold")}>
+        {children || "-"}
+      </span>
     </p>
   );
 }

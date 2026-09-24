@@ -761,13 +761,12 @@
   }
 }
 /*
- * A table with no lines in it at all.
+ * Where the pointer is, said with a tint and nothing else.
  *
- * The body is never ruled - not between rows, not between columns, and not
- * around the row under the pointer. Where the pointer is, is said with a tint
- * and nothing else, and the tint takes the whole row: a record is one thing,
- * so picking out the cell the pointer happens to be over would only break it
- * into pieces.
+ * The rule under each row is there whether or not the pointer is on it, so
+ * hover adds no second line - one arriving and leaving under the pointer only
+ * flickers. The tint takes the whole row: a record is one thing, and picking
+ * out the cell the pointer happens to be over would break it into pieces.
  */
 .table-hover-lines tbody td {
   transition: background-color 120ms;

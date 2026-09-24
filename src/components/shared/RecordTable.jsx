@@ -3,12 +3,12 @@ import { cn } from "@/lib/utils";
 /**
  * The one table every list of records is drawn with.
  *
- * Standard 07: the body is frameless. There are no lines between columns and
- * none between rows either, because the padding already separates one from the
- * next and a grid of lines competes with the data it is supposed to be
- * organising. Where the pointer is, is said with a tint instead. The frame is
- * a single outer border with the container radius, and no shadow: a list is
- * part of the page, not something floating over it.
+ * Standard 07: the body is frameless. There are no lines between columns -
+ * only a rule under each row - because the padding already separates one
+ * column from the next, and a full grid of lines competes with the data it is
+ * supposed to be organising. The frame is a single outer border with the
+ * container radius, and no shadow: a list is part of the page, not something
+ * floating over it.
  *
  * Anything a particular table needs on top of that is passed as a class; the
  * frame itself is not re-described in each file.
@@ -73,11 +73,21 @@ export function Th({ width, className, children }) {
  * draws a grid the data never asked for. The padding does the separating.
  *
  * Where the pointer is, is said with a tint over the whole row and nothing
- * else - see `.table-hover-lines` in the stylesheet. No line is drawn, so
- * nothing moves and nothing competes with the data.
+ * else - see `.table-hover-lines` in the stylesheet. Nothing is drawn around
+ * the row or the cell on top of that: the rule under the row is there either
+ * way, and a second line arriving under the pointer only flickers.
  */
 export function Row({ className, children }) {
-  return <tr className={cn("border-0 align-top", className)}>{children}</tr>;
+  return (
+    <tr
+      className={cn(
+        "border-b border-container-border align-top last:border-0",
+        className
+      )}
+    >
+      {children}
+    </tr>
+  );
 }
 
 export function Td({ className, colSpan, children }) {
