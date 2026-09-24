@@ -12,7 +12,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import AiSearch from "@/components/shared/AiSearch";
-import FormHeading from "@/components/shared/FormHeading";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import UploadIcon from "@/components/shared/UploadIcon";
 import { EmptyState } from "@/components/shared/panels";
 import { RequestSteps } from "@/components/shared/RequestSteps";
@@ -23,7 +28,7 @@ import {
   Row,
   Td,
 } from "@/components/shared/RecordTable";
-import { FileCheck, Gavel, Plus } from "lucide-react";
+import { FileCheck, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useViolations } from "@/lib/violations/context";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
@@ -604,23 +609,17 @@ export default function ViolationsSection({ employee, canEdit = true }) {
 
   return (
     <div className="space-y-6">
-      {/* One heading at a time: the section's row - heading on the left, the
-          way to add on the right - gives way to the process's own heading
-          while a violation is open. */}
-      {openId ? (
-        <FormHeading
-          icon={Gavel}
-          title="Add Violation or Penalty"
-          note={record?.violationNo ? record.violationNo : undefined}
-          onBack={close}
-        />
-      ) : (
-        <FormHeading icon={Gavel} title="Violations & Penalties History" />
-      )}
-
-      {openId && (
-        <Card>
-          <CardContent className="space-y-6 p-4 sm:p-6">
+      {/* Opened over the page, so the list it is filed into stays behind it. */}
+      <Dialog open={Boolean(openId)} onOpenChange={(o) => !o && close()}>
+        <DialogContent className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {record?.violationNo
+                ? "Violation " + record.violationNo
+                : "Add Violation or Penalty"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
             <RequestSteps
               compact
               active={stage}
@@ -628,9 +627,9 @@ export default function ViolationsSection({ employee, canEdit = true }) {
               steps={stages}
             />
             {stageBody[stage]}
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardContent className="space-y-4 p-4 sm:p-6">
