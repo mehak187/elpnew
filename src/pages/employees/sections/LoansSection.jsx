@@ -222,11 +222,6 @@ export default function LoansSection({
   // keystroke in the form above them.
   const months = startMonths();
 
-  const attachedName =
-    attachment?.name ||
-    records.find((record) => record.id === openId)?.attachment ||
-    "";
-
   const requestNo = openId
     ? records.find((record) => record.id === openId)?.requestNo || ""
     : nextLoanNo(records);
@@ -453,46 +448,9 @@ export default function LoansSection({
 
           {stage === "decision" ? (
             <>
-              {/* Who asked, and under what number. Whatever backs the request
-                  up hangs under the number it belongs to. */}
-              <Bordered title="Request Information">
-                <div className="form-grid">
-                  <div className="flex h-full flex-col justify-end gap-2">
-                    <Settled id="decision-no" label="Request No." value={requestNo} />
-                    {attachedName && (
-                      <button
-                        type="button"
-                        className="flex items-center gap-1.5 text-sm text-primary no-underline hover:text-primary/70"
-                        title={"Open " + attachedName}
-                      >
-                        <FileText className="h-4 w-4 shrink-0 text-blue-600" />
-                        {attachedName}
-                      </button>
-                    )}
-                  </div>
-
-                  <Settled
-                    id="decision-date"
-                    label="Request Date"
-                    value={formatDate(requestedOn)}
-                  />
-                  <Settled
-                    id="decision-employee"
-                    label="Employee Name"
-                    value={borrower}
-                  />
-                  <Settled
-                    id="decision-active"
-                    label="Active Loan Status"
-                    value={
-                      isIncrease
-                        ? "Active Loan - " + amount(outstanding)
-                        : "No Active Loan"
-                    }
-                  />
-                </div>
-              </Bordered>
-
+              {/* The request is not read back here: what it was for is on the
+                  stage behind this one, and the facts a decision needs are on
+                  the card at the foot of the page. */}
               <DecisionChoice
                 value={decision}
                 onChange={setDecision}
@@ -500,6 +458,7 @@ export default function LoansSection({
                 notes={{
                   full: "Approve the loan as requested",
                   partial: "Approve with amended terms",
+                  completion: "Return for missing information or documents",
                   rejected: "Reject the loan request",
                 }}
               />
@@ -931,7 +890,7 @@ export default function LoansSection({
             </div>
 
             {addLabel && !adding && (
-              <Button type="button" className="ms-auto" onClick={onOpenAdd}>
+              <Button variant="outline" type="button" className="ms-auto" onClick={onOpenAdd}>
                 <Plus className="me-2 h-4 w-4" />
                 {addLabel}
               </Button>

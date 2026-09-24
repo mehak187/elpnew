@@ -261,7 +261,7 @@ export default function ClientManagementSection() {
       {/* The way to add, on the row above the list it adds to. */}
       {!mode && (
         <div className="flex justify-end">
-          <Button type="button" onClick={openAdd}>
+          <Button variant="outline" type="button" onClick={openAdd}>
             <Plus className="me-1.5 h-4 w-4" />
             Add Client Team
           </Button>

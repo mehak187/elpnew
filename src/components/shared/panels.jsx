@@ -43,16 +43,20 @@ export function PriorityDot({ level, label }) {
 export function Bordered({ title, held, children }) {
   return (
     <div className="space-y-4 rounded-lg border p-4">
-      <p className="flex items-center gap-2 font-semibold text-primary">
-        <span
-          aria-hidden="true"
-          className={cn(
-            "h-5 w-1 shrink-0 rounded-full",
-            held ? "bg-destructive" : "bg-primary"
-          )}
-        />
-        {title}
-      </p>
+      {/* A box whose contents name themselves takes no title: the bar and the
+          heading would only repeat what is already being read. */}
+      {title && (
+        <p className="flex items-center gap-2 font-semibold text-primary">
+          <span
+            aria-hidden="true"
+            className={cn(
+              "h-5 w-1 shrink-0 rounded-full",
+              held ? "bg-destructive" : "bg-primary"
+            )}
+          />
+          {title}
+        </p>
+      )}
       {children}
     </div>
   );

@@ -60,7 +60,7 @@ export default function EntitlementsSection({
           A button that said "Add" would promise otherwise. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <AiSearch value={query} onChange={setQuery} placeholder="Search..." />
-        <Button
+        <Button variant="outline"
           type="button"
           className="ms-auto"
           onClick={() => setAdding(tab)}

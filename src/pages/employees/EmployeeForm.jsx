@@ -1323,7 +1323,7 @@ export default function EmployeeForm({ self }) {
                             behind the overlay and cannot be pressed anyway,
                             and taking it away shifts the row underneath. */}
                         {!readOnly && (
-                          <Button
+                          <Button variant="outline"
                             type="button"
                             className="ms-auto"
                             onClick={() => setAddingDoc(true)}

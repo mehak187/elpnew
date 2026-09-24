@@ -611,7 +611,7 @@ export function AdvanceRequests({
             placeholder="Ask about salary advances..."
           />
           {onAdd && (
-            <Button type="button" className="ms-auto" onClick={onAdd}>
+            <Button variant="outline" type="button" className="ms-auto" onClick={onAdd}>
               <Plus className="me-2 h-4 w-4" />
               {addLabel}
             </Button>

@@ -1001,12 +1001,6 @@ export default function EntitlementTab({
             {medicalLayout && decisionFields}
           </DecisionChoice>
 
-          {!medicalLayout && (
-            <div className="space-y-4">
-              <h3 className={HEADING}>Decision</h3>
-              {decisionFields}
-            </div>
-          )}
 
           {/* Where the case stands now. Only a trip made for a case has a
               file to bring up to date, and only an approved one gets it. */}
@@ -1043,56 +1037,23 @@ export default function EntitlementTab({
             </div>
           )}
 
-          {/* How the money actually reaches them. A refused request has none
-              of this: there is nothing to pay, and so nothing to ask. */}
-          {decision && !refusing && (
+          {/* What an approval settles, in the one order every request in the
+              system settles it in: where it is booked and when it goes, then
+              how much goes and by what route. No heading over it - it is what
+              the answer above it carries out. */}
+          {decision && !refusing && !returning && (
             <div className="space-y-4 sm:space-y-6">
-              <h3 className={HEADING}>
-                Expense &amp; Disbursement Details
-              </h3>
               <div className="form-grid">
                 <Settled
                   id="ent-type"
                   label="Expense Type"
                   value={ENTITLEMENT_EXPENSE_TYPE}
                 />
-                <Settled
-                  id="ent-category"
-                  label="Category"
-                  value={category}
-                />
+                <Settled id="ent-category" label="Category" value={category} />
                 <Settled
                   id="ent-subcategory"
                   label="Subcategory"
                   value={subcategory}
-                />
-                <Settled
-                  id="ent-disbursed"
-                  label="Amount Disbursed (OMR)"
-                  value={amountValue(approvedAmount)}
-                  payable
-                />
-              </div>
-
-              <div className="form-grid">
-                <Choice
-                  id="ent-method"
-                  label="Payment Method"
-                  value={payment.method}
-                  onChange={(value) => value && setPay("method", value)}
-                  placeholder="Select method"
-                  options={PAYMENT_METHODS}
-                />
-
-                {/* One choice, not two: the account carries the bank it is
-                    held at, so they cannot be set to disagree. */}
-                <Choice
-                  id="ent-bank"
-                  label="Bank / Account"
-                  value={payment.bankAccount}
-                  onChange={(value) => value && setPay("bankAccount", value)}
-                  placeholder="Select bank account"
-                  options={PAYING_ACCOUNTS}
                 />
 
                 <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
@@ -1106,12 +1067,105 @@ export default function EntitlementTab({
                     onChange={(e) => setPay("paymentDate", e.target.value)}
                   />
                 </div>
+              </div>
 
-                {/* The proof of the transfer sits beside its reference as a
+              <div className="form-grid">
+                {/* What is being granted. A full approval grants what was
+                    asked for and has nothing to type; a partial one cuts it,
+                    and cuts it in whatever the request is counted in - days
+                    off a balance, hours worked, or a sum. */}
+                {amending && approvedDays !== null ? (
+                  <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
+                    <FieldLabel htmlFor="ent-approved-days" required>
+                      Approved Days
+                    </FieldLabel>
+                    <Input
+                      id="ent-approved-days"
+                      inputMode="numeric"
+                      value={payment.approvedDays}
+                      onChange={(e) =>
+                        setPay("approvedDays", e.target.value.replace(/\D/g, ""))
+                      }
+                      placeholder="0"
+                      className={cn(!grantIsSound && "border-destructive")}
+                    />
+                    {!grantIsSound && (
+                      <p role="alert" className="text-xs font-semibold text-destructive">
+                        {"Between 1 and " + days + " days"}
+                      </p>
+                    )}
+                  </div>
+                ) : amending && approvedHours !== null ? (
+                  <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
+                    <FieldLabel htmlFor="ent-approved-hours" required>
+                      Approved Overtime Hours
+                    </FieldLabel>
+                    <Input
+                      id="ent-approved-hours"
+                      inputMode="decimal"
+                      value={payment.approvedHours}
+                      onChange={(e) =>
+                        setPay("approvedHours", e.target.value.replace(/[^\d.]/g, ""))
+                      }
+                      placeholder="0"
+                      className={cn(!grantIsSound && "border-destructive")}
+                    />
+                    {!grantIsSound && (
+                      <p role="alert" className="text-xs font-semibold text-destructive">
+                        {"Between 0 and " + workedHours + " hours"}
+                      </p>
+                    )}
+                  </div>
+                ) : amending ? (
+                  <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
+                    <FieldLabel htmlFor="ent-approved" required>
+                      Approved Amount (OMR)
+                    </FieldLabel>
+                    <Input
+                      id="ent-approved"
+                      inputMode="decimal"
+                      value={payment.approved}
+                      onChange={(e) =>
+                        setPay("approved", e.target.value.replace(/[^\d.]/g, ""))
+                      }
+                      placeholder="0.000"
+                      className={cn(!grantIsSound && "border-destructive")}
+                    />
+                  </div>
+                ) : (
+                  <Settled
+                    id="ent-approved"
+                    label="Approved Amount (OMR)"
+                    value={amountValue(approvedAmount)}
+                    payable
+                  />
+                )}
+
+                <Choice
+                  id="ent-method"
+                  label="Payment Method"
+                  value={payment.method}
+                  onChange={(value) => value && setPay("method", value)}
+                  placeholder="Select method"
+                  options={PAYMENT_METHODS}
+                />
+
+                {/* One choice, not two: the account carries the bank it is
+                    held at, so they cannot be set to disagree. */}
+                <Choice
+                  id="ent-bank"
+                  label="Bank Account"
+                  value={payment.bankAccount}
+                  onChange={(value) => value && setPay("bankAccount", value)}
+                  placeholder="Select bank account"
+                  options={PAYING_ACCOUNTS}
+                />
+
+                {/* The proof of the transfer sits beside its number as a
                     plain icon: nothing to press but the paperclip itself. */}
                 <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
                   <FieldLabel htmlFor="ent-reference" required>
-                    Payment Reference
+                    Transfer No.
                   </FieldLabel>
                   <div className="flex w-full min-w-0 items-center gap-2">
                     <Input
@@ -1147,6 +1201,39 @@ export default function EntitlementTab({
             </div>
           )}
 
+          {/* Directly below what the approval settles, and never required:
+              a decision is made by the answer above it, and holding one back
+              for want of a sentence only stops the work. */}
+          {decision && (
+            <div className="relative space-y-2 pb-5">
+              <FieldLabel htmlFor="ent-comment">
+                {returning
+                  ? "What is Missing"
+                  : refusing
+                    ? "Reason for Rejection"
+                    : "Management Comment"}
+              </FieldLabel>
+              <Textarea
+                id="ent-comment"
+                rows={3}
+                maxLength={NOTES_LIMIT}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                disabled={!canDecide || settled || refused}
+                placeholder={
+                  returning
+                    ? "Say what the employee still has to supply"
+                    : refusing
+                      ? "Say why this request is refused"
+                      : "Enter management comment"
+                }
+              />
+              <p className="absolute bottom-0 end-0 text-xs text-muted-foreground">
+                {reason.length} / {NOTES_LIMIT}
+              </p>
+            </div>
+          )}
+
           {/* Everything about the request itself, in one line under the
               decision it belongs to - wearing the colour of that decision,
               so the answer is read before a word of it. */}
@@ -1164,7 +1251,7 @@ export default function EntitlementTab({
             {kind === "notice" && (
               <h3 className={cn(HEADING, "mb-3")}>{label} Request Summary</h3>
             )}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 lg:[&>*+*]:border-s">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6 lg:[&>*+*]:border-s">
               {namesAmount && (
                 <Fact icon={FileText} label="Request No.">
                   {requestNo}
@@ -1194,25 +1281,28 @@ export default function EntitlementTab({
               <Fact icon={User} label={kind === "notice" ? "Employee" : "Employee Name"}>
                 {whose}
               </Fact>
-              {courtLinked ? (
+              {courtLinked && (
                 <Fact icon={CalendarDays} label="Travel Date">
                   {draft.travelDate ? formatDate(draft.travelDate) : "-"}
                 </Fact>
-              ) : namesAmount ? (
-                <Fact icon={Banknote} label="Requested Amount">
-                  {amountValue(amount) + " OMR"}
-                </Fact>
-              ) : mode === "hours" ? (
+              )}
+              {mode === "hours" && (
                 <Fact icon={Clock} label="Approved Hours">
                   {approvedHours ? approvedHours + " Hours" : "-"}
                 </Fact>
-              ) : (
-                <Fact icon={Landmark} label="Bank / Account">
-                  {employee?.bankName
-                    ? employee.bankName + " - " + employee.accountNumber
-                    : "-"}
-                </Fact>
               )}
+
+              {/* Where the money lands, and what it comes to. Both belong on
+                  every card: a decision is checked against the account it
+                  will leave for and the figure it will carry. */}
+              <Fact icon={Landmark} label="Bank Name & Account Number">
+                {employee?.bankName
+                  ? employee.bankName + " - " + employee.accountNumber
+                  : "-"}
+              </Fact>
+              <Fact icon={Banknote} label="Total Amount">
+                {amountValue(decision ? approvedAmount : amount) + " OMR"}
+              </Fact>
               <Fact icon={History} label="History">
                 <RecordLink onClick={() => setShowHistory(true)}>
                   View history

@@ -254,7 +254,7 @@ export default function BranchesSection({ canEdit }) {
       {/* The way to add, on the row above the list it adds to. */}
       {canEdit && !adding && (
         <div className="flex justify-end">
-          <Button type="button" onClick={() => setAdding(true)}>
+          <Button variant="outline" type="button" onClick={() => setAdding(true)}>
             <Plus className="me-1.5 h-4 w-4" />
             Add Branch
           </Button>

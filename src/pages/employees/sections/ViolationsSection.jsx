@@ -639,7 +639,7 @@ export default function ViolationsSection({ employee, canEdit = true }) {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <AiSearch value={query} onChange={setQuery} placeholder="Ask AI" />
             {canEdit && !openId && (
-              <Button type="button" className="ms-auto" onClick={openNew}>
+              <Button variant="outline" type="button" className="ms-auto" onClick={openNew}>
                 <Plus className="me-2 h-4 w-4" />
                 Add Violation
               </Button>

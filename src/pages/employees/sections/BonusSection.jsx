@@ -559,7 +559,7 @@ export default function BonusSection({
             placeholder="Ask about bonuses..."
           />
           {addLabel && !adding && (
-            <Button type="button" className="ms-auto" onClick={onOpenAdd}>
+            <Button variant="outline" type="button" className="ms-auto" onClick={onOpenAdd}>
               <Plus className="me-2 h-4 w-4" />
               {addLabel}
             </Button>

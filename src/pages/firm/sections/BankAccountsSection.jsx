@@ -613,7 +613,7 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                 </Button>
                 {/* The way to add, at the end of the row above the list. */}
                 {canEdit && (
-                  <Button type="button" onClick={openAddBank}>
+                  <Button variant="outline" type="button" onClick={openAddBank}>
                     <Plus className="me-1.5 h-4 w-4" />
                     Add New Bank
                   </Button>
