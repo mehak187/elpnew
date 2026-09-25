@@ -1,536 +1,211 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { EmptyState } from "@/components/shared/panels";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { EmptyState, Tile } from "@/components/shared/panels";
-import { Save, Plus, Trash2, CalendarDays, Activity } from "lucide-react";
-import { liveCases } from "@/pages/clients/clientCases";
+  RecordTable,
+  HeadRow,
+  Th,
+  Row,
+  Td,
+} from "@/components/shared/RecordTable";
 import {
-  ACTIVITY_TYPES,
-  activityType,
-  LEGAL_DOCUMENT_TYPES,
-  spanMinutes,
+  CalendarDays,
+  Clock,
+  Activity,
+  FileText,
+  Gavel,
+  Megaphone,
+  Send,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useAdvances } from "@/lib/advances/context";
+import { useBonuses } from "@/lib/bonuses/context";
+import { useLeaves } from "@/lib/leaves/context";
+import { useViolations } from "@/lib/violations/context";
+import { useCirculars } from "@/lib/circulars/context";
+import { initialEntitlements } from "../entitlementData";
+import { longDate, today } from "../activityData";
+import {
+  activityLog,
+  workingDay,
+  actionCounts,
+  clockTime,
   formatDuration,
-  today,
-  longDate,
-  recordedDays,
-} from "../activityData";
-import { checkRequired } from "@/components/shared/formFields";
+} from "../activityLog";
 
-/** A field's label. */
-function FieldLabel({ htmlFor, children }) {
-  return (
-    <Label htmlFor={htmlFor}>
-      {children}
-    </Label>
-  );
-}
+/** What each kind of work is called on the page, and how it is drawn. */
+const KINDS = [
+  { key: "request", label: "Requests Raised", icon: Send },
+  { key: "decision", label: "Decisions Recorded", icon: Gavel },
+  { key: "document", label: "Documents Filed", icon: FileText },
+  { key: "circular", label: "Circulars Acknowledged", icon: Megaphone },
+];
 
-/** A heading with a rule under it, matching the other sections. */
-function Block({ title, children }) {
+/** A figure the day is measured by. Read, never entered. */
+function Measure({ icon, label, value, note }) {
+  const Icon = icon;
   return (
-    <div className="space-y-4">
-      <p className="border-b pb-2 text-sm font-semibold text-primary">{title}</p>
-      {children}
+    <div className="rounded-lg border p-4">
+      <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+        <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
+        {label}
+      </p>
+      <p className="mt-1 text-lg font-bold text-primary">{value}</p>
+      {note && <p className="text-xs text-muted-foreground">{note}</p>}
     </div>
   );
 }
 
-const emptyActivity = {
-  type: "",
-  caseNo: "",
-  location: "",
-  person: "",
-  from: "",
-  to: "",
-};
-
-const emptyDocument = { type: "", caseNo: "", description: "", count: "1" };
+/** A fact of the working day: shown because the system knows it. */
+function Fixed({ id, label, value }) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Input
+        id={id}
+        readOnly
+        tabIndex={-1}
+        value={value || "-"}
+        className="cursor-default bg-locked text-muted-foreground"
+      />
+    </div>
+  );
+}
 
 /**
- * The working day as the employee records it.
+ * The day's work, compiled rather than reported.
  *
- * Nothing here asks for a number that can be counted instead: sessions,
- * meetings and documents are entered one by one and the totals fall out of the
- * entries, so a day cannot claim three hearings and list two. Office time and
- * system active time are both shown but neither is typed - the first is read
- * off the clock, the second off what the employee actually did in YANDS.
+ * Nothing on this page is typed. Every figure and every line is read back off
+ * what the system already recorded when the work was done - a request sent, a
+ * decision given, a circular acknowledged, a paper filed - so the day cannot
+ * be written up more kindly than it was worked, and nobody has to stop at five
+ * o'clock to account for themselves.
+ *
+ * Check-in and check-out are the first and last thing the person actually did.
+ * That is the only honest answer a system without a turnstile has, and it is
+ * said plainly rather than dressed up as an attendance record.
  */
-export default function DailyActivitiesSection() {
+export default function DailyActivitiesSection({ employee }) {
+  const { advances } = useAdvances();
+  const { bonuses } = useBonuses();
+  const { leaves } = useLeaves();
+  const { violations } = useViolations();
+  const { circulars } = useCirculars();
+
   const date = today();
 
-  // What the system saw of today, rather than what anybody says about it.
-  const recorded = recordedDays().find((day) => day.date === date);
-  const activeMinutes = recorded?.activeMinutes ?? 0;
+  const log = activityLog({
+    employee,
+    date,
+    advances,
+    bonuses,
+    leaves,
+    violations,
+    circulars,
+    entitlements: initialEntitlements,
+    documents: employee?.documents || [],
+  });
 
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [activities, setActivities] = useState([]);
-  const [documents, setDocuments] = useState([]);
-  const [otherWork, setOtherWork] = useState("");
-
-  const [activity, setActivity] = useState(emptyActivity);
-  const [document, setDocument] = useState(emptyDocument);
-
-  const officeMinutes = spanMinutes(startTime, endTime);
-
-  const setActivityField = (name, value) =>
-    setActivity((prev) => ({ ...prev, [name]: value }));
-  const setDocumentField = (name, value) =>
-    setDocument((prev) => ({ ...prev, [name]: value }));
-
-  const shape = activityType(activity.type);
-
-  const canAddActivity =
-    activity.type && activity.from && activity.to && spanMinutes(activity.from, activity.to) > 0;
-
-  const addActivity = () => {
-    if (!checkRequired() || !canAddActivity) return;
-    setActivities((prev) => [...prev, { ...activity, id: prev.length + 1 }]);
-    setActivity(emptyActivity);
-  };
-
-  const canAddDocument = document.type && Number(document.count) > 0;
-
-  const addDocument = () => {
-    if (!checkRequired() || !canAddDocument) return;
-    setDocuments((prev) => [
-      ...prev,
-      { ...document, count: Number(document.count), id: prev.length + 1 },
-    ]);
-    setDocument(emptyDocument);
-  };
-
-  // Counted, never typed.
-  const countOf = (key) =>
-    activities.filter((a) => activityType(a.type).key === key).length;
-  const minutesOf = (key) =>
-    activities
-      .filter((a) => activityType(a.type).key === key)
-      .reduce((total, a) => total + spanMinutes(a.from, a.to), 0);
-  const documentCount = documents.reduce((total, d) => total + d.count, 0);
-
-  const save = () => {
-    console.log("Saving daily activity:", {
-      date,
-      startTime,
-      endTime,
-      officeMinutes,
-      activeMinutes,
-      activities,
-      documents,
-      otherWork,
-    });
-  };
+  const day = workingDay(log);
+  const counts = actionCounts(log);
 
   return (
     <div className="space-y-6">
-      {/* The day itself */}
+      {/* When the day started and ended, and how much of it was spent in the
+          system. None of it is asked for: all four follow from the log. */}
       <div className="rounded-lg border p-4">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <p className="font-semibold text-primary">Working Day</p>
-          <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-            <CalendarDays className="h-4 w-4" />
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <CalendarDays aria-hidden="true" className="h-4 w-4 shrink-0" />
             {longDate(date)}
-          </span>
+          </p>
         </div>
 
         <div className="form-grid">
-          <div className="space-y-2">
-            <FieldLabel htmlFor="day-start" required>
-              Start Time / Check-in
-            </FieldLabel>
-            <Input
-              id="day-start"
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <FieldLabel htmlFor="day-end" required>
-              End Time / Check-out
-            </FieldLabel>
-            <Input
-              id="day-end"
-              type="time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <FieldLabel htmlFor="day-office">Total Office Working Time</FieldLabel>
-            <Input
-              id="day-office"
-              readOnly
-              tabIndex={-1}
-              className="bg-locked text-muted-foreground"
-              value={formatDuration(officeMinutes)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <FieldLabel htmlFor="day-active">System Active Time</FieldLabel>
-            <Input
-              id="day-active"
-              readOnly
-              tabIndex={-1}
-              className="bg-locked text-muted-foreground"
-              value={formatDuration(activeMinutes)}
-            />
-          </div>
+          <Fixed
+            id="day-check-in"
+            label="Check-in"
+            value={day.checkIn ? clockTime(day.checkIn) : ""}
+          />
+          <Fixed
+            id="day-check-out"
+            label="Check-out"
+            value={day.checkOut ? clockTime(day.checkOut) : ""}
+          />
+          <Fixed
+            id="day-office"
+            label="Total Office Time"
+            value={log.length ? formatDuration(day.officeMinutes) : ""}
+          />
+          <Fixed
+            id="day-active"
+            label="System Active Duration"
+            value={log.length ? formatDuration(day.activeMinutes) : ""}
+          />
         </div>
       </div>
 
-      {/* What the day was spent on */}
-      <div className="rounded-lg border p-4">
-        <p className="mb-4 font-semibold text-primary">Daily Activities</p>
-
-        <Block title="Add Activity">
-          <div className="form-grid form-grid-3">
-            <div className="space-y-2">
-              <FieldLabel htmlFor="activity-type" required>
-                Activity Type
-              </FieldLabel>
-              <Select
-                value={activity.type}
-                onValueChange={(value) => setActivityField("type", value)}
-              >
-                <SelectTrigger id="activity-type">
-                  <SelectValue placeholder="Select activity type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ACTIVITY_TYPES.map((type) => (
-                    <SelectItem key={type.name} value={type.name}>
-                      {type.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <FieldLabel htmlFor="activity-case">Related Case / File</FieldLabel>
-              <Select
-                value={activity.caseNo}
-                onValueChange={(value) => setActivityField("caseNo", value)}
-              >
-                <SelectTrigger id="activity-case">
-                  <SelectValue placeholder="Select case, if any" />
-                </SelectTrigger>
-                <SelectContent>
-                  {liveCases.map((legalCase) => (
-                    <SelectItem key={legalCase.id} value={legalCase.caseNo}>
-                      {legalCase.caseNo} - {legalCase.type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <FieldLabel htmlFor="activity-location">
-                {shape.location}
-              </FieldLabel>
-              <Input
-                id="activity-location"
-                placeholder={"Enter " + shape.location.toLowerCase()}
-                value={activity.location}
-                onChange={(e) => setActivityField("location", e.target.value)}
-              />
-            </div>
-
-            {/* Only the types that meet somebody ask who it was */}
-            {shape.person && (
-              <div className="space-y-2">
-                <FieldLabel htmlFor="activity-person">{shape.person}</FieldLabel>
-                <Input
-                  id="activity-person"
-                  placeholder={"Enter " + shape.person.toLowerCase()}
-                  value={activity.person}
-                  onChange={(e) => setActivityField("person", e.target.value)}
-                />
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <FieldLabel htmlFor="activity-from" required>
-                From Time
-              </FieldLabel>
-              <Input
-                id="activity-from"
-                type="time"
-                value={activity.from}
-                onChange={(e) => setActivityField("from", e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <FieldLabel htmlFor="activity-to" required>
-                To Time
-              </FieldLabel>
-              <Input
-                id="activity-to"
-                type="time"
-                value={activity.to}
-                onChange={(e) => setActivityField("to", e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={addActivity}
-            >
-              <Plus className="me-2 h-4 w-4" />
-              Add Activity
-            </Button>
-          </div>
-        </Block>
-
-        <div className="mt-6 overflow-x-auto">
-          {activities.length === 0 ? (
-            <EmptyState>No activities recorded for today yet.</EmptyState>
-          ) : (
-            <table className="w-full min-w-[720px] border text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50 text-start text-xs text-muted-foreground">
-                  <th className="p-3 font-semibold">Activity Type</th>
-                  <th className="p-3 font-semibold">Case / File</th>
-                  <th className="p-3 font-semibold">Court / Location</th>
-                  <th className="p-3 font-semibold">Client / Expert</th>
-                  <th className="p-3 font-semibold">From - To</th>
-                  <th className="p-3 font-semibold">Duration</th>
-                  <th className="p-3 font-semibold">Remove</th>
-                </tr>
-              </thead>
-              <tbody>
-                {activities.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="border-b transition-colors last:border-0 hover:bg-primary/10"
-                  >
-                    <td className="p-3 font-medium">{row.type}</td>
-                    <td className="p-3">{row.caseNo || "-"}</td>
-                    <td className="p-3">{row.location || "-"}</td>
-                    <td className="p-3">{row.person || "-"}</td>
-                    <td className="whitespace-nowrap p-3">
-                      {row.from} - {row.to}
-                    </td>
-                    <td className="whitespace-nowrap p-3">
-                      {formatDuration(spanMinutes(row.from, row.to))}
-                    </td>
-                    <td className="p-3">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-red-500 hover:text-red-600"
-                        onClick={() =>
-                          setActivities((prev) =>
-                            prev.filter((a) => a.id !== row.id)
-                          )
-                        }
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Remove {row.type}</span>
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-
-      {/* What was written */}
-      <div className="rounded-lg border p-4">
-        <p className="mb-4 font-semibold text-primary">
-          Memos &amp; Pleadings Written
-        </p>
-
-        <Block title="Add Document">
-          <div className="form-grid">
-            <div className="space-y-2">
-              <FieldLabel htmlFor="document-type" required>
-                Document Type
-              </FieldLabel>
-              <Select
-                value={document.type}
-                onValueChange={(value) => setDocumentField("type", value)}
-              >
-                <SelectTrigger id="document-type">
-                  <SelectValue placeholder="Select document type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {LEGAL_DOCUMENT_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <FieldLabel htmlFor="document-case">Related Case / File</FieldLabel>
-              <Select
-                value={document.caseNo}
-                onValueChange={(value) => setDocumentField("caseNo", value)}
-              >
-                <SelectTrigger id="document-case">
-                  <SelectValue placeholder="Select case, if any" />
-                </SelectTrigger>
-                <SelectContent>
-                  {liveCases.map((legalCase) => (
-                    <SelectItem key={legalCase.id} value={legalCase.caseNo}>
-                      {legalCase.caseNo} - {legalCase.type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <FieldLabel htmlFor="document-description">
-                Short Description
-              </FieldLabel>
-              <Input
-                id="document-description"
-                placeholder="What the document covers"
-                value={document.description}
-                onChange={(e) => setDocumentField("description", e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <FieldLabel htmlFor="document-count" required>
-                Number Completed
-              </FieldLabel>
-              <Input
-                id="document-count"
-                type="number"
-                min="1"
-                value={document.count}
-                onChange={(e) => setDocumentField("count", e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={addDocument}
-            >
-              <Plus className="me-2 h-4 w-4" />
-              Add Document
-            </Button>
-          </div>
-        </Block>
-
-        <div className="mt-6 overflow-x-auto">
-          {documents.length === 0 ? (
-            <EmptyState>No memos or pleadings recorded for today yet.</EmptyState>
-          ) : (
-            <table className="w-full min-w-[640px] border text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50 text-start text-xs text-muted-foreground">
-                  <th className="p-3 font-semibold">Document Type</th>
-                  <th className="p-3 font-semibold">Case / File</th>
-                  <th className="p-3 font-semibold">Short Description</th>
-                  <th className="p-3 font-semibold">Number</th>
-                  <th className="p-3 font-semibold">Remove</th>
-                </tr>
-              </thead>
-              <tbody>
-                {documents.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="border-b transition-colors last:border-0 hover:bg-primary/10"
-                  >
-                    <td className="p-3 font-medium">{row.type}</td>
-                    <td className="p-3">{row.caseNo || "-"}</td>
-                    <td className="p-3 text-muted-foreground">
-                      {row.description || "-"}
-                    </td>
-                    <td className="p-3">{row.count}</td>
-                    <td className="p-3">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-red-500 hover:text-red-600"
-                        onClick={() =>
-                          setDocuments((prev) =>
-                            prev.filter((d) => d.id !== row.id)
-                          )
-                        }
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Remove {row.type}</span>
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-
-      {/* Everything the categories do not cover */}
-      <div className="rounded-lg border p-4">
-        <p className="mb-4 font-semibold text-primary">Other Work / Notes</p>
-        <Textarea
-          rows={4}
-          placeholder="Any other work carried out today"
-          value={otherWork}
-          onChange={(e) => setOtherWork(e.target.value)}
+      {/* What the day came to, counted by kind. */}
+      <div className="form-grid">
+        <Measure
+          icon={Activity}
+          label="Actions Logged"
+          value={String(log.length)}
+          note="Across the whole system"
         />
+        {KINDS.map((kind) => (
+          <Measure
+            key={kind.key}
+            icon={kind.icon}
+            label={kind.label}
+            value={String(counts[kind.key] || 0)}
+          />
+        ))}
       </div>
 
-      {/* Where the day adds up */}
-      <div className="rounded-lg border p-4">
-        <p className="mb-4 inline-flex items-center gap-2 font-semibold text-primary">
-          <Activity className="h-4 w-4" />
-          Day Summary
+      {/* The day itself, newest first. */}
+      <div className="space-y-4 rounded-lg border p-4">
+        <p className="flex items-center gap-2 font-semibold text-primary">
+          <Clock aria-hidden="true" className="h-4 w-4 shrink-0" />
+          Logged System Actions
         </p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <Tile label="Office Working Time" value={formatDuration(officeMinutes)} />
-          <Tile label="System Active Time" value={formatDuration(activeMinutes)} />
-          <Tile label="Memos & Pleadings" value={documentCount} />
-          <Tile
-            label="Court Sessions"
-            value={countOf("court") + " (" + formatDuration(minutesOf("court")) + ")"}
-          />
-          <Tile
-            label="Client Meetings"
-            value={countOf("client") + " (" + formatDuration(minutesOf("client")) + ")"}
-          />
-          <Tile
-            label="Expert Meetings"
-            value={countOf("expert") + " (" + formatDuration(minutesOf("expert")) + ")"}
-          />
-        </div>
-      </div>
 
-      <div className="flex justify-end">
-        <Button type="button" onClick={save} disabled={!startTime || !endTime}>
-          <Save className="me-2 h-4 w-4" />
-          Save Daily Activity
-        </Button>
+        {log.length === 0 ? (
+          <EmptyState>
+            Nothing has been recorded in the system for this employee today.
+          </EmptyState>
+        ) : (
+          <RecordTable minWidth={820}>
+            <HeadRow>
+              <Th width="12%">Time</Th>
+              <Th width="22%">Action</Th>
+              <Th width="42%">Details</Th>
+              <Th width="24%">Reference</Th>
+            </HeadRow>
+            <tbody>
+              {log.map((event, index) => (
+                <Row key={index}>
+                  <Td className="whitespace-nowrap text-primary">
+                    {clockTime(event.at)}
+                  </Td>
+                  <Td
+                    className={cn(
+                      "whitespace-nowrap font-medium",
+                      event.kind === "decision" ? "text-green-700" : "text-primary"
+                    )}
+                  >
+                    {event.action}
+                  </Td>
+                  <Td className="text-start text-muted-foreground">
+                    {event.about || "-"}
+                  </Td>
+                  <Td className="text-primary">{event.reference || "-"}</Td>
+                </Row>
+              ))}
+            </tbody>
+          </RecordTable>
+        )}
       </div>
     </div>
   );
