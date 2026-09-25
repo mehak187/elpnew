@@ -1516,7 +1516,9 @@ export default function EmployeeForm({ self }) {
                   />
                 )}
 
-                {activeSection === "daily" && <DailyActivitiesSection />}
+                {activeSection === "daily" && (
+                  <DailyActivitiesSection employee={formData} />
+                )}
 
                 {activeSection === "circulars" && (
                   <EmployeeCircularsSection employee={formData} self={self} />
