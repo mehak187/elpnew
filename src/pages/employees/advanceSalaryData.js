@@ -61,18 +61,28 @@ const MONTHS = [
  * An advance comes back out of one named month, so it is owed until that month
  * has been reached; once it has, the salary for it carried the deduction.
  */
-export const outstandingAdvance = (advances, name, today = new Date()) => {
+export const owedAdvances = (advances, name, today = new Date()) => {
   const reached = today.getFullYear() * 12 + today.getMonth();
-  return advances
-    .filter(
-      (advance) =>
-        advance.employee === name &&
-        advance.status === "Approved" &&
-        Number(advance.deductYear) * 12 + MONTHS.indexOf(advance.deductMonth) >
-          reached
-    )
-    .reduce((total, advance) => total + Number(advance.amount || 0), 0);
+  return advances.filter(
+    (advance) =>
+      advance.employee === name &&
+      advance.status === "Approved" &&
+      Number(advance.deductYear) * 12 + MONTHS.indexOf(advance.deductMonth) >
+        reached
+  );
 };
+
+/**
+ * What those advances come to.
+ *
+ * Counted off the same list the payroll takes them from, so the figure on the
+ * request form and the figure coming off the pay cannot disagree.
+ */
+export const outstandingAdvance = (advances, name, today = new Date()) =>
+  owedAdvances(advances, name, today).reduce(
+    (total, advance) => total + Number(advance.approvedAmount ?? advance.amount ?? 0),
+    0
+  );
 
 /** One person's requests, newest first. */
 export const advancesFor = (advances, name) =>

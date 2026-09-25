@@ -9,7 +9,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/panels";
-import FormHeading from "@/components/shared/FormHeading";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   RecordTable,
   HeadRow,
@@ -17,7 +22,7 @@ import {
   Row,
   Td,
 } from "@/components/shared/RecordTable";
-import { Plus, CalendarCheck, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { Plus, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/pages/firm/firmData";
 import LeaveForm from "./LeaveForm";
@@ -168,7 +173,9 @@ export default function LeavesSection({ employee, canReview = true }) {
    * refuses ends it there. Management's answer is the final one either way.
    */
   const decide = () => {
-    if (!open || !review.decision || !review.reviewDate) return;
+    // Nobody approves their own leave: on the employee's own page the
+    // decision is read once it has been given, and never written.
+    if (!canReview || !open || !review.decision || !review.reviewDate) return;
     const approved = review.decision === "Approve";
 
     if (stage === "department") {
@@ -214,64 +221,63 @@ export default function LeavesSection({ employee, canReview = true }) {
 
   return (
     <div className="space-y-6">
-      {/* One heading at a time: the section's row - heading on the left, the
-          way to add on the right - gives way to the form's own heading while
-          a request is being written. */}
-      {adding || open ? (
-        <FormHeading
-          icon={CalendarCheck}
-          title={open ? "Leave Request " + (open.leaveNo || "") : "Add New Leave"}
-          note={open ? "Review and decide this request" : "Submit a new leave request"}
-          onBack={close}
-        />
-      ) : (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <FormHeading icon={CalendarCheck} title="Leave Requests History" />
-          {/* Leave is granted a year at a time, so the year is a choice
-              rather than a column repeated down every row. Empty values are
-              ignored: Radix reports "" whenever its list changes. */}
-          <Select value={year} onValueChange={(value) => value && setYear(value)}>
-            <SelectTrigger className="ms-auto w-28" aria-label="Leave year">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {years.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
+      {/* The year the list is read by, and the way to add to it. Leave is
+          granted a year at a time, so the year is a choice rather than a
+          column repeated down every row. Empty values are ignored: Radix
+          reports "" whenever its list changes. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Select value={year} onValueChange={(value) => value && setYear(value)}>
+          <SelectTrigger className="w-28" aria-label="Leave year">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {years.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-      {/* The way to add, on the row above the list it adds to. */}
-      {!adding && !open && (
-        <div className="flex justify-end">
-          <Button type="button" onClick={() => setAdding(true)}>
+        {!adding && !open && (
+          <Button
+            variant="outline"
+            type="button"
+            className="ms-auto"
+            onClick={() => setAdding(true)}
+          >
             <Plus className="me-1.5 h-4 w-4" />
             Add New Leave
           </Button>
-        </div>
-      )}
+        )}
+      </div>
 
-      {(adding || open) && (
-        <LeaveForm
-          employee={employee}
-          leaves={leaves}
-          draft={open ? review : draft}
-          years={requestYears}
-          advanceYear={nextYear}
-          onChange={open ? setReviewField : setField}
-          onCategory={chooseCategory}
-          onSubmit={save}
-          onCancel={close}
-          record={open}
-          stage={open ? stage : "submit"}
-          onStage={setStage}
-          onDecide={decide}
-        />
-      )}
+      {/* Opened over the page, so the list it is filed into stays behind it. */}
+      <Dialog open={adding || Boolean(open)} onOpenChange={(o) => !o && close()}>
+        <DialogContent className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {open ? "Leave Request " + (open.leaveNo || "") : "Add New Leave"}
+            </DialogTitle>
+          </DialogHeader>
+          <LeaveForm
+            employee={employee}
+            leaves={leaves}
+            draft={open ? review : draft}
+            years={requestYears}
+            advanceYear={nextYear}
+            onChange={open ? setReviewField : setField}
+            onCategory={chooseCategory}
+            onSubmit={save}
+            onCancel={close}
+            record={open}
+            canReview={canReview}
+            stage={open ? stage : "submit"}
+            onStage={setStage}
+            onDecide={decide}
+          />
+        </DialogContent>
+      </Dialog>
 
       {filteredBy && (
         <p className="text-sm text-muted-foreground">

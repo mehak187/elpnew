@@ -84,6 +84,9 @@ export default function LeaveForm({
   stage = "submit",
   onStage = () => {},
   onDecide = () => {},
+  // Whoever is looking at somebody else's request answers it; on their own
+  // page the answer is only read, so there is nothing here to press.
+  canReview = true,
 }) {
   // Days taken now against next year: the kind of leave is settled by that
   // choice, so neither the category nor the type is asked for again.
@@ -208,6 +211,7 @@ export default function LeaveForm({
                   <Select
                     value={draft.decision}
                     onValueChange={(value) => value && onChange("decision", value)}
+                    disabled={!canReview}
                   >
                     <SelectTrigger id="leave-review-decision">
                       <SelectValue placeholder="Select decision" />
@@ -243,6 +247,7 @@ export default function LeaveForm({
                 <Select
                   value={draft.decision}
                   onValueChange={(value) => value && onChange("decision", value)}
+                  disabled={!canReview}
                 >
                   <SelectTrigger id="leave-review-decision">
                     <SelectValue placeholder="Select decision" />
@@ -286,13 +291,17 @@ export default function LeaveForm({
               <Button type="button" variant="outline" onClick={onCancel}>
                 Cancel
               </Button>
-              <Button
-                type="button"
-                onClick={onDecide}
-                disabled={!draft.decision || !draft.reviewDate}
-              >
-                {finalising ? "Save & Finalize Decision" : "Save & Submit Decision"}
-              </Button>
+              {canReview && (
+                <Button
+                  type="button"
+                  onClick={onDecide}
+                  disabled={!draft.decision || !draft.reviewDate}
+                >
+                  {finalising
+                    ? "Save & Finalize Decision"
+                    : "Save & Submit Decision"}
+                </Button>
+              )}
             </div>
           </>
         ) : (

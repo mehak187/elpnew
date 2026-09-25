@@ -445,7 +445,7 @@ export default function CircularsSection({ canEdit }) {
 
           {/* The way to add, at the end of the row above the list. */}
           {canEdit && !open && (
-            <Button type="button" className="shrink-0" onClick={startNew}>
+            <Button variant="outline" type="button" className="shrink-0" onClick={startNew}>
               <Plus className="me-1.5 h-4 w-4" />
               New Circular
             </Button>

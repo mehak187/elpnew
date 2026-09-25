@@ -124,6 +124,9 @@ export function AdvanceSalaryForm({
   // A full approval grants what was asked for; only a partial approval sets
   // a figure of its own, so only there is the amount typed.
   const rejected = decision === "rejected";
+  // Handed back rather than answered: nothing is granted and nothing is
+  // refused, so the request goes on waiting under its own number.
+  const returning = decision === "completion";
   const amending = decision === "partial";
   const approvedAmount = amending ? Number(approved) || 0 : requested;
   const afterDeduction = Number(
@@ -134,13 +137,13 @@ export function AdvanceSalaryForm({
   const canSubmit =
     requested > 0 && requested <= limit && draft.deductMonth && draft.deductYear;
 
-  // A refusal is settled by its reason alone; an approval has to say how the
-  // money leaves before it can be saved.
+  // Nothing leaves the firm on a refusal or a hand-back, so neither has to
+  // say how; an approval does, before it can be saved.
   const canSave =
     canDecide &&
     Boolean(decision) &&
-    (rejected
-      ? Boolean(comment.trim())
+    (rejected || returning
+      ? true
       : approvedAmount > 0 &&
         approvedAmount <= requested &&
         pay.method &&
@@ -169,11 +172,13 @@ export function AdvanceSalaryForm({
     if (!canSave || !openRequest) return;
     decideAdvance(openRequest.id, {
       decision,
-      status: rejected ? "Rejected" : "Approved",
-      approvedAmount: rejected ? 0 : approvedAmount,
+      // A hand-back leaves the request where it was: still waiting, with
+      // what is missing written on it.
+      status: rejected ? "Rejected" : returning ? "Pending" : "Approved",
+      approvedAmount: rejected || returning ? 0 : approvedAmount,
       managementComment: comment.trim(),
       decidedOn: new Date().toISOString().slice(0, 10),
-      ...(rejected
+      ...(rejected || returning
         ? {}
         : {
             ...ADVANCE_BOOKING,
@@ -281,11 +286,12 @@ export function AdvanceSalaryForm({
           <DecisionChoice
             value={decision}
             onChange={setDecision}
+            disabled={!canDecide}
           />
 
           {/* Nothing leaves the firm on a refusal, so the transfer is asked
               about only once something has been approved. */}
-          {decision && !rejected && (
+          {decision && !rejected && !returning && (
             <Bordered title="Expense & Disbursement Details">
               <div className="form-grid">
                 <Settled
@@ -566,9 +572,13 @@ export function AdvanceSalaryForm({
             Cancel
           </Button>
           {stage === "decision" ? (
-            <Button type="button" onClick={saveDecision}>
-              Save
-            </Button>
+            // The employee asks; only the firm's side answers, so on their
+            // own page there is nothing here to press.
+            canDecide && (
+              <Button type="button" onClick={saveDecision}>
+                Save
+              </Button>
+            )
           ) : (
             <Button type="button" onClick={submit}>
               Save
@@ -611,7 +621,7 @@ export function AdvanceRequests({
             placeholder="Ask about salary advances..."
           />
           {onAdd && (
-            <Button type="button" className="ms-auto" onClick={onAdd}>
+            <Button variant="outline" type="button" className="ms-auto" onClick={onAdd}>
               <Plus className="me-2 h-4 w-4" />
               {addLabel}
             </Button>

@@ -51,6 +51,8 @@ import {
   Td,
 } from "@/components/shared/RecordTable";
 import { useViolations } from "@/lib/violations/context";
+import { useAdvances } from "@/lib/advances/context";
+import { owedAdvances, deductedFrom } from "../advanceSalaryData";
 import { DEDUCTION_PENALTY } from "../violationData";
 import {
   loanRecords,
@@ -374,6 +376,7 @@ export default function SalariesSection({
   // Every salary on record, so a month entered through this form is in the
   // history below it rather than somewhere of its own.
   const { violations } = useViolations();
+  const { advances } = useAdvances();
   const [history, setHistory] = useState(salaryHistory);
   const [payslip, setPayslip] = useState(() => fromEmployee(employee));
   const [payment, setPayment] = useState(emptyPayment);
@@ -403,7 +406,7 @@ export default function SalariesSection({
 
   // What comes off the pay is not typed: it is the loans still being repaid
   // and the penalties on record, added up.
-  const debts = loansFor(loanRecords, employee?.name)
+  const loanDebts = loansFor(loanRecords, employee?.name)
     .filter(isApprovedLoan)
     .map((loan) => {
     const plan = schedule(loanTotal(loan), loan.monthly);
@@ -416,6 +419,20 @@ export default function SalariesSection({
       monthly: loan.monthly,
     };
   });
+  // An advance already granted comes off the pay the same way a loan does -
+  // it is money the employee has had - except that it comes off in one go, in
+  // the month they named when they asked for it. Read off the same list the
+  // request form counts it from, so the two cannot disagree.
+  const advanceDebts = owedAdvances(advances, employee?.name).map((advance) => ({
+    id: "advance-" + advance.id,
+    type: "Salary Advance",
+    number: 1,
+    of: 1,
+    note: deductedFrom(advance),
+    monthly: Number(advance.approvedAmount ?? advance.amount ?? 0),
+  }));
+
+  const debts = [...loanDebts, ...advanceDebts];
   const loanDue = debts.reduce((sum, debt) => sum + Number(debt.monthly || 0), 0);
 
   // Penalties that took money, gathered into the month they fell in.
@@ -1040,6 +1057,9 @@ export default function SalariesSection({
             employee={employee}
             net={net}
             requestId={openAdvanceId}
+            // The employee asks for the advance; only the firm's side
+            // answers it.
+            canDecide={canEdit}
             onClose={closeAdd}
           />
         </DialogContent>
@@ -1049,24 +1069,32 @@ export default function SalariesSection({
           the history of payments under it. Shown, not asked for - a salary is
           changed by recording one, which is what Add Salary is for. */}
       <div id="salary-details" className="space-y-6 rounded-lg border p-4 sm:p-6">
-        <Group title="Salary & Allowances">
-          <Amount
-            id="salary-basic"
-            label="Basic Salary"
-            required
-            value={payslip.basic}
-            onChange={onAmount("basic")}
-          />
-          {ALLOWANCES.filter((a) => SHOWN_KEYS.includes(a.key)).map((allowance) => (
+        {/* The firm sets what somebody is paid, so on their own page the
+            figures are read and not typed. Left open they were editable by
+            the person they are about, and every figure below - the net, and
+            with it what may be asked for in advance - is counted from them. */}
+        <fieldset disabled={!canEdit} className="contents">
+          <Group title="Salary & Allowances">
             <Amount
-              key={allowance.key}
-              id={"salary-" + allowance.key}
-              label={allowance.label}
-              value={payslip[allowance.key]}
-              onChange={onAmount(allowance.key)}
+              id="salary-basic"
+              label="Basic Salary"
+              required
+              readOnly={!canEdit}
+              value={payslip.basic}
+              onChange={onAmount("basic")}
             />
-          ))}
-        </Group>
+            {ALLOWANCES.filter((a) => SHOWN_KEYS.includes(a.key)).map((allowance) => (
+              <Amount
+                key={allowance.key}
+                id={"salary-" + allowance.key}
+                label={allowance.label}
+                readOnly={!canEdit}
+                value={payslip[allowance.key]}
+                onChange={onAmount(allowance.key)}
+              />
+            ))}
+          </Group>
+        </fieldset>
 
         {/* What comes off the pay is not typed here: it is what the loans
             and the penalties on record say it is. */}
@@ -1088,7 +1116,16 @@ export default function SalariesSection({
                 ) : (
                   debts.map((debt) => (
                     <Row key={debt.id}>
-                      <Td>{debt.type}</Td>
+                      <Td>
+                        {debt.type}
+                        {/* An advance comes off one named month rather than
+                            monthly, so the row says which. */}
+                        {debt.note && (
+                          <span className="block text-xs text-muted-foreground">
+                            {debt.note}
+                          </span>
+                        )}
+                      </Td>
                       <Td className="whitespace-nowrap">
                         {pad(debt.number)} / {pad(debt.of)}
                       </Td>

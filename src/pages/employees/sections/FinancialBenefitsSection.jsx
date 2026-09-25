@@ -74,7 +74,7 @@ const money = (amount) =>
  * with one difference: the person it is paid to is this employee, so the two
  * questions about who it is for are answered before it opens.
  */
-function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd }) {
+function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd, canDecide = true }) {
   const { clients } = useClients();
   const [records, setRecords] = useState(() => commissionsFor(employee.name));
   // The commission on the list the form is open on, if any.
@@ -131,6 +131,7 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd }) {
 
   /** Paid: the commission takes the list's own number and is settled. */
   const save = (record) => {
+    if (!canDecide) return;
     setRecords((prev) =>
       prev.map((row) =>
         row.id === openId
@@ -150,6 +151,7 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd }) {
 
   /** Refused: the commission keeps its temporary number and says why. */
   const reject = (why) => {
+    if (!canDecide) return;
     setRecords((prev) =>
       prev.map((row) =>
         row.id === openId
@@ -179,6 +181,7 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd }) {
             </DialogTitle>
           </DialogHeader>
           <CommissionForm
+            canAnswer={canDecide}
             key={openId || "new"}
             employee={employee}
             initial={open}
@@ -214,7 +217,7 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd }) {
               placeholder="Ask about commission..."
             />
             {!adding && (
-              <Button type="button" className="ms-auto" onClick={onOpenAdd}>
+              <Button variant="outline" type="button" className="ms-auto" onClick={onOpenAdd}>
                 <Plus className="me-2 h-4 w-4" />
                 Add Commission
               </Button>
@@ -420,6 +423,7 @@ export default function FinancialBenefitsSection({
           onCloseAdd={() => setAdding(null)}
           onOpenAdd={() => setAdding("bonus")}
           addLabel={showsAdd ? addLabel : ""}
+          canDecide={canEdit}
         />
       )}
 
@@ -451,6 +455,7 @@ export default function FinancialBenefitsSection({
           adding={adding === "commission"}
           onCloseAdd={() => setAdding(null)}
           onOpenAdd={() => setAdding("commission")}
+          canDecide={canEdit}
         />
       )}
     </div>

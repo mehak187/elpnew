@@ -870,7 +870,7 @@ export default function GeneralInvoices({ partnersOnly = false }) {
               </Select>
             </>
           )}
-          <Button onClick={() => navigate("/expense-requests/create")}>
+          <Button variant="outline" onClick={() => navigate("/expense-requests/create")}>
             <Plus className="me-1.5 h-4 w-4" />
             New Payment Request
           </Button>

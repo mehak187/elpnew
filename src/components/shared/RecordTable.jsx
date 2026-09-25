@@ -5,8 +5,8 @@ import { cn } from "@/lib/utils";
  *
  * Standard 07: the body is frameless. There are no lines between columns -
  * only a rule under each row - because the padding already separates one
- * column from the next, and a full grid of lines competes with the data it
- * is supposed to be organising. The frame is a single outer border with the
+ * column from the next, and a full grid of lines competes with the data it is
+ * supposed to be organising. The frame is a single outer border with the
  * container radius, and no shadow: a list is part of the page, not something
  * floating over it.
  *
@@ -24,7 +24,7 @@ export function RecordTable({ minWidth = 1040, children, className }) {
     <div className="overflow-x-auto rounded-container border border-container-border bg-card">
       <table
         style={{ minWidth }}
-        className={cn("w-full text-start text-sm", className)}
+        className={cn("table-hover-lines w-full text-start text-sm", className)}
       >
         {children}
       </table>
@@ -68,15 +68,20 @@ export function Th({ width, className, children }) {
 /**
  * One record.
  *
- * White, like every other row: stripes say a row is different when the only
- * thing different about it is that it is even-numbered. Hover is the one
- * tint, and it says where the pointer is - not what state the record is in.
+ * White and unruled: stripes say a row is different when the only thing
+ * different about it is that it is even-numbered, and a rule under every row
+ * draws a grid the data never asked for. The padding does the separating.
+ *
+ * Where the pointer is, is said with a tint over the whole row and nothing
+ * else - see `.table-hover-lines` in the stylesheet. Nothing is drawn around
+ * the row or the cell on top of that: the rule under the row is there either
+ * way, and a second line arriving under the pointer only flickers.
  */
 export function Row({ className, children }) {
   return (
     <tr
       className={cn(
-        "border-b border-container-border align-top transition-colors last:border-0 hover:bg-table-head",
+        "border-b border-container-border align-top last:border-0",
         className
       )}
     >

@@ -264,12 +264,17 @@ export default function AssistanceSection({
     }
   };
 
-  // Newest request first, read off the date it was made.
+  // Newest request first, read off the date it was made - and only this
+  // person's. What the firm gave a colleague, and why they had to ask for it,
+  // is nobody else's business.
   const ordered = smartSearch(
-    [...records].sort(
-      (a, b) =>
-        String(b.requestDate).localeCompare(String(a.requestDate)) || b.id - a.id
-    ),
+    records
+      .filter((record) => record.employee === employee?.name)
+      .sort(
+        (a, b) =>
+          String(b.requestDate).localeCompare(String(a.requestDate)) ||
+          b.id - a.id
+      ),
     query
   );
 
@@ -707,7 +712,7 @@ export default function AssistanceSection({
           placeholder="Ask about assistance..."
         />
         {addLabel && !adding && (
-          <Button type="button" className="ms-auto" onClick={onOpenAdd}>
+          <Button variant="outline" type="button" className="ms-auto" onClick={onOpenAdd}>
             <Plus className="me-2 h-4 w-4" />
             {addLabel}
           </Button>

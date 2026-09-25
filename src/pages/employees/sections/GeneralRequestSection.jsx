@@ -10,7 +10,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/panels";
-import FormHeading from "@/components/shared/FormHeading";
+import AiSearch from "@/components/shared/AiSearch";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { smartSearch } from "@/lib/search/smartSearch";
 import { RequestSteps } from "@/components/shared/RequestSteps";
 import {
   Group,
@@ -31,7 +38,7 @@ import {
   Td,
   RecordLink,
 } from "@/components/shared/RecordTable";
-import { Send, History, Paperclip } from "lucide-react";
+import { Paperclip, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   REQUEST_TYPES,
@@ -66,7 +73,7 @@ const DECIDED_BY = "Admin Department";
  * Every button here says type="button": the section sits inside the employee
  * record's own form, and a plain button would submit the whole record.
  */
-export default function GeneralRequestSection({ employee }) {
+export default function GeneralRequestSection({ employee, canDecide = true }) {
   const [requests, setRequests] = useState(initialGeneralRequests);
   const [draft, setDraft] = useState(emptyDraft);
   const [decision, setDecision] = useState(emptyDecision);
@@ -74,8 +81,12 @@ export default function GeneralRequestSection({ employee }) {
   const [stage, setStage] = useState("request");
   // The request on the list the form is open on, if any.
   const [openId, setOpenId] = useState(null);
+  // The form is a window over the list rather than the page itself: the list
+  // is what this section is, and stays where it was behind the window.
+  const [adding, setAdding] = useState(false);
+  const [query, setQuery] = useState("");
 
-  const mine = requestsFor(requests, employee.name);
+  const mine = smartSearch(requestsFor(requests, employee.name), query);
   const open = requests.find((request) => request.id === openId) || null;
   const settled = Boolean(open) && open.status !== "Pending";
 
@@ -114,6 +125,7 @@ export default function GeneralRequestSection({ employee }) {
     setDocument(null);
     setOpenId(null);
     setStage("request");
+    setAdding(false);
   };
 
   /**
@@ -147,7 +159,9 @@ export default function GeneralRequestSection({ employee }) {
 
   /** The answer, against the request it was given on. */
   const decide = () => {
-    if (!open || settled || !answered.check()) return;
+    // Nobody answers their own request: on the employee's own page the
+    // decision is read once it has been given, and never written.
+    if (!open || settled || !canDecide || !answered.check()) return;
     setRequests((prev) =>
       prev.map((request) =>
         request.id === openId
@@ -174,24 +188,23 @@ export default function GeneralRequestSection({ employee }) {
     });
     setDocument(null);
     setStage("decision");
+    setAdding(true);
   };
 
   const refusing = decision.answer === REJECTED;
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardContent className="space-y-6 p-4 sm:p-6">
-          <FormHeading
-            title={open ? "Request " + open.requestNo : "General Request"}
-            note={
-              open
-                ? "Review and record the management decision"
-                : "Ask the administration for anything without a form of its own"
-            }
-            icon={Send}
-          />
+      {/* Opened over the page, so the list it is filed into stays behind it. */}
+      <Dialog open={adding} onOpenChange={(o) => !o && clear()}>
+        <DialogContent className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {open ? "Request " + open.requestNo : "General Request"}
+            </DialogTitle>
+          </DialogHeader>
 
+        <div className="space-y-6">
           {/* The employee writes it; the administration answers. Either
               header opens its own half. */}
           <RequestSteps
@@ -209,8 +222,9 @@ export default function GeneralRequestSection({ employee }) {
                 title: "Management Decision",
                 note: "Review and record the management decision",
                 done: settled,
-                // Nothing to decide until there is a request to decide on.
-                disabled: !open,
+                // Nothing to decide until there is a request to decide on,
+                // and never by the person who made it.
+                disabled: !open || (!canDecide && !settled),
               },
             ]}
           />
@@ -358,12 +372,14 @@ export default function GeneralRequestSection({ employee }) {
                         <Decision
                           value={APPROVED}
                           chosen={decision.answer}
-                          onChoose={(v) => setAnswer("answer", v)}
+                          onChoose={(v) => canDecide && setAnswer("answer", v)}
+                          disabled={!canDecide}
                         />
                         <Decision
                           value={REJECTED}
                           chosen={decision.answer}
-                          onChoose={(v) => setAnswer("answer", v)}
+                          onChoose={(v) => canDecide && setAnswer("answer", v)}
+                          disabled={!canDecide}
                           tone="bad"
                         />
                       </div>
@@ -428,6 +444,9 @@ export default function GeneralRequestSection({ employee }) {
                 Save
               </Button>
             ) : (
+              /* The answer is given by the office, never by the person who
+                 asked: on their own page there is nothing to press. */
+              canDecide &&
               !settled && (
                 <Button
                   type="button"
@@ -439,15 +458,42 @@ export default function GeneralRequestSection({ employee }) {
               )
             )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardContent className="space-y-4 p-4 sm:p-6">
-          <FormHeading title="Previous Requests" icon={History} />
+          {/* The search on the left, where every list in the system has it,
+              and the way to add on the right. */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <AiSearch
+              value={query}
+              onChange={setQuery}
+              placeholder="Ask about requests..."
+            />
+            {!adding && (
+              <Button
+                variant="outline"
+                type="button"
+                className="ms-auto"
+                onClick={() => {
+                  clear();
+                  setAdding(true);
+                }}
+              >
+                <Plus className="me-2 h-4 w-4" />
+                Add Request
+              </Button>
+            )}
+          </div>
 
           {mine.length === 0 ? (
-            <EmptyState>No requests have been submitted yet.</EmptyState>
+            <EmptyState>
+              {query
+                ? "No request matches that search."
+                : "No requests have been submitted yet."}
+            </EmptyState>
           ) : (
             <RecordTable minWidth={980}>
               <HeadRow>

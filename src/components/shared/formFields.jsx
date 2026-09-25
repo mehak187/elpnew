@@ -509,13 +509,14 @@ export function Counted({ id, value, onChange, limit, rows, placeholder, grow })
  * Built from a button rather than a native radio so the whole row is the
  * target: the answer to a request for money is not a thing to have to aim at.
  */
-export function Decision({ value, chosen, onChoose, tone }) {
+export function Decision({ value, chosen, onChoose, tone, disabled }) {
   const picked = chosen === value;
   return (
     <button
       type="button"
       role="radio"
       aria-checked={picked}
+      disabled={disabled}
       onClick={() => onChoose(value)}
       className={cn(
         "flex w-full items-center gap-3 rounded-md border px-4 py-3 text-start text-sm transition",
@@ -525,7 +526,11 @@ export function Decision({ value, chosen, onChoose, tone }) {
             : tone === "part"
               ? "border-decision-partial-ink bg-decision-partial font-medium text-decision-partial-ink"
               : "border-green-600 bg-green-50 font-medium text-green-800"
-          : "hover:bg-muted/50"
+          : "hover:bg-muted/50",
+        // Where the decision is only being read, the card shows it and
+        // cannot change it.
+        disabled && "cursor-default disabled:hover:bg-transparent",
+        disabled && !picked && "opacity-70"
       )}
     >
       <span

@@ -15,11 +15,26 @@ import {
 } from "./employeeData";
 
 /** A fact with its heading beside it, where the pair fits on one line. */
+/**
+ * A label and its value, side by side on one line.
+ *
+ * Laid out rather than run together as text: a value set with a space after
+ * the label can be pushed onto a line of its own when the column narrows, and
+ * a date sitting under "Date of Joining:" reads as two facts rather than one.
+ * The value keeps to one line for the same reason.
+ */
 function Inline({ label, children, strong }) {
   return (
-    <p className={cn("leading-tight", strong && "text-primary")}>
-      <span className="font-semibold">{label} </span>
-      <span className={cn(strong && "font-semibold")}>{children || "-"}</span>
+    <p
+      className={cn(
+        "flex flex-wrap items-baseline gap-x-1 leading-tight",
+        strong && "text-primary"
+      )}
+    >
+      <span className="font-semibold">{label}</span>
+      <span className={cn("whitespace-nowrap", strong && "font-semibold")}>
+        {children || "-"}
+      </span>
     </p>
   );
 }
@@ -120,7 +135,10 @@ export default function EmployeesList() {
           <Inline label="Basic Salary:">{money(row.salary)}</Inline>
           <Inline label="Allowances:">{money(totalAllowances(row))}</Inline>
           <Inline label="Deductions:">{money(totalDeductions(row))}</Inline>
-          <div className="mt-2 border-t pt-2">
+          {/* Set apart by the space above it and the weight it is written
+              in: a rule inside a cell reads as a line of the table, and the
+              table has none until the pointer is on it. */}
+          <div className="pt-2">
             <Inline label="Net Salary:" strong>
               {money(netSalary(row))}
             </Inline>
@@ -159,7 +177,6 @@ export default function EmployeesList() {
             searchPlaceholder="Search employee by name, ID, department..."
             enableColumnSearch={false}
             enableSorting
-            hoverLines
             onAdd={() => navigate("/employees/create")}
             addLabel="Add Employee"
             currentPage={currentPage}

@@ -73,7 +73,7 @@ export default function SalaryHistory({
             placeholder="Ask about salaries..."
           />
           {onAdd && (
-            <Button type="button" className="ms-auto" onClick={onAdd}>
+            <Button variant="outline" type="button" className="ms-auto" onClick={onAdd}>
               <Plus className="me-2 h-4 w-4" />
               {addLabel}
             </Button>

@@ -149,25 +149,25 @@ const DECISIONS = [
   {
     /**
      * Not an answer to the request so much as a question back: something is
-     * missing, and the employee is asked to supply it. Nothing is granted and
-     * nothing is refused, so like a refusal it pays nothing - but unlike one
-     * it leaves the request alive.
+     * missing, and the request is handed back to be sent again. Nothing is
+     * granted and nothing is refused, so like a refusal it pays nothing - but
+     * unlike one it leaves the request alive.
      */
     key: "completion",
-    title: "Request Completion",
+    title: "Resubmit Request",
     tone: "border-frame-alt bg-decision-partial/40 text-frame-alt",
     mark: "border-frame-alt text-frame-alt",
   },
   {
     key: "rejected",
-    title: "Rejection",
+    title: "Reject Request",
     tone: "border-red-600 bg-decision-rejected",
     mark: "border-red-600 text-red-600",
   },
 ];
 
 /**
- * Management's answer to a request, as three cards to choose between.
+ * Management's answer to a request, as cards to choose between.
  *
  * Only the office decides: where `disabled` is set the cards show the decision
  * and cannot change it.
@@ -176,9 +176,9 @@ export function DecisionChoice({
   value,
   onChange,
   disabled,
-  // The stage's own heading, so a form that opens on this stage is not left
-  // with two headings or none.
-  title = "Management Decision",
+  // No heading by default: four answers in a row say plainly enough what is
+  // being asked, and a title over them only repeats the step above them.
+  title = "",
   // What each card says under its name, where the answer needs saying in
   // the request's own words: a loan is granted on terms, not only on an
   // amount. A request that needs none leaves the cards as plain names.
@@ -186,11 +186,11 @@ export function DecisionChoice({
   /**
    * Which answers this kind of request can be given.
    *
-   * Three by default - granted, granted in part, refused. A request that can
-   * also be handed back for something missing names the fourth; offering it
-   * everywhere would put a choice on screens that have nothing to ask for.
+   * All four by default - granted, granted in part, handed back to be sent
+   * again, refused. A screen that has nothing to hand back names the three
+   * it wants instead.
    */
-  offers = ["full", "partial", "rejected"],
+  offers = ["full", "partial", "completion", "rejected"],
   // Whatever belongs to the decision itself - its date, what it grants -
   // where a form draws that inside the same box as the choice.
   children,
@@ -200,7 +200,7 @@ export function DecisionChoice({
     <Bordered title={title}>
       <div
         role="radiogroup"
-        aria-label={title}
+        aria-label={title || "Management decision"}
         className={cn(
           "grid grid-cols-1 gap-3",
           shown.length > 3 ? "md:grid-cols-2 xl:grid-cols-4" : "md:grid-cols-3"

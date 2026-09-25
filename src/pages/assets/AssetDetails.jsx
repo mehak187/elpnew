@@ -743,7 +743,7 @@ export default function AssetDetails() {
                   {/* The way to add, on the row above the list. */}
                   {!addingExpense && (
                     <div className="flex justify-end">
-                      <Button
+                      <Button variant="outline"
                         type="button"
                         onClick={() => setAddingExpense(true)}
                       >

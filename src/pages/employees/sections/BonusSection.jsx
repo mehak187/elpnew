@@ -91,6 +91,9 @@ export default function BonusSection({
   onOpenAdd,
   // The words on the button that opens the form, over the list it adds to.
   addLabel = "Bonus Request",
+  // The firm pays a bonus out; on the employee's own page the payment is
+  // read and never recorded.
+  canDecide = true,
 }) {
   const { bonuses, addBonus, updateBonus } = useBonuses();
   const [draft, setDraft] = useState(emptyDraft);
@@ -173,7 +176,7 @@ export default function BonusSection({
 
   /** Paid out: the bonus is disbursed, and the record says how. */
   const disburse = () => {
-    if (!checkRequired() || !canPay || !open) return;
+    if (!checkRequired() || !canPay || !canDecide || !open) return;
     updateBonus(open.id, {
       status: BONUS_DISBURSED,
       rejectionReason: "",
@@ -559,7 +562,7 @@ export default function BonusSection({
             placeholder="Ask about bonuses..."
           />
           {addLabel && !adding && (
-            <Button type="button" className="ms-auto" onClick={onOpenAdd}>
+            <Button variant="outline" type="button" className="ms-auto" onClick={onOpenAdd}>
               <Plus className="me-2 h-4 w-4" />
               {addLabel}
             </Button>
