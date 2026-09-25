@@ -1344,7 +1344,7 @@ export default function EmployeeForm({ self }) {
                             <Th width="26%">Document Type &amp; Attachment</Th>
                             <Th width="16%">Expiry Date</Th>
                             <Th width="26%">Notes</Th>
-                            <Th width="8%">Delete</Th>
+                            {!readOnly && <Th width="8%">Delete</Th>}
                           </HeadRow>
                           <tbody>
                             {shownDocuments.map((document) => {
@@ -1434,9 +1434,11 @@ export default function EmployeeForm({ self }) {
                                   </Td>
 
                                   {/* Taken off the record by the firm, never
-                                      from My Profile, which only reads. */}
-                                  <Td className="text-center align-top">
-                                    {!readOnly && (
+                                      from My Profile, which only reads - so
+                                      there the column is not drawn at all
+                                      rather than left labelled and empty. */}
+                                  {!readOnly && (
+                                    <Td className="text-center align-top">
                                       <button
                                         type="button"
                                         onClick={() => setRemovingDoc(document)}
@@ -1448,8 +1450,8 @@ export default function EmployeeForm({ self }) {
                                           Delete {document.fileName}
                                         </span>
                                       </button>
-                                    )}
-                                  </Td>
+                                    </Td>
+                                  )}
                                 </Row>
                               );
                             })}
@@ -1517,7 +1519,7 @@ export default function EmployeeForm({ self }) {
                 {activeSection === "daily" && <DailyActivitiesSection />}
 
                 {activeSection === "circulars" && (
-                  <EmployeeCircularsSection employee={formData} />
+                  <EmployeeCircularsSection employee={formData} self={self} />
                 )}
 
                 {activeSection === "performance" && <PerformanceSection />}
@@ -1527,11 +1529,11 @@ export default function EmployeeForm({ self }) {
                 )}
 
                 {activeSection === "leaves" && (
-                  <LeavesSection employee={formData} />
+                  <LeavesSection employee={formData} canReview={!readOnly} />
                 )}
 
                 {activeSection === "generalRequest" && (
-                  <GeneralRequestSection employee={formData} />
+                  <GeneralRequestSection employee={formData} canDecide={!readOnly} />
                 )}
 
                 {/* Not yet specified, so nothing is invented for it */}

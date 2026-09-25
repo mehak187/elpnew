@@ -286,6 +286,7 @@ export function AdvanceSalaryForm({
           <DecisionChoice
             value={decision}
             onChange={setDecision}
+            disabled={!canDecide}
           />
 
           {/* Nothing leaves the firm on a refusal, so the transfer is asked
@@ -571,9 +572,13 @@ export function AdvanceSalaryForm({
             Cancel
           </Button>
           {stage === "decision" ? (
-            <Button type="button" onClick={saveDecision}>
-              Save
-            </Button>
+            // The employee asks; only the firm's side answers, so on their
+            // own page there is nothing here to press.
+            canDecide && (
+              <Button type="button" onClick={saveDecision}>
+                Save
+              </Button>
+            )
           ) : (
             <Button type="button" onClick={submit}>
               Save

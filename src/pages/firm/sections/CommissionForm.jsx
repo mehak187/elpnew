@@ -173,6 +173,7 @@ function CommissionPayment({
   firmAccounts,
   beneficiaryBank,
   beneficiaryAccountNo,
+  canAnswer = true,
   payment,
   onChange,
   receipt,
@@ -245,16 +246,19 @@ function CommissionPayment({
             value={APPROVED_IN_FULL}
             chosen={payment.decision}
             onChoose={(v) => onChange("decision", v)}
+            disabled={!canAnswer}
           />
           <Decision
             value={APPROVED_IN_PART}
             chosen={payment.decision}
             onChoose={(v) => onChange("decision", v)}
+            disabled={!canAnswer}
           />
           <Decision
             value={REFUSED}
             chosen={payment.decision}
             onChoose={(v) => onChange("decision", v)}
+            disabled={!canAnswer}
             tone="bad"
           />
         </div>
@@ -470,6 +474,11 @@ export default function CommissionForm({
   // Told which client is chosen, so the list under the form can narrow to
   // that client's commissions while one for them is being written.
   onClientChange,
+  // `canDecide` below means there is enough on the form to decide on. This
+  // is the other question: whether the person looking may decide at all. The
+  // firm settles a commission, so on the payee's own page the decision is
+  // read once it has been given, and never written.
+  canAnswer = true,
 }) {
   const { clients } = useClients();
   const { bankAccounts } = useFirm();
@@ -703,7 +712,7 @@ export default function CommissionForm({
         (!partial || partialIsSound));
 
   const save = () => {
-    if (!checkRequired() || !canDecide) return;
+    if (!checkRequired() || !canDecide || !canAnswer) return;
     if (refusing) {
       onReject?.((payment.notes || "").trim());
       return;
@@ -760,6 +769,7 @@ export default function CommissionForm({
             window it sits in is already named after it. */}
         {stage === "payment" ? (
           <CommissionPayment
+            canAnswer={canAnswer}
             commissionNo={commissionNo}
             requestDate={requestDate}
             payee={draft.paidTo}
@@ -1109,7 +1119,8 @@ export default function CommissionForm({
               made in the radio group above, so a second place to make it
               could only disagree with the first. */}
           {stage === "payment" ? (
-            !refused && (
+            !refused &&
+            canAnswer && (
               <Button
                 type="button"
                 variant={refusing ? "destructive" : "default"}

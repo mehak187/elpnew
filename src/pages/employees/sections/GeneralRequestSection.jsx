@@ -73,7 +73,7 @@ const DECIDED_BY = "Admin Department";
  * Every button here says type="button": the section sits inside the employee
  * record's own form, and a plain button would submit the whole record.
  */
-export default function GeneralRequestSection({ employee }) {
+export default function GeneralRequestSection({ employee, canDecide = true }) {
   const [requests, setRequests] = useState(initialGeneralRequests);
   const [draft, setDraft] = useState(emptyDraft);
   const [decision, setDecision] = useState(emptyDecision);
@@ -159,7 +159,9 @@ export default function GeneralRequestSection({ employee }) {
 
   /** The answer, against the request it was given on. */
   const decide = () => {
-    if (!open || settled || !answered.check()) return;
+    // Nobody answers their own request: on the employee's own page the
+    // decision is read once it has been given, and never written.
+    if (!open || settled || !canDecide || !answered.check()) return;
     setRequests((prev) =>
       prev.map((request) =>
         request.id === openId
@@ -220,8 +222,9 @@ export default function GeneralRequestSection({ employee }) {
                 title: "Management Decision",
                 note: "Review and record the management decision",
                 done: settled,
-                // Nothing to decide until there is a request to decide on.
-                disabled: !open,
+                // Nothing to decide until there is a request to decide on,
+                // and never by the person who made it.
+                disabled: !open || (!canDecide && !settled),
               },
             ]}
           />
@@ -369,12 +372,14 @@ export default function GeneralRequestSection({ employee }) {
                         <Decision
                           value={APPROVED}
                           chosen={decision.answer}
-                          onChoose={(v) => setAnswer("answer", v)}
+                          onChoose={(v) => canDecide && setAnswer("answer", v)}
+                          disabled={!canDecide}
                         />
                         <Decision
                           value={REJECTED}
                           chosen={decision.answer}
-                          onChoose={(v) => setAnswer("answer", v)}
+                          onChoose={(v) => canDecide && setAnswer("answer", v)}
+                          disabled={!canDecide}
                           tone="bad"
                         />
                       </div>
@@ -439,6 +444,9 @@ export default function GeneralRequestSection({ employee }) {
                 Save
               </Button>
             ) : (
+              /* The answer is given by the office, never by the person who
+                 asked: on their own page there is nothing to press. */
+              canDecide &&
               !settled && (
                 <Button
                   type="button"

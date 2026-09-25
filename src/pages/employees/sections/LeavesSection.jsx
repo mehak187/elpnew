@@ -173,7 +173,9 @@ export default function LeavesSection({ employee, canReview = true }) {
    * refuses ends it there. Management's answer is the final one either way.
    */
   const decide = () => {
-    if (!open || !review.decision || !review.reviewDate) return;
+    // Nobody approves their own leave: on the employee's own page the
+    // decision is read once it has been given, and never written.
+    if (!canReview || !open || !review.decision || !review.reviewDate) return;
     const approved = review.decision === "Approve";
 
     if (stage === "department") {
@@ -269,6 +271,7 @@ export default function LeavesSection({ employee, canReview = true }) {
             onSubmit={save}
             onCancel={close}
             record={open}
+            canReview={canReview}
             stage={open ? stage : "submit"}
             onStage={setStage}
             onDecide={decide}

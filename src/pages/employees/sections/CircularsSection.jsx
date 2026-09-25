@@ -32,7 +32,7 @@ import {
  * colleague's - so the count and the details that appear on the Company
  * Profile page are deliberately absent here.
  */
-export default function EmployeeCircularsSection({ employee }) {
+export default function EmployeeCircularsSection({ employee, self = false }) {
   const { circulars, acknowledge } = useCirculars();
 
   const [query, setQuery] = useState("");
@@ -84,11 +84,17 @@ export default function EmployeeCircularsSection({ employee }) {
             header: "Acknowledgement",
             exportValue: ownAcknowledgement,
           },
-          {
-            key: "status",
-            header: "Status",
-            exportValue: (r) => STATUS_LABEL[r.status],
-          },
+          // The file that leaves with the employee carries what they can
+          // see on the page, and nothing they cannot.
+          ...(self
+            ? []
+            : [
+                {
+                  key: "status",
+                  header: "Status",
+                  exportValue: (r) => STATUS_LABEL[r.status],
+                },
+              ]),
         ],
         listed
       ),
@@ -179,9 +185,15 @@ export default function EmployeeCircularsSection({ employee }) {
                   <th className="p-3 font-semibold" style={{ width: "18%" }}>
                     Acknowledgement
                   </th>
-                  <th className="p-3 font-semibold" style={{ width: "12%" }}>
-                    Status
-                  </th>
+                  {/* Where a circular stands in the register is the firm's
+                      own tracking, so it is kept off the employee's own
+                      page along with everything else about how the circular
+                      is being managed. */}
+                  {!self && (
+                    <th className="p-3 font-semibold" style={{ width: "12%" }}>
+                      Status
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -233,18 +245,20 @@ export default function EmployeeCircularsSection({ employee }) {
                       </td>
                       {/* A circular still in force says nothing: only one
                           that has been superseded or cancelled does. */}
-                      <td className="p-3">
-                        {circular.status !== ACTIVE && (
-                          <span
-                            className={cn(
-                              "inline-block whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-semibold",
-                              STATUS_TONE[circular.status]
-                            )}
-                          >
-                            {STATUS_LABEL[circular.status]}
-                          </span>
-                        )}
-                      </td>
+                      {!self && (
+                        <td className="p-3">
+                          {circular.status !== ACTIVE && (
+                            <span
+                              className={cn(
+                                "inline-block whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-semibold",
+                                STATUS_TONE[circular.status]
+                              )}
+                            >
+                              {STATUS_LABEL[circular.status]}
+                            </span>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   );
                 })}

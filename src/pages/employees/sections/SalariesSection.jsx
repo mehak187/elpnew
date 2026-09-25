@@ -1057,6 +1057,9 @@ export default function SalariesSection({
             employee={employee}
             net={net}
             requestId={openAdvanceId}
+            // The employee asks for the advance; only the firm's side
+            // answers it.
+            canDecide={canEdit}
             onClose={closeAdd}
           />
         </DialogContent>
@@ -1066,24 +1069,32 @@ export default function SalariesSection({
           the history of payments under it. Shown, not asked for - a salary is
           changed by recording one, which is what Add Salary is for. */}
       <div id="salary-details" className="space-y-6 rounded-lg border p-4 sm:p-6">
-        <Group title="Salary & Allowances">
-          <Amount
-            id="salary-basic"
-            label="Basic Salary"
-            required
-            value={payslip.basic}
-            onChange={onAmount("basic")}
-          />
-          {ALLOWANCES.filter((a) => SHOWN_KEYS.includes(a.key)).map((allowance) => (
+        {/* The firm sets what somebody is paid, so on their own page the
+            figures are read and not typed. Left open they were editable by
+            the person they are about, and every figure below - the net, and
+            with it what may be asked for in advance - is counted from them. */}
+        <fieldset disabled={!canEdit} className="contents">
+          <Group title="Salary & Allowances">
             <Amount
-              key={allowance.key}
-              id={"salary-" + allowance.key}
-              label={allowance.label}
-              value={payslip[allowance.key]}
-              onChange={onAmount(allowance.key)}
+              id="salary-basic"
+              label="Basic Salary"
+              required
+              readOnly={!canEdit}
+              value={payslip.basic}
+              onChange={onAmount("basic")}
             />
-          ))}
-        </Group>
+            {ALLOWANCES.filter((a) => SHOWN_KEYS.includes(a.key)).map((allowance) => (
+              <Amount
+                key={allowance.key}
+                id={"salary-" + allowance.key}
+                label={allowance.label}
+                readOnly={!canEdit}
+                value={payslip[allowance.key]}
+                onChange={onAmount(allowance.key)}
+              />
+            ))}
+          </Group>
+        </fieldset>
 
         {/* What comes off the pay is not typed here: it is what the loans
             and the penalties on record say it is. */}
