@@ -42,7 +42,10 @@ export function PriorityDot({ level, label }) {
  */
 export function Bordered({ title, held, children }) {
   return (
-    <div className="space-y-4 rounded-lg border p-4">
+    // A form container shares the page's own fill: what gives it its shape is
+    // the line around it and the white boxes inside it, not a second surface
+    // colour stacked on the first.
+    <div className="space-y-4 rounded-container border border-container-border bg-background p-4">
       {/* A box whose contents name themselves takes no title: the bar and the
           heading would only repeat what is already being read. */}
       {title && (

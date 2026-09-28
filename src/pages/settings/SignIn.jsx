@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, LogIn } from "lucide-react";
 import { useFirm } from "@/lib/firm/context";
-import logo from "@/assets/logo2.png";
+import logo from "@/assets/logonew.jpeg";
 
 /**
  * Where Sign Out lands. There is no auth layer yet, so any details are accepted

@@ -51,7 +51,7 @@ import { cn } from "@/lib/utils";
 import { useFirm } from "@/lib/firm/context";
 import { useLanguage, LANGUAGES } from "@/lib/language/context";
 import NotificationBell from "./NotificationBell";
-import logo from "@/assets/logo2.png";
+import logo from "@/assets/logonew.jpeg";
 
 /** The firm's mark. Height is set; the width follows the artwork. */
 function Logo({ name, className }) {
@@ -344,18 +344,23 @@ export default function Header({ onNavClick, activeNav }) {
               // A section that opens as a menu
               return (
                 <NavigationMenuItem key={section.key}>
+                  {/* 14px, and half a weight heavier while it is the one
+                      that is open - one header item at a time. */}
                   <NavigationMenuTrigger
                     className={cn(
-                      "h-9 px-3 py-2 text-sm font-medium",
+                      "h-9 px-3 py-2 text-[14px]/[20px] font-medium",
+                      "data-[state=open]:bg-menu-hover data-[state=open]:font-semibold data-[state=open]:text-primary",
                       active
-                        ? "bg-primary text-primary-foreground font-semibold"
+                        ? "bg-primary font-semibold text-primary-foreground"
                         : "text-muted-foreground"
                     )}
                   >
                     {section.name}
                   </NavigationMenuTrigger>
+                  {/* 236px wide, inset 6px, cornered at 8px: the one
+                      geometry every menu in the system is drawn to. */}
                   <NavigationMenuContent>
-                    <ul className="w-72 p-2">
+                    <ul className="w-[236px] rounded-lg p-1.5">
                       {section.items.map((item) => (
                         <li key={item.key}>
                           <NavigationMenuLink
@@ -364,7 +369,10 @@ export default function Header({ onNavClick, activeNav }) {
                               // The rule runs down the item's logical start,
                               // so it swaps sides with the language rather
                               // than staying on the left in Arabic.
-                              "flex items-start gap-3 rounded-md border-s-[3px] border-transparent p-3 transition-colors",
+                              "flex min-h-[46px] items-center gap-2.5 rounded-md border-s-[3px] border-transparent px-2.5 py-2 transition-colors",
+                              // A row that carries a description needs the
+                              // second line's worth of room.
+                              item.description && "min-h-[56px]",
                               isActive(item.key)
                                 ? "border-s-primary bg-menu-selected text-menu-selected-ink hover:bg-menu-selected focus:bg-menu-selected"
                                 : "text-primary hover:bg-menu-hover focus:bg-menu-hover"
@@ -380,20 +388,21 @@ export default function Header({ onNavClick, activeNav }) {
                                   rest: with the block gone, the icon is half
                                   of what says which one is open. */}
                               <item.icon
+                                strokeWidth={1.5}
                                 className={cn(
-                                  "mt-0.5 h-4 w-4 shrink-0",
+                                  "size-[18px] shrink-0",
                                   isActive(item.key)
                                     ? "text-primary"
                                     : "text-menu-icon"
                                 )}
                               />
                               <span>
-                                <span className="block text-sm font-medium">
+                                <span className="block text-[13px]/[18px] font-medium">
                                   {item.name}
                                 </span>
                                 <span
                                   className={cn(
-                                    "block text-xs",
+                                    "mt-0.5 block text-[11px]/[16px]",
                                     isActive(item.key)
                                       ? "text-menu-selected-ink/80"
                                       : "text-muted-foreground"
