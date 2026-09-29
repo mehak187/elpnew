@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Minus, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { changePercent } from "@/lib/metrics";
@@ -65,21 +65,40 @@ export function Bordered({ title, held, children }) {
   );
 }
 
-/** Section wrapper: title, optional icon, optional action on the right. */
+/**
+ * The form container: one titled box, drawn to the geometry every form in the
+ * system shares - 10px corners, a #FAFBFC fill inside a 1px border, and 28px
+ * of padding all round. It takes the width it is given and grows with
+ * whatever is put in it.
+ */
 export function SectionCard({ title, icon: Icon, action, children, className }) {
   return (
-    <Card className={className}>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+    <section
+      className={cn(
+        "w-full rounded-container border border-container-border bg-background p-7",
+        className
+      )}
+    >
+      {(title || action) && (
+        <div className="mb-6 flex items-center justify-between gap-3">
+          {/* The accent, the icon and the title read as one heading: a 4px
+              rule down the start, then an icon that says which section this
+              is - never the same generic mark on every one of them. */}
+          <h2 className="flex items-center gap-2.5 text-[18px]/[24px] font-bold text-primary">
+            <span
+              aria-hidden="true"
+              className="h-6 w-1 shrink-0 rounded-full bg-primary"
+            />
+            {Icon && (
+              <Icon strokeWidth={1.5} className="size-[22px] shrink-0 text-primary" />
+            )}
             {title}
-          </CardTitle>
+          </h2>
           {action}
         </div>
-      </CardHeader>
-      <CardContent className="p-4 pt-0">{children}</CardContent>
-    </Card>
+      )}
+      {children}
+    </section>
   );
 }
 

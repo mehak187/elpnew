@@ -281,3 +281,26 @@ export const ACCOUNT_TYPES = [
   "Call Account",
   "Fixed Deposit",
 ];
+
+/**
+ * What an upload will take.
+ *
+ * Configured here rather than written into each control, so the types and the
+ * size the system accepts are one edit - and so no screen can promise 5MB
+ * while another quietly allows ten.
+ */
+export const UPLOAD_RULES = {
+  accept: ".pdf,.jpg,.jpeg,.png",
+  maxBytes: 5 * 1024 * 1024,
+};
+
+/** Those rules said in the words a person reads under the control. */
+export function describeUpload({ accept, maxBytes } = UPLOAD_RULES) {
+  const types = accept
+    .split(",")
+    .map((ext) => ext.trim().replace(/^\./, "").toUpperCase())
+    .filter((ext, i, all) => all.indexOf(ext) === i)
+    .join(", ");
+  const mb = Math.round((maxBytes / (1024 * 1024)) * 10) / 10;
+  return types + " \u00b7 up to " + mb + " MB";
+}

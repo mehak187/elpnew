@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import DataTable from "@/components/shared/DataTable";
-import { Users, Plus } from "lucide-react";
+import FilterPanel from "@/components/shared/FilterPanel";
+import { Users, Plus, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IdStatusDot, isEndedStatus } from "@/components/shared/panels";
 import {
@@ -12,6 +13,7 @@ import {
   totalAllowances,
   totalDeductions,
   amount,
+  hasDocuments,
 } from "./employeeData";
 
 /** A fact with its heading beside it, where the pair fits on one line. */
@@ -44,10 +46,52 @@ const money = (value) => amount(value);
 
 const employees = employeeRecords;
 
+/** Every value a column actually holds, in the order they were first met. */
+const valuesOf = (key) =>
+  employees.map((row) => row[key]).filter((v, i, all) => v && all.indexOf(v) === i);
+
+const FILTER_FIELDS = [
+  {
+    key: "status",
+    label: "Status",
+    type: "radio",
+    options: [
+      { value: "all", label: "All" },
+      { value: "Active", label: "Active" },
+      { value: "Inactive", label: "Inactive" },
+    ],
+  },
+  { key: "branch", label: "Branch", type: "select", allLabel: "All branches", options: valuesOf("branch") },
+  { key: "role", label: "Role", type: "select", allLabel: "All roles", options: valuesOf("role") },
+  {
+    key: "documents",
+    label: "Documents",
+    type: "radio",
+    options: [
+      { value: "all", label: "All" },
+      { value: "with", label: "With document" },
+      { value: "without", label: "Without document" },
+    ],
+  },
+];
+
+/** A record kept only if it answers to every filter in force. */
+const matches = (row, filters) =>
+  Object.entries(filters).every(([key, value]) => {
+    if (!value || value === "all") return true;
+    // Inactive covers everyone no longer working, however they left.
+    if (key === "status" && value === "Inactive") return isEndedStatus(row.status);
+    if (key === "documents") return hasDocuments(row.id) === (value === "with");
+    return row[key] === value;
+  });
+
 export default function EmployeesList() {
   const navigate = useNavigate();
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+  const [filters, setFilters] = useState({});
+
+  const shown = employees.filter((row) => matches(row, filters));
 
   const columns = [
     {
@@ -146,6 +190,33 @@ export default function EmployeesList() {
         </div>
       ),
     },
+    {
+      key: "documents",
+      header: "Documents",
+      width: "9%",
+      // The eye is offered only where there is something to look at; a dash
+      // says plainly that nothing has been filed, rather than leaving a gap
+      // that reads as a column still loading.
+      render: (value, row) =>
+        hasDocuments(row.id) ? (
+          <button
+            type="button"
+            title="View documents"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate("/employees/" + row.id);
+            }}
+            className="text-primary transition-colors hover:text-primary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <Eye strokeWidth={1.5} className="size-[18px]" />
+            <span className="sr-only">View documents for {row.name}</span>
+          </button>
+        ) : (
+          <span aria-label="No documents" className="text-muted-foreground">
+            &ndash;
+          </span>
+        ),
+    },
   ];
 
   return (
@@ -171,7 +242,7 @@ export default function EmployeesList() {
         <CardContent className="p-4 sm:p-6">
           <DataTable
             columns={columns}
-            data={employees}
+            data={shown}
             // Anyone who has left is kept, at the foot of the list.
             endedRow={(row) => isEndedStatus(row.status)}
             searchPlaceholder="Search employee by name, ID, department..."
@@ -180,7 +251,18 @@ export default function EmployeesList() {
             onAdd={() => navigate("/employees/create")}
             addLabel="Add Employee"
             currentPage={currentPage}
-            totalPages={Math.ceil(employees.length / pageSize)}
+            totalPages={Math.ceil(shown.length / pageSize)}
+            filters={
+              <FilterPanel
+                fields={FILTER_FIELDS}
+                value={filters}
+                onChange={(next) => {
+                  setFilters(next);
+                  // A narrowed list is read from its first page.
+                  setCurrentPage(1);
+                }}
+              />
+            }
             pageSize={pageSize}
             onPageChange={setCurrentPage}
             onPageSizeChange={setPageSize}

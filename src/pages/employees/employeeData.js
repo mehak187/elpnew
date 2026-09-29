@@ -57,15 +57,23 @@ export function nextEmployeeNo(records) {
  * often filed on the same day and the list is read newest first.
  */
 export const employeeDocuments = [
-  { id: 1, uploadedAt: "2026-08-26T10:30", type: "Resident Card", fileName: "Resident_Card_Mohammed.pdf", expiry: "2030-09-12", notes: "Clear copy of the resident card" },
-  { id: 2, uploadedAt: "2026-08-20T14:15", type: "Passport", fileName: "Passport_Mohammed.jpg", expiry: "2030-09-12", notes: "Valid until 12/09/2030" },
-  { id: 3, uploadedAt: "2026-08-15T09:45", type: "Lawyer Card (Bar Card)", fileName: "Bar_Card_Mohammed.pdf", expiry: "2027-03-31", notes: "Issued by Oman Bar Association" },
-  { id: 4, uploadedAt: "2026-08-10T11:20", type: "Academic Qualification", fileName: "Bachelor_Law.pdf", expiry: "", notes: "Bachelor of Law" },
-  { id: 5, uploadedAt: "2026-08-05T13:05", type: "Experience Certificate", fileName: "Experience_Certificate.pdf", expiry: "", notes: "5 years of legal experience" },
-  { id: 6, uploadedAt: "2026-08-01T15:40", type: "Administrative & Penal Decisions", fileName: "Decision_2026_14.pdf", expiry: "", notes: "Decision No. 14/2026" },
-  { id: 7, uploadedAt: "2026-07-29T12:10", type: "Other Documents", fileName: "Training_Certificate.jpg", expiry: "2026-06-30", notes: "Legal training certificate" },
-  { id: 8, uploadedAt: "2026-07-25T16:25", type: "Other Documents", fileName: "Reference_Letter.pdf", expiry: "", notes: "Reference letter" },
+  { id: 1, employeeId: 1, uploadedAt: "2026-08-26T10:30", type: "Resident Card", fileName: "Resident_Card_Mohammed.pdf", expiry: "2030-09-12", notes: "Clear copy of the resident card" },
+  { id: 2, employeeId: 1, uploadedAt: "2026-08-20T14:15", type: "Passport", fileName: "Passport_Mohammed.jpg", expiry: "2030-09-12", notes: "Valid until 12/09/2030" },
+  { id: 3, employeeId: 1, uploadedAt: "2026-08-15T09:45", type: "Lawyer Card (Bar Card)", fileName: "Bar_Card_Mohammed.pdf", expiry: "2027-03-31", notes: "Issued by Oman Bar Association" },
+  { id: 4, employeeId: 1, uploadedAt: "2026-08-10T11:20", type: "Academic Qualification", fileName: "Bachelor_Law.pdf", expiry: "", notes: "Bachelor of Law" },
+  { id: 5, employeeId: 3, uploadedAt: "2026-08-05T13:05", type: "Experience Certificate", fileName: "Experience_Certificate.pdf", expiry: "", notes: "5 years of legal experience" },
+  { id: 6, employeeId: 3, uploadedAt: "2026-08-01T15:40", type: "Administrative & Penal Decisions", fileName: "Decision_2026_14.pdf", expiry: "", notes: "Decision No. 14/2026" },
+  { id: 7, employeeId: 7, uploadedAt: "2026-07-29T12:10", type: "Other Documents", fileName: "Training_Certificate.jpg", expiry: "2026-06-30", notes: "Legal training certificate" },
+  { id: 8, employeeId: 8, uploadedAt: "2026-07-25T16:25", type: "Other Documents", fileName: "Reference_Letter.pdf", expiry: "", notes: "Reference letter" },
 ];
+
+/** The papers filed against one employee. */
+export const documentsFor = (employeeId) =>
+  employeeDocuments.filter((doc) => doc.employeeId === employeeId);
+
+/** Whether any paper has been filed against them at all. */
+export const hasDocuments = (employeeId) =>
+  employeeDocuments.some((doc) => doc.employeeId === employeeId);
 
 /**
  * The document types one employee can file.

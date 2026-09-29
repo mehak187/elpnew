@@ -256,7 +256,7 @@
      disappears on a bright screen is a field nobody can see the bounds of. */
   --field-border: #cbd5e1;
   --focus-navy: #35495a;
-  --focus-ring: 0 0 0 3px rgba(53, 73, 90, 0.16);
+  --focus-ring: 0 0 0 2px rgba(53, 73, 90, 0.16);
   /*
    * ---- Standard 05: the four states a field can be in ------------------
    *
@@ -270,7 +270,7 @@
   /* Read-only: the system filled it in, but the value is yours to read. */
   --readonly-background: #f1f5f9;
   --readonly-border: #cbd5e1;
-  --readonly-text: #475569;
+  --readonly-text: #64748b;
   /* Disabled: nothing here is for you at all. */
   --disabled-background: #f1f5f9;
   --disabled-border: #e2e8f0;
@@ -292,7 +292,7 @@
      marks the row under the pointer, because both mean "this one" and the
      system should not have two ways of saying it. */
   --table-head: #f8fafc;
-  --table-head-ink: #475569;
+  --table-head-ink: #35495a;
   /* The reference in the first column is the way into the record. */
   --record-link: #1e3a8a;
 
@@ -577,8 +577,9 @@
   .form-grid {
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
-    column-gap: 20px;
-    row-gap: 16px;
+    /* Standard 03: 19px between columns, 44px between rows. */
+    column-gap: 19px;
+    row-gap: 44px;
     width: 100%;
   }
 

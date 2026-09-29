@@ -292,7 +292,7 @@ export function FieldError({ htmlFor, children }) {
 }
 
 /** The one thing an empty required field is told. */
-export const REQUIRED_MESSAGE = "Required field";
+export const REQUIRED_MESSAGE = "Please fill in this field";
 
 const isBlank = (value) =>
   value === undefined ||

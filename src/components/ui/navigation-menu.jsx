@@ -88,8 +88,13 @@ function NavigationMenuTrigger({
       {...clickOnly}
       {...props}>
       {children}{" "}
+      {/* 12px at a 1.5px stroke, 8px after the label, turning over in 160ms
+          - and not turning at all for anyone who has asked for less motion.
+          The spec drew it at 7px; against the 15px label that was too small to
+          read as a control, so the size is up and the thin stroke stays. */}
       <ChevronDownIcon
-        className="relative top-[1px] ms-1 size-3 transition duration-300 group-data-[state=open]:rotate-180"
+        strokeWidth={1.5}
+        className="relative top-[1px] ms-2 size-3 transition-transform duration-[160ms] ease-out group-data-[state=open]:rotate-180 motion-reduce:transition-none"
         aria-hidden="true" />
     </NavigationMenuPrimitive.Trigger>
   );
@@ -104,7 +109,7 @@ function NavigationMenuContent({
       data-slot="navigation-menu-content"
       className={cn(
         "data-[motion^=from-]:animate-in data-[motion^=to-]:animate-out data-[motion^=from-]:fade-in data-[motion^=to-]:fade-out data-[motion=from-end]:slide-in-from-right-52 data-[motion=from-start]:slide-in-from-left-52 data-[motion=to-end]:slide-out-to-right-52 data-[motion=to-start]:slide-out-to-left-52 top-0 left-0 w-full p-2 pe-2.5 md:absolute md:w-auto",
-        "group-data-[viewport=false]/navigation-menu:bg-popover group-data-[viewport=false]/navigation-menu:text-popover-foreground group-data-[viewport=false]/navigation-menu:data-[state=open]:animate-in group-data-[viewport=false]/navigation-menu:data-[state=closed]:animate-out group-data-[viewport=false]/navigation-menu:data-[state=closed]:zoom-out-95 group-data-[viewport=false]/navigation-menu:data-[state=open]:zoom-in-95 group-data-[viewport=false]/navigation-menu:data-[state=open]:fade-in-0 group-data-[viewport=false]/navigation-menu:data-[state=closed]:fade-out-0 group-data-[viewport=false]/navigation-menu:top-full group-data-[viewport=false]/navigation-menu:mt-1.5 group-data-[viewport=false]/navigation-menu:overflow-hidden group-data-[viewport=false]/navigation-menu:rounded-lg group-data-[viewport=false]/navigation-menu:border group-data-[viewport=false]/navigation-menu:duration-200 **:data-[slot=navigation-menu-link]:focus:ring-0 **:data-[slot=navigation-menu-link]:focus:outline-none",
+        "group-data-[viewport=false]/navigation-menu:bg-popover group-data-[viewport=false]/navigation-menu:text-popover-foreground group-data-[viewport=false]/navigation-menu:data-[state=open]:animate-in group-data-[viewport=false]/navigation-menu:data-[state=closed]:animate-out group-data-[viewport=false]/navigation-menu:data-[state=open]:slide-in-from-top-1 group-data-[viewport=false]/navigation-menu:data-[state=open]:fade-in-0 group-data-[viewport=false]/navigation-menu:data-[state=closed]:fade-out-0 group-data-[viewport=false]/navigation-menu:top-full group-data-[viewport=false]/navigation-menu:mt-1.5 group-data-[viewport=false]/navigation-menu:overflow-hidden group-data-[viewport=false]/navigation-menu:rounded-lg group-data-[viewport=false]/navigation-menu:border group-data-[viewport=false]/navigation-menu:duration-[160ms] group-data-[viewport=false]/navigation-menu:ease-out motion-reduce:animate-none **:data-[slot=navigation-menu-link]:focus:ring-0 **:data-[slot=navigation-menu-link]:focus:outline-none",
         className
       )}
       {...clickOnly}

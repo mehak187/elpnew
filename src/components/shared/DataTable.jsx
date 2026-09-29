@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Table,
   TableBody,
@@ -123,6 +123,10 @@ export default function DataTable({
     if (onSearch) {
       onSearch(value);
     }
+    // Standard 06: a narrowed list is read from its first page. Staying on
+    // page four of a list that now holds two is an empty table with no
+    // reason given for it.
+    if (onPageChange && currentPage !== 1) onPageChange(1);
   };
 
   const handleColumnFilterChange = (columnKey, value) => {
@@ -210,6 +214,15 @@ export default function DataTable({
   // Calculate total pages based on filtered data
   const calculatedTotalPages = Math.ceil(orderedData.length / pageSize) || 1;
 
+  // The same rule for whatever narrows the list from outside this component:
+  // a filter applied or cleared, a smaller page size. The page that no longer
+  // exists is left rather than shown empty.
+  useEffect(() => {
+    if (currentPage > calculatedTotalPages && onPageChange) {
+      onPageChange(calculatedTotalPages);
+    }
+  }, [currentPage, calculatedTotalPages, onPageChange]);
+
   // Paginate filtered data
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
@@ -224,7 +237,7 @@ export default function DataTable({
         Search takes the logical start of the row and the actions the logical
         end, which swap sides with the language.
       */}
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden rounded-[8px] border border-container-border bg-card">
       <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 border-b border-container-border p-3">
 
         {/* Global Search, first on the row wherever it appears */}
@@ -414,7 +427,10 @@ export default function DataTable({
                       <TableRow
                         key={row.id || rowIndex}
                         className={cn(
-                          "border-b border-container-border align-top last:border-0",
+                          // 52px of row, striped on the evens and lit on
+                          // hover; hover is written last so it wins.
+                          "h-[52px] border-b border-container-border align-top last:border-0",
+                          "even:bg-background hover:bg-menu-hover",
                           onRowClick && "cursor-pointer"
                         )}
                         onClick={() => onRowClick && onRowClick(row)}
