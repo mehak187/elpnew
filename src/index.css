@@ -343,7 +343,7 @@
      sits in. */
   --border: #e2e8f0;
   --input: oklch(0.93 0.008 262);
-  --ring: #35495a;
+  --ring: #334b63;
   /* Charts: one hue, dark to light */
   --chart-1: oklch(0.33 0.11 262);
   --chart-2: oklch(0.43 0.13 262);

@@ -112,7 +112,7 @@ const SECTIONS = [
     // entries in this menu that were all one answer, so they are one page
     // with a box each.
     key: "information",
-    label: "Employee Profile",
+    label: "Employee Data",
     title: "Employee",
     icon: User,
     note: "Employee profile, job description and contact details",
@@ -643,7 +643,12 @@ export default function EmployeeForm({ self }) {
             this employee alone - the name at its head says whose file is
             open, and the list under it goes nowhere else. */}
         <RecordSidebar
-          id="employee"
+          // Standard 07 #04: moving to another employee replaces the name,
+          // the number, the links and which group is open - all together.
+          // The key does that in one stroke, and stops one employee's
+          // opened groups from being remembered as another's.
+          key={record?.id || "new"}
+          id={"employee-" + (record?.id || "new")}
           backTo="/employees"
           backLabel="All employees"
           title={formData.employeeName || "New employee"}
