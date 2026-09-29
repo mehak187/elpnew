@@ -230,16 +230,17 @@
 
 :root {
   --radius: 0.625rem;
-  /* #A61C1F - the red from the YANDS wordmark. The mark keeps its red; the
-     interface around it is navy, so the two never compete for attention. */
-  --brand: oklch(0.47 0.173 26);
+  /* #35495A - the SADEED mark, in the one solid value the logo is drawn in.
+     The interface takes the same value wherever the brand colour is called
+     for, so the screen and the mark on it are never two different navies. */
+  --brand: #35495a;
   /* Every other request card is framed in brown, so where one ends and the
      next begins is read at a glance rather than counted. */
   --frame-alt: oklch(0.44 0.075 55);
   /* The background of a field the system fills in: a figure worked out, or a
      record being read rather than written. One tint for all of them, so "you
      cannot type here" is the same colour wherever it appears. */
-  --locked: #f8fafc;
+  --locked: #f1f5f9;
 
   /* ---- Standard 01: borders, radii and field states -------------------- */
   /*
@@ -248,14 +249,14 @@
    * not the tone a legal and administrative record keeps.
    */
   --container-radius: 10px;
-  --field-radius: 7px;
+  --field-radius: 6px;
   --container-border: #e2e8f0;
   --field-background: #ffffff;
-  /* Darker than the container's own border on purpose - a field edge that
+  /* A step darker than the container's own border: a field edge that
      disappears on a bright screen is a field nobody can see the bounds of. */
-  --field-border: #a8b4c3;
-  --focus-navy: #142f5f;
-  --focus-ring: 0 0 0 3px rgba(20, 47, 95, 0.14);
+  --field-border: #cbd5e1;
+  --focus-navy: #35495a;
+  --focus-ring: 0 0 0 2px rgba(53, 73, 90, 0.16);
   /*
    * ---- Standard 05: the four states a field can be in ------------------
    *
@@ -267,9 +268,9 @@
    * not use. So its two tints are taken, which 01 had collapsed into one.
    */
   /* Read-only: the system filled it in, but the value is yours to read. */
-  --readonly-background: #f8fafc;
+  --readonly-background: #f1f5f9;
   --readonly-border: #cbd5e1;
-  --readonly-text: #475569;
+  --readonly-text: #64748b;
   /* Disabled: nothing here is for you at all. */
   --disabled-background: #f1f5f9;
   --disabled-border: #e2e8f0;
@@ -291,16 +292,16 @@
      marks the row under the pointer, because both mean "this one" and the
      system should not have two ways of saying it. */
   --table-head: #f8fafc;
-  --table-head-ink: #475569;
+  --table-head-ink: #35495a;
   /* The reference in the first column is the way into the record. */
   --record-link: #1e3a8a;
 
   /* ---- Standard 06: the menu's selected item --------------------------- */
   /* A pale tint and a rule down its start, not a navy block: the selected
      item should be findable, not the loudest thing on the page. */
-  --menu-selected: #f1f5f9;
-  --menu-selected-ink: #334155;
-  --menu-hover: #f8fafc;
+  --menu-selected: #edf2f5;
+  --menu-selected-ink: #35495a;
+  --menu-hover: #f1f5f9;
   --menu-icon: #64748b;
   /* The three answers a request can be given. Each carries its own tint
      wherever the decision is shown, so what was decided is read from the
@@ -315,21 +316,23 @@
   --decision-partial: #fef3c7;
   --decision-partial-ink: #d97706;
   --decision-rejected: #fff0f0;
-  --background: oklch(0.99 0 0);
+  --background: #fafbfc;
   --foreground: oklch(0.20 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.20 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.20 0 0);
-  /* Primary: the navy the buttons, headings and active nav are drawn in */
-  --primary: oklch(0.36 0.115 262);
+  /* Primary: the brand colour itself - the buttons, headings and active nav
+     are drawn in the same navy as the mark above them, so nothing on screen
+     is a second, nearly-right version of it. */
+  --primary: #35495a;
   --primary-foreground: oklch(0.99 0 0);
   /* Secondary: pale tint of the same navy */
-  --secondary: oklch(0.955 0.018 258);
+  --secondary: #f1f5f9;
   --secondary-foreground: oklch(0.36 0.115 262);
   /* Muted: plain grey - this paints table stripes and page surfaces */
   --muted: oklch(0.96 0 0);
-  --muted-foreground: oklch(0.48 0 0);
+  --muted-foreground: #64748b;
   --accent: oklch(0.93 0.03 258);
   --accent-foreground: oklch(0.36 0.115 262);
   /* Destructive is plain red, now well clear of the brand hue */
@@ -338,9 +341,9 @@
   /* A section is framed in a thin, muted navy; the boxes inside it are
      framed lighter still, so a field never reads as loudly as the panel it
      sits in. */
-  --border: oklch(0.89 0.012 262);
+  --border: #e2e8f0;
   --input: oklch(0.93 0.008 262);
-  --ring: oklch(0.46 0.13 262);
+  --ring: #334b63;
   /* Charts: one hue, dark to light */
   --chart-1: oklch(0.33 0.11 262);
   --chart-2: oklch(0.43 0.13 262);
@@ -360,7 +363,8 @@
 .dark {
   /* Dark mode - steps chosen against the dark surface, not flipped */
   /* The wordmark lifts off the dark ground rather than sinking into it */
-  --brand: oklch(0.62 0.18 26);
+  /* The same navy, lifted to carry on a dark background. */
+  --brand: oklch(0.74 0.045 249);
   --frame-alt: oklch(0.62 0.09 60);
   --background: oklch(0.16 0 0);
   --foreground: oklch(0.95 0 0);
@@ -368,7 +372,7 @@
   --card-foreground: oklch(0.95 0 0);
   --popover: oklch(0.20 0 0);
   --popover-foreground: oklch(0.95 0 0);
-  --primary: oklch(0.62 0.14 260);
+  --primary: oklch(0.74 0.045 249);
   --primary-foreground: oklch(0.16 0.02 262);
   --secondary: oklch(0.26 0.04 260);
   --secondary-foreground: oklch(0.93 0.015 258);
@@ -573,8 +577,9 @@
   .form-grid {
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
-    column-gap: 20px;
-    row-gap: 16px;
+    /* Standard 03: 19px between columns, 44px between rows. */
+    column-gap: 19px;
+    row-gap: 44px;
     width: 100%;
   }
 

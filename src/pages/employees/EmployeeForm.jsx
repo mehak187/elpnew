@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import BackButton from "@/components/shared/BackButton";
+import RecordSidebar from "@/components/shared/RecordSidebar";
 import FormHeading from "@/components/shared/FormHeading";
 import PhoneInput from "@/components/shared/PhoneInput";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,7 @@ import {
   User,
   FileText,
   Wallet,
+  ListTree,
 
   CalendarClock,
   Megaphone,
@@ -91,7 +93,7 @@ import { formatDate } from "@/pages/firm/firmData";
 import {
   employeeRecords,
   nextEmployeeNo,
-  employeeDocuments,
+  documentsFor,
   documentTypesFor,
   documentStatus,
   formatUploadedAt,
@@ -110,7 +112,7 @@ const SECTIONS = [
     // entries in this menu that were all one answer, so they are one page
     // with a box each.
     key: "information",
-    label: "Employee Profile",
+    label: "Employee Data",
     title: "Employee",
     icon: User,
     note: "Employee profile, job description and contact details",
@@ -213,6 +215,42 @@ function Required({ show }) {
   if (!show) return null;
   return ;
 }
+
+/**
+ * How the sides of one employee's file are grouped in the sidebar.
+ *
+ * Standard 07 names two: the dossier - who the person is and the papers that
+ * prove it - and the money the firm owes them. Everything else is gathered
+ * below until the standard says where it belongs.
+ */
+const SECTION_GROUPS = [
+  {
+    key: "dossier",
+    label: "Employee Dossier",
+    icon: User,
+    items: ["information", "documents"],
+  },
+  {
+    key: "financial",
+    label: "Financial Requests",
+    icon: Wallet,
+    items: ["benefits", "entitlements"],
+  },
+  {
+    key: "other",
+    label: "Other sections",
+    icon: ListTree,
+    items: [
+      "generalRequest",
+      "leaves",
+      "circulars",
+      "daily",
+      "performance",
+      "violations",
+      "permissions",
+    ],
+  },
+];
 
 /**
  * A phone number and the country it belongs to.
@@ -396,7 +434,8 @@ export default function EmployeeForm({ self }) {
   const [formData, setFormData] = useState(() => toFormData(record));
 
   // Papers are a list of their own, kept beside the fields rather than in them.
-  const [documents, setDocuments] = useState(employeeDocuments);
+  // This person's papers, not every paper in the firm.
+  const [documents, setDocuments] = useState(() => documentsFor(record?.id));
   const [docDraft, setDocDraft] = useState(emptyDocument);
   const [docFile, setDocFile] = useState(null);
   const [docQuery, setDocQuery] = useState("");
@@ -600,35 +639,32 @@ export default function EmployeeForm({ self }) {
       </div>
 
       <div className="flex flex-col items-start gap-4 sm:gap-6 lg:flex-row">
-        {/* Section navigation */}
-        <Card className="w-full lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:w-60 lg:shrink-0 lg:overflow-y-auto">
-          <CardContent className="p-3">
-            <p className="mb-2 border-b px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Employee Details
-            </p>
-            <nav className="flex flex-row gap-1 overflow-x-auto lg:flex-col">
-              {sections.map((section) => {
-                const Icon = section.icon;
-                return (
-                  <button
-                    key={section.key}
-                    type="button"
-                    onClick={() => setActiveSection(section.key)}
-                    className={cn(
-                      "flex items-center gap-2.5 text-nowrap rounded-md px-3 py-2 text-start text-sm font-medium transition-colors",
-                      activeSection === section.key
-                        ? "bg-primary text-primary-foreground"
-                        : "text-primary hover:bg-secondary"
-                    )}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" />
-                    {section.label}
-                  </button>
-                );
-              })}
-            </nav>
-          </CardContent>
-        </Card>
+        {/* Standard 07: the sides of this file, grouped, and belonging to
+            this employee alone - the name at its head says whose file is
+            open, and the list under it goes nowhere else. */}
+        <RecordSidebar
+          // Standard 07 #04: moving to another employee replaces the name,
+          // the number, the links and which group is open - all together.
+          // The key does that in one stroke, and stops one employee's
+          // opened groups from being remembered as another's.
+          key={record?.id || "new"}
+          id={"employee-" + (record?.id || "new")}
+          backTo="/employees"
+          backLabel="All employees"
+          title={formData.employeeName || "New employee"}
+          subtitle={isEditMode ? employeeNo + " · " + formData.status : "New record"}
+          active={activeSection}
+          onSelect={setActiveSection}
+          groups={SECTION_GROUPS.map((group) => ({
+            key: group.key,
+            label: group.label,
+            icon: group.icon,
+            items: group.items
+              .map((key) => sections.find((section) => section.key === key))
+              .filter(Boolean)
+              .map((section) => ({ key: section.key, label: section.label })),
+          })).filter((group) => group.items.length > 0)}
+        />
 
         {/* min-w-0 or the column will not shrink: a flex child sizes itself to
             its widest content by default, so one wide table in here would

@@ -1,14 +1,12 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  User,
   ChevronDown,
+  Clock,
+  Settings,
   LogOut,
   KeyRound,
-  Building2,
   ListTree,
-  LayoutDashboard,
   ReceiptText,
-  Truck,
   Landmark,
   FileBarChart,
   Briefcase,
@@ -18,8 +16,6 @@ import {
   UserCircle,
   Archive,
   Menu,
-  Home,
-  Box,
   Calculator,
   Percent,
 } from "lucide-react";
@@ -35,6 +31,9 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -51,7 +50,7 @@ import { cn } from "@/lib/utils";
 import { useFirm } from "@/lib/firm/context";
 import { useLanguage, LANGUAGES } from "@/lib/language/context";
 import NotificationBell from "./NotificationBell";
-import logo from "@/assets/logo2.png";
+import logo from "@/assets/logonew.jpeg";
 
 /** The firm's mark. Height is set; the width follows the artwork. */
 function Logo({ name, className }) {
@@ -59,7 +58,7 @@ function Logo({ name, className }) {
     <img
       src={logo}
       alt={name}
-      className={cn("h-10 w-auto shrink-0", className)}
+      className={cn("h-[60px] w-[190px] shrink-0 object-contain", className)}
     />
   );
 }
@@ -71,6 +70,30 @@ function Logo({ name, className }) {
  * plain link. Further pages for the Partner Menu go in its `items` array - nothing
  * else has to change.
  */
+/**
+ * The person signed in, and what their own menu offers.
+ *
+ * Kept apart from `navSections` on purpose: these belong to the reader, not
+ * to the firm's records, and they do not change with whichever employee
+ * record happens to be on screen.
+ */
+const SIGNED_IN_USER = "Mohammed Al Yahyaei";
+
+/** First letter of the first name and of the last, for the avatar. */
+function initials(name) {
+  const words = name.trim().split(/s+/);
+  const first = words[0]?.[0] || "";
+  const last = words.length > 1 ? words[words.length - 1][0] : "";
+  return (first + last).toUpperCase();
+}
+
+const ACCOUNT_LINKS = [
+  { label: "My Profile", path: "/my-profile", icon: UserCircle },
+  { label: "Change Password", path: "/settings/password", icon: KeyRound },
+  { label: "Activity Review", path: "/activity-review", icon: Clock },
+  { label: "Settings", path: "/settings/firm", icon: Settings },
+];
+
 const navSections = [
   { name: "Active Cases", path: "/litigation", key: "litigation", icon: Scale },
   {
@@ -79,11 +102,11 @@ const navSections = [
     icon: ListTree,
     items: [
       {
-        name: "Dashboard",
-        path: "/dashboard",
-        key: "dashboard",
-        icon: LayoutDashboard,
-        description: "Daily operations and management overview",
+        name: "Employees",
+        path: "/employees",
+        key: "employees",
+        icon: Users,
+        description: "Staff records, branches and roles",
       },
       {
         name: "Clients",
@@ -93,39 +116,11 @@ const navSections = [
         description: "Client directory and profiles",
       },
       {
-        name: "Suppliers",
-        path: "/suppliers",
-        key: "suppliers",
-        icon: Truck,
-        description: "Supplier directory and tax numbers",
-      },
-      {
-        name: "Leases",
-        path: "/leases",
-        key: "leases",
-        icon: Home,
-        description: "Office and property lease contracts",
-      },
-      {
-        name: "Assets",
-        path: "/assets",
-        key: "assets",
-        icon: Box,
-        description: "Fixed asset register",
-      },
-      {
-        name: "Company Profile",
-        path: "/settings/firm",
-        key: "settings",
-        icon: Building2,
-        description: "Company information and administration",
-      },
-      {
-        name: "Employees",
-        path: "/employees",
-        key: "employees",
-        icon: Users,
-        description: "Staff records, branches and roles",
+        name: "Finance Center",
+        path: "/finance",
+        key: "finance",
+        icon: Wallet,
+        description: "Invoices and the money against them",
       },
     ],
   },
@@ -217,8 +212,8 @@ export default function Header({ onNavClick, activeNav }) {
       : isActive(section.key);
 
   return (
-    <header className="fixed top-0 start-0 end-0 z-50 border-b bg-background">
-      <div className="flex h-16 items-center px-4 md:px-6">
+    <header className="fixed top-0 start-0 end-0 z-50 border-b border-container-border bg-card">
+      <div className="flex h-[72px] items-center px-4 md:px-7">
         {/* Mobile Menu */}
         <Sheet>
           <SheetTrigger asChild>
@@ -304,8 +299,8 @@ export default function Header({ onNavClick, activeNav }) {
         </Link>
 
         {/* Desktop Navigation - left aligned, next to logo */}
-        <NavigationMenu className="hidden lg:flex ms-8" viewport={false}>
-          <NavigationMenuList className="gap-2">
+        <NavigationMenu className="hidden lg:flex ms-[22px]" viewport={false}>
+          <NavigationMenuList className="gap-1">
             {navSections.map((section) => {
               const active = isSectionActive(section);
 
@@ -322,13 +317,14 @@ export default function Header({ onNavClick, activeNav }) {
                     <NavigationMenuLink
                       asChild
                       className={cn(
-                        "inline-flex items-center gap-2 h-9 rounded-md px-3 py-2 text-sm text-nowrap font-medium transition-colors",
-                        "text-primary hover:bg-secondary",
-                        "focus:bg-secondary focus:text-secondary-foreground focus:outline-none",
+                        "inline-flex h-auto items-center gap-2 text-nowrap rounded-md px-2.5 py-[11px] text-[15px]/[20px] font-normal transition-colors",
+                        "text-primary hover:bg-menu-hover",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                         active
-                          ? "bg-primary text-primary-foreground font-semibold"
-                          : "text-muted-foreground"
+                          ? cn("font-bold text-primary", "relative after:absolute after:inset-x-[10px] after:bottom-0 after:h-[3px] after:rounded-full after:bg-primary")
+                          : "text-primary"
                       )}
+                      aria-current={active ? "page" : undefined}
                     >
                       <Link
                         to={section.path}
@@ -344,18 +340,25 @@ export default function Header({ onNavClick, activeNav }) {
               // A section that opens as a menu
               return (
                 <NavigationMenuItem key={section.key}>
+                  {/* 14px, and half a weight heavier while it is the one
+                      that is open - one header item at a time. */}
                   <NavigationMenuTrigger
                     className={cn(
-                      "h-9 px-3 py-2 text-sm font-medium",
-                      active
-                        ? "bg-primary text-primary-foreground font-semibold"
-                        : "text-muted-foreground"
+                      "inline-flex h-auto items-center gap-2 text-nowrap rounded-md px-2.5 py-[11px] text-[15px]/[20px] font-normal transition-colors",
+                      "bg-card text-primary hover:bg-menu-hover",
+                      "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                      // Open, it takes the same pale fill a hovered control
+                      // takes - the panel below it is what says it is open.
+                      "data-[state=open]:bg-menu-hover data-[state=open]:text-primary",
+                      active && cn("font-bold", "relative after:absolute after:inset-x-[10px] after:bottom-0 after:h-[3px] after:rounded-full after:bg-primary")
                     )}
                   >
                     {section.name}
                   </NavigationMenuTrigger>
+                  {/* 270px wide, inset 8px, cornered at 10px: the one
+                      geometry every menu in the system is drawn to. */}
                   <NavigationMenuContent>
-                    <ul className="w-72 p-2">
+                    <ul className="w-[270px] rounded-container p-2">
                       {section.items.map((item) => (
                         <li key={item.key}>
                           <NavigationMenuLink
@@ -364,14 +367,20 @@ export default function Header({ onNavClick, activeNav }) {
                               // The rule runs down the item's logical start,
                               // so it swaps sides with the language rather
                               // than staying on the left in Arabic.
-                              "flex items-start gap-3 rounded-md border-s-[3px] border-transparent p-3 transition-colors",
+                              // 46px of row, cornered at 6px, with the rule
+                              // down its logical start so it swaps sides
+                              // with the language rather than staying left
+                              // in Arabic.
+                              "flex h-[46px] items-center gap-2.5 rounded-[6px] border-s-[3px] border-transparent px-2.5 transition-colors",
+                              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                               isActive(item.key)
-                                ? "border-s-primary bg-menu-selected text-menu-selected-ink hover:bg-menu-selected focus:bg-menu-selected"
-                                : "text-primary hover:bg-menu-hover focus:bg-menu-hover"
+                                ? "border-s-primary bg-menu-hover font-semibold text-primary"
+                                : "text-primary hover:bg-menu-hover hover:outline hover:outline-1 hover:-outline-offset-1 hover:outline-field-border focus:bg-menu-hover"
                             )}
                           >
                             <Link
                               to={item.path}
+                              aria-current={isActive(item.key) ? "page" : undefined}
                               onClick={() => onNavClick && onNavClick(item.key)}
                             >
                               {/* Named colour on purpose: without a text-
@@ -380,27 +389,25 @@ export default function Header({ onNavClick, activeNav }) {
                                   rest: with the block gone, the icon is half
                                   of what says which one is open. */}
                               <item.icon
+                                strokeWidth={1.5}
                                 className={cn(
-                                  "mt-0.5 h-4 w-4 shrink-0",
+                                  "size-[18px] shrink-0",
                                   isActive(item.key)
                                     ? "text-primary"
                                     : "text-menu-icon"
                                 )}
                               />
-                              <span>
-                                <span className="block text-sm font-medium">
-                                  {item.name}
-                                </span>
-                                <span
-                                  className={cn(
-                                    "block text-xs",
-                                    isActive(item.key)
-                                      ? "text-menu-selected-ink/80"
-                                      : "text-muted-foreground"
-                                  )}
-                                >
-                                  {item.description}
-                                </span>
+                              {/* The destination, and nothing under it. A
+                                  line of explanation beneath each name made
+                                  the panel a page of its own; the names are
+                                  what somebody came to the menu to pick. */}
+                              <span
+                                className={cn(
+                                  "truncate text-[16px]/[20px]",
+                                  isActive(item.key) ? "font-semibold" : "font-medium"
+                                )}
+                              >
+                                {item.name}
                               </span>
                             </Link>
                           </NavigationMenuLink>
@@ -421,62 +428,93 @@ export default function Header({ onNavClick, activeNav }) {
             the one thing here that asks for something to be done. */}
         <NotificationBell />
 
-        {/* Which language the records are read in. Beside the user menu
-            because it belongs to the person reading, not to the page. */}
-        <div className="me-2 flex items-center gap-1 rounded-md border p-0.5">
-          {LANGUAGES.map((option) => (
-            <button
-              key={option.code}
-              type="button"
-              onClick={() => setLanguage(option.code)}
-              title={option.label}
-              className={cn(
-                "rounded px-2 py-1 text-xs font-semibold transition-colors",
-                language === option.code
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-secondary"
-              )}
-            >
-              {option.short}
-            </button>
-          ))}
-        </div>
-
-        {/* User Dropdown */}
+        {/* The account menu.
+            The name and every action in here belong to the person signed in.
+            They do not change with whichever employee record is on screen. */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="gap-2">
-              <User className="h-4 w-4" />
-              <span className="hidden sm:inline-block text-sm">
-                Mohammed Al Yahyaei
-              </span>
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48 bg-white">
-            <DropdownMenuItem className="sm:hidden font-medium">
-              Mohammed Al Yahyaei
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="sm:hidden" />
-            <DropdownMenuItem className="cursor-pointer" asChild>
-              <Link to="/settings/firm">
-                <Building2 className="me-2 h-4 w-4" />
-                Company Settings
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer" asChild>
-              <Link to="/settings/password">
-                <KeyRound className="me-2 h-4 w-4" />
-                Change Password
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="cursor-pointer text-destructive focus:text-destructive"
-              onClick={() => navigate("/sign-in")}
+            {/* One button, not a row of them: the avatar, the name and the
+                chevron are all the same target. */}
+            <button
+              type="button"
+              className={cn(
+                "ms-2 flex h-[50px] items-center gap-[10px] rounded-md px-2.5 transition-colors",
+                "bg-card hover:bg-menu-hover",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                "data-[state=open]:bg-menu-hover",
+                "group"
+              )}
             >
-              <LogOut className="me-2 h-4 w-4" />
-              Sign Out
+              {/* Fixed fill on purpose: the avatar stands for one person, so
+                  it keeps its colour whatever the page around it is doing. */}
+              <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-[#DCE6EB] text-[12px]/[1] font-semibold text-primary">
+                {initials(SIGNED_IN_USER)}
+              </span>
+              <span className="hidden text-[14px]/[20px] font-semibold text-primary sm:inline-block">
+                {SIGNED_IN_USER}
+              </span>
+              <ChevronDown
+                strokeWidth={1.5}
+                aria-hidden="true"
+                className="size-3 shrink-0 text-primary transition-transform duration-[160ms] ease-out group-data-[state=open]:rotate-180 motion-reduce:transition-none"
+              />
+            </button>
+          </DropdownMenuTrigger>
+
+          {/* 270px, 8px of padding, cornered at 10px and ended against the
+              trigger - the one panel geometry the header is drawn to. */}
+          <DropdownMenuContent
+            align="end"
+            sideOffset={6}
+            className="w-[270px] rounded-container border border-container-border bg-card p-2 shadow-md"
+          >
+            {ACCOUNT_LINKS.map((item) => (
+              <DropdownMenuItem key={item.path} asChild className="p-0 focus:bg-transparent">
+                <Link
+                  to={item.path}
+                  className="flex h-[44px] w-full cursor-pointer items-center gap-2.5 rounded-[6px] px-2.5 text-[15px]/[20px] font-semibold text-primary transition-colors hover:bg-menu-hover focus:bg-menu-hover"
+                >
+                  <item.icon strokeWidth={1.5} className="size-[18px] shrink-0 text-menu-icon" />
+                  {item.label}
+                </Link>
+              </DropdownMenuItem>
+            ))}
+
+            <DropdownMenuSeparator className="my-[10px] bg-container-border" />
+
+            {/* Both languages stay on screen with the current one marked,
+                rather than one button that swaps what it says. */}
+            <DropdownMenuLabel className="px-2.5 py-0 pb-1.5 text-[13px]/[18px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Language
+            </DropdownMenuLabel>
+            <DropdownMenuRadioGroup value={language} onValueChange={setLanguage}>
+              {LANGUAGES.map((option) => (
+                <DropdownMenuRadioItem
+                  key={option.code}
+                  value={option.code}
+                  className="h-[44px] cursor-pointer rounded-[6px] pe-2.5 text-[15px]/[20px] font-medium text-primary transition-colors hover:bg-menu-hover focus:bg-menu-hover"
+                >
+                  {/* The ring is always drawn; the dot above it is what the
+                      indicator fills in once this is the chosen language. */}
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute start-2 size-3.5 rounded-full border border-field-border"
+                  />
+                  {option.label}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+
+            <DropdownMenuSeparator className="my-[10px] bg-container-border" />
+
+            {/* Navy like every other row: signing out is the way out, not a
+                destructive act that needs a warning colour. */}
+            <DropdownMenuItem
+              onClick={() => navigate("/sign-in")}
+              className="flex h-[44px] cursor-pointer items-center gap-2.5 rounded-[6px] px-2.5 text-[15px]/[20px] font-semibold text-primary transition-colors hover:bg-menu-hover focus:bg-menu-hover"
+            >
+              <LogOut strokeWidth={1.5} className="size-[18px] shrink-0 text-menu-icon" />
+              Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
