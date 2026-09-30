@@ -264,11 +264,11 @@ export default function DataTable({
           {filters}
         </div>
 
-        {/* Spacer */}
-        <div className="hidden sm:block flex-1" />
-
-        {/* Page Size and Export */}
-        <div className="flex items-center gap-2 justify-between sm:justify-end">
+        {/* Everything that acts on this list, gathered on one side of the row.
+            Splitting the controls between the two ends made the eye cross the
+            whole table to set a page size, and left the middle saying nothing.
+            The far end is kept clear for whatever acts on a record. */}
+        <div className="flex flex-1 items-center gap-2">
           <Select
             value={pageSize.toString()}
             onValueChange={(value) => {
@@ -318,7 +318,11 @@ export default function DataTable({
           {onAdd && !addPanel && (
             <Button
               type="button"
-              className="shrink-0 border border-primary bg-card font-semibold text-primary shadow-none hover:bg-menu-hover"
+              variant="add"
+              // Pushed to the far end: this is the one control that acts on a
+              // record rather than on the view of the list, and a list inside
+              // a record has no page title for it to sit beside.
+              className="ms-auto shrink-0"
               onClick={onAdd}
             >
               <Plus className="me-2 h-4 w-4" />
