@@ -117,6 +117,7 @@ export default function SuppliersPage() {
         <CardContent className="p-4 sm:p-6">
           <DataTable
             columns={columns}
+            itemLabel="suppliers"
             data={suppliers}
             // A supplier no longer dealt with is kept, at the foot of the list.
             endedRow={(row) => isEndedStatus(row.status)}

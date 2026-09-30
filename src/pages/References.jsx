@@ -173,6 +173,7 @@ export default function References() {
         <CardContent className="p-4 sm:p-6">
           <DataTable
             columns={columns}
+            itemLabel="references"
             data={filteredData}
             // One no longer in use is kept, at the foot of its list.
             endedRow={(row) => isEndedStatus(row.status)}

@@ -121,6 +121,7 @@ export default function CorporateList() {
         <CardContent className="p-4 sm:p-6">
           <DataTable
             columns={columns}
+            itemLabel="matters"
             data={matters}
             searchPlaceholder="Search corporate matters..."
             currentPage={currentPage}

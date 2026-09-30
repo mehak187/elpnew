@@ -8,6 +8,7 @@ import { onLeaveToday, annualLeaveLeft } from "./leaveData";
 import DataTable from "@/components/shared/DataTable";
 import PageHeader from "@/components/shared/PageHeader";
 import FilterPanel from "@/components/shared/FilterPanel";
+import { filterChips, withoutChip } from "@/lib/filterChips";
 import {
   Users,
   Eye,
@@ -261,6 +262,13 @@ export default function EmployeesList() {
   // page from printing what it should not.
   const canSeeRestricted = CURRENT_USER.role === "admin";
   const fields = filterFields(canSeeRestricted);
+  const chips = filterChips(fields, filters);
+
+  /** Narrowing the list always starts it again at its first page. */
+  const narrow = (next) => {
+    setFilters(next);
+    setCurrentPage(1);
+  };
 
   const shown = employees
     .filter((row) => matches(row, filters, leaves))
@@ -435,8 +443,12 @@ export default function EmployeesList() {
         <CardContent className="p-4 sm:p-6">
           <DataTable
             columns={columns}
+            itemLabel="employees"
             data={shown}
             keepOrder
+            appliedFilters={chips}
+            onRemoveFilter={(chip) => narrow(withoutChip(filters, chip))}
+            onClearFilters={() => narrow({})}
             // Anyone who has left is kept, at the foot of the list.
             endedRow={(row) => isEndedStatus(row.status)}
             searchPlaceholder="Search employee by name, ID, department..."
@@ -448,11 +460,7 @@ export default function EmployeesList() {
               <FilterPanel
                 fields={fields}
                 value={filters}
-                onChange={(next) => {
-                  setFilters(next);
-                  // A narrowed list is read from its first page.
-                  setCurrentPage(1);
-                }}
+                onChange={narrow}
               />
             }
             pageSize={pageSize}

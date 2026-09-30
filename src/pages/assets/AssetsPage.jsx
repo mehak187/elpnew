@@ -482,6 +482,7 @@ export default function AssetsPage() {
         <CardContent className="p-4 sm:p-6">
           <DataTable
             columns={columns}
+            itemLabel="assets"
             data={rows}
             // An asset out of service is kept, at the foot of the register.
             endedRow={(row) => isEndedStatus(ASSET_STATUS[row.state].label)}

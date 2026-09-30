@@ -402,6 +402,7 @@ export default function IncomeTaxPage() {
           <FormHeading icon={FileText} title="Income Tax Returns" note="One return a year, the latest first" />
           <DataTable
             columns={columns}
+            itemLabel="tax returns"
             data={rows}
             searchPlaceholder="Ask about income tax..."
             exportFileName="income-tax-returns.csv"

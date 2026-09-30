@@ -371,7 +371,7 @@ export default function DataTable({
             <button
               key={filter.key}
               type="button"
-              onClick={() => onRemoveFilter && onRemoveFilter(filter.key)}
+              onClick={() => onRemoveFilter && onRemoveFilter(filter)}
               className="inline-flex items-center gap-1.5 rounded-[6px] border border-primary bg-card px-2.5 py-1 text-xs font-semibold text-primary transition-colors hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <span>
@@ -559,16 +559,19 @@ export default function DataTable({
       {/* Pagination */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground order-2 sm:order-1">
-          {itemLabel && filteredData.length > 0
+          {/* What is on screen out of what there is. Said whether or not
+              the page named what it holds: "Page 1 of 3" answers a
+              question nobody asked, while the count answers the one they
+              did. */}
+          {filteredData.length > 0
             ? "Showing " +
               ((currentPage - 1) * pageSize + 1) +
-              "\u2013" +
+              "–" +
               Math.min(currentPage * pageSize, filteredData.length) +
               " of " +
               filteredData.length +
-              " " +
-              itemLabel
-            : "Page " + currentPage + " of " + calculatedTotalPages}
+              (itemLabel ? " " + itemLabel : "")
+            : "Nothing to show"}
         </p>
         <div className="flex items-center gap-2 order-1 sm:order-2">
           <Button

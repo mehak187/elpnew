@@ -212,6 +212,7 @@ export default function ClientsList() {
         <CardContent className="p-4 sm:p-6">
           <DataTable
             columns={columns}
+            itemLabel="clients"
             data={processedClients}
             // Clients that have stopped are kept, at the foot of the list.
             endedRow={(row) => isEndedStatus(row.status)}

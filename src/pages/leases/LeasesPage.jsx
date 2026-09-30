@@ -367,6 +367,7 @@ export default function LeasesPage() {
         <CardContent className="p-4 sm:p-6">
           <DataTable
             columns={columns}
+            itemLabel="leases"
             data={rows}
             // A lease that has ended or been cancelled sits under the running
             // ones rather than among them.

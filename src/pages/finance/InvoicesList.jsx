@@ -137,6 +137,7 @@ export default function InvoicesList() {
         <CardContent className="p-4 sm:p-6">
           <DataTable
             columns={columns}
+            itemLabel="invoices"
             data={visibleInvoices}
             searchPlaceholder="Search invoices..."
             currentPage={currentPage}
