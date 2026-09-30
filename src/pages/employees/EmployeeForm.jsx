@@ -99,6 +99,7 @@ import { smartSearch } from "@/lib/search/smartSearch";
 import { formatDate } from "@/pages/firm/firmData";
 import {
   employeeRecords,
+  employeeDocuments,
   nextEmployeeNo,
   documentsFor,
   documentTypesFor,
@@ -278,10 +279,38 @@ const ADD_STEPS = [
   // After the job, because which papers apply follows from it: a lawyer's
   // card only for a lawyer, a passport and visa only for a foreigner.
   { key: "identity", label: "Identity & Immigration" },
-  // Pay once the person and the job are settled, and before the papers.
+  // Pay once the person and the job are settled.
   { key: "salary", label: "Salary & Banking" },
-  { key: "documents", label: "Documents" },
+  // Only for somebody registered with the Fund, as Employment says; anybody
+  // else skips it.
+  {
+    key: "socialProtection",
+    label: "Social Protection",
+    when: (values) => values.socialProtection === "Yes",
+  },
+  // Not a step in the sequence: papers can be filed whenever there is an
+  // employee to file them against, so the tab opens once Personal Details is
+  // saved and the record is finished without it.
+  { key: "documents", label: "Documents", standalone: true },
 ];
+
+/** The sections a record with these values is saved through, in order. */
+const flowFor = (values) =>
+  ADD_STEPS.filter((s) => !s.standalone && (!s.when || s.when(values)));
+
+/** Said under the tabs while the draft is being built, where no step says more. */
+const DRAFT_NOTE = "Draft employee · sections are saved one at a time";
+
+/**
+ * Social Protection Fund contributions, as a share of basic pay.
+ *
+ * The employee's 7% is what payroll already holds back as the social
+ * insurance contribution on every record; the employer's share is the Fund's
+ * published rate. Both are the firm's to confirm - they are here, once, so
+ * changing a rate changes it everywhere it is worked out.
+ */
+const SPF_EMPLOYEE_RATE = 0.07;
+const SPF_EMPLOYER_RATE = 0.115;
 
 /** The pay a new employee is taken on at, in the order it is asked for. */
 const PAY_FIELDS = [
@@ -319,14 +348,14 @@ const sumOf = (fields, values) =>
  * to; the one being filled in is underlined; the rest wait, greyed, until the
  * step before them is saved.
  */
-function StepTabs({ steps, active, done, onSelect }) {
+function StepTabs({ steps, active, done, canOpen, onSelect }) {
   return (
     <nav aria-label="Add employee steps" className="overflow-x-auto">
       <ol className="flex min-w-max border-b border-container-border">
         {steps.map((step, index) => {
           const isDone = done.includes(step.key);
           const isActive = step.key === active;
-          const reachable = isDone || isActive;
+          const reachable = canOpen(step.key);
           return (
             <li key={step.key} className="flex items-center">
               {index > 0 && (
@@ -686,6 +715,10 @@ const emptyFormData = {
   accountNumber: "",
   iban: "",
   swiftCode: "",
+
+  // The Fund's own number for the employee, and when they were registered.
+  spRegistrationNo: "",
+  spRegistrationDate: "",
 };
 
 /**
@@ -944,11 +977,38 @@ export default function EmployeeForm({ self }) {
   // top of the screen rather than pretending to save from up here.
 
   /**
+   * The finished employee, filed with the others and opened as a record.
+   *
+   * Held in the session's lists until there is a server to send it to - so
+   * the record page, the list and the papers all find it - along with any
+   * papers filed while it was being added.
+   */
+  const finishEmployee = () => {
+    const newId = employeeRecords.reduce((max, e) => Math.max(max, e.id), 0) + 1;
+    employeeRecords.push({
+      ...toRecord(formData),
+      id: newId,
+      empNo: employeeNo,
+      // What the list shows a person as doing.
+      designation: formData.occupation,
+      role: formData.occupation,
+    });
+    let docId = employeeDocuments.reduce((max, d) => Math.max(max, d.id), 0);
+    documents.forEach((document) => {
+      docId += 1;
+      employeeDocuments.push({ ...document, id: docId, employeeId: newId });
+    });
+    navigate("/employees/" + newId);
+  };
+
+  /**
    * Saves the step on screen and opens the next one.
    *
    * Nothing moves on while a required field is empty: the check marks the
    * gaps and takes the cursor to the first, and the step stays where it is.
-   * The last step finishes the employee and goes back to the list.
+   * Which step is next is read from what is being saved now - Social
+   * Protection only follows for somebody registered - and the last one
+   * finishes the employee and opens their record.
    */
   const saveStep = () => {
     if (!checkRequired(formRef.current)) return;
@@ -966,16 +1026,27 @@ export default function EmployeeForm({ self }) {
     setSavedSteps((prev) => (prev.includes(step) ? prev : [...prev, step]));
     setSaved(formData);
 
-    const next = ADD_STEPS[ADD_STEPS.findIndex((s) => s.key === step) + 1];
+    const flow = flowFor(formData);
+    const next = flow[flow.findIndex((s) => s.key === step) + 1];
     if (!next) {
-      navigate("/employees");
+      finishEmployee();
       return;
     }
     setStep(next.key);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const isLastStep = step === ADD_STEPS[ADD_STEPS.length - 1].key;
+  // The steps on the bar: every one that applies to what has been saved.
+  const shownSteps = ADD_STEPS.filter((s) => !s.when || s.when(saved));
+  const savedFlow = flowFor(saved);
+  // The section before this one, to go back to without losing anything.
+  const previousStep = savedFlow[savedFlow.findIndex((s) => s.key === step) - 1];
+  // A tab opens once it has been saved or is the one being filled in; the
+  // papers open as soon as there is an employee to file them against.
+  const canOpen = (key) =>
+    savedSteps.includes(key) ||
+    key === step ||
+    (key === "documents" && savedSteps.includes("personal"));
 
   // The month's pay, worked out from its parts rather than typed, so the
   // totals can never disagree with the lines they add up.
@@ -992,33 +1063,38 @@ export default function EmployeeForm({ self }) {
     { month: "long", year: "numeric" }
   );
   const currentStep = ADD_STEPS.find((s) => s.key === step) || ADD_STEPS[0];
+  // What goes to the Social Protection Fund each month, on the basic pay.
+  const spEmployee = Number(formData.salary || 0) * SPF_EMPLOYEE_RATE;
+  const spEmployer = Number(formData.salary || 0) * SPF_EMPLOYER_RATE;
 
-  // Cancel and Save for the step on screen, drawn inside that step's box.
-  // Finishing is a click, not a submit: the documents step has a search box,
-  // and Enter in it must search rather than send the person back to the list.
+  // The step's way back, and Cancel and Save, at the end of what they act on.
+  // Documents is filed paper by paper, so it has nothing to save here.
   const stepActions = isAdding && (
-    <div className="flex items-center justify-end gap-3">
-      <Button type="button" variant="ghost" onClick={() => navigate("/employees")}>
-        Cancel
-      </Button>
-      {isLastStep ? (
-        <Button type="button" onClick={saveStep}>
-          <Save className="me-2 h-4 w-4" />
-          Finish
-        </Button>
-      ) : (
-        <Button type="submit">
-          <Save className="me-2 h-4 w-4" />
-          Save
+    <div className="flex flex-wrap items-center gap-3">
+      {previousStep && (
+        <Button type="button" variant="ghost" onClick={() => setStep(previousStep.key)}>
+          Back to previous saved section
         </Button>
       )}
+      <div className="ms-auto flex items-center gap-3">
+        <Button type="button" variant="ghost" onClick={() => navigate("/employees")}>
+          Cancel
+        </Button>
+        {step !== "documents" && (
+          <Button type="submit">
+            <Save className="me-2 h-4 w-4" />
+            Save
+          </Button>
+        )}
+      </div>
     </div>
   );
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (isAdding) {
-      if (!isLastStep) saveStep();
+      // Enter in the documents search must search, not save a section.
+      if (step !== "documents") saveStep();
       return;
     }
     console.log(isEditMode ? "Updating employee:" : "Creating employee:", {
@@ -1113,14 +1189,18 @@ export default function EmployeeForm({ self }) {
           {isAdding && (
             <div className="space-y-2">
               <StepTabs
-                steps={ADD_STEPS}
+                steps={shownSteps}
                 active={step}
                 done={savedSteps}
+                canOpen={canOpen}
                 onSelect={setStep}
               />
-              {/* What the step asks for, where the step says it. */}
-              {currentStep.hint && (
-                <p className="text-sm text-primary/75">{currentStep.hint}</p>
+              {/* What the step asks for, where the step says it; otherwise,
+                  once there is a draft, that it is saved a section at a time. */}
+              {(currentStep.hint || savedSteps.length > 0) && (
+                <p className="text-sm text-primary/75">
+                  {currentStep.hint || DRAFT_NOTE}
+                </p>
               )}
             </div>
           )}
@@ -2124,6 +2204,70 @@ export default function EmployeeForm({ self }) {
                       </DialogContent>
                     </Dialog>
                   </>
+                )}
+
+                {/* The Fund's number and date are asked for; what is paid into
+                    it is worked out from the basic pay saved on Salary &
+                    Banking, and payroll is where those figures come from. */}
+                {isAdding && step === "socialProtection" && (
+                  <SectionCard title="Social Protection" icon={ShieldCheck} footer={stepActions}>
+                    <div className="form-grid gap-y-6">
+                      <div className="form-field space-y-2">
+                        <Label htmlFor="spRegistrationNo">Registration No.</Label>
+                        <Input
+                          id="spRegistrationNo"
+                          name="spRegistrationNo"
+                          value={formData.spRegistrationNo}
+                          onChange={onChange}
+                          placeholder="Enter registration number"
+                          required
+                        />
+                      </div>
+                      <div className="form-field space-y-2">
+                        <Label htmlFor="spRegistrationDate">Registration Date</Label>
+                        <Input
+                          id="spRegistrationDate"
+                          name="spRegistrationDate"
+                          type="date"
+                          value={formData.spRegistrationDate}
+                          onChange={onChange}
+                          required
+                        />
+                      </div>
+                      <MoneyField
+                        id="spEmployee"
+                        label="Employee Contribution"
+                        value={spEmployee}
+                        locked
+                      />
+                      <MoneyField
+                        id="spEmployer"
+                        label="Employer Contribution"
+                        value={spEmployer}
+                        locked
+                      />
+                      <MoneyField
+                        id="spTotal"
+                        label="Total Contribution"
+                        value={spEmployee + spEmployer}
+                        locked
+                      />
+                      <div className="form-field space-y-2">
+                        <Label htmlFor="spSource">Data Source</Label>
+                        <Input id="spSource" value="Payroll" readOnly tabIndex={-1} className="bg-locked" />
+                      </div>
+                      <div className="form-field space-y-2">
+                        <Label htmlFor="spUpdated">Last Updated</Label>
+                        <Input
+                          id="spUpdated"
+                          value={formatDate(today)}
+                          readOnly
+                          tabIndex={-1}
+                          className="bg-locked"
+                        />
+                      </div>
+                    </div>
+                  </SectionCard>
                 )}
 
                   </fieldset>
