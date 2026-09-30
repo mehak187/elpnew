@@ -11,9 +11,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import DataTable from "@/components/shared/DataTable";
+import PageHeader from "@/components/shared/PageHeader";
 import FormHeading from "@/components/shared/FormHeading";
 import { IdStatusDot, isEndedStatus } from "@/components/shared/panels";
-import { Home, Plus } from "lucide-react";
+import { Home } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useFirm } from "@/lib/firm/context";
 import { useSuppliers } from "@/lib/suppliers/context";
@@ -294,20 +295,13 @@ export default function LeasesPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-primary p-2 sm:p-3">
-            <Home className="h-5 w-5 text-primary-foreground sm:h-6 sm:w-6" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-primary sm:text-2xl">Leases</h1>
-            <p className="text-xs text-primary/75 sm:text-sm">
-              Manage all lease contracts in one place
-            </p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        icon={Home}
+        title="Leases"
+        note="Manage all lease contracts in one place"
+        onAdd={adding ? null : () => setAdding(true)}
+        addLabel="Add New Lease"
+      />
 
       {adding && (
         <Card>
@@ -380,8 +374,6 @@ export default function LeasesPage() {
             searchPlaceholder="Ask about leases..."
             exportFileName="leases.csv"
             enableColumnSearch={false}
-            onAdd={adding ? null : () => setAdding(true)}
-            addLabel="Add New Lease"
             currentPage={currentPage}
             totalPages={Math.ceil(rows.length / pageSize)}
             pageSize={pageSize}

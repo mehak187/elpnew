@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import DataTable from "@/components/shared/DataTable";
+import PageHeader from "@/components/shared/PageHeader";
 import FormHeading from "@/components/shared/FormHeading";
 import Panel from "@/components/shared/Panel";
 import { IdStatusDot, isEndedStatus } from "@/components/shared/panels";
@@ -334,18 +335,13 @@ export default function AssetsPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-primary p-2 sm:p-3">
-            <Box className="h-5 w-5 text-primary-foreground sm:h-6 sm:w-6" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-primary sm:text-2xl">Assets</h1>
-            <p className="text-xs text-primary/75 sm:text-sm">Fixed Asset Register</p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        icon={Box}
+        title="Assets"
+        note="Fixed Asset Register"
+        onAdd={adding ? null : () => setAdding(true)}
+        addLabel="Add Asset"
+      />
 
       {adding && (
         <Card>
@@ -493,8 +489,6 @@ export default function AssetsPage() {
             exportFileName="assets.csv"
             enableColumnSearch={false}
             enableSorting
-            onAdd={adding ? null : () => setAdding(true)}
-            addLabel="Add Asset"
             currentPage={currentPage}
             totalPages={Math.ceil(rows.length / pageSize)}
             pageSize={pageSize}

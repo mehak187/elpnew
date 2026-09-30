@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import DataTable from "@/components/shared/DataTable";
-import { Users, Plus, FileText } from "lucide-react";
+import PageHeader from "@/components/shared/PageHeader";
+import { Users, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IdStatusDot, isEndedStatus } from "@/components/shared/panels";
 import ActiveFilters from "@/components/shared/ActiveFilters";
@@ -193,22 +194,13 @@ export default function ClientsList() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 sm:p-3 rounded-xl bg-primary">
-            <Users className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-primary">
-              Clients
-            </h1>
-            <p className="text-xs sm:text-sm text-primary/75">
-              Manage client information
-            </p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        icon={Users}
+        title="Clients"
+        note="Manage client information"
+        onAdd={() => navigate("/clients/create")}
+        addLabel="Add Client"
+      />
 
       <ActiveFilters
         filters={active}
@@ -225,8 +217,6 @@ export default function ClientsList() {
             endedRow={(row) => isEndedStatus(row.status)}
             searchPlaceholder="Ask anything..."
             enableColumnSearch={false}
-            onAdd={() => navigate("/clients/create")}
-            addLabel="Add Client"
             currentPage={currentPage}
             totalPages={Math.ceil(processedClients.length / pageSize)}
             pageSize={pageSize}

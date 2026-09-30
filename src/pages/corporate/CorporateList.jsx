@@ -4,8 +4,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import DataTable from "@/components/shared/DataTable";
+import PageHeader from "@/components/shared/PageHeader";
 import RecordDialog from "@/components/shared/RecordDialog";
-import { Briefcase, Plus, Eye, Edit } from "lucide-react";
+import { Briefcase, Eye, Edit } from "lucide-react";
 
 const corporateMatters = [
   { id: 1, ref_no: "CORP/2024/001", client: "ABC Holdings LLC", matter_type: "Company Formation", status: "In Progress", created_date: "2024-12-01" },
@@ -93,22 +94,13 @@ export default function CorporateList() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 sm:p-3 rounded-xl bg-primary">
-            <Briefcase className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-primary">
-              Corporate Matters
-            </h1>
-            <p className="text-xs sm:text-sm text-primary/75">
-              Manage corporate legal matters
-            </p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        icon={Briefcase}
+        title="Corporate Matters"
+        note="Manage corporate legal matters"
+        onAdd={() => navigate("/corporate/create")}
+        addLabel="New Matter"
+      />
 
       <RecordDialog
         open={Boolean(selected)}
@@ -131,8 +123,6 @@ export default function CorporateList() {
             columns={columns}
             data={matters}
             searchPlaceholder="Search corporate matters..."
-            onAdd={() => navigate("/corporate/create")}
-            addLabel="New Matter"
             currentPage={currentPage}
             totalPages={Math.ceil(matters.length / pageSize)}
             pageSize={pageSize}

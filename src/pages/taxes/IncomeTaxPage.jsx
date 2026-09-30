@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import DataTable from "@/components/shared/DataTable";
+import PageHeader from "@/components/shared/PageHeader";
 import FormHeading from "@/components/shared/FormHeading";
 import SummaryStrip from "@/components/shared/SummaryStrip";
-import { FileCheck2, FileText, Landmark, Plus, Save, X } from "lucide-react";
+import { FileCheck2, FileText, Landmark, Save, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTaxes } from "@/lib/taxes/context";
 import { Choice, TextField, Worked, Attach } from "@/pages/leases/fields";
@@ -352,18 +353,13 @@ export default function IncomeTaxPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-primary p-2 sm:p-3">
-            <Landmark className="h-5 w-5 text-primary-foreground sm:h-6 sm:w-6" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-primary sm:text-2xl">Income Tax</h1>
-            <p className="text-xs text-primary/75 sm:text-sm">Corporate income tax returns and payments</p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        icon={Landmark}
+        title="Income Tax"
+        note="Corporate income tax returns and payments"
+        onAdd={editing === null ? () => setEditing("new") : null}
+        addLabel="Add Tax Return"
+      />
 
       <SummaryStrip
         items={[
@@ -411,8 +407,6 @@ export default function IncomeTaxPage() {
             exportFileName="income-tax-returns.csv"
             enableColumnSearch={false}
             enableSorting
-            onAdd={editing === null ? () => setEditing("new") : null}
-            addLabel="Add Tax Return"
             currentPage={currentPage}
             totalPages={Math.ceil(rows.length / pageSize)}
             pageSize={pageSize}

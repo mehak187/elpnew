@@ -4,8 +4,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import SummaryStrip from "@/components/shared/SummaryStrip";
 import { Button } from "@/components/ui/button";
 import DataTable from "@/components/shared/DataTable";
+import PageHeader from "@/components/shared/PageHeader";
 import { cn } from "@/lib/utils";
-import { Briefcase, Plus, FileText } from "lucide-react";
+import { Briefcase, FileText } from "lucide-react";
 import { useExpenses } from "@/lib/expenses/context";
 import { judicialTotals } from "./judicialData";
 import { formatDate, money } from "./expenseData";
@@ -235,22 +236,17 @@ export default function CourtFeePayments() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-primary p-2 sm:p-3">
-            <Briefcase className="h-5 w-5 text-primary-foreground sm:h-6 sm:w-6" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-primary sm:text-2xl">
-              Judicial Authority Expenses
-            </h1>
-            <p className="text-xs text-primary/75 sm:text-sm">
-              {all.count} expenses · {money(all.amount)}
-            </p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        icon={Briefcase}
+        title="Judicial Authority Expenses"
+        note={
+          <>
+            {all.count} expenses &middot; {money(all.amount)}
+          </>
+        }
+        onAdd={() => navigate("/court-fee-payments/create")}
+        addLabel="Add Expense"
+      />
 
       {/* What the firm has paid the courts, by what it was paid for */}
       <SummaryStrip
@@ -272,8 +268,6 @@ export default function CourtFeePayments() {
             enableColumnSearch={false}
             enableSorting
             itemLabel="expenses"
-            onAdd={() => navigate("/court-fee-payments/create")}
-            addLabel="Add Expense"
             currentPage={currentPage}
             totalPages={Math.ceil(judicialExpenses.length / pageSize)}
             pageSize={pageSize}

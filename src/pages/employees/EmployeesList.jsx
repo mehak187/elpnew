@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import DataTable from "@/components/shared/DataTable";
+import PageHeader from "@/components/shared/PageHeader";
 import FilterPanel from "@/components/shared/FilterPanel";
-import { Users, Plus, Eye } from "lucide-react";
+import { Users, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IdStatusDot, isEndedStatus } from "@/components/shared/panels";
 import {
@@ -221,22 +222,13 @@ export default function EmployeesList() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 sm:p-3 rounded-xl bg-primary">
-            <Users className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-primary">
-              Employees
-            </h1>
-            <p className="text-xs sm:text-sm text-primary/75">
-              Manage employee information
-            </p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        icon={Users}
+        title="Employees"
+        note="Manage employee information"
+        onAdd={() => navigate("/employees/create")}
+        addLabel="Add Employee"
+      />
 
       <Card>
         <CardContent className="p-4 sm:p-6">
@@ -248,8 +240,6 @@ export default function EmployeesList() {
             searchPlaceholder="Search employee by name, ID, department..."
             enableColumnSearch={false}
             enableSorting
-            onAdd={() => navigate("/employees/create")}
-            addLabel="Add Employee"
             currentPage={currentPage}
             totalPages={Math.ceil(shown.length / pageSize)}
             filters={
