@@ -67,6 +67,14 @@ const Fact = ({ label, children }) => (
   </p>
 );
 
+/** How each standing is marked, the same colours the record itself uses. */
+const STATUS_TONE = {
+  Active: "bg-green-500",
+  "On Leave": "bg-amber-500",
+  Inactive: "bg-muted-foreground",
+  Terminated: "bg-red-500",
+};
+
 /** A date as the firm writes them. */
 const formatDate = (iso) => {
   if (!iso) return "";
@@ -261,7 +269,7 @@ export default function EmployeesList() {
     {
       key: "empNo",
       header: "Employee No.",
-      width: "11%",
+      width: "10%",
       render: (value, row) => (
         <button
           type="button"
@@ -275,15 +283,12 @@ export default function EmployeesList() {
     {
       key: "name",
       header: "Employee",
-      width: "19%",
+      width: "17%",
       render: (value, row) => (
         <div className="space-y-0.5">
           <p className="font-semibold text-primary">{value}</p>
           <p className="text-xs text-muted-foreground">
             {row.nationality} <span className="px-1">|</span> {row.gender}
-          </p>
-          <p className="text-xs text-primary/75">
-            <span className="font-semibold">Status:</span> {row.status}
           </p>
         </div>
       ),
@@ -291,7 +296,7 @@ export default function EmployeesList() {
     {
       key: "designation",
       header: "Employment Details",
-      width: "23%",
+      width: "21%",
       render: (value, row) => (
         <div className="space-y-0.5">
           <p className="font-semibold text-primary">{value}</p>
@@ -308,7 +313,7 @@ export default function EmployeesList() {
     {
       key: "salary",
       header: "Net Salary",
-      width: "12%",
+      width: "11%",
       sortValue: (row) => netSalary(row),
       render: (value, row) => (
         <span className="font-semibold text-emerald-700">{money(netSalary(row))}</span>
@@ -317,7 +322,7 @@ export default function EmployeesList() {
     {
       key: "leave",
       header: "Leave",
-      width: "10%",
+      width: "9%",
       sortValue: (row) => annualLeaveLeft(leaves, row.name) ?? -1,
       render: (value, row) => {
         const left = annualLeaveLeft(leaves, row.name);
@@ -347,13 +352,13 @@ export default function EmployeesList() {
           </span>
         </span>
       ),
-      width: "10%",
+      width: "9%",
       render: () => <span className="text-muted-foreground">&ndash;</span>,
     },
     {
       key: "documents",
       header: "Documents",
-      width: "15%",
+      width: "14%",
       // One paper only: the one nearest to costing the firm something.
       // Everything else is counted, not listed, because a column that lists
       // six documents is a column nobody reads.
@@ -400,6 +405,26 @@ export default function EmployeesList() {
           </div>
         );
       },
+    },
+    {
+      key: "status",
+      header: "Status",
+      width: "9%",
+      // Its own column rather than a line under the name: standing is the one
+      // thing on this row that changes, and a column can be scanned down and
+      // sorted where a line buried in a cell cannot.
+      render: (value) => (
+        <span className="inline-flex items-center gap-2 text-primary">
+          <span
+            aria-hidden="true"
+            className={cn(
+              "size-2 shrink-0 rounded-full",
+              STATUS_TONE[value] || "bg-muted-foreground"
+            )}
+          />
+          {value}
+        </span>
+      ),
     },
   ];
 

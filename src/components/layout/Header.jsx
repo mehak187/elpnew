@@ -210,8 +210,11 @@ export default function Header({ onNavClick, activeNav }) {
                         "inline-flex h-auto items-center gap-2 text-nowrap rounded-md px-2.5 py-[11px] text-[15px]/[20px] font-normal transition-colors",
                         "text-primary hover:bg-menu-hover",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                        // Marked by the fill it takes, not by a rule under
+                        // it: the same pale ground a hovered control takes,
+                        // held while the page it leads to is the one open.
                         active
-                          ? cn("font-bold text-primary", "relative after:absolute after:inset-x-[10px] after:bottom-0 after:h-[3px] after:rounded-full after:bg-primary")
+                          ? "bg-menu-selected font-bold text-primary"
                           : "text-primary"
                       )}
                       aria-current={active ? "page" : undefined}
@@ -240,7 +243,7 @@ export default function Header({ onNavClick, activeNav }) {
                       // Open, it takes the same pale fill a hovered control
                       // takes - the panel below it is what says it is open.
                       "data-[state=open]:bg-menu-hover data-[state=open]:text-primary",
-                      active && cn("font-bold", "relative after:absolute after:inset-x-[10px] after:bottom-0 after:h-[3px] after:rounded-full after:bg-primary")
+                      active && "bg-menu-selected font-bold"
                     )}
                   >
                     {section.name}
