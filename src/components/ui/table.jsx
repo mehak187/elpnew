@@ -1,8 +1,11 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-const Table = React.forwardRef(({ className, ...props }, ref) => (
-  <div className="relative w-full overflow-auto">
+const Table = React.forwardRef(({ className, wrapperClassName, ...props }, ref) => (
+  // The scroll box the table sits in. A sticky heading sticks to its nearest
+  // scrolling ancestor, which is this - so whoever wants the heading held has
+  // to give this box a height to scroll inside.
+  <div className={cn("relative w-full overflow-auto", wrapperClassName)}>
     <table
       ref={ref}
       className={cn("w-full caption-bottom text-sm", className)}

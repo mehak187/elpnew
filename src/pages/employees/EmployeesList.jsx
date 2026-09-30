@@ -344,14 +344,7 @@ export default function EmployeesList() {
     },
     {
       key: "access",
-      header: (
-        <span className="flex flex-col">
-          Access Level
-          <span className="text-xs font-normal text-muted-foreground">
-            Under construction
-          </span>
-        </span>
-      ),
+      header: "Access Level",
       width: "9%",
       render: () => <span className="text-muted-foreground">&ndash;</span>,
     },
