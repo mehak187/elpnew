@@ -5,7 +5,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import RecordSidebar from "@/components/shared/RecordSidebar";
 import PageHeader from "@/components/shared/PageHeader";
-import FormHeading from "@/components/shared/FormHeading";
 import PhoneInput from "@/components/shared/PhoneInput";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,9 +35,8 @@ import {
   Phone,
   Mail,
   FileCheck,
-  FileImage,
   FileSpreadsheet,
-  Trash2,
+  Eye,
   Briefcase,
   Users,
   Gavel,
@@ -87,7 +85,6 @@ import EmployeeCircularsSection from "./sections/CircularsSection";
 import LeavesSection from "./sections/LeavesSection";
 import GeneralRequestSection from "./sections/GeneralRequestSection";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
-import AiSearch from "@/components/shared/AiSearch";
 import {
   RecordTable,
   HeadRow,
@@ -95,7 +92,6 @@ import {
   Row,
   Td,
 } from "@/components/shared/RecordTable";
-import { smartSearch } from "@/lib/search/smartSearch";
 import { formatDate } from "@/pages/firm/firmData";
 import {
   employeeRecords,
@@ -104,7 +100,7 @@ import {
   documentsFor,
   documentTypesFor,
   documentStatus,
-  formatUploadedAt,
+  documentCategory,
 } from "./employeeData";
 import { checkRequired } from "@/components/shared/formFields";
 
@@ -626,13 +622,16 @@ function SectionCard({ title, icon: Icon, note, aside, footer, children }) {
   );
 }
 
-const IMAGE_TYPES = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
-
-const isImage = (name) =>
-  IMAGE_TYPES.some((ext) => String(name).toLowerCase().endsWith(ext));
-
-/** A picture is marked as one so a scan is not mistaken for a signed PDF. */
-const fileIcon = (name) => (isImage(name) ? FileImage : FileText);
+/**
+ * How each standing of a paper is marked: green while it holds, amber as it
+ * runs out, red once it has, and grey once a newer one has taken its place.
+ */
+const DOCUMENT_STATUS_PILL = {
+  Active: "border-green-200 bg-green-50 text-green-700",
+  "Expiring Soon": "border-amber-200 bg-amber-50 text-amber-700",
+  Expired: "border-red-200 bg-red-50 text-red-700",
+  Replaced: "border-slate-200 bg-slate-100 text-slate-600",
+};
 
 /** Somebody who has left, and so owes the record a reason and a last day. */
 const HAS_LEFT = ["Inactive", "Terminated"];
@@ -804,30 +803,14 @@ export default function EmployeeForm({ self }) {
   const [documents, setDocuments] = useState(() => documentsFor(record?.id));
   const [docDraft, setDocDraft] = useState(emptyDocument);
   const [docFile, setDocFile] = useState(null);
-  const [docQuery, setDocQuery] = useState("");
   // The page is the list of documents until someone asks to add to it.
   const [addingDoc, setAddingDoc] = useState(false);
-  // The paper opened from the list to be corrected, if any.
-  const [editingDoc, setEditingDoc] = useState(null);
 
   /** Back to the list, with nothing half-written left behind. */
   const closeDocForm = () => {
     setAddingDoc(false);
-    setEditingDoc(null);
     setDocDraft(emptyDocument);
     setDocFile(null);
-  };
-
-  /** A paper opened back into the form, to be replaced or corrected. */
-  const editDocument = (document) => {
-    setEditingDoc(document);
-    setAddingDoc(true);
-    setDocFile(null);
-    setDocDraft({
-      type: document.type,
-      expiry: document.expiry || "",
-      notes: document.notes || "",
-    });
   };
 
   // Reload when the route moves to a different employee without unmounting.
@@ -848,10 +831,9 @@ export default function EmployeeForm({ self }) {
     closeDocForm();
   }
 
-  // A paper is saved with the file it was filed with; correcting one keeps
-  // that file unless a new one is attached over it.
-  const canSaveDocument =
-    docDraft.type && docDraft.expiry && (docFile || editingDoc);
+  // A paper is filed with its copy. It is never corrected in place: a newer
+  // one of the same kind is added and the old one becomes Replaced.
+  const canSaveDocument = docDraft.type && docDraft.expiry && docFile;
 
   const addDocument = () => {
     if (!checkRequired() || !canSaveDocument) return;
@@ -871,33 +853,18 @@ export default function EmployeeForm({ self }) {
       ? { fileName: docFile.name, fileUrl: URL.createObjectURL(docFile) }
       : {};
 
-    setDocuments((prev) =>
-      editingDoc
-        ? prev.map((document) =>
-            document.id === editingDoc.id
-              ? {
-                  ...document,
-                  ...file,
-                  type: docDraft.type,
-                  expiry: docDraft.expiry,
-                  notes: docDraft.notes,
-                  // A replaced file is filed on the day it replaced the old one.
-                  ...(docFile ? { uploadedAt } : {}),
-                }
-              : document
-          )
-        : [
-            {
-              id: prev.reduce((max, d) => Math.max(max, d.id), 0) + 1,
-              uploadedAt,
-              type: docDraft.type,
-              expiry: docDraft.expiry,
-              ...file,
-              notes: docDraft.notes,
-            },
-            ...prev,
-          ]
-    );
+    setDocuments((prev) => [
+      {
+        id: prev.reduce((max, d) => Math.max(max, d.id), 0) + 1,
+        employeeId: record?.id,
+        uploadedAt,
+        type: docDraft.type,
+        expiry: docDraft.expiry,
+        ...file,
+        notes: docDraft.notes,
+      },
+      ...prev,
+    ]);
     closeDocForm();
   };
 
@@ -905,35 +872,10 @@ export default function EmployeeForm({ self }) {
     if (doc.fileUrl) window.open(doc.fileUrl, "_blank", "noopener,noreferrer");
   };
 
-  // The paper waiting to be taken off the record, while that is confirmed.
-  const [removingDoc, setRemovingDoc] = useState(null);
-
-  const removeDocument = () => {
-    if (!removingDoc) return;
-    setDocuments((prev) => prev.filter((d) => d.id !== removingDoc.id));
-    setRemovingDoc(null);
-  };
-
-  // Newest paper first, and numbered so: the most recent carries the highest
-  // number, so a number means the same paper however long the list grows.
+  // Newest paper first, so a paper that has been replaced sits under the one
+  // that replaced it.
   const orderedDocuments = [...documents].sort(
     (a, b) => String(b.uploadedAt).localeCompare(String(a.uploadedAt)) || b.id - a.id
-  );
-  // The number is fixed by when the paper was filed, not by where it sits in
-  // the list, so it survives the papers needing attention being lifted up.
-  const serialOf = new Map(
-    orderedDocuments.map((document, index) => [
-      document.id,
-      orderedDocuments.length - index,
-    ])
-  );
-  // Papers that need chasing come first - expired, then expiring soon - and
-  // everything else keeps its newest-first order under them.
-  const URGENCY = { Expired: 0, "Expiring Soon": 1 };
-  const urgency = (document) => URGENCY[documentStatus(document)] ?? 2;
-  const shownDocuments = smartSearch(
-    [...orderedDocuments].sort((a, b) => urgency(a) - urgency(b)),
-    docQuery
   );
 
   // Which papers this employee can file at all, and what decides it.
@@ -2298,7 +2240,7 @@ export default function EmployeeForm({ self }) {
                       <DialogContent className="max-h-[90vh] w-[95vw] max-w-4xl overflow-y-auto">
                         <DialogHeader>
                           <DialogTitle>
-                            {editingDoc ? "Edit Document" : "Add Document"}
+                            Add Document
                           </DialogTitle>
                         </DialogHeader>
 
@@ -2449,154 +2391,86 @@ export default function EmployeeForm({ self }) {
                       </DialogContent>
                     </Dialog>
 
-                    {/* What is already on file */}
-                    <div className="space-y-4 rounded-lg border p-4">
-                      {/* The list's name on the left, and the way to add to
-                          it on the right - one row, not two. It gives way to
-                          the form it opens. */}
-                      <FormHeading title="Uploaded Documents" icon={FileText} />
-
-                      {/* The search on the left, and the way to add on the
-                          right - the one row every list in the system has. */}
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <AiSearch
-                          value={docQuery}
-                          onChange={setDocQuery}
-                          placeholder="Ask about documents..."
-                        />
-                        {/* Kept on the row while the window is open: it is
-                            behind the overlay and cannot be pressed anyway,
-                            and taking it away shifts the row underneath. */}
+                    {/* What is on file. A paper is never corrected or taken
+                        off: a new one of the same kind is added, and the old
+                        one stays on the list as Replaced - so the file shows
+                        what was held and when, not only what is held now. */}
+                    <div className="space-y-4">
+                      {/* The list's name, and the way to add to it, on one row. */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4">
+                        <div className="flex items-center gap-3">
+                          <span aria-hidden="true" className="h-8 w-1 rounded-full bg-primary" />
+                          <FileText
+                            strokeWidth={1.5}
+                            aria-hidden="true"
+                            className="size-7 shrink-0 text-primary"
+                          />
+                          <h2 className="text-xl font-bold text-primary">Employee Documents</h2>
+                        </div>
                         {!readOnly && (
-                          <Button variant="outline"
-                            type="button"
-                            className="ms-auto"
-                            onClick={() => setAddingDoc(true)}
-                          >
+                          <Button type="button" variant="add" onClick={() => setAddingDoc(true)}>
                             <Plus className="me-2 h-4 w-4" />
                             Add Document
                           </Button>
                         )}
                       </div>
 
-                      {shownDocuments.length === 0 ? (
+                      {orderedDocuments.length === 0 ? (
                         <EmptyState>No documents uploaded yet.</EmptyState>
                       ) : (
-                        <RecordTable minWidth={980}>
+                        <RecordTable minWidth={860}>
                           <HeadRow>
-                            <Th width="8%">Serial No.</Th>
-                            <Th width="16%">Upload Date</Th>
-                            <Th width="26%">Document Type &amp; Attachment</Th>
-                            <Th width="16%">Expiry Date</Th>
-                            <Th width="26%">Notes</Th>
-                            {!readOnly && <Th width="8%">Delete</Th>}
+                            <Th width="20%">Document Category</Th>
+                            <Th width="20%">Document Type</Th>
+                            <Th width="15%">Upload Date</Th>
+                            <Th width="15%">Expiry Date</Th>
+                            <Th width="12%" className="text-center">Document</Th>
+                            <Th width="18%">Status</Th>
                           </HeadRow>
                           <tbody>
-                            {shownDocuments.map((document) => {
-                              const Icon = fileIcon(document.fileName);
-                              const status = documentStatus(document);
+                            {orderedDocuments.map((document) => {
+                              const status = documentStatus(document, documents);
                               return (
                                 <Row key={document.id}>
-                                  {/* The serial number opens the paper back
-                                      into the form above, to be replaced or
-                                      corrected. */}
-                                  <Td className="align-top">
-                                    {readOnly ? (
-                                      <span className="font-medium text-primary">
-                                        {serialOf.get(document.id)}
-                                      </span>
+                                  <Td>{documentCategory(document.type)}</Td>
+                                  <Td>{document.type}</Td>
+                                  <Td className="whitespace-nowrap">
+                                    {formatDate(document.uploadedAt)}
+                                  </Td>
+                                  <Td className="whitespace-nowrap">
+                                    {document.expiry ? (
+                                      formatDate(document.expiry)
                                     ) : (
-                                      <button
-                                        type="button"
-                                        onClick={() => editDocument(document)}
-                                        className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
-                                      >
-                                        {serialOf.get(document.id)}
-                                      </button>
-                                    )}
-                                    {/* Only a paper that needs chasing says so;
-                                        an active one is the normal case and
-                                        carries no badge. */}
-                                    {status && status !== "Active" && (
-                                      <span
-                                        className={cn(
-                                          "mt-1 flex w-fit items-center gap-1.5 whitespace-nowrap text-xs font-semibold",
-                                          status === "Expired"
-                                            ? "text-destructive"
-                                            : "text-amber-600"
-                                        )}
-                                      >
-                                        <span
-                                          aria-hidden="true"
-                                          className="h-2 w-2 shrink-0 rounded-full bg-current"
-                                        />
-                                        {status}
-                                      </span>
+                                      <span className="text-muted-foreground">-</span>
                                     )}
                                   </Td>
-
-                                  <Td className="whitespace-nowrap align-top">
-                                    {formatUploadedAt(document.uploadedAt)}
-                                  </Td>
-
-                                  <Td className="align-top">
-                                    <span className="block">
-                                      {document.type}
-                                    </span>
+                                  <Td className="text-center">
                                     <button
                                       type="button"
                                       onClick={() => openDocument(document)}
-                                      className="mt-1 inline-flex items-center gap-1.5 rounded text-primary focus:outline-none focus:ring-2 focus:ring-ring"
+                                      title={"View " + (document.fileName || document.type)}
+                                      className="rounded p-1.5 text-primary transition-colors hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                     >
-                                      <Icon
-                                        className={cn(
-                                          "h-4 w-4 shrink-0",
-                                          isImage(document.fileName)
-                                            ? "text-green-600"
-                                            : "text-red-600"
-                                        )}
-                                      />
-                                      {document.fileName}
+                                      <Eye className="h-5 w-5" aria-hidden="true" />
+                                      <span className="sr-only">
+                                        View {document.fileName || document.type}
+                                      </span>
                                     </button>
                                   </Td>
-
-                                  {/* When it runs out. Whether it has is
-                                      said under the serial number. */}
-                                  <Td className="whitespace-nowrap align-top">
-                                    {document.expiry ? (
-                                      <span className="block">
-                                        {formatDate(document.expiry)}
-                                      </span>
-                                    ) : (
-                                      <span className="text-muted-foreground">
-                                        -
-                                      </span>
-                                    )}
+                                  <Td>
+                                    <span
+                                      className={cn(
+                                        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2.5 py-1 text-xs font-semibold",
+                                        DOCUMENT_STATUS_PILL[status]
+                                      )}
+                                    >
+                                      <span
+                                        aria-hidden="true"
+                                        className="size-2 shrink-0 rounded-full bg-current"
+                                      />
+                                      {status}
+                                    </span>
                                   </Td>
-
-                                  <Td className="align-top text-muted-foreground">
-                                    {document.notes || "-"}
-                                  </Td>
-
-                                  {/* Taken off the record by the firm, never
-                                      from My Profile, which only reads - so
-                                      there the column is not drawn at all
-                                      rather than left labelled and empty. */}
-                                  {!readOnly && (
-                                    <Td className="text-center align-top">
-                                      <button
-                                        type="button"
-                                        onClick={() => setRemovingDoc(document)}
-                                        title={"Delete " + document.fileName}
-                                        className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus:outline-none focus:ring-2 focus:ring-ring"
-                                      >
-                                        <Trash2 className="h-5 w-5" />
-                                        <span className="sr-only">
-                                          Delete {document.fileName}
-                                        </span>
-                                      </button>
-                                    </Td>
-                                  )}
                                 </Row>
                               );
                             })}
@@ -2604,39 +2478,6 @@ export default function EmployeeForm({ self }) {
                         </RecordTable>
                       )}
                     </div>
-
-                    {/* A deleted paper cannot be brought back, so the X asks
-                        once before it takes one off the record. */}
-                    <Dialog
-                      open={Boolean(removingDoc)}
-                      onOpenChange={(open) => !open && setRemovingDoc(null)}
-                    >
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Delete document</DialogTitle>
-                          <DialogDescription>
-                            {removingDoc?.type} - {removingDoc?.fileName} will be
-                            removed from this employee's documents.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <DialogFooter>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setRemovingDoc(null)}
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            onClick={removeDocument}
-                          >
-                            Delete
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
                   </div>
                   {stepActions && (
                     <div className="mt-6 border-t pt-4">{stepActions}</div>

@@ -91,17 +91,64 @@ export function documentTypesFor(employee) {
   ];
 }
 
+/** An employee's papers are chased three months before they lapse. */
+export const DOCUMENT_EXPIRING_DAYS = 90;
+
 /**
- * Where a document stands: Active, Expiring Soon inside the warning window,
- * Expired after its date.
- *
- * Worked out from the date every time rather than stored, so a paper cannot
- * claim to be valid on a day its own expiry date has passed. The window is
- * the one every other paper in the system is chased by.
+ * The papers a person holds one of at a time. A new one of these replaces
+ * the last; a second degree or certificate is simply another paper, so the
+ * other types are never replaced.
  */
-export function documentStatus(document) {
-  const state = expiryState(document?.expiry);
-  return state === "none" ? "" : EXPIRY_LABEL[state];
+const ONE_AT_A_TIME = [
+  ...OMANI_DOCUMENT_TYPES,
+  ...NON_OMANI_DOCUMENT_TYPES,
+  LAWYER_DOCUMENT_TYPE,
+];
+
+/** The heading each kind of paper is filed under. */
+const DOCUMENT_CATEGORY = {
+  "ID Card": "Identity & Residency",
+  "Resident Card": "Identity & Residency",
+  Passport: "Identity & Residency",
+  [LAWYER_DOCUMENT_TYPE]: "Professional License",
+  "Academic Qualification": "Qualifications & Experience",
+  "Experience Certificate": "Qualifications & Experience",
+  "Administrative & Penal Decisions": "Administrative Decisions",
+  "Other Documents": "Other",
+};
+
+export const documentCategory = (type) => DOCUMENT_CATEGORY[type] || "Other";
+
+/** Filed later than the other paper - by upload time, then by the order kept. */
+const newer = (a, b) =>
+  String(a.uploadedAt).localeCompare(String(b.uploadedAt)) > 0 ||
+  (a.uploadedAt === b.uploadedAt && a.id > b.id);
+
+/**
+ * Where a document stands.
+ *
+ * Replaced first: once a newer paper of the same one-at-a-time type is on
+ * file, the old one is history whatever its date says, and nobody is chased
+ * about it. Otherwise it is read off the expiry date on the firm's calendar -
+ * Expired before today, Expiring Soon from today to ninety days out, Active
+ * beyond that. A paper with no expiry date never lapses, so it is Active.
+ *
+ * Worked out every time rather than stored, so a paper cannot claim to be
+ * valid on a day its own expiry date has passed. `papers` is the employee's
+ * file it is read against; a page holding its own copy of that file passes it.
+ */
+export function documentStatus(document, papers = documentsFor(document?.employeeId)) {
+  if (
+    ONE_AT_A_TIME.includes(document?.type) &&
+    papers.some(
+      (other) =>
+        other.id !== document.id && other.type === document.type && newer(other, document)
+    )
+  ) {
+    return "Replaced";
+  }
+  const state = expiryState(document?.expiry, DOCUMENT_EXPIRING_DAYS);
+  return state === "none" ? "Active" : EXPIRY_LABEL[state];
 }
 
 /** "2026-08-26T10:30" as "26/08/2026  10:30 AM". */

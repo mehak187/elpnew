@@ -7,24 +7,47 @@
  * own business; this only decides what the answer is.
  */
 
-/** Papers are chased a month before they lapse, so that is the warning. */
+/**
+ * Papers are chased a month before they lapse, so that is the warning -
+ * unless a kind of paper is chased earlier and says so.
+ */
 export const EXPIRING_SOON_DAYS = 30;
 
+/** The firm's calendar: a day turns over in Muscat, wherever it is read. */
+const FIRM_TIME_ZONE = "Asia/Muscat";
+
 const DAY = 24 * 60 * 60 * 1000;
+
+/** Today's date on the firm's calendar, as YYYY-MM-DD. */
+export function firmToday() {
+  // en-CA writes dates year first, which is the shape the fields store.
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: FIRM_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+/** A calendar date as a day count, so two dates subtract to whole days. */
+const dayNumber = (iso) => {
+  const [year, month, day] = String(iso).slice(0, 10).split("-").map(Number);
+  return Date.UTC(year, month - 1, day) / DAY;
+};
 
 /**
  * One of four states.
  *
- * A paper with no expiry date is not a failing - it simply says nothing,
- * because there is nothing to say.
+ * Read in whole calendar days on the firm's calendar, so a paper expiring
+ * today is still running out today and has expired tomorrow - not at some
+ * hour that depends on where the page is opened. A paper with no expiry date
+ * is not a failing - it simply says nothing, because there is nothing to say.
  */
-export function expiryState(date) {
+export function expiryState(date, soonDays = EXPIRING_SOON_DAYS) {
   if (!date) return "none";
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const days = Math.ceil((new Date(date) - today) / DAY);
+  const days = dayNumber(date) - dayNumber(firmToday());
   if (days < 0) return "expired";
-  if (days <= EXPIRING_SOON_DAYS) return "soon";
+  if (days <= soonDays) return "soon";
   return "valid";
 }
 
