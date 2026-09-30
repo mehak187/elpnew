@@ -67,7 +67,7 @@ function Logo({ name, className }) {
  * Header navigation.
  *
  * An entry with `items` is a section that opens as a menu; one with `path` is a
- * plain link. Further pages for the Partner Menu go in its `items` array - nothing
+ * plain link. Further pages for Administration go in its `items` array - nothing
  * else has to change.
  */
 /**
@@ -97,7 +97,7 @@ const ACCOUNT_LINKS = [
 const navSections = [
   { name: "Active Cases", path: "/litigation", key: "litigation", icon: Scale },
   {
-    name: "Partner Menu",
+    name: "Administration",
     key: "private",
     icon: ListTree,
     items: [
@@ -211,6 +211,17 @@ export default function Header({ onNavClick, activeNav }) {
       ? section.items.some((item) => isActive(item.key))
       : isActive(section.key);
 
+  /**
+   * Which page inside a section is the one being read.
+   *
+   * The section name alone says which menu a page came out of, not which page it
+   * is - and a menu only answers that while it is open, which is exactly when
+   * nobody is working. Naming the page on the closed control means looking up
+   * is enough to know where you are.
+   */
+  const activeItemOf = (section) =>
+    section.items?.find((item) => isActive(item.key));
+
   return (
     <header className="fixed top-0 start-0 end-0 z-50 border-b border-container-border bg-card">
       <div className="flex h-[72px] items-center px-4 md:px-7">
@@ -303,6 +314,7 @@ export default function Header({ onNavClick, activeNav }) {
           <NavigationMenuList className="gap-1">
             {navSections.map((section) => {
               const active = isSectionActive(section);
+              const activeItem = activeItemOf(section);
 
               // A plain link
               if (!section.items) {
@@ -354,6 +366,15 @@ export default function Header({ onNavClick, activeNav }) {
                     )}
                   >
                     {section.name}
+                    {/* The open page, named on the closed control. Drawn as an
+                        outline and nothing else: a label added beside a control
+                        carries a border, never a fill, so it cannot be mistaken
+                        for a second control sitting in the header. */}
+                    {activeItem && (
+                      <span className="rounded-[6px] border border-primary bg-card px-1.5 py-0.5 text-[13px]/[16px] font-semibold text-primary">
+                        {activeItem.name}
+                      </span>
+                    )}
                   </NavigationMenuTrigger>
                   {/* 270px wide, inset 8px, cornered at 10px: the one
                       geometry every menu in the system is drawn to. */}
