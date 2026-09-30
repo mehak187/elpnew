@@ -291,9 +291,17 @@ export default function DataTable({
 
           {/* The way to add, at the logical end of the toolbar. It goes
               while the panel is open: two of the same form on one page is
-              two records nobody meant to make. */}
+              two records nobody meant to make.
+
+              Standard 06: an outline, not a filled button - white, a 1px navy
+              edge and navy text. Adding is one thing a list offers, not the
+              thing the list is for. */}
           {onAdd && !addPanel && (
-            <Button type="button" className="shrink-0" onClick={onAdd}>
+            <Button
+              type="button"
+              className="shrink-0 border border-primary bg-card font-semibold text-primary shadow-none hover:bg-menu-hover"
+              onClick={onAdd}
+            >
               <Plus className="me-2 h-4 w-4" />
               {addLabel}
             </Button>

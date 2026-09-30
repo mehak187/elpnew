@@ -366,12 +366,12 @@ export default function Header({ onNavClick, activeNav }) {
                     )}
                   >
                     {section.name}
-                    {/* The open page, named on the closed control and wearing
-                        the mark it wears in a sidebar: pale fill, and the navy
-                        rule down its logical start. One treatment for "this is
-                        the one you are on", wherever it is shown. */}
+                    {/* The open page, named on the closed control. Drawn as an
+                        outline and nothing else: a label added beside a control
+                        carries a border, never a fill, so it cannot be mistaken
+                        for a second control sitting in the header. */}
                     {activeItem && (
-                      <span className="rounded-[6px] border-s-[3px] border-s-primary bg-menu-selected px-1.5 py-0.5 text-[13px]/[16px] font-semibold text-primary">
+                      <span className="rounded-[6px] border border-primary bg-card px-1.5 py-0.5 text-[13px]/[16px] font-semibold text-primary">
                         {activeItem.name}
                       </span>
                     )}
