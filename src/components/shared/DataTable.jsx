@@ -327,7 +327,7 @@ export default function DataTable({
             <Button
               variant="outline"
               size="icon"
-              className="size-[42px] shrink-0"
+              className="h-[42px] w-[42px] shrink-0 [&_svg]:size-6"
               title="Export to Excel"
               onClick={() =>
                 downloadCsv(toCsv(columns, filteredData), exportFileName)
@@ -527,7 +527,7 @@ export default function DataTable({
                           // 52px of row, striped on the evens and lit on
                           // hover; hover is written last so it wins.
                           "h-[52px] border-b border-container-border align-top last:border-0",
-                          "even:bg-background hover:bg-menu-hover",
+                          "even:bg-table-zebra hover:bg-table-row-hover",
                           onRowClick && "cursor-pointer"
                         )}
                         onClick={() => onRowClick && onRowClick(row)}

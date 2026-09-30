@@ -144,11 +144,12 @@ export default function EmployeeCircularsSection({ employee, self = false }) {
           <Button
             variant="outline"
             size="icon"
+            className="h-[42px] w-[42px] [&_svg]:size-6"
             className="shrink-0"
             title="Export to CSV"
             onClick={exportCirculars}
           >
-            <ExcelIcon className="size-5" />
+            <ExcelIcon className="size-6" />
             <span className="sr-only">Export to CSV</span>
           </Button>
         </div>

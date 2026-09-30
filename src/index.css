@@ -175,6 +175,8 @@
   --color-error-text: var(--error-text);
   --color-table-head: var(--table-head);
   --color-table-head-ink: var(--table-head-ink);
+  --color-table-zebra: var(--table-zebra);
+  --color-table-row-hover: var(--table-row-hover);
   --color-record-link: var(--record-link);
   --color-menu-selected: var(--menu-selected);
   --color-menu-selected-ink: var(--menu-selected-ink);
@@ -291,8 +293,12 @@
   /* The header is told apart by a tint, not by a colour block; the same tint
      marks the row under the pointer, because both mean "this one" and the
      system should not have two ways of saying it. */
-  --table-head: #f8fafc;
+  --table-head: #e2e8f0;
   --table-head-ink: #35495a;
+  /* Striped row, and the row under the cursor: one step and two steps
+     down from white, with the heading a step below them again. */
+  --table-zebra: #f6f9fc;
+  --table-row-hover: #edf2f8;
   /* The reference in the first column is the way into the record. */
   --record-link: #1e3a8a;
 
@@ -410,6 +416,8 @@
   --locked: oklch(0.24 0 0);
   --table-head: oklch(0.24 0 0);
   --table-head-ink: oklch(0.75 0 0);
+  --table-zebra: oklch(0.21 0 0);
+  --table-row-hover: oklch(0.27 0.01 260);
   --record-link: oklch(0.72 0.11 258);
   --menu-selected: oklch(0.28 0.03 260);
   --menu-selected-ink: oklch(0.93 0.01 258);

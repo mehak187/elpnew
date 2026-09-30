@@ -257,6 +257,7 @@ export default function CircularsSection({ canEdit }) {
                 <Button
                   variant="outline"
                   size="icon"
+            className="h-[42px] w-[42px] [&_svg]:size-6"
                   asChild
                   title={
                     attachedName
@@ -438,7 +439,7 @@ export default function CircularsSection({ canEdit }) {
             title="Export to CSV"
             onClick={exportCirculars}
           >
-            <ExcelIcon className="size-5" />
+            <ExcelIcon className="size-6" />
             <span className="sr-only">Export to CSV</span>
           </Button>
 
