@@ -1,10 +1,11 @@
 import { useState } from "react";
+import ExcelIcon from "@/components/shared/ExcelIcon";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import DataTable from "@/components/shared/DataTable";
 import PageHeader from "@/components/shared/PageHeader";
-import { Truck, FileSpreadsheet } from "lucide-react";
+import { Truck } from "lucide-react";
 import { IdStatusDot, isEndedStatus } from "@/components/shared/panels";
 import { toCsv, downloadCsv } from "@/lib/csv";
 import { useSuppliers } from "@/lib/suppliers/context";
@@ -104,7 +105,7 @@ export default function SuppliersPage() {
             variant="outline"
             onClick={() => downloadCsv(toCsv(columns, suppliers), "suppliers.csv")}
           >
-            <FileSpreadsheet className="me-2 h-4 w-4 text-emerald-600" />
+            <ExcelIcon className="me-2 size-[18px]" />
             Export
           </Button>
         }

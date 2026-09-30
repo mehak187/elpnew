@@ -1,6 +1,7 @@
 import {
   useState } from "react";
 import UploadIcon from "@/components/shared/UploadIcon";
+import ExcelIcon from "@/components/shared/ExcelIcon";
 import { Button } from "@/components/ui/button";
 import FormHeading from "@/components/shared/FormHeading";
 import AiSearch from "@/components/shared/AiSearch";
@@ -20,9 +21,7 @@ import { EmptyState } from "@/components/shared/panels";
 import {
   Plus,
   Lock,
-  Search,
-  FileSpreadsheet,
-  Ban,
+  Search,  Ban,
   FileCheck,
   FileText,
   Megaphone,
@@ -439,7 +438,7 @@ export default function CircularsSection({ canEdit }) {
             title="Export to CSV"
             onClick={exportCirculars}
           >
-            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+            <ExcelIcon className="size-5" />
             <span className="sr-only">Export to CSV</span>
           </Button>
 

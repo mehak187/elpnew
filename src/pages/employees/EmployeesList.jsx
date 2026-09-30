@@ -94,6 +94,20 @@ export default function EmployeesList() {
 
   const shown = employees.filter((row) => matches(row, filters));
 
+  // One chip per choice in force, labelled as the panel labelled it. "All" is
+  // not a choice, so it is not shown as one.
+  const appliedFilters = Object.entries(filters)
+    .filter(([, value]) => value && value !== "all")
+    .map(([key, value]) => {
+      const field = FILTER_FIELDS.find((entry) => entry.key === key);
+      const option = field?.options?.find?.((o) => o.value === value);
+      return {
+        key,
+        label: field?.label || key,
+        value: option?.label || value,
+      };
+    });
+
   const columns = [
     {
       key: "empNo",
@@ -242,6 +256,19 @@ export default function EmployeesList() {
             enableSorting
             currentPage={currentPage}
             totalPages={Math.ceil(shown.length / pageSize)}
+            appliedFilters={appliedFilters}
+            onRemoveFilter={(key) => {
+              setFilters((prev) => {
+                const next = { ...prev };
+                delete next[key];
+                return next;
+              });
+              setCurrentPage(1);
+            }}
+            onClearFilters={() => {
+              setFilters({});
+              setCurrentPage(1);
+            }}
             filters={
               <FilterPanel
                 fields={FILTER_FIELDS}

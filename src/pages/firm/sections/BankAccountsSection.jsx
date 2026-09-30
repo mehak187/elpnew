@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ExcelIcon from "@/components/shared/ExcelIcon";
 import UploadIcon from "@/components/shared/UploadIcon";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -21,9 +22,7 @@ import {
   FileCheck,
   Plus,
   Search,
-  Landmark,
-  FileSpreadsheet,
-  Info,
+  Landmark,  Info,
 } from "lucide-react";
 import { EmptyState } from "@/components/shared/panels";
 import { cn } from "@/lib/utils";
@@ -608,7 +607,7 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                 />
                 <div className="hidden flex-1 sm:block" />
                 <Button variant="outline" onClick={exportAccounts}>
-                  <FileSpreadsheet className="me-2 h-4 w-4 text-green-600" />
+                  <ExcelIcon className="me-2 size-[18px]" />
                   Export to Excel
                 </Button>
                 {/* The way to add, at the end of the row above the list. */}
