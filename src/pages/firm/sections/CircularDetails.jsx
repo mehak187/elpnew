@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import ExcelIcon from "@/components/shared/ExcelIcon";
 import {
   Dialog,
   DialogContent,
@@ -6,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Check, X, FileSpreadsheet } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { toCsv, downloadCsv } from "@/lib/csv";
 import {
   audienceFor,
@@ -103,7 +104,7 @@ export default function CircularDetails({ circular, onOpenChange }) {
 
         <div className="flex justify-end">
           <Button variant="outline" onClick={exportReport}>
-            <FileSpreadsheet className="me-2 h-4 w-4 text-green-600" />
+            <ExcelIcon className="me-2 size-[18px]" />
             Acknowledgement Report
           </Button>
         </div>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ExcelIcon from "@/components/shared/ExcelIcon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -10,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/panels";
 import AiSearch from "@/components/shared/AiSearch";
-import { Check, FileSpreadsheet } from "lucide-react";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toCsv, downloadCsv } from "@/lib/csv";
 import {
@@ -147,7 +148,7 @@ export default function EmployeeCircularsSection({ employee, self = false }) {
             title="Export to CSV"
             onClick={exportCirculars}
           >
-            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+            <ExcelIcon className="size-5" />
             <span className="sr-only">Export to CSV</span>
           </Button>
         </div>

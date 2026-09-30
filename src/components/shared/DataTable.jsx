@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ExcelIcon from "./ExcelIcon";
 import {
   Table,
   TableBody,
@@ -24,12 +25,10 @@ import {
   ChevronUp,
   ChevronDown,
   ChevronsUpDown,
-  ChevronRight,
-  FileSpreadsheet,
-  Loader2,
+  ChevronRight,  Loader2,
   Plus,
-  Sparkles,
   X,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toCsv, downloadCsv } from "@/lib/csv";
@@ -43,7 +42,12 @@ import { smartSearch } from "@/lib/search/smartSearch";
  */
 function SortMark({ direction }) {
   if (!direction) {
-    return <ChevronsUpDown className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-40" />;
+    // Standard 06: an idle arrow on every heading is a row of arrows, and a
+    // row of arrows reads as decoration. It appears when the heading is
+    // pointed at or focused, which is when it means something.
+    return (
+      <ChevronsUpDown className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover/sort:opacity-40 group-focus-visible/sort:opacity-40" />
+    );
   }
   const Icon = direction === "asc" ? ChevronUp : ChevronDown;
   return <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0" />;
@@ -93,6 +97,14 @@ export default function DataTable({
   addPanelNote,
   onAddPanelClose,
   filters,
+  /**
+   * What the list is narrowed by, as [{ key, label, value }] - and the two
+   * ways out of it. Supplied by the page rather than worked out here, because
+   * only the page knows what its own filters mean.
+   */
+  appliedFilters = [],
+  onRemoveFilter,
+  onClearFilters,
   onRowClick,
   enableColumnSearch = true,
   enableSorting = false,
@@ -259,9 +271,13 @@ export default function DataTable({
         <div className="flex items-center gap-2 justify-between sm:justify-end">
           <Select
             value={pageSize.toString()}
-            onValueChange={(value) =>
-              onPageSizeChange && onPageSizeChange(parseInt(value))
-            }
+            onValueChange={(value) => {
+              onPageSizeChange && onPageSizeChange(parseInt(value));
+              // Changing how many rows a page holds changes which page each
+              // record is on, so the numbering starts again from the first.
+              // Page three of ten pages is not page three of two.
+              if (onPageChange) onPageChange(1);
+            }}
           >
             <SelectTrigger className="w-20">
               <SelectValue />
@@ -274,18 +290,21 @@ export default function DataTable({
             </SelectContent>
           </Select>
 
+          {/* Square, and the same 42px every other control on this row stands
+              at, so the mark inside has room to be recognised rather than
+              guessed at. */}
           {showExport && (
             <Button
               variant="outline"
               size="icon"
-              className="shrink-0"
-              title="Export to CSV"
+              className="size-[42px] shrink-0"
+              title="Export to Excel"
               onClick={() =>
                 downloadCsv(toCsv(columns, filteredData), exportFileName)
               }
             >
-              <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
-              <span className="sr-only">Export to CSV</span>
+              <ExcelIcon className="size-6" />
+              <span className="sr-only">Export to Excel</span>
             </Button>
           )}
 
@@ -308,6 +327,39 @@ export default function DataTable({
           )}
         </div>
       </div>
+
+      {/* What the list is currently narrowed by, said under the row that
+          narrowed it. Each one can go on its own, because undoing four
+          choices to revisit one is how people give up on filtering. */}
+      {appliedFilters.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-container-border px-3 py-2.5">
+          {appliedFilters.map((filter) => (
+            <button
+              key={filter.key}
+              type="button"
+              onClick={() => onRemoveFilter && onRemoveFilter(filter.key)}
+              className="inline-flex items-center gap-1.5 rounded-[6px] border border-primary bg-card px-2.5 py-1 text-xs font-semibold text-primary transition-colors hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <span>
+                {filter.label}: {filter.value}
+              </span>
+              <X className="size-3.5 shrink-0" aria-hidden="true" />
+              <span className="sr-only">
+                Remove the {filter.label} filter
+              </span>
+            </button>
+          ))}
+
+          {/* Not underlined: nothing that can be clicked in this system is. */}
+          <button
+            type="button"
+            onClick={() => onClearFilters && onClearFilters()}
+            className="rounded-[6px] px-1.5 py-1 text-xs font-semibold text-primary transition-colors hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            Clear all
+          </button>
+        </div>
+      )}
 
       {/* The panel sits between the toolbar and the table, inside the same
           frame, with a rule under it and the accent that marks a section
@@ -374,7 +426,7 @@ export default function DataTable({
                           <button
                             type="button"
                             onClick={() => toggleSort(column.key)}
-                            className="inline-flex items-start gap-1 rounded text-start hover:text-primary/80 focus:outline-none focus:ring-2 focus:ring-ring"
+                            className="group/sort inline-flex items-start gap-1 rounded text-start hover:text-primary/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
                             <span>
                               <ColumnHeading
