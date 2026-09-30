@@ -5,19 +5,8 @@ import {
   Settings,
   LogOut,
   KeyRound,
-  ListTree,
-  ReceiptText,
-  Landmark,
-  FileBarChart,
-  Briefcase,
-  Scale,
-  Wallet,
-  Users,
   UserCircle,
-  Archive,
   Menu,
-  Calculator,
-  Percent,
 } from "lucide-react";
 import {
   NavigationMenu,
@@ -49,6 +38,7 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useFirm } from "@/lib/firm/context";
 import { useLanguage, LANGUAGES } from "@/lib/language/context";
+import { navSections } from "@/lib/navigation";
 import NotificationBell from "./NotificationBell";
 import logo from "@/assets/logonew.jpeg";
 
@@ -94,106 +84,6 @@ const ACCOUNT_LINKS = [
   { label: "Settings", path: "/settings/firm", icon: Settings },
 ];
 
-const navSections = [
-  { name: "Active Cases", path: "/litigation", key: "litigation", icon: Scale },
-  {
-    name: "Administration",
-    key: "private",
-    icon: ListTree,
-    items: [
-      {
-        name: "Employees",
-        path: "/employees",
-        key: "employees",
-        icon: Users,
-        description: "Staff records, branches and roles",
-      },
-      {
-        name: "Clients",
-        path: "/clients",
-        key: "clients",
-        icon: Users,
-        description: "Client directory and profiles",
-      },
-      {
-        name: "Finance Center",
-        path: "/finance",
-        key: "finance",
-        icon: Wallet,
-        description: "Invoices and the money against them",
-      },
-    ],
-  },
-  {
-    name: "Payment Request",
-    path: "/expense-requests",
-    key: "expense-requests",
-    icon: ReceiptText,
-  },
-  {
-    name: "Expenses",
-    key: "spending",
-    icon: Wallet,
-    items: [
-      {
-        name: "Pending Disbursements",
-        path: "/partner-disbursements",
-        key: "partner-disbursements",
-        icon: Wallet,
-        description: "Partners only - no accountant approval",
-      },
-      {
-        name: "Court Fee Payment",
-        path: "/court-fee-payments",
-        key: "court-fee-payments",
-        icon: Landmark,
-        description: "Fees raised against a case file",
-      },
-      {
-        name: "Expense Reports",
-        path: "/expenses",
-        key: "expenses",
-        icon: FileBarChart,
-        description: "Every expense, and what has been paid against it",
-      },
-    ],
-  },
-  {
-    // A menu of its own rather than a place under Expenses: VAT is charged on
-    // the firm's invoices as well as paid on its purchases, and income tax is
-    // owed on the year as a whole.
-    name: "Taxes",
-    key: "taxes",
-    icon: Calculator,
-    items: [
-      {
-        name: "Income Tax",
-        path: "/taxes/income-tax",
-        key: "taxes/income-tax",
-        icon: Landmark,
-        description: "Corporate income tax returns and payments",
-      },
-      {
-        name: "Value Added Tax (VAT)",
-        path: "/taxes/vat",
-        key: "taxes/vat",
-        icon: Percent,
-        description: "VAT returns and the VAT on every invoice",
-      },
-    ],
-  },
-  // { name: "Corporate Matters", path: "/corporate", icon: Briefcase, key: "corporate" },
-  // { name: "Invoices", path: "/finance", icon: Wallet, key: "finance" },
-  // { name: "Archive", path: "/archive", icon: Archive, key: "archive" },
-  {
-    // A page about the person reading it, so it sits in the header rather
-    // than inside a menu of the firm's records.
-    name: "My Profile",
-    path: "/my-profile",
-    key: "my-profile",
-    icon: UserCircle,
-  },
-];
 
 export default function Header({ onNavClick, activeNav }) {
   const navigate = useNavigate();
