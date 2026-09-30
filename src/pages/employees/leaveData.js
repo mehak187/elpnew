@@ -423,3 +423,39 @@ export function canTakeAdvance(leaves, name, year) {
   const balance = remainingBalance(leaves, name, "Annual Leave", year);
   return Boolean(balance) && balance.remaining === 0;
 }
+
+/**
+ * Whether somebody is away today.
+ *
+ * Approved leave covering the current date - not merely a request made, and
+ * not a standing typed onto the employee record. A request still waiting on
+ * a decision is not leave, and a record that says "On Leave" for a month
+ * after the person came back is worse than saying nothing.
+ */
+export function onLeaveToday(leaves, name) {
+  const today = new Date().toISOString().slice(0, 10);
+  return leaves.some(
+    (leave) =>
+      leave.employee === name &&
+      leave.status === "Approved" &&
+      leave.from <= today &&
+      leave.to >= today
+  );
+}
+
+/**
+ * Days of annual leave left to somebody this year.
+ *
+ * Counted off the approved requests rather than stored, for the same reason
+ * the per-type balance is: a number kept on the record is a number that goes
+ * stale the first time a request is approved anywhere else.
+ */
+export function annualLeaveLeft(leaves, name) {
+  const balance = remainingBalance(
+    leaves,
+    name,
+    "Annual Leave",
+    String(new Date().getFullYear())
+  );
+  return balance ? balance.remaining : null;
+}

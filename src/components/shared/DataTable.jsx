@@ -42,7 +42,12 @@ import { smartSearch } from "@/lib/search/smartSearch";
  */
 function SortMark({ direction }) {
   if (!direction) {
-    return <ChevronsUpDown className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-40" />;
+    // Standard 06: an idle arrow on every heading is a row of arrows, and a
+    // row of arrows reads as decoration. It appears when the heading is
+    // pointed at or focused, which is when it means something.
+    return (
+      <ChevronsUpDown className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover/sort:opacity-40 group-focus-visible/sort:opacity-40" />
+    );
   }
   const Icon = direction === "asc" ? ChevronUp : ChevronDown;
   return <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0" />;
@@ -421,7 +426,7 @@ export default function DataTable({
                           <button
                             type="button"
                             onClick={() => toggleSort(column.key)}
-                            className="inline-flex items-start gap-1 rounded text-start hover:text-primary/80 focus:outline-none focus:ring-2 focus:ring-ring"
+                            className="group/sort inline-flex items-start gap-1 rounded text-start hover:text-primary/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
                             <span>
                               <ColumnHeading
