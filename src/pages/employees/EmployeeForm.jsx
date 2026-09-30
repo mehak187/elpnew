@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import UploadIcon from "@/components/shared/UploadIcon";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import RecordSidebar from "@/components/shared/RecordSidebar";
+import PageHeader from "@/components/shared/PageHeader";
 import FormHeading from "@/components/shared/FormHeading";
 import PhoneInput from "@/components/shared/PhoneInput";
 import { Input } from "@/components/ui/input";
@@ -32,7 +33,6 @@ import {
   CalendarCheck,
   ShieldCheck,
   ClipboardList,
-  MapPin,
   Phone,
   Mail,
   FileCheck,
@@ -42,6 +42,8 @@ import {
   Briefcase,
   Users,
   Gavel,
+  CircleCheck,
+  UserPlus,
 } from "lucide-react";
 import {
   Dialog,
@@ -66,6 +68,8 @@ import {
   COUNTRY_DIAL_CODES,
   EMERGENCY_RELATIONSHIPS,
   EMPLOYMENT_TYPES,
+  EMPLOYEE_CONTRACT_TYPES,
+  PRACTICE_LEVELS,
 } from "@/lib/constants";
 import { initialBranches } from "@/pages/firm/firmData";
 import FinancialBenefitsSection from "./sections/FinancialBenefitsSection";
@@ -252,15 +256,88 @@ const SECTION_GROUPS = [
 ];
 
 /**
+ * Adding an employee, one step at a time.
+ *
+ * An employee is built in order - who they are, then the job they are taking,
+ * then the papers - and each step is saved before the next opens, so nothing
+ * is filed against somebody the system has not got yet. Every step is on the
+ * bar from the start, so how far there is to go is plain before anybody
+ * begins; the ones not reached yet are shown but cannot be opened.
+ */
+const ADD_STEPS = [
+  { key: "personal", label: "Personal Details" },
+  {
+    key: "employment",
+    label: "Employment & Contract",
+    hint: "Complete this section and save to continue to Identity & Immigration.",
+  },
+  // After the job, because which papers apply follows from it: a lawyer's
+  // card only for a lawyer, a passport and visa only for a foreigner.
+  { key: "identity", label: "Identity & Immigration" },
+  { key: "documents", label: "Documents" },
+];
+
+/**
+ * The bar of steps across the top of Add Employee.
+ *
+ * A step that has been saved carries a green check and stays open to go back
+ * to; the one being filled in is underlined; the rest wait, greyed, until the
+ * step before them is saved.
+ */
+function StepTabs({ steps, active, done, onSelect }) {
+  return (
+    <nav aria-label="Add employee steps" className="overflow-x-auto">
+      <ol className="flex min-w-max border-b border-container-border">
+        {steps.map((step, index) => {
+          const isDone = done.includes(step.key);
+          const isActive = step.key === active;
+          const reachable = isDone || isActive;
+          return (
+            <li key={step.key} className="flex items-center">
+              {index > 0 && (
+                <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+              )}
+              <button
+                type="button"
+                disabled={!reachable}
+                onClick={() => onSelect(step.key)}
+                aria-current={isActive ? "step" : undefined}
+                className={cn(
+                  "-mb-px flex items-center gap-2 border-b-2 px-6 py-3 text-[15px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  isActive
+                    ? "border-primary font-semibold text-primary"
+                    : "border-transparent",
+                  !isActive && reachable && "text-primary hover:bg-menu-hover",
+                  !reachable && "cursor-not-allowed text-muted-foreground"
+                )}
+              >
+                {isDone && (
+                  <CircleCheck
+                    aria-hidden="true"
+                    className="size-5 shrink-0 fill-green-600 text-white"
+                  />
+                )}
+                {step.label}
+                {isDone && <span className="sr-only">(completed)</span>}
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
+
+/**
  * A phone number and the country it belongs to.
  *
  * The dial code is a field of its own rather than something typed into the
  * number, so a number can be dialled without guessing which country it is
  * from - and so two people cannot write the same number two ways.
  */
-function PhoneField({ id, label, placeholder, dialCode, onDialCode, value, onChange }) {
+function PhoneField({ id, label, placeholder, dialCode, onDialCode, value, onChange, required }) {
   return (
-    <div className="space-y-2">
+    <div className="form-field space-y-2">
       <Label htmlFor={id}>{label}</Label>
       <PhoneInput
         id={id}
@@ -269,8 +346,65 @@ function PhoneField({ id, label, placeholder, dialCode, onDialCode, value, onCha
         value={value}
         onChange={onChange}
         placeholder={placeholder}
+        required={required}
       />
     </div>
+  );
+}
+
+/**
+ * A labelled choice from a fixed list.
+ *
+ * `required` marks the cell for the save check, which reads an unchosen select
+ * by the placeholder its trigger is still showing.
+ */
+function ChoiceField({ id, label, placeholder, value, onChange, options, required }) {
+  return (
+    <div className="form-field space-y-2" data-required={required || undefined}>
+      <Label htmlFor={id}>{label}</Label>
+      <Select value={value} onValueChange={(next) => next && onChange(next)}>
+        <SelectTrigger id={id}>
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option} value={option}>
+              {option}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+/** A paper's number and the day it runs out, side by side on the grid. */
+function PaperFields({ label, numberName, expiryName, values, onChange }) {
+  return (
+    <>
+      <div className="form-field space-y-2">
+        <Label htmlFor={numberName}>{label} No.</Label>
+        <Input
+          id={numberName}
+          name={numberName}
+          value={values[numberName]}
+          onChange={onChange}
+          placeholder="Enter number"
+          required
+        />
+      </div>
+      <div className="form-field space-y-2">
+        <Label htmlFor={expiryName}>{label} Expiry Date</Label>
+        <Input
+          id={expiryName}
+          name={expiryName}
+          type="date"
+          value={values[expiryName]}
+          onChange={onChange}
+          required
+        />
+      </div>
+    </>
   );
 }
 
@@ -278,7 +412,7 @@ function PhoneField({ id, label, placeholder, dialCode, onDialCode, value, onCha
 function IconField({ icon, id, label, ...props }) {
   const Icon = icon;
   return (
-    <div className="space-y-2">
+    <div className="form-field space-y-2">
       <Label htmlFor={id}>{label}</Label>
       <div className="relative">
         <Icon
@@ -307,15 +441,32 @@ const emptyDocument = { type: "", expiry: "", notes: "" };
  * The boxes are separated by space rather than by a divider, so the page
  * reads as three things about one person rather than one long form.
  */
-function SectionCard({ title, aside, children }) {
+function SectionCard({ title, icon: Icon, note, aside, footer, children }) {
   return (
     <Card>
       <CardContent className="p-4 sm:p-6">
-        <div className="mb-6 flex items-center gap-3 border-b pb-3">
-          <h2 className="border-s-4 border-primary ps-3 text-lg font-bold text-primary">{title}</h2>
-          {aside}
-        </div>
+        {Icon ? (
+          // A step of Add Employee: the rule, the icon, then the name and
+          // what the step asks for - the page title's heading, one size down.
+          <div className="mb-6 flex items-center gap-3 border-b pb-4">
+            <span aria-hidden="true" className="w-1 self-stretch rounded-full bg-primary" />
+            <Icon strokeWidth={1.5} aria-hidden="true" className="size-8 shrink-0 text-primary" />
+            <div className="min-w-0">
+              <h2 className="text-xl font-bold text-primary">{title}</h2>
+              {note && <p className="text-sm text-primary/75">{note}</p>}
+            </div>
+            {aside}
+          </div>
+        ) : (
+          <div className="mb-6 flex items-center gap-3 border-b pb-3">
+            <h2 className="border-s-4 border-primary ps-3 text-lg font-bold text-primary">{title}</h2>
+            {aside}
+          </div>
+        )}
         {children}
+        {/* The step's own Cancel and Save, inside the box they act on, under
+            a rule where the last field leaves off. */}
+        {footer && <div className="mt-6 border-t pt-4">{footer}</div>}
       </CardContent>
     </Card>
   );
@@ -356,6 +507,15 @@ const emptyFormData = {
   // The card a person is identified by in Oman: a citizen's civil ID, or a
   // resident's card. One field, because a person carries one or the other.
   civilId: "",
+  idExpiry: "",
+  // Asked of a foreign employee only; an Omani is identified by the ID card.
+  passportNumber: "",
+  passportExpiry: "",
+  visaNo: "",
+  visaExpiry: "",
+  // The card that admits a lawyer to plead; nobody else carries one.
+  lawyerCardNo: "",
+  lawyerCardExpiry: "",
 
   dialCode: DEFAULT_DIAL_CODE,
   phone: "",
@@ -369,6 +529,19 @@ const emptyFormData = {
   emergencyRelationship: "",
   emergencyDialCode: DEFAULT_DIAL_CODE,
   emergencyPhone: "",
+
+  // Only a lawyer is admitted to a court, so only a lawyer has a level.
+  practiceLevel: "",
+  workDialCode: DEFAULT_DIAL_CODE,
+  workPhone: "",
+  // The contract: its kind, and the days it runs from and - if fixed - to.
+  contractType: "",
+  contractStartDate: "",
+  // The one leave figure kept on the record; leave taken is recorded on the
+  // leave page, not here. Thirty days is the statutory annual entitlement.
+  annualLeaveDays: "30",
+  // Registered with the Social Protection Fund unless somebody says not.
+  socialProtection: "Yes",
 };
 
 /**
@@ -423,6 +596,18 @@ export default function EmployeeForm({ self }) {
 
   // A record on screen is one being edited; only Add starts an empty one.
   const isEditMode = Boolean(record);
+  // A new employee is added step by step rather than on the record's pages:
+  // there is no record yet for those pages to belong to.
+  const isAdding = !isEditMode && !self;
+  const [step, setStep] = useState(ADD_STEPS[0].key);
+  const [savedSteps, setSavedSteps] = useState([]);
+  // The record as it stood at its last save. Whose it is and which papers it
+  // calls for are read from here, not from a step gone back to and being
+  // retyped: a nationality changed but not saved has not changed yet.
+  const [saved, setSaved] = useState({});
+  const savedOmani = String(saved.nationality || "").trim().toLowerCase() === "omani";
+  const savedLawyer = saved.occupation === "Lawyer";
+  const formRef = useRef(null);
 
   const [activeSection, setActiveSection] = useState("information");
   // Which side of Financial Benefits is open. Held here because the tabs
@@ -585,10 +770,13 @@ export default function EmployeeForm({ self }) {
   );
 
   const current = SECTIONS.find((s) => s.key === activeSection) || SECTIONS[0];
-  const isInfo = activeSection === "information";
+  // While adding, the step decides what is on screen rather than the sidebar.
+  const isInfo = isAdding ? step !== "documents" : activeSection === "information";
   // Both of these draw their own boxes, so the page's card steps out of the
   // way rather than drawing a border around borders.
-  const isDocuments = activeSection === "documents";
+  const isDocuments = isAdding ? step === "documents" : activeSection === "documents";
+  /** Whether a box belongs on screen: all of them on a record, one step's while adding. */
+  const onStep = (key) => !isAdding || step === key;
 
   /**
    * Whether the record can be changed on this page.
@@ -606,8 +794,69 @@ export default function EmployeeForm({ self }) {
   // The section saves itself lower down, so the header brings the form to the
   // top of the screen rather than pretending to save from up here.
 
+  /**
+   * Saves the step on screen and opens the next one.
+   *
+   * Nothing moves on while a required field is empty: the check marks the
+   * gaps and takes the cursor to the first, and the step stays where it is.
+   * The last step finishes the employee and goes back to the list.
+   */
+  const saveStep = () => {
+    if (!checkRequired(formRef.current)) return;
+    // Filled but in the wrong shape - an email with no @ - holds the step too,
+    // and the cursor is taken to it; the field already says what is wrong.
+    const misshapen = [...formRef.current.querySelectorAll("input")].find(
+      (input) => !input.disabled && input.value && !input.checkValidity()
+    );
+    if (misshapen) {
+      misshapen.scrollIntoView({ block: "center", behavior: "smooth" });
+      misshapen.focus({ preventScroll: true });
+      return;
+    }
+    console.log("Saving " + step + ":", { ...toRecord(formData), empNo: employeeNo });
+    setSavedSteps((prev) => (prev.includes(step) ? prev : [...prev, step]));
+    setSaved(formData);
+
+    const next = ADD_STEPS[ADD_STEPS.findIndex((s) => s.key === step) + 1];
+    if (!next) {
+      navigate("/employees");
+      return;
+    }
+    setStep(next.key);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const isLastStep = step === ADD_STEPS[ADD_STEPS.length - 1].key;
+  const currentStep = ADD_STEPS.find((s) => s.key === step) || ADD_STEPS[0];
+
+  // Cancel and Save for the step on screen, drawn inside that step's box.
+  // Finishing is a click, not a submit: the documents step has a search box,
+  // and Enter in it must search rather than send the person back to the list.
+  const stepActions = isAdding && (
+    <div className="flex items-center justify-end gap-3">
+      <Button type="button" variant="ghost" onClick={() => navigate("/employees")}>
+        Cancel
+      </Button>
+      {isLastStep ? (
+        <Button type="button" onClick={saveStep}>
+          <Save className="me-2 h-4 w-4" />
+          Finish
+        </Button>
+      ) : (
+        <Button type="submit">
+          <Save className="me-2 h-4 w-4" />
+          Save
+        </Button>
+      )}
+    </div>
+  );
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (isAdding) {
+      if (!isLastStep) saveStep();
+      return;
+    }
     console.log(isEditMode ? "Updating employee:" : "Creating employee:", {
       ...toRecord(formData),
       empNo: employeeNo,
@@ -617,11 +866,33 @@ export default function EmployeeForm({ self }) {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Page Header.
+      {/* Adding has no sidebar, so the way back to the list sits beside the
+          title instead. */}
+      {isAdding ? (
+        <PageHeader
+          icon={UserPlus}
+          title="Add Employee"
+          note="Create a new employee profile"
+          crumb="Add Employee"
+          backTo="/employees"
+          className="px-0 sm:px-0"
+          // Whose record this is, from the moment there is somebody: shown
+          // once Personal Details is saved, with the number they will carry.
+          action={
+            saved.employeeName && (
+              <div className="text-end">
+                <p className="text-lg font-bold text-primary">{saved.employeeName}</p>
+                <p className="text-sm text-primary/75">Employee No. {employeeNo}</p>
+              </div>
+            )
+          }
+        />
+      ) : (
+      /* Page Header.
 
           No back control here: the sidebar's own "All employees" link leads
           to the same place, and two ways back from one page is one way too
-          many. The one that stayed says where it goes. */}
+          many. The one that stayed says where it goes. */
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div>
@@ -639,11 +910,13 @@ export default function EmployeeForm({ self }) {
         {/* No Save up here: it sits at the end of the form it saves, where
             the last field leaves off. */}
       </div>
+      )}
 
       <div className="flex flex-col items-start gap-4 sm:gap-6 lg:flex-row">
         {/* Standard 07: the sides of this file, grouped, and belonging to
             this employee alone - the name at its head says whose file is
             open, and the list under it goes nowhere else. */}
+        {!isAdding && (
         <RecordSidebar
           // Standard 07 #04: moving to another employee replaces the name,
           // the number, the links and which group is open - all together.
@@ -667,11 +940,26 @@ export default function EmployeeForm({ self }) {
               .map((section) => ({ key: section.key, label: section.label })),
           })).filter((group) => group.items.length > 0)}
         />
+        )}
 
         {/* min-w-0 or the column will not shrink: a flex child sizes itself to
             its widest content by default, so one wide table in here would
             stretch the whole page and push the sidebar off screen. */}
-        <div className="w-full min-w-0 flex-1">
+        <div className="w-full min-w-0 flex-1 space-y-4 sm:space-y-6">
+          {isAdding && (
+            <div className="space-y-2">
+              <StepTabs
+                steps={ADD_STEPS}
+                active={step}
+                done={savedSteps}
+                onSelect={setStep}
+              />
+              {/* What the step asks for, where the step says it. */}
+              {currentStep.hint && (
+                <p className="text-sm text-primary/75">{currentStep.hint}</p>
+              )}
+            </div>
+          )}
           {/* On the merged page the three boxes are the frame, so the
               page's own card steps out of the way rather than drawing a
               border around three borders. */}
@@ -684,7 +972,11 @@ export default function EmployeeForm({ self }) {
             >
               <form
                 id="employee-form"
+                ref={formRef}
                 onSubmit={handleSubmit}
+                // While adding, the step's own check says what is missing,
+                // in the page's own marking rather than the browser's bubble.
+                noValidate={isAdding}
                 className={cn(isInfo && "space-y-4 sm:space-y-6")}
               >
                 {isInfo && (
@@ -707,9 +999,19 @@ export default function EmployeeForm({ self }) {
                     there is nothing to be Active. */}
                 {/* No standing beside the heading: it is already on the row
                     this record was opened from, and it is a field below. */}
-                <SectionCard title="Personal Details">
-                  <div className="form-grid">
-                    <div className="space-y-2">
+                {onStep("personal") && (
+                <SectionCard
+                  title="Personal Details"
+                  icon={isAdding ? User : undefined}
+                  note={isAdding ? "Complete personal details and save to continue." : undefined}
+                  footer={stepActions}
+                >
+                  {/* Four to a row, in the order the person is described:
+                      name, birth and sex; then nationality and the papers it
+                      decides; then how to reach them. Adding sets the rows
+                      closer than the standard 44px, as its design does. */}
+                  <div className={cn("form-grid", isAdding && "gap-y-6")}>
+                    <div className="form-field space-y-2">
                       <Label htmlFor="arabicName">
                         Full Name (Arabic)
                         <Required show={asksFor} />
@@ -725,7 +1027,7 @@ export default function EmployeeForm({ self }) {
                       />
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="form-field space-y-2">
                       <Label htmlFor="employeeName">
                         Full Name (English)
                         <Required show={asksFor} />
@@ -740,29 +1042,22 @@ export default function EmployeeForm({ self }) {
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="nationality">
-                        Nationality
+                    <div className="form-field space-y-2">
+                      <Label htmlFor="dateOfBirth">
+                        Date of Birth
                         <Required show={asksFor} />
                       </Label>
-                      <Select
-                        value={formData.nationality}
-                        onValueChange={(value) => set("nationality", value)}
-                      >
-                        <SelectTrigger id="nationality">
-                          <SelectValue placeholder="Select Nationality" />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-72">
-                          {NATIONALITIES.map((nationality) => (
-                            <SelectItem key={nationality} value={nationality}>
-                              {nationality}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Input
+                        id="dateOfBirth"
+                        name="dateOfBirth"
+                        type="date"
+                        value={formData.dateOfBirth}
+                        onChange={onChange}
+                        required
+                      />
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="form-field space-y-2" data-required={isAdding || undefined}>
                       <Label htmlFor="gender">
                         Gender
                         <Required show={asksFor} />
@@ -784,26 +1079,37 @@ export default function EmployeeForm({ self }) {
                       </Select>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="dateOfBirth">
-                        Date of Birth
+                    {/* Omani first in the list: most of the firm is. */}
+                    <div className="form-field space-y-2" data-required={isAdding || undefined}>
+                      <Label htmlFor="nationality">
+                        Nationality
                         <Required show={asksFor} />
                       </Label>
-                      <Input
-                        id="dateOfBirth"
-                        name="dateOfBirth"
-                        type="date"
-                        value={formData.dateOfBirth}
-                        onChange={onChange}
-                        required
-                      />
+                      <Select
+                        value={formData.nationality}
+                        onValueChange={(value) => set("nationality", value)}
+                      >
+                        <SelectTrigger id="nationality">
+                          <SelectValue placeholder="Select Nationality" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-72">
+                          {NATIONALITIES.map((nationality) => (
+                            <SelectItem key={nationality} value={nationality}>
+                              {nationality}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
-                    {/* The card the person is identified by. The copy of it
-                        is filed on the Documents page, with the rest. */}
-                    <div className="space-y-2">
+                    {/* The card the person is identified by: a citizen's ID or
+                        a resident's card. Adding asks for it, and every other
+                        paper's number, on Identity & Immigration instead. */}
+                    {!isAdding && (
+                    <>
+                    <div className="form-field space-y-2">
                       <Label htmlFor="civilId">
-                        Civil ID / Resident Card No.
+                        ID Number
                         <Required show={asksFor} />
                       </Label>
                       <Input
@@ -811,7 +1117,75 @@ export default function EmployeeForm({ self }) {
                         name="civilId"
                         value={formData.civilId}
                         onChange={onChange}
-                        placeholder="Enter civil ID or resident card number"
+                        placeholder="Enter ID number"
+                        required={isAdding}
+                      />
+                    </div>
+
+                    <div className="form-field space-y-2">
+                      <Label htmlFor="idExpiry">
+                        ID Expiry Date
+                        <Required show={asksFor} />
+                      </Label>
+                      <Input
+                        id="idExpiry"
+                        name="idExpiry"
+                        type="date"
+                        value={formData.idExpiry}
+                        onChange={onChange}
+                      />
+                    </div>
+                    </>
+                    )}
+
+                    {/* A foreign employee is also identified by a passport; an
+                        Omani is not asked for one, and the row closes up. */}
+                    {!isAdding && formData.nationality && !isOmani && (
+                      <>
+                        <div className="form-field space-y-2">
+                          <Label htmlFor="passportNumber">
+                            Passport Number
+                            <Required show={asksFor} />
+                          </Label>
+                          <Input
+                            id="passportNumber"
+                            name="passportNumber"
+                            value={formData.passportNumber}
+                            onChange={onChange}
+                            placeholder="Enter passport number"
+                            required={isAdding}
+                          />
+                        </div>
+
+                        <div className="form-field space-y-2">
+                          <Label htmlFor="passportExpiry">
+                            Passport Expiry Date
+                            <Required show={asksFor} />
+                          </Label>
+                          <Input
+                            id="passportExpiry"
+                            name="passportExpiry"
+                            type="date"
+                            value={formData.passportExpiry}
+                            onChange={onChange}
+                            required={isAdding}
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {/* Two addresses, said apart: the firm writes to the work
+                        one, and reaches a person on this one. Optional, so
+                        only its form is checked, once it has been typed in. */}
+                    <div className="form-field space-y-2">
+                      <Label htmlFor="personalEmail">Personal Email</Label>
+                      <Input
+                        id="personalEmail"
+                        name="personalEmail"
+                        type="email"
+                        value={formData.personalEmail}
+                        onChange={onChange}
+                        placeholder="Enter email address"
                       />
                     </div>
 
@@ -823,45 +1197,44 @@ export default function EmployeeForm({ self }) {
                       onDialCode={(value) => set("dialCode", value)}
                       value={formData.phone}
                       onChange={(e) => set("phone", e.target.value)}
+                      required={isAdding}
                     />
 
-                    {/* Two addresses, said apart: the firm writes to the work
-                        one, and reaches a person on the other. */}
-                    <IconField
-                      icon={Mail}
-                      id="personalEmail"
-                      name="personalEmail"
-                      type="email"
-                      label="Personal Email"
-                      placeholder="Enter personal email address"
-                      value={formData.personalEmail}
-                      onChange={onChange}
-                    />
-
-                    <IconField
-                      icon={MapPin}
-                      id="address"
-                      name="address"
-                      label={<>Address<Required show={asksFor} /></>}
-                      placeholder="Enter full address"
-                      value={formData.address}
-                      onChange={onChange}
-                    />
+                    <div className="form-field space-y-2">
+                      <Label htmlFor="address">
+                        Address
+                        <Required show={asksFor} />
+                      </Label>
+                      <Input
+                        id="address"
+                        name="address"
+                        value={formData.address}
+                        onChange={onChange}
+                        placeholder="Enter full address"
+                        required={isAdding}
+                      />
+                    </div>
 
                     {/* Who to call, and on what number, if something happens */}
-                    <IconField
-                      icon={User}
-                      id="emergencyName"
-                      name="emergencyName"
-                      label={<>Emergency Contact Name<Required show={asksFor} /></>}
-                      placeholder="Enter emergency contact name"
-                      value={formData.emergencyName}
-                      onChange={onChange}
-                    />
+                    <div className="form-field space-y-2">
+                      <Label htmlFor="emergencyName">
+                        Emergency Contact Name
+                        <Required show={asksFor} />
+                      </Label>
+                      <Input
+                        id="emergencyName"
+                        name="emergencyName"
+                        value={formData.emergencyName}
+                        onChange={onChange}
+                        placeholder="Enter contact name"
+                        required={isAdding}
+                      />
+                    </div>
 
-                    {/* Who they are to the employee: whoever answers that call
-                        needs to know who they are speaking to. */}
-                    <div className="space-y-2">
+                    {/* Who they are to the employee, kept on the record. Not
+                        asked for when the employee is added. */}
+                    {!isAdding && (
+                    <div className="form-field space-y-2">
                       <Label htmlFor="emergencyRelationship">
                         Relationship to Employee
                         <Required show={asksFor} />
@@ -884,19 +1257,25 @@ export default function EmployeeForm({ self }) {
                         </SelectContent>
                       </Select>
                     </div>
+                    )}
 
                     <PhoneField
                       id="emergencyPhone"
-                      label={<>Emergency Contact Phone Number<Required show={asksFor} /></>}
-                      placeholder="Enter emergency contact phone number"
+                      label={<>Emergency Contact Phone<Required show={asksFor} /></>}
+                      placeholder="Enter phone number"
                       dialCode={formData.emergencyDialCode}
                       onDialCode={(value) => set("emergencyDialCode", value)}
                       value={formData.emergencyPhone}
                       onChange={(e) => set("emergencyPhone", e.target.value)}
+                      required={isAdding}
                     />
                   </div>
                 </SectionCard>
+                )}
 
+                {/* On a record. Adding asks for the job in its own shape,
+                    further down. */}
+                {!isAdding && (
                 <SectionCard title="Employment Details">
                   <div className="space-y-6">
                     <div className="form-grid">
@@ -942,7 +1321,7 @@ export default function EmployeeForm({ self }) {
                         />
                       </div>
 
-                      <div className="space-y-2">
+                      <div className="form-field space-y-2" data-required={isAdding || undefined}>
                         <Label htmlFor="branch">
                           Branch / Work Location
                           <Required show={asksFor} />
@@ -973,9 +1352,10 @@ export default function EmployeeForm({ self }) {
                         placeholder="name@firm.com"
                         value={formData.workEmail}
                         onChange={onChange}
+                        required={isAdding}
                       />
 
-                      <div className="space-y-2">
+                      <div className="form-field space-y-2">
                         <Label htmlFor="dateOfJoining">
                           Date of Joining
                           <Required show={asksFor} />
@@ -992,7 +1372,7 @@ export default function EmployeeForm({ self }) {
 
                       {/* How the person is engaged, and - where the engagement
                           runs out - the day it does. */}
-                      <div className="space-y-2">
+                      <div className="form-field space-y-2" data-required={isAdding || undefined}>
                         <Label htmlFor="employmentType">
                           Employment Type
                           <Required show={asksFor} />
@@ -1029,7 +1409,7 @@ export default function EmployeeForm({ self }) {
                         />
                       </div>
 
-                      <div className="space-y-2">
+                      <div className="form-field space-y-2" data-required={isAdding || undefined}>
                         <Label htmlFor="category">
                           Category / Role
                           <Required show={asksFor} />
@@ -1051,7 +1431,7 @@ export default function EmployeeForm({ self }) {
                         </Select>
                       </div>
 
-                      <div className="space-y-2">
+                      <div className="form-field space-y-2" data-required={isAdding || undefined}>
                         <Label htmlFor="jobLevel">
                           Job Level
                           <Required show={asksFor} />
@@ -1073,7 +1453,7 @@ export default function EmployeeForm({ self }) {
                         </Select>
                       </div>
 
-                      <div className="space-y-2">
+                      <div className="form-field space-y-2" data-required={isAdding || undefined}>
                         <Label htmlFor="department">
                           Department / Division
                           <Required show={asksFor} />
@@ -1095,7 +1475,7 @@ export default function EmployeeForm({ self }) {
                         </Select>
                       </div>
 
-                      <div className="space-y-2">
+                      <div className="form-field space-y-2" data-required={isAdding || undefined}>
                         <Label htmlFor="occupation">
                           Profession / Occupation
                           <Required show={asksFor} />
@@ -1162,14 +1542,249 @@ export default function EmployeeForm({ self }) {
                     )}
                   </div>
                 </SectionCard>
+                )}
+
+                {/* The job and the contract it is held on, as a new employee
+                    is taken on: where they work and what as, then the terms. */}
+                {isAdding && step === "employment" && (
+                  <>
+                  <SectionCard title="Employment & Contract">
+                    <div className="space-y-6">
+                      <section>
+                        <h3 className="mb-4 text-base font-bold text-primary">
+                          Organizational Information
+                        </h3>
+                        <div className="form-grid gap-y-6">
+                          {/* Nobody is taken on as having left: a new record
+                              starts working or on leave, never ended. */}
+                          <ChoiceField
+                            id="status"
+                            label="Employee Status"
+                            value={formData.status}
+                            onChange={(value) => set("status", value)}
+                            options={EMPLOYEE_STATUSES.filter(
+                              (status) => !HAS_LEFT.includes(status)
+                            )}
+                            required
+                          />
+                          <ChoiceField
+                            id="branch"
+                            label="Branch / Work Location"
+                            placeholder="Select Branch"
+                            value={formData.branch}
+                            onChange={(value) => set("branch", value)}
+                            options={initialBranches.map((branch) => branch.name)}
+                            required
+                          />
+                          <ChoiceField
+                            id="department"
+                            label="Department / Division"
+                            placeholder="Select Department"
+                            value={formData.department}
+                            onChange={(value) => set("department", value)}
+                            options={DEPARTMENTS}
+                            required
+                          />
+                          {/* Choosing anything but Lawyer takes the practice
+                              level away with it, so no level is saved for
+                              somebody who cannot hold one. */}
+                          <ChoiceField
+                            id="occupation"
+                            label="Occupation"
+                            placeholder="Select Occupation"
+                            value={formData.occupation}
+                            onChange={(value) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                occupation: value,
+                                practiceLevel:
+                                  value === "Lawyer" ? prev.practiceLevel : "",
+                              }))
+                            }
+                            options={OCCUPATIONS}
+                            required
+                          />
+                          {formData.occupation === "Lawyer" && (
+                            <ChoiceField
+                              id="practiceLevel"
+                              label="Practice Level"
+                              placeholder="Select Practice Level"
+                              value={formData.practiceLevel}
+                              onChange={(value) => set("practiceLevel", value)}
+                              options={PRACTICE_LEVELS}
+                              required
+                            />
+                          )}
+                          <PhoneField
+                            id="workPhone"
+                            label="Work Phone Number"
+                            placeholder="Enter work phone number"
+                            dialCode={formData.workDialCode}
+                            onDialCode={(value) => set("workDialCode", value)}
+                            value={formData.workPhone}
+                            onChange={(e) => set("workPhone", e.target.value)}
+                          />
+                          <div className="form-field space-y-2">
+                            <Label htmlFor="workEmail">Work Email</Label>
+                            <Input
+                              id="workEmail"
+                              name="workEmail"
+                              type="email"
+                              placeholder="name@firm.com"
+                              value={formData.workEmail}
+                              onChange={onChange}
+                              required
+                            />
+                          </div>
+                        </div>
+                      </section>
+
+                      <section className="border-t pt-6">
+                        <h3 className="mb-4 text-base font-bold text-primary">
+                          Contract &amp; Timeline
+                        </h3>
+                        <div className="form-grid gap-y-6">
+                          <ChoiceField
+                            id="employmentType"
+                            label="Employment Type"
+                            placeholder="Select Employment Type"
+                            value={formData.employmentType}
+                            onChange={(value) => set("employmentType", value)}
+                            options={EMPLOYMENT_TYPES}
+                            required
+                          />
+                          <ChoiceField
+                            id="contractType"
+                            label="Contract Type"
+                            placeholder="Select Contract Type"
+                            value={formData.contractType}
+                            onChange={(value) => set("contractType", value)}
+                            options={EMPLOYEE_CONTRACT_TYPES}
+                            required
+                          />
+                          <div className="form-field space-y-2">
+                            <Label htmlFor="dateOfJoining">Date of Joining</Label>
+                            <Input
+                              id="dateOfJoining"
+                              name="dateOfJoining"
+                              type="date"
+                              value={formData.dateOfJoining}
+                              onChange={onChange}
+                              required
+                            />
+                          </div>
+                          <div className="form-field space-y-2">
+                            <Label htmlFor="contractStartDate">Contract Start Date</Label>
+                            <Input
+                              id="contractStartDate"
+                              name="contractStartDate"
+                              type="date"
+                              value={formData.contractStartDate}
+                              onChange={onChange}
+                              required
+                            />
+                          </div>
+                          {/* A fixed-term contract is one with an end, so it
+                              has to be given; an open-ended one has none. */}
+                          <div className="form-field space-y-2">
+                            <Label htmlFor="employmentEndDate">Contract End Date</Label>
+                            <Input
+                              id="employmentEndDate"
+                              name="employmentEndDate"
+                              type="date"
+                              value={formData.employmentEndDate}
+                              onChange={onChange}
+                              required={formData.contractType === "Fixed-term"}
+                            />
+                          </div>
+                          {/* The one leave figure on the record. Leave taken
+                              is recorded on the leave page, not here. */}
+                          <div className="form-field space-y-2">
+                            <Label htmlFor="annualLeaveDays">
+                              Annual Leave Entitlement (Days)
+                            </Label>
+                            <Input
+                              id="annualLeaveDays"
+                              name="annualLeaveDays"
+                              type="number"
+                              inputMode="numeric"
+                              min="0"
+                              step="1"
+                              placeholder="30"
+                              value={formData.annualLeaveDays}
+                              onChange={onChange}
+                              required
+                            />
+                          </div>
+                          <ChoiceField
+                            id="socialProtection"
+                            label="Social Protection Registration"
+                            value={formData.socialProtection}
+                            onChange={(value) => set("socialProtection", value)}
+                            options={["Yes", "No"]}
+                            required
+                          />
+                        </div>
+                      </section>
+                    </div>
+                  </SectionCard>
+                  {stepActions}
+                  </>
+                )}
+
+                {/* The numbers and expiry dates of the papers that apply to
+                    this person, decided by what was saved on the steps before:
+                    the ID card for everybody, the lawyer's card for a lawyer,
+                    passport and visa for a foreigner. Numbers only - the
+                    papers themselves are filed on Documents. */}
+                {isAdding && step === "identity" && (
+                  <SectionCard title="Identity & Immigration" footer={stepActions}>
+                    <div className="form-grid gap-y-6">
+                      <PaperFields
+                        label={savedOmani ? "Civil ID" : "Resident Card"}
+                        numberName="civilId"
+                        expiryName="idExpiry"
+                        values={formData}
+                        onChange={onChange}
+                      />
+                      {savedLawyer && (
+                        <PaperFields
+                          label="Lawyer Card"
+                          numberName="lawyerCardNo"
+                          expiryName="lawyerCardExpiry"
+                          values={formData}
+                          onChange={onChange}
+                        />
+                      )}
+                      {!savedOmani && (
+                        <>
+                          <PaperFields
+                            label="Passport"
+                            numberName="passportNumber"
+                            expiryName="passportExpiry"
+                            values={formData}
+                            onChange={onChange}
+                          />
+                          <PaperFields
+                            label="Visa"
+                            numberName="visaNo"
+                            expiryName="visaExpiry"
+                            values={formData}
+                            onChange={onChange}
+                          />
+                        </>
+                      )}
+                    </div>
+                  </SectionCard>
+                )}
 
                   </fieldset>
                 )}
 
                 {/* The employee's papers, in a section of their own. Only once
                     the employee exists - there is nobody to file a paper
-                    against before. */}
-                {isDocuments && isEditMode && (
+                    against before, which is why adding reaches them last. */}
+                {isDocuments && (isEditMode || isAdding) && (
                   <Card>
                   <CardContent className="p-4 sm:p-6">
                   <div className="space-y-6">
@@ -1531,6 +2146,9 @@ export default function EmployeeForm({ self }) {
                       </DialogContent>
                     </Dialog>
                   </div>
+                  {stepActions && (
+                    <div className="mt-6 border-t pt-4">{stepActions}</div>
+                  )}
                   </CardContent>
                   </Card>
                 )}
@@ -1584,7 +2202,7 @@ export default function EmployeeForm({ self }) {
                 {/* Save at the end of what it saves, where the last field
                     leaves off. A section that saves its own records has
                     nothing here: there is no draft on the page to save. */}
-                {!current.noSave && !readOnly && (
+                {!isAdding && !current.noSave && !readOnly && (
                   <div className="flex justify-end">
                     <Button type="submit">
                       <Save className="me-2 h-4 w-4" />

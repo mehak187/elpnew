@@ -695,6 +695,29 @@
     text-align: start;
   }
 
+  /*
+   * A value in the wrong shape - an email with no @, a negative salary - said
+   * once the person has left the field rather than while they are still
+   * typing (:user-invalid waits for that), and never for an empty field: that
+   * is the required check's to say. Written after it so a filled field in the
+   * wrong shape is called that, not "required".
+   */
+  .form-field input:is([type="email"], [type="number"]):user-invalid:not(:placeholder-shown) {
+    border-color: var(--error-border);
+  }
+
+  .form-field:has(input:is([type="email"], [type="number"]):user-invalid:not(:placeholder-shown))::after,
+  [data-checked="true"]
+    .form-field:has(input:is([type="email"], [type="number"]):invalid:not(:placeholder-shown))::after {
+    content: "Invalid format";
+    display: block;
+    margin-top: 4px;
+    color: var(--error-border);
+    font-size: 12px;
+    line-height: 1.5;
+    text-align: start;
+  }
+
   .field-error {
     margin-top: 4px;
     color: var(--error-border);

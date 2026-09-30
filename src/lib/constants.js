@@ -63,6 +63,12 @@ export const DEPARTMENTS = [
 /** How a person is engaged, rather than what they are engaged to do. */
 export const EMPLOYMENT_TYPES = ["Full-Time", "Part-Time", "Temporary"];
 
+/** How long an employee's contract runs: to a date, or until it is ended. */
+export const EMPLOYEE_CONTRACT_TYPES = ["Fixed-term", "Indefinite-term"];
+
+/** The courts a lawyer is admitted to plead before, lowest first. */
+export const PRACTICE_LEVELS = ["Trainee", "Primary", "Appeal", "Supreme"];
+
 export const OCCUPATIONS = [
   "Legal Consultant",
   "Lawyer",

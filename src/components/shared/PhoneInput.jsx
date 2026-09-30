@@ -26,6 +26,7 @@ export default function PhoneInput({
   onChange,
   placeholder = "Enter phone number",
   disabled,
+  required,
   className,
 }) {
   const [open, setOpen] = useState(false);
@@ -104,6 +105,7 @@ export default function PhoneInput({
           onChange={onChange}
           placeholder={placeholder}
           disabled={disabled}
+          required={required}
           className="h-full min-w-0 flex-1 bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
         />
       </div>

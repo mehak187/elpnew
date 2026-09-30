@@ -1,5 +1,5 @@
-import { useLocation } from "react-router-dom";
-import { Plus } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { ArrowLeft, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { trailFor } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
@@ -26,8 +26,13 @@ export default function PageHeader({
   addLabel = "Add",
   action,
   className,
+  // A page opened from a list - adding to it, say - names itself at the end
+  // of the trail and offers the way back to the list beside its title.
+  crumb,
+  backTo,
 }) {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const trail = trailFor(pathname);
 
   return (
@@ -44,14 +49,37 @@ export default function PageHeader({
           <span aria-hidden="true" className="px-2 text-primary/40">
             /
           </span>
-          <span className="font-semibold text-primary" aria-current="page">
-            {trail.page}
-          </span>
+          {crumb ? (
+            <>
+              <span className="text-primary/60">{trail.page}</span>
+              <span aria-hidden="true" className="px-2 text-primary/40">
+                /
+              </span>
+              <span className="font-semibold text-primary" aria-current="page">
+                {crumb}
+              </span>
+            </>
+          ) : (
+            <span className="font-semibold text-primary" aria-current="page">
+              {trail.page}
+            </span>
+          )}
         </nav>
       )}
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex gap-3">
+          {backTo && (
+            <button
+              type="button"
+              onClick={() => navigate(backTo)}
+              title={"Back to " + (trail?.page || "the list")}
+              className="mt-1 flex size-9 shrink-0 items-center justify-center self-start rounded-md text-primary transition-colors hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <ArrowLeft className="size-5" aria-hidden="true" />
+              <span className="sr-only">Back to {trail?.page || "the list"}</span>
+            </button>
+          )}
           {/* The rule down the start, then the icon, then the name - the same
               three-part heading the form containers use, one size up. */}
           <span
