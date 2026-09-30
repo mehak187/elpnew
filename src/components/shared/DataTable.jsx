@@ -285,18 +285,21 @@ export default function DataTable({
             </SelectContent>
           </Select>
 
+          {/* Square, and the same 42px every other control on this row stands
+              at, so the mark inside has room to be recognised rather than
+              guessed at. */}
           {showExport && (
             <Button
               variant="outline"
               size="icon"
-              className="shrink-0"
-              title="Export to CSV"
+              className="size-[42px] shrink-0"
+              title="Export to Excel"
               onClick={() =>
                 downloadCsv(toCsv(columns, filteredData), exportFileName)
               }
             >
-              <ExcelIcon className="size-5" />
-              <span className="sr-only">Export to CSV</span>
+              <ExcelIcon className="size-6" />
+              <span className="sr-only">Export to Excel</span>
             </Button>
           )}
 

@@ -5,10 +5,10 @@
  * says "a table", while this says "the file you will get is one Excel opens",
  * which is the only question anybody asks of that button.
  *
- * Two halves, as the application's own mark has them - the X on the left and
- * a few cells of sheet on the right. Nothing finer than that: at the size a
- * toolbar gives an icon, detail that cannot be resolved reads as blur rather
- * than as detail.
+ * Built the way the application's own mark is - a pale sheet inside a green
+ * edge, the X on a green panel down its start, a few cells beside it. Nothing
+ * finer: at the size a toolbar gives an icon, detail that cannot be resolved
+ * reads as blur rather than as detail.
  */
 export default function ExcelIcon({ className }) {
   return (
@@ -18,23 +18,35 @@ export default function ExcelIcon({ className }) {
       aria-hidden="true"
       className={className}
     >
-      <rect x="2.5" y="2.5" width="19" height="19" rx="2.5" fill="#1D6F42" />
+      {/* The sheet, and the edge that names it. */}
+      <rect
+        x="2.6"
+        y="2.6"
+        width="18.8"
+        height="18.8"
+        rx="2.4"
+        fill="#FFFFFF"
+        stroke="#1D6F42"
+        strokeWidth="1.6"
+      />
 
-      {/* The X, in the white the application uses. */}
+      {/* The green panel down the start, carrying the X. */}
       <path
-        d="m5.6 8 4 8m0-8-4 8"
+        d="M3.4 5a1.6 1.6 0 0 1 1.6-1.6h5.2v17.2H5A1.6 1.6 0 0 1 3.4 19V5Z"
+        fill="#1D6F42"
+      />
+      <path
+        d="m5.7 9 3.2 6m0-6-3.2 6"
         stroke="#FFFFFF"
-        strokeWidth="1.9"
+        strokeWidth="1.7"
         strokeLinecap="round"
       />
 
-      {/* Four cells of sheet: enough to read as one, few enough to stay open
-          at 20px. */}
-      <rect x="12" y="7" width="7.5" height="10" rx="0.75" fill="#FFFFFF" />
+      {/* Four cells, enough to read as a sheet. */}
       <path
-        d="M15.75 7v10M12 12h7.5"
+        d="M12.4 12h8M16.4 7.2v9.6"
         stroke="#1D6F42"
-        strokeWidth="1.1"
+        strokeWidth="1.5"
         strokeLinecap="round"
       />
     </svg>
