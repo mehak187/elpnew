@@ -31,11 +31,15 @@ export default function PageHeader({
   const trail = trailFor(pathname);
 
   return (
-    <div className={cn("space-y-2", className)}>
+    // Set in by the same amount the card below it insets its own contents, so
+    // the trail, the rule and the table all begin on one line down the page.
+    <div className={cn("space-y-2 px-4 sm:px-6", className)}>
       {/* Which menu this page came out of, and which page it is. Quiet above
           the title, because it answers where rather than what. */}
       {trail?.section && (
-        <nav aria-label="Breadcrumb" className="ps-4 text-sm">
+        // Flush with the rule below it, so the head of the page has one left
+        // edge rather than a trail set in from the title it belongs to.
+        <nav aria-label="Breadcrumb" className="text-sm">
           <span className="text-primary/60">{trail.section}</span>
           <span aria-hidden="true" className="px-2 text-primary/40">
             /
