@@ -233,29 +233,34 @@ export default function FilterPanel({
 
                   {field.placeholder ? (
                     <p className="text-sm text-muted-foreground">{field.placeholder}</p>
-                  ) : field.type === "checkbox" ? (
-                    field.options.map((option) => (
-                      <Tick
-                        key={option.value}
-                        id={field.key + "-" + option.value}
-                        checked={(draft[field.key] || []).includes(option.value)}
-                        onToggle={() => toggle(field.key, option.value)}
-                      >
-                        {option.label}
-                      </Tick>
-                    ))
                   ) : (
-                    field.options.map((option) => (
-                      <Choice
-                        key={option.value}
-                        name={field.key}
-                        value={option.value}
-                        checked={(draft[field.key] || "all") === option.value}
-                        onSelect={(next) => set(field.key, next)}
-                      >
-                        {option.label}
-                      </Choice>
-                    ))
+                    // Along the line and wrapping, not stacked: three short
+                    // words set one under the other make a column of nine
+                    // lines out of a group that reads in one.
+                    <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
+                      {field.type === "checkbox"
+                        ? field.options.map((option) => (
+                            <Tick
+                              key={option.value}
+                              id={field.key + "-" + option.value}
+                              checked={(draft[field.key] || []).includes(option.value)}
+                              onToggle={() => toggle(field.key, option.value)}
+                            >
+                              {option.label}
+                            </Tick>
+                          ))
+                        : field.options.map((option) => (
+                            <Choice
+                              key={option.value}
+                              name={field.key}
+                              value={option.value}
+                              checked={(draft[field.key] || "all") === option.value}
+                              onSelect={(next) => set(field.key, next)}
+                            >
+                              {option.label}
+                            </Choice>
+                          ))}
+                    </div>
                   )}
                   </div>
                 </div>

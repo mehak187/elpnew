@@ -235,6 +235,36 @@ export default function DataTable({
     }
   }, [currentPage, calculatedTotalPages, onPageChange]);
 
+  /**
+   * Which page buttons to draw: always the first and the last, the three
+   * around the one being read, and `null` wherever a run was left out.
+   */
+  const pageNumbers = (() => {
+    const total = calculatedTotalPages;
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+
+    // At either end the reader is already beside the edge, so two numbers
+    // are enough there; in the middle it takes three to show which way the
+    // list runs. Anything wider only pushes the last page further off.
+    const around =
+      currentPage <= 2
+        ? [2, 3]
+        : currentPage >= total - 1
+          ? [total - 2, total - 1]
+          : [currentPage - 1, currentPage, currentPage + 1];
+
+    const shown = [1, ...around, total];
+
+    const out = [];
+    let last = 0;
+    for (const n of shown) {
+      if (n - last > 1) out.push(null);
+      out.push(n);
+      last = n;
+    }
+    return out;
+  })();
+
   // Paginate filtered data
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
@@ -412,9 +442,12 @@ export default function DataTable({
                   use this table cannot drift apart. The outer edge is the
                   card's own rounded border - a second, square one inside it
                   shows through at the corners. */}
-              <Table className="table-hover-lines">
+              <Table
+                className="table-hover-lines"
+                wrapperClassName="max-h-[min(70vh,720px)]"
+              >
                 <TableHeader>
-                  <TableRow className="border-b border-container-border bg-table-head hover:bg-table-head">
+                  <TableRow className="sticky top-0 z-10 bg-table-head shadow-[0_1px_0_0_var(--container-border)] hover:bg-table-head">
                     {columns.map((column) => (
                       <TableHead
                         key={column.key}
@@ -454,7 +487,7 @@ export default function DataTable({
                     ))}
                   </TableRow>
                   {enableColumnSearch && (
-                    <TableRow className="border-b border-container-border bg-table-head hover:bg-table-head">
+                    <TableRow className="sticky top-0 z-10 bg-table-head shadow-[0_1px_0_0_var(--container-border)] hover:bg-table-head">
                       {columns.map((column) => (
                         <TableHead
                           key={`filter-${column.key}`}
@@ -529,7 +562,7 @@ export default function DataTable({
           {itemLabel && filteredData.length > 0
             ? "Showing " +
               ((currentPage - 1) * pageSize + 1) +
-              " to " +
+              "\u2013" +
               Math.min(currentPage * pageSize, filteredData.length) +
               " of " +
               filteredData.length +
@@ -549,31 +582,33 @@ export default function DataTable({
             <span className="hidden sm:inline">Previous</span>
           </Button>
 
-          {/* Page numbers - desktop only */}
-          <div className="hidden sm:flex items-center gap-1">
-            {Array.from({ length: Math.min(5, calculatedTotalPages) }, (_, i) => {
-              let pageNum;
-              if (calculatedTotalPages <= 5) {
-                pageNum = i + 1;
-              } else if (currentPage <= 3) {
-                pageNum = i + 1;
-              } else if (currentPage >= calculatedTotalPages - 2) {
-                pageNum = calculatedTotalPages - 4 + i;
-              } else {
-                pageNum = currentPage - 2 + i;
-              }
-              return (
+          {/* The first page, the last, and the three around whichever is
+              being read - with an ellipsis standing for whatever run was
+              skipped. A row of twenty-five numbers is not a control anybody
+              uses; it is a wall they read past. */}
+          <div className="hidden items-center gap-1 sm:flex">
+            {pageNumbers.map((pageNum, i) =>
+              pageNum === null ? (
+                <span
+                  key={"gap" + i}
+                  aria-hidden="true"
+                  className="px-1 text-sm text-muted-foreground"
+                >
+                  &hellip;
+                </span>
+              ) : (
                 <Button
                   key={pageNum}
                   variant={currentPage === pageNum ? "default" : "ghost"}
                   size="sm"
+                  aria-current={currentPage === pageNum ? "page" : undefined}
                   onClick={() => onPageChange && onPageChange(pageNum)}
                   className="h-9 w-9"
                 >
                   {pageNum}
                 </Button>
-              );
-            })}
+              )
+            )}
           </div>
 
           <Button
