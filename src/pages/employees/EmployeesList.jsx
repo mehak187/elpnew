@@ -31,7 +31,9 @@ import {
   amount,
   documentsFor,
   documentStatus,
+  accessHold,
 } from "./employeeData";
+import { readDocumentControl } from "@/lib/settings/documentControl";
 
 /** A fact with its heading beside it, where the pair fits on one line. */
 /**
@@ -261,6 +263,8 @@ export default function EmployeesList() {
   // manager's to read. The server enforces the same rule; this only keeps the
   // page from printing what it should not.
   const canSeeRestricted = CURRENT_USER.role === "admin";
+  // The grace period and action set on System Settings.
+  const documentControl = readDocumentControl();
   const fields = filterFields(canSeeRestricted);
   const chips = filterChips(fields, filters);
 
@@ -414,18 +418,39 @@ export default function EmployeesList() {
       // Its own column rather than a line under the name: standing is the one
       // thing on this row that changes, and a column can be scanned down and
       // sorted where a line buried in a cell cannot.
-      render: (value) => (
-        <span className="inline-flex items-center gap-2 text-primary">
-          <span
-            aria-hidden="true"
-            className={cn(
-              "size-2 shrink-0 rounded-full",
-              STATUS_TONE[value] || "bg-muted-foreground"
+      render: (value, row) => {
+        // A lapsed critical paper holds access after its grace period, and
+        // that is said here, under the standing it qualifies.
+        const hold = accessHold(documentsFor(row.id), documentControl);
+        return (
+          <div className="space-y-1">
+            <span className="inline-flex items-center gap-2 text-primary">
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "size-2 shrink-0 rounded-full",
+                  STATUS_TONE[value] || "bg-muted-foreground"
+                )}
+              />
+              {value}
+            </span>
+            {hold && (
+              <p
+                className={cn(
+                  "text-xs font-medium",
+                  hold.state === "held" ? "text-red-700" : "text-amber-700"
+                )}
+              >
+                {hold.state === "held"
+                  ? hold.action === "Restrict access"
+                    ? "Access restricted"
+                    : "Access suspended"
+                  : "Grace period: " + hold.daysLeft + " day" + (hold.daysLeft === 1 ? "" : "s") + " left"}
+              </p>
             )}
-          />
-          {value}
-        </span>
-      ),
+          </div>
+        );
+      },
     },
   ];
 

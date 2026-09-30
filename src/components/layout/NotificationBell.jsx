@@ -14,6 +14,7 @@ import {
   readAlertIds,
   writeAlertIds,
 } from "@/lib/notifications/expiryAlerts";
+import { employeeDocumentAlerts } from "@/pages/employees/employeeData";
 
 /** How often the reminder sounds while anything is still unread. */
 const REMINDER_MINUTES = 10;
@@ -61,7 +62,17 @@ export default function NotificationBell() {
   const navigate = useNavigate();
   const { clients } = useClients();
 
-  const alerts = expiryAlerts(clients);
+  // Clients' papers and employees' papers, in one list, soonest first. Each
+  // alert says whose it is, what it is and where it opens.
+  const alerts = [
+    ...expiryAlerts(clients).map((alert) => ({
+      ...alert,
+      title: alert.clientName,
+      detail: alert.documentType + ": " + alert.number,
+      href: "/clients/" + alert.clientId,
+    })),
+    ...employeeDocumentAlerts(),
+  ].sort((a, b) => a.expiryDate.localeCompare(b.expiryDate));
   const [readIds, setReadIds] = useState(readAlertIds);
   const [open, setOpen] = useState(false);
 
@@ -87,9 +98,9 @@ export default function NotificationBell() {
     return () => clearInterval(timer);
   }, [hasUnread]);
 
-  const openClient = (alert) => {
+  const openAlert = (alert) => {
     setOpen(false);
-    navigate("/clients/" + alert.clientId);
+    navigate(alert.href);
   };
 
   return (
@@ -142,15 +153,13 @@ export default function NotificationBell() {
             <button
               key={alert.id}
               type="button"
-              onClick={() => openClient(alert)}
+              onClick={() => openAlert(alert)}
               className="block w-full border-b px-4 py-3 text-start last:border-0 hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-ring"
             >
               <p className="text-sm font-medium text-primary">
-                {alert.clientName}
+                {alert.title}
               </p>
-              <p className="text-xs text-muted-foreground">
-                {alert.documentType}: {alert.number}
-              </p>
+              <p className="text-xs text-muted-foreground">{alert.detail}</p>
               <p className="mt-1 flex flex-wrap items-center gap-2 text-xs">
                 <span className="text-muted-foreground">
                   {alert.expiryDate}

@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Fragment, useRef, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import RecordSidebar from "@/components/shared/RecordSidebar";
@@ -36,6 +36,9 @@ import {
   FileSpreadsheet,
   Eye,
   CloudUpload,
+  ChevronDown,
+  ChevronUp,
+  AlertTriangle,
   Gavel,
   CircleCheck,
   UserPlus,
@@ -50,6 +53,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { amountValue } from "@/lib/money";
+import { readDocumentControl } from "@/lib/settings/documentControl";
 import { Rial } from "@/components/shared/Rial";
 import { EmptyState } from "@/components/shared/panels";
 import {
@@ -97,6 +101,9 @@ import {
   documentTypesFor,
   documentStatus,
   documentCategory,
+  isVersioned,
+  documentVersions,
+  accessHold,
   documentExpires,
   hasRelatedRecord,
   relatedExpiry,
@@ -484,6 +491,40 @@ function MoneyField({ id, label, value, onChange, required, locked }) {
   );
 }
 
+/** What holding access is called once it has happened. */
+const HELD_AS = { "Restrict access": "restricted", "Suspend access": "suspended" };
+
+/**
+ * Said at the head of a record whose critical paper has lapsed: amber while
+ * the grace period runs, with the day it runs out; red once access is held.
+ */
+function AccessNotice({ hold, graceDays }) {
+  const held = hold.state === "held";
+  const outcome = HELD_AS[hold.action] || "held";
+  return (
+    <div
+      role="alert"
+      className={cn(
+        "flex items-start gap-3 rounded-lg border px-4 py-3 text-sm",
+        held
+          ? "border-red-200 bg-red-50 text-red-800"
+          : "border-amber-200 bg-amber-50 text-amber-800"
+      )}
+    >
+      <AlertTriangle className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
+      <p>
+        <span className="font-semibold">
+          {held ? "Access " + outcome : "Grace period"}
+        </span>
+        {" - "}
+        {held
+          ? `${hold.type} expired on ${formatDate(hold.expiry)} and was not renewed within the ${graceDays}-day grace period.`
+          : `${hold.type} expired on ${formatDate(hold.expiry)}. Renew it by ${formatDate(hold.until)} or access will be ${outcome}.`}
+      </p>
+    </div>
+  );
+}
+
 /** One figure of the coming payroll: what it is, then the amount. */
 function PayTile({ label, value, className }) {
   return (
@@ -627,13 +668,13 @@ function SectionCard({ title, icon: Icon, note, aside, footer, children }) {
 
 /**
  * How each standing of a paper is marked: green while it holds, amber as it
- * runs out, red once it has, and grey once a newer one has taken its place.
+ * runs out, red once it has, and grey once a newer version has been filed.
  */
 const DOCUMENT_STATUS_PILL = {
   Active: "border-green-200 bg-green-50 text-green-700",
   "Expiring Soon": "border-amber-200 bg-amber-50 text-amber-700",
   Expired: "border-red-200 bg-red-50 text-red-700",
-  Replaced: "border-slate-200 bg-slate-100 text-slate-600",
+  Archived: "border-slate-200 bg-slate-100 text-slate-600",
 };
 
 /** Somebody who has left, and so owes the record a reason and a last day. */
@@ -669,6 +710,8 @@ const emptyFormData = {
   passportExpiry: "",
   visaNo: "",
   visaExpiry: "",
+  workPermitNo: "",
+  workPermitExpiry: "",
   // The card that admits a lawyer to plead; nobody else carries one.
   lawyerCardNo: "",
   lawyerCardExpiry: "",
@@ -790,7 +833,12 @@ export default function EmployeeForm({ self }) {
   const savedLawyer = saved.occupation === "Lawyer";
   const formRef = useRef(null);
 
-  const [activeSection, setActiveSection] = useState("information");
+  // A page that sends somebody here can say which section to open - a newly
+  // added employee opens on Documents, the next thing they need.
+  const location = useLocation();
+  const [activeSection, setActiveSection] = useState(
+    () => location.state?.section || "information"
+  );
   // Which side of Financial Benefits is open. Held here because the tabs
   // that choose it sit in the section's heading, which this page draws.
   const [benefitsTab, setBenefitsTab] = useState("salaries");
@@ -834,8 +882,17 @@ export default function EmployeeForm({ self }) {
   const [loadedId, setLoadedId] = useState(id);
   if (id !== loadedId) {
     setLoadedId(id);
-    setFormData(toFormData(record));
-    setActiveSection("information");
+    // The same fresh start the page gives when it first opens: a record's own
+    // details, or a blank employee whose pay starts today.
+    setFormData(
+      record ? toFormData(record) : { ...emptyFormData, salaryEffectiveDate: todayIso() }
+    );
+    setDocuments(documentsFor(record?.id));
+    setActiveSection(location.state?.section || "information");
+    // Nothing of an earlier employee being added carries over to the next.
+    setStep(ADD_STEPS[0].key);
+    setSavedSteps([]);
+    setSaved({});
     closeDocForm();
   }
 
@@ -892,10 +949,88 @@ export default function EmployeeForm({ self }) {
     if (doc.fileUrl) window.open(doc.fileUrl, "_blank", "noopener,noreferrer");
   };
 
-  // Newest paper first, so a paper that has been replaced sits under the one
-  // that replaced it.
+  // Newest paper first.
   const orderedDocuments = [...documents].sort(
     (a, b) => String(b.uploadedAt).localeCompare(String(a.uploadedAt)) || b.id - a.id
+  );
+
+  // Whether this person's access is held for a lapsed critical paper, under
+  // the grace period and action set on System Settings.
+  const documentControl = readDocumentControl();
+  const hold = isEditMode ? accessHold(documents, documentControl) : null;
+
+  // The papers whose earlier versions are open under them.
+  const [openHistory, setOpenHistory] = useState([]);
+  const toggleHistory = (type) =>
+    setOpenHistory((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    );
+
+  /**
+   * One paper on the list. A versioned paper says which version it is; the
+   * current one also offers the versions before it, which open underneath,
+   * set in and greyed, as the archived record they are.
+   */
+  const documentRow = (document, status, { version, older = 0, historyOpen, archivedRow } = {}) => (
+    <Row key={document.id} className={cn(archivedRow && "bg-muted/40")}>
+      <Td className={cn(archivedRow && "ps-8 text-muted-foreground")}>
+        {archivedRow ? "" : documentCategory(document.type)}
+      </Td>
+      <Td>
+        <span className={cn(archivedRow && "text-muted-foreground")}>{document.type}</span>
+        {version && (
+          <span className="block text-xs text-muted-foreground">
+            Version {version}
+            {!archivedRow && " · Current"}
+          </span>
+        )}
+        {older > 0 && (
+          <button
+            type="button"
+            onClick={() => toggleHistory(document.type)}
+            aria-expanded={historyOpen}
+            className="mt-1 inline-flex items-center gap-1 rounded text-xs font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {historyOpen ? (
+              <ChevronUp className="size-3.5" aria-hidden="true" />
+            ) : (
+              <ChevronDown className="size-3.5" aria-hidden="true" />
+            )}
+            Version history ({older})
+          </button>
+        )}
+      </Td>
+      <Td className="whitespace-nowrap">{formatDate(document.uploadedAt)}</Td>
+      <Td className="whitespace-nowrap">
+        {document.expiry ? (
+          formatDate(document.expiry)
+        ) : (
+          <span className="text-muted-foreground">-</span>
+        )}
+      </Td>
+      <Td className="text-center">
+        <button
+          type="button"
+          onClick={() => openDocument(document)}
+          title={"View " + (document.fileName || document.type)}
+          className="rounded p-1.5 text-primary transition-colors hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Eye className="h-5 w-5" aria-hidden="true" />
+          <span className="sr-only">View {document.fileName || document.type}</span>
+        </button>
+      </Td>
+      <Td>
+        <span
+          className={cn(
+            "inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2.5 py-1 text-xs font-semibold",
+            DOCUMENT_STATUS_PILL[status]
+          )}
+        >
+          <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-current" />
+          {status}
+        </span>
+      </Td>
+    </Row>
   );
 
   // Which papers this employee can file at all, and what decides it.
@@ -974,7 +1109,8 @@ export default function EmployeeForm({ self }) {
       docId += 1;
       employeeDocuments.push({ ...document, id: docId, employeeId: newId });
     });
-    navigate("/employees/" + newId);
+    // Opened on Documents: the details are in, and the papers are next.
+    navigate("/employees/" + newId, { state: { section: "documents" } });
   };
 
   /**
@@ -1165,6 +1301,7 @@ export default function EmployeeForm({ self }) {
             its widest content by default, so one wide table in here would
             stretch the whole page and push the sidebar off screen. */}
         <div className="w-full min-w-0 flex-1 space-y-4 sm:space-y-6">
+          {hold && <AccessNotice hold={hold} graceDays={documentControl.graceDays} />}
           {isAdding && (
             <div className="space-y-2">
               <StepTabs
@@ -1995,6 +2132,13 @@ export default function EmployeeForm({ self }) {
                             values={formData}
                             onChange={onChange}
                           />
+                          <PaperFields
+                            label="Work Permit"
+                            numberName="workPermitNo"
+                            expiryName="workPermitExpiry"
+                            values={formData}
+                            onChange={onChange}
+                          />
                         </>
                       )}
                     </div>
@@ -2447,52 +2591,34 @@ export default function EmployeeForm({ self }) {
                             <Th width="18%">Status</Th>
                           </HeadRow>
                           <tbody>
-                            {orderedDocuments.map((document) => {
-                              const status = documentStatus(document, documents);
-                              return (
-                                <Row key={document.id}>
-                                  <Td>{documentCategory(document.type)}</Td>
-                                  <Td>{document.type}</Td>
-                                  <Td className="whitespace-nowrap">
-                                    {formatDate(document.uploadedAt)}
-                                  </Td>
-                                  <Td className="whitespace-nowrap">
-                                    {document.expiry ? (
-                                      formatDate(document.expiry)
-                                    ) : (
-                                      <span className="text-muted-foreground">-</span>
-                                    )}
-                                  </Td>
-                                  <Td className="text-center">
-                                    <button
-                                      type="button"
-                                      onClick={() => openDocument(document)}
-                                      title={"View " + (document.fileName || document.type)}
-                                      className="rounded p-1.5 text-primary transition-colors hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                    >
-                                      <Eye className="h-5 w-5" aria-hidden="true" />
-                                      <span className="sr-only">
-                                        View {document.fileName || document.type}
-                                      </span>
-                                    </button>
-                                  </Td>
-                                  <Td>
-                                    <span
-                                      className={cn(
-                                        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2.5 py-1 text-xs font-semibold",
-                                        DOCUMENT_STATUS_PILL[status]
+                            {/* One row for each paper held now - the current
+                                version of a versioned paper stands for all of
+                                its versions, and the older ones open under it. */}
+                            {orderedDocuments
+                              .filter((document) => documentStatus(document, documents) !== "Archived")
+                              .map((document) => {
+                                const versions = isVersioned(document.type)
+                                  ? documentVersions(document.type, documents)
+                                  : [];
+                                const older = versions.slice(0, -1).reverse();
+                                const historyOpen = openHistory.includes(document.type);
+                                return (
+                                  <Fragment key={document.id}>
+                                    {documentRow(document, documentStatus(document, documents), {
+                                      version: versions.length || null,
+                                      older: older.length,
+                                      historyOpen,
+                                    })}
+                                    {historyOpen &&
+                                      older.map((version) =>
+                                        documentRow(version, "Archived", {
+                                          version: version.version,
+                                          archivedRow: true,
+                                        })
                                       )}
-                                    >
-                                      <span
-                                        aria-hidden="true"
-                                        className="size-2 shrink-0 rounded-full bg-current"
-                                      />
-                                      {status}
-                                    </span>
-                                  </Td>
-                                </Row>
-                              );
-                            })}
+                                  </Fragment>
+                                );
+                              })}
                           </tbody>
                         </RecordTable>
                       )}

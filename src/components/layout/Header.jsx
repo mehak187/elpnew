@@ -7,6 +7,7 @@ import {
   KeyRound,
   UserCircle,
   Menu,
+  SlidersHorizontal,
 } from "lucide-react";
 import {
   NavigationMenu,
@@ -82,6 +83,7 @@ const ACCOUNT_LINKS = [
   { label: "Change Password", path: "/settings/password", icon: KeyRound },
   { label: "Activity Review", path: "/activity-review", icon: Clock },
   { label: "Settings", path: "/settings/firm", icon: Settings },
+  { label: "System Settings", path: "/settings/system", icon: SlidersHorizontal },
 ];
 
 

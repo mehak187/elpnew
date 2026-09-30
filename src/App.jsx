@@ -32,6 +32,7 @@ import ClientDetails from "@/pages/clients/ClientDetails";
 import LawFirmProfile from "@/pages/firm/LawFirmProfile";
 import BankEdit from "@/pages/firm/BankEdit";
 import ChangePassword from "@/pages/settings/ChangePassword";
+import SystemSettings from "@/pages/settings/SystemSettings";
 import SignIn from "@/pages/settings/SignIn";
 
 // Expenses
@@ -104,6 +105,7 @@ function App() {
               <Route path="settings/firm" element={<LawFirmProfile />} />
               <Route path="settings/bank/:id" element={<BankEdit />} />
               <Route path="settings/password" element={<ChangePassword />} />
+              <Route path="settings/system" element={<SystemSettings />} />
               <Route path="sign-in" element={<SignIn />} />
 
               {/* Expenses */}

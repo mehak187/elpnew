@@ -250,7 +250,17 @@ export const COUNTRY_DIAL_CODES = [
  * whoever the employee is.
  */
 export const OMANI_DOCUMENT_TYPES = ["ID Card"];
-export const NON_OMANI_DOCUMENT_TYPES = ["Resident Card", "Passport"];
+export const NON_OMANI_DOCUMENT_TYPES = ["Resident Card", "Passport", "Work Permit"];
+
+/**
+ * The papers an employee cannot work without: when one lapses and is not
+ * renewed within the grace period, their access to the system is held.
+ */
+export const CRITICAL_DOCUMENT_TYPES = [
+  "Lawyer Card (Bar Card)",
+  "Resident Card",
+  "Work Permit",
+];
 export const LAWYER_DOCUMENT_TYPE = "Lawyer Card (Bar Card)";
 
 export const COMMON_DOCUMENT_TYPES = [

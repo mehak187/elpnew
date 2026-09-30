@@ -1,4 +1,4 @@
-import { expiryState, EXPIRY_LABEL } from "@/lib/expiry";
+import { expiryState, EXPIRY_LABEL, daysUntil, addDays } from "@/lib/expiry";
 /**
  * The people the firm employs.
  *
@@ -11,6 +11,7 @@ import {
   NON_OMANI_DOCUMENT_TYPES,
   LAWYER_DOCUMENT_TYPE,
   COMMON_DOCUMENT_TYPES,
+  CRITICAL_DOCUMENT_TYPES,
 } from "@/lib/constants";
 
 export const employeeRecords = [
@@ -95,9 +96,10 @@ export function documentTypesFor(employee) {
 export const DOCUMENT_EXPIRING_DAYS = 90;
 
 /**
- * The papers a person holds one of at a time. A new one of these replaces
- * the last; a second degree or certificate is simply another paper, so the
- * other types are never replaced.
+ * The papers a person holds one of at a time, and so keeps versions of: a
+ * renewed passport is version 2 of the passport, and version 1 is archived.
+ * A second degree or certificate is simply another paper, so the other types
+ * are never versioned.
  */
 const ONE_AT_A_TIME = [
   ...OMANI_DOCUMENT_TYPES,
@@ -110,6 +112,7 @@ const DOCUMENT_CATEGORY = {
   "ID Card": "Identity & Residency",
   "Resident Card": "Identity & Residency",
   Passport: "Identity & Residency",
+  "Work Permit": "Identity & Residency",
   [LAWYER_DOCUMENT_TYPE]: "Professional License",
   "Academic Qualification": "Qualifications & Experience",
   "Experience Certificate": "Qualifications & Experience",
@@ -129,6 +132,7 @@ const RELATED_RECORD = {
   "ID Card": { number: "civilId", expiry: "idExpiry" },
   "Resident Card": { number: "civilId", expiry: "idExpiry" },
   Passport: { number: "passportNumber", expiry: "passportExpiry" },
+  "Work Permit": { number: "workPermitNo", expiry: "workPermitExpiry" },
   // Asked for on Identity & Immigration; the Legal Practice section that
   // once held it was taken out.
   [LAWYER_DOCUMENT_TYPE]: { number: "lawyerCardNo", expiry: "lawyerCardExpiry" },
@@ -155,13 +159,42 @@ const newer = (a, b) =>
   String(a.uploadedAt).localeCompare(String(b.uploadedAt)) > 0 ||
   (a.uploadedAt === b.uploadedAt && a.id > b.id);
 
+/** Whether a paper of this type is kept in versions. */
+export const isVersioned = (type) => ONE_AT_A_TIME.includes(type);
+
+/**
+ * Every version of a versioned paper on file, oldest first, numbered from 1.
+ *
+ * Nothing is ever overwritten: renewing a paper files a new one, so the
+ * history is simply the papers of that type in the order they were filed.
+ * The last is the current one; every one before it is archived.
+ */
+export function documentVersions(type, papers) {
+  return papers
+    .filter((paper) => paper.type === type)
+    .sort((a, b) => (newer(a, b) ? 1 : -1))
+    .map((paper, index, all) => ({
+      ...paper,
+      version: index + 1,
+      current: index === all.length - 1,
+    }));
+}
+
+/** Whether a newer version of this paper has been filed after it. */
+const archived = (document, papers) =>
+  isVersioned(document?.type) &&
+  papers.some(
+    (other) =>
+      other.id !== document.id && other.type === document.type && newer(other, document)
+  );
+
 /**
  * Where a document stands.
  *
- * Replaced first: once a newer paper of the same one-at-a-time type is on
- * file, the old one is history whatever its date says, and nobody is chased
- * about it. Otherwise it is read off the expiry date on the firm's calendar -
- * Expired before today, Expiring Soon from today to ninety days out, Active
+ * Archived first: once a newer version of the same paper is on file, the old
+ * one is history whatever its date says, and nobody is chased about it.
+ * Otherwise it is read off the expiry date on the firm's calendar - Expired
+ * from the day after it, Expiring Soon from today to ninety days out, Active
  * beyond that. A paper with no expiry date never lapses, so it is Active.
  *
  * Worked out every time rather than stored, so a paper cannot claim to be
@@ -169,17 +202,76 @@ const newer = (a, b) =>
  * file it is read against; a page holding its own copy of that file passes it.
  */
 export function documentStatus(document, papers = documentsFor(document?.employeeId)) {
-  if (
-    ONE_AT_A_TIME.includes(document?.type) &&
-    papers.some(
-      (other) =>
-        other.id !== document.id && other.type === document.type && newer(other, document)
-    )
-  ) {
-    return "Replaced";
-  }
+  if (archived(document, papers)) return "Archived";
   const state = expiryState(document?.expiry, DOCUMENT_EXPIRING_DAYS);
   return state === "none" ? "Active" : EXPIRY_LABEL[state];
+}
+
+/**
+ * Reminders for employees' papers, for the notification bell.
+ *
+ * A paper is brought up ninety days before it expires, again at thirty, on
+ * the day, and once it has expired - each of those is its own reminder, so
+ * one read three months ago does not silence the one due today. Only the
+ * current version is followed: an archived paper has been renewed.
+ */
+export function employeeDocumentAlerts() {
+  const alerts = [];
+  for (const employee of employeeRecords) {
+    const papers = documentsFor(employee.id);
+    for (const paper of papers) {
+      if (!paper.expiry || archived(paper, papers)) continue;
+      const days = daysUntil(paper.expiry);
+      const milestone =
+        days < 0 ? "expired" : days === 0 ? "today" : days <= 30 ? "30" : days <= 90 ? "90" : null;
+      if (!milestone) continue;
+      alerts.push({
+        id: "employee:" + paper.id + ":" + milestone,
+        title: employee.name,
+        detail: paper.type,
+        expiryDate: paper.expiry,
+        state: days < 0 ? "expired" : "soon",
+        status: days < 0 ? "Expired" : "Expiring Soon",
+        href: "/employees/" + employee.id,
+      });
+    }
+  }
+  return alerts;
+}
+
+/**
+ * Whether an employee's access is held for a lapsed critical paper.
+ *
+ * Only the current version of a critical paper counts - an archived one has
+ * been renewed. Its first day expired starts the grace period; once that has
+ * run out without a renewal, access is held with the action the firm chose.
+ * The most serious answer wins: one held paper holds the whole account.
+ *
+ * Returns null when nothing is wrong, or { state: "grace" | "held", type,
+ * expiry, until, daysLeft, action }.
+ */
+export function accessHold(papers, control) {
+  let worst = null;
+  for (const paper of papers) {
+    if (!CRITICAL_DOCUMENT_TYPES.includes(paper.type) || !paper.expiry) continue;
+    if (archived(paper, papers)) continue;
+
+    const daysExpired = -daysUntil(paper.expiry);
+    if (daysExpired < 1) continue;
+
+    const until = addDays(paper.expiry, control.graceDays);
+    const held = daysExpired > control.graceDays;
+    const found = {
+      state: held ? "held" : "grace",
+      type: paper.type,
+      expiry: paper.expiry,
+      until,
+      daysLeft: Math.max(control.graceDays - daysExpired + 1, 0),
+      action: control.action,
+    };
+    if (!worst || (held && worst.state !== "held")) worst = found;
+  }
+  return worst;
 }
 
 /** "2026-08-26T10:30" as "26/08/2026  10:30 AM". */

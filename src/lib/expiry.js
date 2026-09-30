@@ -36,6 +36,16 @@ const dayNumber = (iso) => {
 };
 
 /**
+ * Whole days from today to a date on the firm's calendar: 0 on the day,
+ * negative once it has passed (-1 the day after).
+ */
+export const daysUntil = (date) => dayNumber(date) - dayNumber(firmToday());
+
+/** A date some whole days after another, as YYYY-MM-DD. */
+export const addDays = (date, days) =>
+  new Date((dayNumber(date) + days) * DAY).toISOString().slice(0, 10);
+
+/**
  * One of four states.
  *
  * Read in whole calendar days on the firm's calendar, so a paper expiring
@@ -45,7 +55,7 @@ const dayNumber = (iso) => {
  */
 export function expiryState(date, soonDays = EXPIRING_SOON_DAYS) {
   if (!date) return "none";
-  const days = dayNumber(date) - dayNumber(firmToday());
+  const days = daysUntil(date);
   if (days < 0) return "expired";
   if (days <= soonDays) return "soon";
   return "valid";
