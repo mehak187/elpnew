@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ExcelIcon from "./ExcelIcon";
 import {
   Table,
@@ -64,6 +64,13 @@ function ColumnHeading({ header }) {
   return header;
 }
 
+/**
+ * The fixed app header - 72px and its 1px rule - that a frozen toolbar holds
+ * under. The column headings hold under the toolbar, whose height is measured
+ * rather than counted, because it wraps and grows a row of filter chips.
+ */
+const APP_HEADER = 73;
+
 export default function DataTable({
   columns,
   data,
@@ -114,8 +121,31 @@ export default function DataTable({
   // The data already arrives in the order it should be read in (a schedule,
   // or a list sorted by its own date), so the table leaves it alone.
   keepOrder = false,
+  /**
+   * Excel's Freeze Panes, on every list. As the page scrolls, the toolbar
+   * holds under the app header and the column headings under the toolbar, so
+   * search, filters, export and the headings stay in sight whichever record
+   * is being read - with one scrollbar, the page's own. Turned off only for a
+   * table that sits inside a box of its own that scrolls.
+   */
+  freezeHeader = true,
 }) {
   const [searchValue, setSearchValue] = useState("");
+  const toolbarRef = useRef(null);
+  const [toolbarHeight, setToolbarHeight] = useState(0);
+  // The styled scroll area scrolls both ways, which would hold a frozen
+  // heading inside it instead of against the page.
+  const Scroller = freezeHeader ? "div" : ScrollArea;
+
+  // The toolbar's height changes as it wraps on a narrow screen and as filter
+  // chips come and go, and the table's box has to shrink or grow with it.
+  useEffect(() => {
+    const toolbar = toolbarRef.current;
+    if (!freezeHeader || !toolbar) return;
+    const observer = new ResizeObserver(() => setToolbarHeight(toolbar.offsetHeight));
+    observer.observe(toolbar);
+    return () => observer.disconnect();
+  }, [freezeHeader]);
   const [columnFilters, setColumnFilters] = useState({});
   // Column key and direction, or null while the table is in its natural order.
   const [sort, setSort] = useState(null);
@@ -279,7 +309,20 @@ export default function DataTable({
         Search takes the logical start of the row and the actions the logical
         end, which swap sides with the language.
       */}
-      <Card className="overflow-hidden rounded-[8px] border border-container-border bg-card">
+      {/* Clipped rather than hidden when frozen: both keep the corners
+          round, but hidden makes the card a scroll box of its own, and a
+          sticky toolbar inside one never meets the page's scroll. */}
+      <Card
+        className={cn(
+          "rounded-[8px] border border-container-border bg-card",
+          freezeHeader ? "overflow-clip" : "overflow-hidden"
+        )}
+      >
+      <div
+        ref={toolbarRef}
+        className={cn(freezeHeader && "sticky z-20 bg-card")}
+        style={freezeHeader ? { top: APP_HEADER } : undefined}
+      >
       <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 border-b border-container-border p-3">
 
         {/* Global Search, first on the row wherever it appears */}
@@ -394,6 +437,7 @@ export default function DataTable({
           </button>
         </div>
       )}
+      </div>
 
       {/* The panel sits between the toolbar and the table, inside the same
           frame, with a rule under it and the accent that marks a section
@@ -435,7 +479,13 @@ export default function DataTable({
               </div>
             )}
 
-            <ScrollArea className="w-full">
+            {/* Frozen, the table has no scroll box of its own: the page is the
+                one thing that scrolls, and the headings hold against it. A box
+                that scrolls - even only sideways - is what a sticky heading
+                sticks to, so on a wide screen the table is left unboxed. On a
+                narrow one it still scrolls sideways, and the headings go with
+                the page there rather than cut the table off. */}
+            <Scroller className="w-full">
               {/* The frame every table in the system is drawn in: a rule under
                   each row and none between columns, a tinted single-line
                   header, figures to the right. It lives here so the pages that
@@ -444,10 +494,17 @@ export default function DataTable({
                   shows through at the corners. */}
               <Table
                 className="table-hover-lines"
-                wrapperClassName="max-h-[min(70vh,720px)]"
+                wrapperClassName={
+                  freezeHeader ? "lg:overflow-visible" : "max-h-[min(70vh,720px)]"
+                }
               >
                 <TableHeader>
-                  <TableRow className="sticky top-0 z-10 bg-table-head shadow-[0_1px_0_0_var(--container-border)] hover:bg-table-head">
+                  <TableRow
+                    className="sticky top-0 z-10 bg-table-head shadow-[0_1px_0_0_var(--container-border)] hover:bg-table-head"
+                    style={
+                      freezeHeader ? { top: APP_HEADER + toolbarHeight } : undefined
+                    }
+                  >
                     {columns.map((column) => (
                       <TableHead
                         key={column.key}
@@ -550,8 +607,8 @@ export default function DataTable({
                   )}
                 </TableBody>
               </Table>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
+              {!freezeHeader && <ScrollBar orientation="horizontal" />}
+            </Scroller>
           </div>
       </div>
       </Card>
