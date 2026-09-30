@@ -44,6 +44,7 @@ import {
   Gavel,
   CircleCheck,
   UserPlus,
+  ArrowRight,
 } from "lucide-react";
 import {
   Dialog,
@@ -54,6 +55,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { amountValue } from "@/lib/money";
+import { Rial } from "@/components/shared/Rial";
 import { EmptyState } from "@/components/shared/panels";
 import {
   NATIONALITIES,
@@ -70,6 +73,7 @@ import {
   EMPLOYMENT_TYPES,
   EMPLOYEE_CONTRACT_TYPES,
   PRACTICE_LEVELS,
+  RECEIVING_BANKS,
 } from "@/lib/constants";
 import { initialBranches } from "@/pages/firm/firmData";
 import FinancialBenefitsSection from "./sections/FinancialBenefitsSection";
@@ -274,8 +278,39 @@ const ADD_STEPS = [
   // After the job, because which papers apply follows from it: a lawyer's
   // card only for a lawyer, a passport and visa only for a foreigner.
   { key: "identity", label: "Identity & Immigration" },
+  // Pay once the person and the job are settled, and before the papers.
+  { key: "salary", label: "Salary & Banking" },
   { key: "documents", label: "Documents" },
 ];
+
+/** The pay a new employee is taken on at, in the order it is asked for. */
+const PAY_FIELDS = [
+  { key: "salary", label: "Basic Salary", required: true },
+  { key: "special", label: "Special Allowance" },
+  { key: "housing", label: "Housing Allowance" },
+  // Not `phone`: that is the employee's own number.
+  { key: "phoneAllowance", label: "Phone Allowance" },
+  { key: "electricity", label: "Electricity Allowance" },
+  { key: "transport", label: "Transport Allowance" },
+];
+
+/** What comes off each month's pay. */
+const DEDUCTION_FIELDS = [
+  { key: "loan", label: "Loan Installment" },
+  { key: "salaryAdvance", label: "Salary Advance Deduction" },
+  { key: "disciplinary", label: "Disciplinary Deduction" },
+  { key: "otherDeduction", label: "Other Deduction" },
+];
+
+/** Today as a date field holds it, in local time rather than UTC's. */
+const todayIso = () => {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate());
+};
+
+const sumOf = (fields, values) =>
+  fields.reduce((total, field) => total + Number(values[field.key] || 0), 0);
 
 /**
  * The bar of steps across the top of Add Employee.
@@ -374,6 +409,96 @@ function ChoiceField({ id, label, placeholder, value, onChange, options, require
           ))}
         </SelectContent>
       </Select>
+    </div>
+  );
+}
+
+/**
+ * An amount in Rials, the currency written inside the box after the figure.
+ *
+ * Put to three places once the person leaves it, because a Baisa is a
+ * thousandth and "19" and "19.000" should not both be on one payslip.
+ * `locked` shows a figure the page works out rather than asks for.
+ */
+function MoneyField({ id, label, value, onChange, required, locked }) {
+  return (
+    <div className="form-field space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="relative">
+        {locked ? (
+          <Input
+            id={id}
+            value={amountValue(value)}
+            readOnly
+            tabIndex={-1}
+            className="bg-locked pe-14"
+          />
+        ) : (
+          <Input
+            id={id}
+            name={id}
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.001"
+            placeholder="0.000"
+            value={value}
+            onChange={onChange}
+            onBlur={(e) =>
+              e.target.value !== "" &&
+              onChange({
+                target: { name: id, value: Number(e.target.value).toFixed(3) },
+              })
+            }
+            required={required}
+            className="pe-14"
+          />
+        )}
+        <Rial className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground" />
+      </div>
+    </div>
+  );
+}
+
+/** One figure of the coming payroll: what it is, then the amount. */
+function PayTile({ label, value, className }) {
+  return (
+    <div className="rounded-lg border px-4 py-3">
+      <p className="text-sm text-primary/75">{label}</p>
+      <p className={cn("text-xl font-bold text-primary", className)}>
+        {amountValue(value)} <Rial className="text-sm font-medium" />
+      </p>
+    </div>
+  );
+}
+
+/**
+ * One side of a salary statement: each line that has an amount, then its
+ * total. Lines at nothing are left out - a statement lists what is paid.
+ */
+function StatementLines({ title, fields, values, total, totalLabel }) {
+  const lines = fields.filter((field) => Number(values[field.key] || 0) > 0);
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-semibold text-primary">{title}</p>
+      {lines.length === 0 ? (
+        <p className="text-sm text-muted-foreground">None</p>
+      ) : (
+        lines.map((field) => (
+          <div key={field.key} className="flex items-center justify-between text-sm">
+            <span className="text-primary/75">{field.label}</span>
+            <span className="text-primary">
+              {amountValue(values[field.key])} <Rial />
+            </span>
+          </div>
+        ))
+      )}
+      <div className="flex items-center justify-between border-t pt-2 text-sm font-semibold">
+        <span className="text-primary">{totalLabel}</span>
+        <span className="text-primary">
+          {amountValue(total)} <Rial />
+        </span>
+      </div>
     </div>
   );
 }
@@ -542,6 +667,25 @@ const emptyFormData = {
   annualLeaveDays: "30",
   // Registered with the Social Protection Fund unless somebody says not.
   socialProtection: "Yes",
+
+  // Pay, from the day it takes effect. Basic pay is `salary`, as on every
+  // record; the allowances and deductions use the keys the net is worked from.
+  salary: "",
+  special: "",
+  housing: "",
+  phoneAllowance: "",
+  electricity: "",
+  transport: "",
+  loan: "",
+  salaryAdvance: "",
+  disciplinary: "",
+  otherDeduction: "",
+  salaryEffectiveDate: "",
+  // Where it is paid to.
+  bankName: "",
+  accountNumber: "",
+  iban: "",
+  swiftCode: "",
 };
 
 /**
@@ -605,6 +749,8 @@ export default function EmployeeForm({ self }) {
   // calls for are read from here, not from a step gone back to and being
   // retyped: a nationality changed but not saved has not changed yet.
   const [saved, setSaved] = useState({});
+  // The salary statement, opened over the pay step to read before saving.
+  const [showStatement, setShowStatement] = useState(false);
   const savedOmani = String(saved.nationality || "").trim().toLowerCase() === "omani";
   const savedLawyer = saved.occupation === "Lawyer";
   const formRef = useRef(null);
@@ -615,7 +761,10 @@ export default function EmployeeForm({ self }) {
   const [benefitsTab, setBenefitsTab] = useState("salaries");
   // The section whose add form is open, if any. Held here because the button
   // that opens it lives in the page header, above the section itself.
-  const [formData, setFormData] = useState(() => toFormData(record));
+  // A new employee's pay takes effect from today unless somebody says when.
+  const [formData, setFormData] = useState(() =>
+    record ? toFormData(record) : { ...emptyFormData, salaryEffectiveDate: todayIso() }
+  );
 
   // Papers are a list of their own, kept beside the fields rather than in them.
   // This person's papers, not every paper in the firm.
@@ -827,6 +976,21 @@ export default function EmployeeForm({ self }) {
   };
 
   const isLastStep = step === ADD_STEPS[ADD_STEPS.length - 1].key;
+
+  // The month's pay, worked out from its parts rather than typed, so the
+  // totals can never disagree with the lines they add up.
+  const gross = sumOf(PAY_FIELDS, formData);
+  const held = sumOf(DEDUCTION_FIELDS, formData);
+  const net = gross - held;
+  const today = todayIso();
+  const effective = formData.salaryEffectiveDate;
+  // A salary starting later is scheduled; it is paid from the first payroll
+  // on or after the day it starts.
+  const scheduled = Boolean(effective) && effective > today;
+  const payrollMonth = new Date((scheduled ? effective : today) + "T00:00").toLocaleDateString(
+    "en-GB",
+    { month: "long", year: "numeric" }
+  );
   const currentStep = ADD_STEPS.find((s) => s.key === step) || ADD_STEPS[0];
 
   // Cancel and Save for the step on screen, drawn inside that step's box.
@@ -1776,6 +1940,190 @@ export default function EmployeeForm({ self }) {
                       )}
                     </div>
                   </SectionCard>
+                )}
+
+                {/* What the employee is paid, what comes off it, where it is
+                    sent, and what the first payroll will come to. */}
+                {isAdding && step === "salary" && (
+                  <>
+                    <SectionCard title="Salary Information">
+                      <div className="form-grid gap-y-6">
+                        {PAY_FIELDS.map((field) => (
+                          <MoneyField
+                            key={field.key}
+                            id={field.key}
+                            label={field.label}
+                            value={formData[field.key]}
+                            onChange={onChange}
+                            required={field.required}
+                          />
+                        ))}
+                        <MoneyField id="grossSalary" label="Gross Salary" value={gross} locked />
+                        <div className="form-field space-y-2">
+                          <Label htmlFor="salaryEffectiveDate">Effective Date</Label>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              id="salaryEffectiveDate"
+                              name="salaryEffectiveDate"
+                              type="date"
+                              value={formData.salaryEffectiveDate}
+                              onChange={onChange}
+                              required
+                              className="min-w-0 flex-1"
+                            />
+                            {scheduled && (
+                              <span className="shrink-0 rounded-md border border-primary px-2.5 py-1.5 text-xs font-semibold text-primary">
+                                Scheduled
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      {scheduled && (
+                        <p className="mt-4 text-sm text-primary/75">
+                          Effective {formatDate(effective)}. Current salary remains in
+                          force until that date.
+                        </p>
+                      )}
+                    </SectionCard>
+
+                    <SectionCard title="Deductions">
+                      <div className="form-grid gap-y-6">
+                        {DEDUCTION_FIELDS.map((field) => (
+                          <MoneyField
+                            key={field.key}
+                            id={field.key}
+                            label={field.label}
+                            value={formData[field.key]}
+                            onChange={onChange}
+                          />
+                        ))}
+                      </div>
+                    </SectionCard>
+
+                    <SectionCard title="Bank Information">
+                      <div className="form-grid gap-y-6">
+                        <ChoiceField
+                          id="bankName"
+                          label="Bank Name"
+                          placeholder="Select Bank"
+                          value={formData.bankName}
+                          onChange={(value) => set("bankName", value)}
+                          options={RECEIVING_BANKS}
+                          required
+                        />
+                        <div className="form-field space-y-2">
+                          <Label htmlFor="accountNumber">Account Number</Label>
+                          <Input
+                            id="accountNumber"
+                            name="accountNumber"
+                            value={formData.accountNumber}
+                            onChange={onChange}
+                            placeholder="Enter account number"
+                            required
+                          />
+                        </div>
+                        <div className="form-field space-y-2">
+                          <Label htmlFor="iban">IBAN</Label>
+                          <Input
+                            id="iban"
+                            name="iban"
+                            value={formData.iban}
+                            onChange={onChange}
+                            placeholder="Enter IBAN"
+                            required
+                          />
+                        </div>
+                        {/* Only a transfer abroad needs it, so it is not
+                            demanded of an Omani bank account. */}
+                        <div className="form-field space-y-2">
+                          <Label htmlFor="swiftCode">SWIFT Code</Label>
+                          <Input
+                            id="swiftCode"
+                            name="swiftCode"
+                            value={formData.swiftCode}
+                            onChange={onChange}
+                            placeholder="Enter SWIFT code"
+                          />
+                        </div>
+                      </div>
+                    </SectionCard>
+
+                    {/* The first payroll this pay goes into, worked out from
+                        the lines above as they are typed. An estimate: the
+                        month's own absences and changes settle the final
+                        figure when payroll is run. */}
+                    <Card>
+                      <CardContent className="p-4 sm:p-6">
+                        <h2 className="text-lg font-bold text-primary">
+                          Next Payroll <span aria-hidden="true">•</span> {payrollMonth}
+                        </h2>
+                        <div className="mt-4 grid items-center gap-4 sm:grid-cols-3 lg:grid-cols-[1fr_1fr_1fr_auto]">
+                          <PayTile label="Gross Salary" value={gross} />
+                          <PayTile label="Total Deductions" value={held} />
+                          <PayTile
+                            label="Estimated Net Salary"
+                            value={net}
+                            className={net < 0 ? "text-destructive" : "text-emerald-700"}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="justify-self-start font-semibold text-primary"
+                            onClick={() => setShowStatement(true)}
+                          >
+                            View Salary Statement
+                            <ArrowRight className="ms-2 h-4 w-4" aria-hidden="true" />
+                          </Button>
+                        </div>
+                        <p className="mt-3 text-sm text-primary/75">
+                          {amountValue(gross)} &minus; {amountValue(held)} ={" "}
+                          {amountValue(net)} · Final amount is confirmed at payroll
+                          processing.
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    {stepActions}
+
+                    <Dialog open={showStatement} onOpenChange={setShowStatement}>
+                      <DialogContent className="sm:max-w-lg">
+                        <DialogHeader>
+                          <DialogTitle>Salary Statement · {payrollMonth}</DialogTitle>
+                          <DialogDescription>
+                            {saved.employeeName || formData.employeeName} · Employee No.{" "}
+                            {employeeNo}
+                          </DialogDescription>
+                        </DialogHeader>
+                        <StatementLines
+                          title="Earnings"
+                          fields={PAY_FIELDS}
+                          values={formData}
+                          total={gross}
+                          totalLabel="Gross Salary"
+                        />
+                        <StatementLines
+                          title="Deductions"
+                          fields={DEDUCTION_FIELDS}
+                          values={formData}
+                          total={held}
+                          totalLabel="Total Deductions"
+                        />
+                        <div className="flex items-center justify-between border-t pt-3 text-base font-bold">
+                          <span className="text-primary">Estimated Net Salary</span>
+                          <span className={net < 0 ? "text-destructive" : "text-emerald-700"}>
+                            {amountValue(net)} <Rial />
+                          </span>
+                        </div>
+                        {formData.bankName && (
+                          <p className="text-sm text-primary/75">
+                            Paid to {formData.bankName}
+                            {formData.accountNumber && " · " + formData.accountNumber}
+                          </p>
+                        )}
+                      </DialogContent>
+                    </Dialog>
+                  </>
                 )}
 
                   </fieldset>

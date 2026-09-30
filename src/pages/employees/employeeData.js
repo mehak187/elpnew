@@ -116,10 +116,27 @@ export function formatUploadedAt(value) {
 }
 
 /** The allowances that sit on top of basic pay. */
-export const ALLOWANCE_KEYS = ["special", "housing", "transport", "electricity", "water"];
+// `phoneAllowance`, not `phone`: `phone` is the employee's number.
+export const ALLOWANCE_KEYS = [
+  "special",
+  "housing",
+  "phoneAllowance",
+  "transport",
+  "electricity",
+  "water",
+];
 
-/** What can be held back from a month's pay. */
-export const DEDUCTION_KEYS = ["loan", "administrative"];
+/**
+ * What can be held back from a month's pay. A record without one of these
+ * simply has nothing held back under it.
+ */
+export const DEDUCTION_KEYS = [
+  "loan",
+  "salaryAdvance",
+  "disciplinary",
+  "otherDeduction",
+  "administrative",
+];
 
 const sum = (employee, keys) =>
   keys.reduce((total, key) => total + Number(employee[key] || 0), 0);
