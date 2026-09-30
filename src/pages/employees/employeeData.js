@@ -119,6 +119,37 @@ const DOCUMENT_CATEGORY = {
 
 export const documentCategory = (type) => DOCUMENT_CATEGORY[type] || "Other";
 
+/**
+ * The papers that stand for details held elsewhere on the record: the copy
+ * can only be filed once the number and expiry it is a copy of are saved,
+ * so the paper and the record cannot disagree about which passport it is.
+ * These are also the papers that expire; the rest are held as they are.
+ */
+const RELATED_RECORD = {
+  "ID Card": { number: "civilId", expiry: "idExpiry" },
+  "Resident Card": { number: "civilId", expiry: "idExpiry" },
+  Passport: { number: "passportNumber", expiry: "passportExpiry" },
+  // Asked for on Identity & Immigration; the Legal Practice section that
+  // once held it was taken out.
+  [LAWYER_DOCUMENT_TYPE]: { number: "lawyerCardNo", expiry: "lawyerCardExpiry" },
+};
+
+/** Whether a paper of this type runs out, and so asks for its expiry date. */
+export const documentExpires = (type) => type in RELATED_RECORD;
+
+/**
+ * Whether this employee's saved record holds what a paper of this type
+ * stands for. Types that stand for nothing can always be filed.
+ */
+export const hasRelatedRecord = (type, employee) => {
+  const related = RELATED_RECORD[type];
+  return !related || Boolean(employee?.[related.number] && employee?.[related.expiry]);
+};
+
+/** The expiry the record already holds for this type, to start the copy from. */
+export const relatedExpiry = (type, employee) =>
+  RELATED_RECORD[type] ? employee?.[RELATED_RECORD[type].expiry] || "" : "";
+
 /** Filed later than the other paper - by upload time, then by the order kept. */
 const newer = (a, b) =>
   String(a.uploadedAt).localeCompare(String(b.uploadedAt)) > 0 ||

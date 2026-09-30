@@ -1,5 +1,4 @@
 import { useRef, useState } from "react";
-import UploadIcon from "@/components/shared/UploadIcon";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,11 +33,9 @@ import {
   ClipboardList,
   Phone,
   Mail,
-  FileCheck,
   FileSpreadsheet,
   Eye,
-  Briefcase,
-  Users,
+  CloudUpload,
   Gavel,
   CircleCheck,
   UserPlus,
@@ -48,7 +45,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -101,6 +97,9 @@ import {
   documentTypesFor,
   documentStatus,
   documentCategory,
+  documentExpires,
+  hasRelatedRecord,
+  relatedExpiry,
 } from "./employeeData";
 import { checkRequired } from "@/components/shared/formFields";
 
@@ -580,7 +579,11 @@ function IconField({ icon, id, label, ...props }) {
 const NOTES_LIMIT = 300;
 
 /** A blank paper: what is asked for before one is filed. */
-const emptyDocument = { type: "", expiry: "", notes: "" };
+const emptyDocument = { category: "", type: "", expiry: "", notes: "" };
+
+/** Said in place of the upload when the paper's details are not on file yet. */
+const UPLOAD_BLOCKED =
+  "This document cannot be uploaded yet. Please complete the required information first in the relevant section.";
 
 /** The first field of the form a section's header button jumps to. */
 /** Sections where the header button opens a form instead of scrolling to one. */
@@ -805,11 +808,25 @@ export default function EmployeeForm({ self }) {
   const [docFile, setDocFile] = useState(null);
   // The page is the list of documents until someone asks to add to it.
   const [addingDoc, setAddingDoc] = useState(false);
+  // Whether Save has been tried without a copy attached, so it can say so.
+  const [docTried, setDocTried] = useState(false);
+  const docFormRef = useRef(null);
 
   /** Back to the list, with nothing half-written left behind. */
   const closeDocForm = () => {
     setAddingDoc(false);
     setDocDraft(emptyDocument);
+    setDocFile(null);
+    setDocTried(false);
+  };
+
+  /** A new choice clears what depended on the old one. */
+  const chooseCategory = (category) => {
+    setDocDraft({ ...emptyDocument, category });
+    setDocFile(null);
+  };
+  const chooseType = (type) => {
+    setDocDraft((prev) => ({ ...prev, type, expiry: "" }));
     setDocFile(null);
   };
 
@@ -831,12 +848,15 @@ export default function EmployeeForm({ self }) {
     closeDocForm();
   }
 
-  // A paper is filed with its copy. It is never corrected in place: a newer
-  // one of the same kind is added and the old one becomes Replaced.
-  const canSaveDocument = docDraft.type && docDraft.expiry && docFile;
+  // A paper is filed with its copy, and with its expiry if it is a kind that
+  // runs out. It is never corrected in place: a newer one of the same kind is
+  // added and the old one becomes Replaced.
+  const canSaveDocument =
+    docDraft.type && docFile && (!documentExpires(docDraft.type) || docDraft.expiry);
 
   const addDocument = () => {
-    if (!checkRequired() || !canSaveDocument) return;
+    setDocTried(true);
+    if (!checkRequired(docFormRef.current) || !canSaveDocument) return;
     const now = new Date();
     const pad = (n) => String(n).padStart(2, "0");
     const uploadedAt =
@@ -882,6 +902,20 @@ export default function EmployeeForm({ self }) {
   const isOmani =
     String(formData.nationality || "").trim().toLowerCase() === "omani";
   const docTypes = documentTypesFor(formData);
+  // The details a paper stands for, as saved: on a record, the record; while
+  // adding, Identity & Immigration once that step has been saved.
+  const filedDetails = isAdding
+    ? savedSteps.includes("identity")
+      ? saved
+      : {}
+    : record || {};
+  const docCategories = [...new Set(docTypes.map(documentCategory))];
+  const typesInCategory = docTypes.filter(
+    (type) => documentCategory(type) === docDraft.category
+  );
+  // A paper whose details are not on file yet cannot be uploaded.
+  const uploadBlocked =
+    Boolean(docDraft.type) && !hasRelatedRecord(docDraft.type, filedDetails);
 
   const set = (name, value) => setFormData((prev) => ({ ...prev, [name]: value }));
   const onChange = (e) => set(e.target.name, e.target.value);
@@ -1034,6 +1068,9 @@ export default function EmployeeForm({ self }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // The documents page saves each paper with its own button; Enter in one
+    // of its fields must not save, or leave, the record around it.
+    if (isDocuments) return;
     if (isAdding) {
       // Enter in the documents search must search, not save a section.
       if (step !== "documents") saveStep();
@@ -2222,175 +2259,6 @@ export default function EmployeeForm({ self }) {
                   <Card>
                   <CardContent className="p-4 sm:p-6">
                   <div className="space-y-6">
-                    {/* Nothing is asked for until it is asked for: the page
-                        is the documents on file, and the form is opened over
-                        them when there is one to add. */}
-                    {/* No heading: the page above is already called Documents.
-                        The firm files the papers on an employee's record; on My
-                        Profile they are read, not added to. */}
-                    {/* Opened over the list rather than pushed in above it,
-                        the way every other form on this record opens: the
-                        papers already on file stay where they were, and the
-                        page does not grow a second frame while one is being
-                        added. */}
-                    <Dialog
-                      open={addingDoc}
-                      onOpenChange={(next) => !next && closeDocForm()}
-                    >
-                      <DialogContent className="max-h-[90vh] w-[95vw] max-w-4xl overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle>
-                            Add Document
-                          </DialogTitle>
-                        </DialogHeader>
-
-                      {/* What decides which papers can be filed: an Omani
-                          carries an ID card, a foreigner a resident card and
-                          a passport, and only a lawyer a bar card. */}
-                      <div className="mb-4 flex flex-wrap items-center gap-2">
-                        <span className="inline-flex items-center gap-2 rounded-md bg-secondary px-3 py-1.5 text-sm text-primary">
-                          <Users className="h-4 w-4 shrink-0 opacity-70" />
-                          Nationality:{" "}
-                          <span className="font-semibold">
-                            {isOmani ? "Omani" : "Non-Omani"}
-                          </span>
-                        </span>
-                        <span className="inline-flex items-center gap-2 rounded-md bg-secondary px-3 py-1.5 text-sm text-primary">
-                          <Briefcase className="h-4 w-4 shrink-0 opacity-70" />
-                          Profession / Occupation:{" "}
-                          <span className="font-semibold">
-                            {formData.occupation || "-"}
-                          </span>
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
-                        <div className="space-y-2">
-                          <Label htmlFor="docType">
-                            Document Type{" "}
-                            
-                          </Label>
-                          <div className="flex w-full min-w-0 items-center gap-2">
-                            <Select
-                              value={docDraft.type}
-                              onValueChange={(value) =>
-                                value &&
-                                setDocDraft((prev) => ({ ...prev, type: value }))
-                              }
-                            >
-                              <SelectTrigger id="docType" className="min-w-0 flex-1">
-                                <SelectValue placeholder="Select document type" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {docTypes.map((type) => (
-                                  <SelectItem key={type} value={type}>
-                                    {type}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-
-                            {/* The file name lives in the tooltip, so the
-                                control stays icon-sized either way. */}
-                            {docFile ? (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                className="shrink-0 border-green-600 text-green-600 hover:text-destructive"
-                                title={docFile.name + " - click to remove"}
-                                onClick={() => setDocFile(null)}
-                              >
-                                <FileCheck className="h-4 w-4" />
-                                <span className="sr-only">
-                                  {docFile.name} attached. Remove it.
-                                </span>
-                              </Button>
-                            ) : (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                className="shrink-0"
-                                title="Upload document"
-                                asChild
-                              >
-                                <label className="cursor-pointer">
-                                  <UploadIcon className="h-4 w-4" />
-                                  <span className="sr-only">
-                                    Upload document
-                                  </span>
-                                  <Input
-                                    type="file"
-                                    className="hidden"
-                                    onChange={(e) =>
-                                      e.target.files[0] &&
-                                      setDocFile(e.target.files[0])
-                                    }
-                                  />
-                                </label>
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* A paper that runs out has to say when. */}
-                        <div className="space-y-2">
-                          <Label htmlFor="docExpiry">
-                            Expiry Date{" "}
-                            
-                          </Label>
-                          <Input
-                            id="docExpiry"
-                            type="date"
-                            value={docDraft.expiry}
-                            onChange={(e) =>
-                              setDocDraft((prev) => ({
-                                ...prev,
-                                expiry: e.target.value,
-                              }))
-                            }
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="docNotes">Notes</Label>
-                          <div className="relative">
-                            <Input
-                              id="docNotes"
-                              maxLength={NOTES_LIMIT}
-                              placeholder="Enter notes (optional)"
-                              className="pe-16"
-                              value={docDraft.notes}
-                              onChange={(e) =>
-                                setDocDraft((prev) => ({
-                                  ...prev,
-                                  notes: e.target.value,
-                                }))
-                              }
-                            />
-                            <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                              {docDraft.notes.length}/{NOTES_LIMIT}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <DialogFooter className="mt-4">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={closeDocForm}
-                        >
-                          Cancel
-                        </Button>
-                        <Button type="button" onClick={addDocument}>
-                          Save Document
-                        </Button>
-                      </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-
                     {/* What is on file. A paper is never corrected or taken
                         off: a new one of the same kind is added, and the old
                         one stays on the list as Replaced - so the file shows
@@ -2405,9 +2273,15 @@ export default function EmployeeForm({ self }) {
                             aria-hidden="true"
                             className="size-7 shrink-0 text-primary"
                           />
-                          <h2 className="text-xl font-bold text-primary">Employee Documents</h2>
+                          <div>
+                            <h2 className="text-xl font-bold text-primary">Employee Documents</h2>
+                            {addingDoc && (
+                              <p className="text-sm text-primary/75">Add Document</p>
+                            )}
+                          </div>
                         </div>
-                        {!readOnly && (
+                        {/* Gone while the form is open: it is the form. */}
+                        {!readOnly && !addingDoc && (
                           <Button type="button" variant="add" onClick={() => setAddingDoc(true)}>
                             <Plus className="me-2 h-4 w-4" />
                             Add Document
@@ -2415,7 +2289,152 @@ export default function EmployeeForm({ self }) {
                         )}
                       </div>
 
-                      {orderedDocuments.length === 0 ? (
+                      {/* Asked for a step at a time: the category, then the
+                          type and its copy, then - once the copy is attached -
+                          when it runs out and anything to note. A paper that
+                          stands for details not yet saved on the record cannot
+                          be uploaded until they are. */}
+                      {addingDoc ? (
+                        <div ref={docFormRef} className="space-y-6">
+                          <div className="form-grid gap-y-6">
+                            <ChoiceField
+                              id="docCategory"
+                              label="Document Category"
+                              placeholder="Select category"
+                              value={docDraft.category}
+                              onChange={chooseCategory}
+                              options={docCategories}
+                              required
+                            />
+
+                            {docDraft.category && (
+                              <div
+                                className="form-field space-y-2"
+                                data-required="true"
+                              >
+                                <Label htmlFor="docType">Document Type</Label>
+                                <div className="flex items-center gap-2">
+                                  <Select
+                                    value={docDraft.type}
+                                    onValueChange={(value) => value && chooseType(value)}
+                                  >
+                                    <SelectTrigger id="docType" className="min-w-0 flex-1">
+                                      <SelectValue placeholder="Select type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {typesInCategory.map((type) => (
+                                        <SelectItem key={type} value={type}>
+                                          {type}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  {/* Open only once there is a type, and only
+                                      when its details are on file. */}
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="shrink-0 text-primary [&_svg]:size-6"
+                                    disabled={!docDraft.type || uploadBlocked}
+                                    title="Upload document"
+                                    asChild={Boolean(docDraft.type) && !uploadBlocked}
+                                  >
+                                    {docDraft.type && !uploadBlocked ? (
+                                      <label className="cursor-pointer">
+                                        <CloudUpload aria-hidden="true" />
+                                        <span className="sr-only">Upload document</span>
+                                        <input
+                                          type="file"
+                                          className="hidden"
+                                          onChange={(e) => {
+                                            const file = e.target.files[0];
+                                            if (!file) return;
+                                            setDocFile(file);
+                                            // Started from the expiry the record
+                                            // already holds for this paper.
+                                            setDocDraft((prev) => ({
+                                              ...prev,
+                                              expiry:
+                                                prev.expiry ||
+                                                relatedExpiry(prev.type, filedDetails),
+                                            }));
+                                          }}
+                                        />
+                                      </label>
+                                    ) : (
+                                      <span>
+                                        <CloudUpload aria-hidden="true" />
+                                        <span className="sr-only">Upload document</span>
+                                      </span>
+                                    )}
+                                  </Button>
+                                </div>
+                                {uploadBlocked && (
+                                  <p role="alert" className="text-xs text-destructive">
+                                    {UPLOAD_BLOCKED}
+                                  </p>
+                                )}
+                                {docFile && (
+                                  <span className="inline-flex max-w-full items-center gap-2 rounded-md border border-green-200 bg-green-50 px-2.5 py-1.5 text-sm text-primary">
+                                    <FileText className="size-4 shrink-0" aria-hidden="true" />
+                                    <span className="truncate">{docFile.name}</span>
+                                    <CircleCheck
+                                      aria-hidden="true"
+                                      className="size-4 shrink-0 fill-green-600 text-white"
+                                    />
+                                  </span>
+                                )}
+                                {docTried && docDraft.type && !uploadBlocked && !docFile && (
+                                  <p className="text-xs text-destructive">
+                                    Upload the document to save it.
+                                  </p>
+                                )}
+                              </div>
+                            )}
+
+                            {docFile && documentExpires(docDraft.type) && (
+                              <div className="form-field space-y-2">
+                                <Label htmlFor="docExpiry">Expiry Date</Label>
+                                <Input
+                                  id="docExpiry"
+                                  type="date"
+                                  value={docDraft.expiry}
+                                  onChange={(e) =>
+                                    setDocDraft((prev) => ({ ...prev, expiry: e.target.value }))
+                                  }
+                                  required
+                                />
+                              </div>
+                            )}
+
+                            {docFile && (
+                              <div className="form-field space-y-2">
+                                <Label htmlFor="docNotes">Notes</Label>
+                                <Input
+                                  id="docNotes"
+                                  maxLength={NOTES_LIMIT}
+                                  placeholder="Enter notes"
+                                  value={docDraft.notes}
+                                  onChange={(e) =>
+                                    setDocDraft((prev) => ({ ...prev, notes: e.target.value }))
+                                  }
+                                />
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex items-center justify-end gap-3">
+                            <Button type="button" variant="ghost" onClick={closeDocForm}>
+                              Cancel
+                            </Button>
+                            <Button type="button" onClick={addDocument}>
+                              <Save className="me-2 h-4 w-4" />
+                              Save
+                            </Button>
+                          </div>
+                        </div>
+                      ) : orderedDocuments.length === 0 ? (
                         <EmptyState>No documents uploaded yet.</EmptyState>
                       ) : (
                         <RecordTable minWidth={860}>
