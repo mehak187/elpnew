@@ -22,6 +22,11 @@ const buttonVariants = cva(
         // text as everything else. It is not a second primary action.
         cancel:
           "border border-field-border bg-card font-semibold text-primary hover:bg-menu-hover",
+        // Adding, wherever it is offered: white, a 1px navy edge, navy text.
+        // A list is for reading what is already there; adding to it is one
+        // thing it offers, so it is outlined rather than filled.
+        add:
+          "border border-primary bg-card font-semibold text-primary shadow-none hover:bg-menu-hover",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {

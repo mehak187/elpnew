@@ -5,7 +5,8 @@ import SummaryStrip from "@/components/shared/SummaryStrip";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import DataTable from "@/components/shared/DataTable";
-import { Wallet, Plus } from "lucide-react";
+import PageHeader from "@/components/shared/PageHeader";
+import { Wallet } from "lucide-react";
 import { useExpenses } from "@/lib/expenses/context";
 import { useSuppliers } from "@/lib/suppliers/context";
 import { expenseColumns } from "./expenseColumns";
@@ -108,23 +109,18 @@ export default function ExpensesPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-primary p-2 sm:p-3">
-            <Wallet className="h-5 w-5 text-primary-foreground sm:h-6 sm:w-6" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-primary sm:text-2xl">
-              Expenses
-            </h1>
-            <p className="text-xs text-primary/75 sm:text-sm">
-              {rows.length} {rows.length === 1 ? "expense" : "expenses"} &middot;{" "}
-              {money(total)}
-            </p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        icon={Wallet}
+        title="Expenses"
+        note={
+          <>
+            {rows.length} {rows.length === 1 ? "expense" : "expenses"} &middot;{" "}
+            {money(total)}
+          </>
+        }
+        onAdd={() => navigate("/expenses/create")}
+        addLabel="Add Expense"
+      />
 
       {/* Each cell is also the filter for the table below it */}
       <SummaryStrip
@@ -153,8 +149,6 @@ export default function ExpensesPage() {
             exportFileName="expenses.csv"
             enableColumnSearch={false}
             itemLabel="expenses"
-            onAdd={() => navigate("/expenses/create")}
-            addLabel="Add Expense"
             currentPage={currentPage}
             totalPages={Math.ceil(rows.length / pageSize)}
             pageSize={pageSize}

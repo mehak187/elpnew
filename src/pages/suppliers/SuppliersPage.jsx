@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import DataTable from "@/components/shared/DataTable";
-import { Truck, Plus, FileSpreadsheet } from "lucide-react";
+import PageHeader from "@/components/shared/PageHeader";
+import { Truck, FileSpreadsheet } from "lucide-react";
 import { IdStatusDot, isEndedStatus } from "@/components/shared/panels";
 import { toCsv, downloadCsv } from "@/lib/csv";
 import { useSuppliers } from "@/lib/suppliers/context";
@@ -94,29 +95,22 @@ export default function SuppliersPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-primary p-2 sm:p-3">
-            <Truck className="h-5 w-5 text-primary-foreground sm:h-6 sm:w-6" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-primary sm:text-2xl">
-              Suppliers
-            </h1>
-            <p className="text-xs text-primary/75 sm:text-sm">
-              Manage your suppliers
-            </p>
-          </div>
-        </div>
-        <Button
-          variant="outline"
-          onClick={() => downloadCsv(toCsv(columns, suppliers), "suppliers.csv")}
-        >
-          <FileSpreadsheet className="me-2 h-4 w-4 text-emerald-600" />
-          Export
-        </Button>
-      </div>
+      <PageHeader
+        icon={Truck}
+        title="Suppliers"
+        note="Manage your suppliers"
+        action={
+          <Button
+            variant="outline"
+            onClick={() => downloadCsv(toCsv(columns, suppliers), "suppliers.csv")}
+          >
+            <FileSpreadsheet className="me-2 h-4 w-4 text-emerald-600" />
+            Export
+          </Button>
+        }
+        onAdd={() => navigate("/suppliers/create")}
+        addLabel="Add Supplier"
+      />
 
       <Card>
         <CardContent className="p-4 sm:p-6">
@@ -128,8 +122,6 @@ export default function SuppliersPage() {
             searchPlaceholder="Ask anything..."
             showExport={false}
             enableColumnSearch={false}
-            onAdd={() => navigate("/suppliers/create")}
-            addLabel="Add Supplier"
             currentPage={currentPage}
             totalPages={Math.ceil(suppliers.length / pageSize)}
             pageSize={pageSize}

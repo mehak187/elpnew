@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import DataTable from "@/components/shared/DataTable";
+import PageHeader from "@/components/shared/PageHeader";
 import ActiveFilters from "@/components/shared/ActiveFilters";
 import RecordDialog from "@/components/shared/RecordDialog";
 import { toCsv, downloadCsv } from "@/lib/csv";
@@ -13,7 +14,7 @@ const FILTERS = {
   status: { label: "Status", match: (row, value) => row.status === value },
   client: { label: "Client", match: (row, value) => row.client === value },
 };
-import { Wallet, Plus, Eye, Edit, FileText } from "lucide-react";
+import { Wallet, Eye, Edit, FileText } from "lucide-react";
 import { withRial } from "@/lib/money";
 
 const invoices = [
@@ -108,22 +109,13 @@ export default function InvoicesList() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 sm:p-3 rounded-xl bg-primary">
-            <Wallet className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-primary">
-              Invoices
-            </h1>
-            <p className="text-xs sm:text-sm text-primary/75">
-              Manage billing and invoices
-            </p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        icon={Wallet}
+        title="Invoices"
+        note="Manage billing and invoices"
+        onAdd={() => navigate("/finance/invoices/create")}
+        addLabel="Create Invoice"
+      />
 
       <RecordDialog
         open={Boolean(selected)}
@@ -147,8 +139,6 @@ export default function InvoicesList() {
             columns={columns}
             data={visibleInvoices}
             searchPlaceholder="Search invoices..."
-            onAdd={() => navigate("/finance/invoices/create")}
-            addLabel="Create Invoice"
             currentPage={currentPage}
             totalPages={Math.ceil(visibleInvoices.length / pageSize)}
             pageSize={pageSize}

@@ -3,9 +3,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import DataTable from "@/components/shared/DataTable";
+import PageHeader from "@/components/shared/PageHeader";
 import RecordDialog from "@/components/shared/RecordDialog";
 import { IdStatusDot, isEndedStatus } from "@/components/shared/panels";
-import { BookOpen, Plus, Eye, Edit, Trash2 } from "lucide-react";
+import { BookOpen, Eye, Edit, Trash2 } from "lucide-react";
 
 const references = [
   { id: 1, category: "Courts", name: "Primary Court - Muscat", code: "PC-MUS", status: "Active" },
@@ -130,22 +131,13 @@ export default function References() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 sm:p-3 rounded-xl bg-primary">
-            <BookOpen className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-primary">
-              References
-            </h1>
-            <p className="text-xs sm:text-sm text-primary/75">
-              Manage system reference data
-            </p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        icon={BookOpen}
+        title="References"
+        note="Manage system reference data"
+        onAdd={() => setSelected({ ...blankReference, id: 0 })}
+        addLabel="Add Reference"
+      />
 
       {/* Category Filter */}
       <Card>
@@ -185,8 +177,6 @@ export default function References() {
             // One no longer in use is kept, at the foot of its list.
             endedRow={(row) => isEndedStatus(row.status)}
             searchPlaceholder="Search references..."
-            onAdd={() => setSelected({ ...blankReference, id: 0 })}
-            addLabel="Add Reference"
             currentPage={currentPage}
             totalPages={Math.ceil(filteredData.length / pageSize)}
             pageSize={pageSize}
