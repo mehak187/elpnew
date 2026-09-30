@@ -2,10 +2,22 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 import DataTable from "@/components/shared/DataTable";
 import PageHeader from "@/components/shared/PageHeader";
 import FilterPanel from "@/components/shared/FilterPanel";
-import { Users, Eye } from "lucide-react";
+import {
+  Users,
+  Eye,
+  Briefcase,
+  MapPin,
+  Building2,
+  Globe,
+  CalendarDays,
+  UserRoundCog,
+  Scale,
+  KeyRound,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IdStatusDot, isEndedStatus } from "@/components/shared/panels";
 import {
@@ -15,6 +27,8 @@ import {
   totalDeductions,
   amount,
   hasDocuments,
+  documentsFor,
+  documentStatus,
 } from "./employeeData";
 
 /** A fact with its heading beside it, where the pair fits on one line. */
@@ -51,40 +65,134 @@ const employees = employeeRecords;
 const valuesOf = (key) =>
   employees.map((row) => row[key]).filter((v, i, all) => v && all.indexOf(v) === i);
 
-const FILTER_FIELDS = [
-  {
-    key: "status",
-    label: "Status",
-    type: "radio",
-    options: [
-      { value: "all", label: "All" },
-      { value: "Active", label: "Active" },
-      { value: "Inactive", label: "Inactive" },
-    ],
-  },
-  { key: "branch", label: "Branch", type: "select", allLabel: "All branches", options: valuesOf("branch") },
-  { key: "role", label: "Role", type: "select", allLabel: "All roles", options: valuesOf("role") },
-  {
-    key: "documents",
-    label: "Documents",
-    type: "radio",
-    options: [
-      { value: "all", label: "All" },
-      { value: "with", label: "With document" },
-      { value: "without", label: "Without document" },
-    ],
-  },
+/** "All", then whatever the records hold, as the panel wants its options. */
+const optionsOf = (key) => [
+  { value: "all", label: "All" },
+  ...valuesOf(key).map((one) => ({ value: one, label: one })),
 ];
+
+/**
+ * The questions this list can be narrowed by.
+ *
+ * Branch and Department read their choices from the records themselves, so a
+ * new one appears here without an edit. The last group is the General
+ * Manager's alone: it is left out of the array entirely rather than merely
+ * greyed, because a filter nobody may use is still a filter that says what
+ * the system holds.
+ */
+const filterFields = (canSeeDocuments) =>
+  [
+    {
+      key: "status",
+      label: "Employment Status",
+      icon: Briefcase,
+      type: "radio",
+      options: [
+        { value: "all", label: "All" },
+        { value: "Active", label: "Active" },
+        { value: "Inactive", label: "Inactive" },
+      ],
+    },
+    { key: "branch", label: "Branch", icon: MapPin, type: "radio", options: optionsOf("branch") },
+    {
+      key: "department",
+      label: "Department",
+      icon: Building2,
+      type: "radio",
+      options: optionsOf("department"),
+    },
+    {
+      key: "gender",
+      label: "Gender",
+      icon: Users,
+      type: "radio",
+      options: [
+        { value: "all", label: "All" },
+        { value: "Male", label: "Male" },
+        { value: "Female", label: "Female" },
+      ],
+    },
+    {
+      key: "nationality",
+      label: "Nationality",
+      icon: Globe,
+      type: "radio",
+      options: [
+        { value: "all", label: "All" },
+        { value: "Omani", label: "Omani" },
+        { value: "Non-Omani", label: "Non-Omani" },
+      ],
+    },
+    {
+      key: "leave",
+      label: "Leave Status",
+      icon: CalendarDays,
+      type: "radio",
+      options: [
+        { value: "all", label: "All" },
+        { value: "on", label: "On Leave" },
+        { value: "off", label: "Not on Leave" },
+      ],
+    },
+    canSeeDocuments && {
+      key: "documentStatus",
+      label: "Document Status",
+      note: "General manager only",
+      icon: UserRoundCog,
+      type: "checkbox",
+      // Either, both, or neither: neither is no document filter at all.
+      options: [
+        { value: "Expired", label: "Expired" },
+        { value: "Expiring Soon", label: "Expiring Soon" },
+      ],
+    },
+    {
+      key: "practiceLevel",
+      label: "Legal Practice Level",
+      icon: Scale,
+      type: "radio",
+      // Only lawyers are admitted to a court, so choosing a level narrows the
+      // list to lawyers by the same stroke.
+      options: [
+        { value: "all", label: "All" },
+        { value: "Trainee", label: "Trainee" },
+        { value: "Primary", label: "Primary" },
+        { value: "Appeal", label: "Appeal" },
+        { value: "Supreme", label: "Supreme" },
+      ],
+    },
+    {
+      key: "access",
+      label: "Access Level",
+      icon: KeyRound,
+      placeholder: "Under construction",
+    },
+  ].filter(Boolean);
 
 /** A record kept only if it answers to every filter in force. */
 const matches = (row, filters) =>
   Object.entries(filters).every(([key, value]) => {
-    if (!value || value === "all") return true;
-    // Inactive covers everyone no longer working, however they left.
-    if (key === "status" && value === "Inactive") return isEndedStatus(row.status);
-    if (key === "documents") return hasDocuments(row.id) === (value === "with");
-    return row[key] === value;
+    if (!value || value === "all" || (Array.isArray(value) && !value.length)) return true;
+
+    switch (key) {
+      // Inactive covers everyone no longer working, however they left.
+      case "status":
+        return value === "Inactive" ? isEndedStatus(row.status) : row.status === value;
+      case "nationality":
+        return value === "Omani"
+          ? row.nationality === "Omani"
+          : row.nationality !== "Omani";
+      // Approved leave covering today, which the record carries as a standing.
+      case "leave":
+        return (row.status === "On Leave") === (value === "on");
+      // Either mark, or both; a paper only has to be in one of them.
+      case "documentStatus":
+        return documentsFor(row.id).some((doc) => value.includes(documentStatus(doc)));
+      default:
+        return row[key] === value;
+    }
   });
+
 
 export default function EmployeesList() {
   const navigate = useNavigate();
@@ -92,22 +200,12 @@ export default function EmployeesList() {
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState({});
 
+  // Standard: the document group is the general manager's. Left out of the
+  // list entirely for anybody else - the server enforces the same rule, this
+  // only keeps the panel honest about it.
+  const fields = filterFields(CURRENT_USER.role === "admin");
+
   const shown = employees.filter((row) => matches(row, filters));
-
-  // One chip per choice in force, labelled as the panel labelled it. "All" is
-  // not a choice, so it is not shown as one.
-  const appliedFilters = Object.entries(filters)
-    .filter(([, value]) => value && value !== "all")
-    .map(([key, value]) => {
-      const field = FILTER_FIELDS.find((entry) => entry.key === key);
-      const option = field?.options?.find?.((o) => o.value === value);
-      return {
-        key,
-        label: field?.label || key,
-        value: option?.label || value,
-      };
-    });
-
   const columns = [
     {
       key: "empNo",
@@ -256,22 +354,9 @@ export default function EmployeesList() {
             enableSorting
             currentPage={currentPage}
             totalPages={Math.ceil(shown.length / pageSize)}
-            appliedFilters={appliedFilters}
-            onRemoveFilter={(key) => {
-              setFilters((prev) => {
-                const next = { ...prev };
-                delete next[key];
-                return next;
-              });
-              setCurrentPage(1);
-            }}
-            onClearFilters={() => {
-              setFilters({});
-              setCurrentPage(1);
-            }}
             filters={
               <FilterPanel
-                fields={FILTER_FIELDS}
+                fields={fields}
                 value={filters}
                 onChange={(next) => {
                   setFilters(next);
