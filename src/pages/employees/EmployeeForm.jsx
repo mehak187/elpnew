@@ -3,7 +3,6 @@ import UploadIcon from "@/components/shared/UploadIcon";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import BackButton from "@/components/shared/BackButton";
 import RecordSidebar from "@/components/shared/RecordSidebar";
 import FormHeading from "@/components/shared/FormHeading";
 import PhoneInput from "@/components/shared/PhoneInput";
@@ -618,10 +617,13 @@ export default function EmployeeForm({ self }) {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Page Header */}
+      {/* Page Header.
+
+          No back control here: the sidebar's own "All employees" link leads
+          to the same place, and two ways back from one page is one way too
+          many. The one that stayed says where it goes. */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <BackButton fallback="/employees" />
           <div>
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-xl font-bold text-primary sm:text-2xl">
