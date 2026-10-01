@@ -70,12 +70,16 @@ const Fact = ({ label, children }) => (
   </p>
 );
 
-/** How each standing is marked, the same colours the record itself uses. */
+/**
+ * How each standing is marked.
+ *
+ * Two, because there are two: away on approved leave is said by the Leave
+ * column beside this one, out of the leave book, and no longer a standing a
+ * record carries about itself.
+ */
 const STATUS_TONE = {
   Active: "bg-green-500",
-  "On Leave": "bg-amber-500",
   Inactive: "bg-muted-foreground",
-  Terminated: "bg-red-500",
 };
 
 /** A date as the firm writes them. */

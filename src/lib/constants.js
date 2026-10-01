@@ -51,7 +51,22 @@ export const NATIONALITIES = [...GULF_NATIONALITIES, ...OTHER_NATIONALITIES, "Ot
 
 export const GENDERS = ["Male", "Female"];
 
-export const EMPLOYEE_STATUSES = ["Active", "On Leave", "Inactive", "Terminated"];
+/**
+ * Whether somebody is still working here. Two answers, because that is how
+ * many there are - being away on approved leave is not a third standing, it
+ * is a fact about this week that the leave book already holds, and "ended"
+ * is answered by who decided it rather than by another word for it.
+ */
+export const EMPLOYEE_STATUSES = ["Active", "Inactive"];
+
+/** Whose decision ended it. */
+export const DECISION_MAKERS = ["Management Decision", "Employee Decision"];
+
+/** And, where it was the firm's decision, on what ground. */
+export const MANAGEMENT_DECISION_REASONS = [
+  "Contract Expiry",
+  "Termination / Dismissal",
+];
 
 /**
  * Why someone left. Only asked for once a status says they have - a reason for

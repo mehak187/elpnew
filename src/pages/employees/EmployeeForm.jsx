@@ -64,6 +64,8 @@ import {
   DEPARTMENTS,
   JOB_TITLES,
   EMPLOYEE_STATUSES,
+  DECISION_MAKERS,
+  MANAGEMENT_DECISION_REASONS,
   LEAVING_REASONS,
   DEFAULT_DIAL_CODE,
   COUNTRY_DIAL_CODES,
@@ -740,7 +742,7 @@ const DOCUMENT_STATUS_PILL = {
 };
 
 /** Somebody who has left, and so owes the record a reason and a last day. */
-const HAS_LEFT = ["Inactive", "Terminated"];
+const HAS_LEFT = ["Inactive"];
 
 const emptyFormData = {
   arabicName: "",
@@ -793,6 +795,8 @@ const emptyFormData = {
 
   // Only a lawyer is admitted to a court, so only a lawyer has a level.
   practiceLevel: "",
+  decisionMaker: "",
+  managementReason: "",
   workDialCode: DEFAULT_DIAL_CODE,
   workPhone: "",
   // The contract: its kind, and the days it runs from and - if fixed - to.
@@ -1989,18 +1993,59 @@ export default function EmployeeForm({ self }) {
                           Organizational Information
                         </h3>
                         <div className="form-grid gap-y-6">
-                          {/* Nobody is taken on as having left: a new record
-                              starts working or on leave, never ended. */}
+                          {/* Inactive asks who decided it, and the firm's
+                              own decision asks on what ground. Each answer is
+                              dropped when the one above it changes, so a
+                              record cannot keep a reason for an ending that
+                              is no longer there. */}
                           <ChoiceField
                             id="status"
                             label="Employee Status"
                             value={formData.status}
-                            onChange={(value) => set("status", value)}
-                            options={EMPLOYEE_STATUSES.filter(
-                              (status) => !HAS_LEFT.includes(status)
-                            )}
+                            onChange={(value) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                status: value,
+                                decisionMaker:
+                                  value === "Inactive" ? prev.decisionMaker : "",
+                                managementReason:
+                                  value === "Inactive" ? prev.managementReason : "",
+                              }))
+                            }
+                            options={EMPLOYEE_STATUSES}
                             required
                           />
+                          {formData.status === "Inactive" && (
+                            <ChoiceField
+                              id="decisionMaker"
+                              label="Decision Maker"
+                              placeholder="Select decision maker"
+                              value={formData.decisionMaker}
+                              onChange={(value) =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  decisionMaker: value,
+                                  managementReason:
+                                    value === "Management Decision"
+                                      ? prev.managementReason
+                                      : "",
+                                }))
+                              }
+                              options={DECISION_MAKERS}
+                              required
+                            />
+                          )}
+                          {formData.decisionMaker === "Management Decision" && (
+                            <ChoiceField
+                              id="managementReason"
+                              label="Management Decision Reason"
+                              placeholder="Select reason"
+                              value={formData.managementReason}
+                              onChange={(value) => set("managementReason", value)}
+                              options={MANAGEMENT_DECISION_REASONS}
+                              required
+                            />
+                          )}
                           <ChoiceField
                             id="branch"
                             label="Branch / Work Location"
