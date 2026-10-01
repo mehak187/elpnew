@@ -27,6 +27,8 @@ export default function PhoneInput({
   placeholder = "Enter phone number",
   disabled,
   required,
+  // Marks the number as wrong, the way an Input with aria-invalid is marked.
+  invalid,
   className,
 }) {
   const [open, setOpen] = useState(false);
@@ -74,21 +76,27 @@ export default function PhoneInput({
 
   return (
     <div ref={containerRef} className={cn("relative", className)}>
-      {/* One border, one shadow, one set of rounded corners - the parts inside
-          have none of their own. */}
+      {/* One border, one set of rounded corners - the parts inside have none
+          of their own. Drawn with the same height, border, fill, focus and
+          error marks as every other field, so a phone number does not stand
+          out from the fields beside it. */}
       <div
         className={cn(
-          "flex h-9 w-full items-center overflow-hidden rounded-md border border-input bg-transparent shadow-sm transition-colors focus-within:ring-1 focus-within:ring-primary",
-          disabled && "cursor-not-allowed bg-locked opacity-70"
+          "flex h-[42px] w-full items-center overflow-hidden rounded-field border border-field-border bg-field transition-colors focus-within:border-[var(--focus-navy)] focus-within:shadow-[var(--focus-ring)]",
+          invalid &&
+            "border-[var(--error-border)] focus-within:border-[var(--error-border)] focus-within:shadow-[var(--error-ring)]",
+          disabled && "cursor-not-allowed border-disabled-border bg-disabled text-disabled-text"
         )}
       >
+        {/* The code reads at the weight of the number beside it: it is part
+            of the same value, not a label for it. */}
         <button
           type="button"
           disabled={disabled}
           aria-label="Country dialling code"
           aria-expanded={open}
           onClick={() => setOpen((isOpen) => !isOpen)}
-          className="flex h-full shrink-0 items-center gap-1 px-3 text-sm font-medium focus:outline-none focus-visible:bg-muted disabled:cursor-not-allowed"
+          className="flex h-full shrink-0 items-center gap-1 px-3 text-sm focus:outline-none focus-visible:bg-muted disabled:cursor-not-allowed"
         >
           {code}
           <ChevronDown className="h-4 w-4 opacity-50" />
@@ -106,6 +114,8 @@ export default function PhoneInput({
           placeholder={placeholder}
           disabled={disabled}
           required={required}
+          inputMode="tel"
+          aria-invalid={invalid || undefined}
           className="h-full min-w-0 flex-1 bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
         />
       </div>

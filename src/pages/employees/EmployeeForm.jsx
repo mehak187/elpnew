@@ -395,6 +395,49 @@ function StepTabs({ steps, active, done, canOpen, onSelect }) {
 }
 
 /**
+ * What each field may hold, checked as it is typed.
+ *
+ * A wrong character - Arabic in the English name, a letter in a phone number -
+ * is wrong the moment it is typed, so it is said at once, under the field,
+ * rather than on Save. Whole-value checks that are only wrong once finished,
+ * like an email address, wait until the field is left. Keyed by the field's
+ * name, or its id where a field has no name.
+ */
+const FIELD_RULES = {
+  arabicName: { allowed: /^[؀-ۿ\s]*$/, message: "Arabic letters only." },
+  employeeName: { allowed: /^[A-Za-z\s.'-]*$/, message: "English letters only." },
+  emergencyName: { allowed: /^[A-Za-z؀-ۿ\s.'-]*$/, message: "Letters only." },
+  phone: { allowed: /^[0-9\s-]*$/, message: "Numbers only." },
+  emergencyPhone: { allowed: /^[0-9\s-]*$/, message: "Numbers only." },
+  workPhone: { allowed: /^[0-9\s-]*$/, message: "Numbers only." },
+  civilId: { allowed: /^[0-9]*$/, message: "Numbers only." },
+  passportNumber: { allowed: /^[A-Za-z0-9]*$/, message: "English letters and numbers only." },
+  visaNo: { allowed: /^[A-Za-z0-9-]*$/, message: "English letters and numbers only." },
+  workPermitNo: { allowed: /^[A-Za-z0-9-]*$/, message: "English letters and numbers only." },
+  lawyerCardNo: { allowed: /^[A-Za-z0-9-]*$/, message: "English letters and numbers only." },
+  spRegistrationNo: { allowed: /^[A-Za-z0-9-]*$/, message: "English letters and numbers only." },
+  accountNumber: { allowed: /^[0-9\s]*$/, message: "Numbers only." },
+  iban: { allowed: /^[A-Za-z0-9\s]*$/, message: "English letters and numbers only." },
+  swiftCode: { allowed: /^[A-Za-z0-9]*$/, message: "English letters and numbers only." },
+};
+
+/** Whether a field holds something its rule does not allow. */
+const ruleBroken = (name, value) => {
+  const rule = FIELD_RULES[name];
+  return Boolean(rule && value && !rule.allowed.test(value));
+};
+
+/** What is wrong with a field, said under it the moment it is wrong. */
+function RuleNote({ name, value }) {
+  if (!ruleBroken(name, value)) return null;
+  return (
+    <p role="alert" className="field-error">
+      {FIELD_RULES[name].message}
+    </p>
+  );
+}
+
+/**
  * A phone number and the country it belongs to.
  *
  * The dial code is a field of its own rather than something typed into the
@@ -413,7 +456,9 @@ function PhoneField({ id, label, placeholder, dialCode, onDialCode, value, onCha
         onChange={onChange}
         placeholder={placeholder}
         required={required}
+        invalid={ruleBroken(id, value)}
       />
+      <RuleNote name={id} value={value} />
     </div>
   );
 }
@@ -580,8 +625,10 @@ function PaperFields({ label, numberName, expiryName, values, onChange }) {
           value={values[numberName]}
           onChange={onChange}
           placeholder="Enter number"
+          aria-invalid={ruleBroken(numberName, values[numberName]) || undefined}
           required
         />
+        <RuleNote name={numberName} value={values[numberName]} />
       </div>
       <div className="form-field space-y-2">
         <Label htmlFor={expiryName}>{label} Expiry Date</Label>
@@ -1126,8 +1173,12 @@ export default function EmployeeForm({ self }) {
     if (!checkRequired(formRef.current)) return;
     // Filled but in the wrong shape - an email with no @ - holds the step too,
     // and the cursor is taken to it; the field already says what is wrong.
+    // So does a character the field does not allow, already said under it.
     const misshapen = [...formRef.current.querySelectorAll("input")].find(
-      (input) => !input.disabled && input.value && !input.checkValidity()
+      (input) =>
+        !input.disabled &&
+        input.value &&
+        (!input.checkValidity() || ruleBroken(input.name || input.id, input.value))
     );
     if (misshapen) {
       misshapen.scrollIntoView({ block: "center", behavior: "smooth" });
@@ -1383,8 +1434,10 @@ export default function EmployeeForm({ self }) {
                         onChange={onChange}
                         placeholder="أدخل الاسم الكامل بالعربية"
                         dir="rtl"
+                        aria-invalid={ruleBroken("arabicName", formData.arabicName) || undefined}
                         required
                       />
+                      <RuleNote name="arabicName" value={formData.arabicName} />
                     </div>
 
                     <div className="form-field space-y-2">
@@ -1398,8 +1451,10 @@ export default function EmployeeForm({ self }) {
                         value={formData.employeeName}
                         onChange={onChange}
                         placeholder="Enter full name in English"
+                        aria-invalid={ruleBroken("employeeName", formData.employeeName) || undefined}
                         required
                       />
+                      <RuleNote name="employeeName" value={formData.employeeName} />
                     </div>
 
                     <div className="form-field space-y-2">
@@ -1478,8 +1533,10 @@ export default function EmployeeForm({ self }) {
                         value={formData.civilId}
                         onChange={onChange}
                         placeholder="Enter ID number"
+                        aria-invalid={ruleBroken("civilId", formData.civilId) || undefined}
                         required={isAdding}
                       />
+                      <RuleNote name="civilId" value={formData.civilId} />
                     </div>
 
                     <div className="form-field space-y-2">
@@ -1587,8 +1644,10 @@ export default function EmployeeForm({ self }) {
                         value={formData.emergencyName}
                         onChange={onChange}
                         placeholder="Enter contact name"
+                        aria-invalid={ruleBroken("emergencyName", formData.emergencyName) || undefined}
                         required={isAdding}
                       />
+                      <RuleNote name="emergencyName" value={formData.emergencyName} />
                     </div>
 
                     {/* Who they are to the employee, kept on the record. Not
@@ -2223,8 +2282,11 @@ export default function EmployeeForm({ self }) {
                             value={formData.accountNumber}
                             onChange={onChange}
                             placeholder="Enter account number"
+                            inputMode="numeric"
+                            aria-invalid={ruleBroken("accountNumber", formData.accountNumber) || undefined}
                             required
                           />
+                          <RuleNote name="accountNumber" value={formData.accountNumber} />
                         </div>
                         <div className="form-field space-y-2">
                           <Label htmlFor="iban">IBAN</Label>
@@ -2234,8 +2296,10 @@ export default function EmployeeForm({ self }) {
                             value={formData.iban}
                             onChange={onChange}
                             placeholder="Enter IBAN"
+                            aria-invalid={ruleBroken("iban", formData.iban) || undefined}
                             required
                           />
+                          <RuleNote name="iban" value={formData.iban} />
                         </div>
                         {/* Only a transfer abroad needs it, so it is not
                             demanded of an Omani bank account. */}
@@ -2247,7 +2311,9 @@ export default function EmployeeForm({ self }) {
                             value={formData.swiftCode}
                             onChange={onChange}
                             placeholder="Enter SWIFT code"
+                            aria-invalid={ruleBroken("swiftCode", formData.swiftCode) || undefined}
                           />
+                          <RuleNote name="swiftCode" value={formData.swiftCode} />
                         </div>
                       </div>
                     </SectionCard>
@@ -2343,8 +2409,10 @@ export default function EmployeeForm({ self }) {
                           value={formData.spRegistrationNo}
                           onChange={onChange}
                           placeholder="Enter registration number"
+                          aria-invalid={ruleBroken("spRegistrationNo", formData.spRegistrationNo) || undefined}
                           required
                         />
+                        <RuleNote name="spRegistrationNo" value={formData.spRegistrationNo} />
                       </div>
                       <div className="form-field space-y-2">
                         <Label htmlFor="spRegistrationDate">Registration Date</Label>
