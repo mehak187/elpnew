@@ -1,7 +1,13 @@
 import * as React from "react";
 import * as SelectPrimitive from "@radix-ui/react-select";
-import { Check, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+/**
+ * More choices than fit in view without scrolling, and the list grows a
+ * search box: nobody should scroll through two hundred countries to find one.
+ */
+const SEARCH_AFTER = 8;
 
 const Select = SelectPrimitive.Root;
 const SelectGroup = SelectPrimitive.Group;
@@ -59,13 +65,118 @@ const SelectScrollDownButton = React.forwardRef(
 SelectScrollDownButton.displayName =
   SelectPrimitive.ScrollDownButton.displayName;
 
+/** The words an option is found by: its own text, however it is wrapped. */
+function textOf(node) {
+  if (node == null || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(textOf).join(" ");
+  return textOf(node.props?.children);
+}
+
+const isOption = (child) => React.isValidElement(child) && child.type === SelectItem;
+
+/**
+ * The options, with a search box above them once there are too many to see
+ * at once.
+ *
+ * Mounted only while the list is open, so every opening starts with an empty
+ * search. Options that do not match are hidden and disabled rather than
+ * taken out: the box above shows the chosen value by reading its option, and
+ * the arrow keys skip a disabled option, so the keyboard walks the matches
+ * only.
+ */
+function SearchableOptions({ children, position, searchable, searchPlaceholder }) {
+  const [query, setQuery] = React.useState("");
+  const inputRef = React.useRef(null);
+  const options = React.Children.toArray(children);
+  const showSearch = searchable ?? options.filter(isOption).length > SEARCH_AFTER;
+
+  // Radix puts the focus on the chosen option as the list opens; the search
+  // takes it straight after, so typing starts the search.
+  React.useEffect(() => {
+    if (!showSearch) return;
+    const frame = requestAnimationFrame(() => inputRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [showSearch]);
+
+  const term = query.trim().toLowerCase();
+  const matchesTerm = (child) =>
+    !term || textOf(child.props.children).toLowerCase().includes(term);
+  const matches = options.filter((child) => isOption(child) && matchesTerm(child)).length;
+  const shown = options.map((child) =>
+    !isOption(child) || matchesTerm(child)
+      ? child
+      : React.cloneElement(child, {
+          disabled: true,
+          className: cn(child.props.className, "hidden"),
+        })
+  );
+
+  return (
+    <>
+      {showSearch && (
+        <div className="relative border-b border-container-border p-1">
+          <Search
+            aria-hidden="true"
+            className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+          />
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            // Typing belongs to the search, not to the list's own
+            // jump-to-letter; only the keys that move into the list or
+            // close it are let through.
+            onKeyDown={(e) => {
+              if (!["ArrowDown", "ArrowUp", "Escape", "Tab"].includes(e.key)) {
+                e.stopPropagation();
+              }
+            }}
+            placeholder={searchPlaceholder}
+            aria-label={searchPlaceholder}
+            className="h-9 w-full rounded-sm bg-transparent ps-8 pe-2 text-sm outline-none placeholder:text-muted-foreground"
+          />
+        </div>
+      )}
+      <SelectScrollUpButton />
+      {/* The list is as tall as it needs to be, up to the max-h on the
+          content around it. It must not be pinned to the height of the
+          trigger: that leaves one row showing and everything else behind a
+          scroll button, which reads as an empty dropdown. */}
+      <SelectPrimitive.Viewport
+        className={cn(
+          "p-1",
+          position === "popper" && "w-full min-w-[var(--radix-select-trigger-width)]"
+        )}
+      >
+        {shown}
+        {term && matches === 0 && (
+          <p className="px-2 py-3 text-center text-sm text-muted-foreground">No matches</p>
+        )}
+      </SelectPrimitive.Viewport>
+      <SelectScrollDownButton />
+    </>
+  );
+}
+
 const SelectContent = React.forwardRef(
-  ({ className, children, position = "popper", ...props }, ref) => (
+  (
+    {
+      className,
+      children,
+      position = "popper",
+      // Forces the search on or off; left out, it follows the option count.
+      searchable,
+      searchPlaceholder = "Search...",
+      ...props
+    },
+    ref
+  ) => (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
         ref={ref}
         className={cn(
-          "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-[8px] border-container-border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-end-2 data-[side=right]:slide-in-from-start-2 data-[side=top]:slide-in-from-bottom-2",
+          "relative z-50 flex max-h-96 min-w-[8rem] flex-col overflow-hidden rounded-[8px] border-container-border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-end-2 data-[side=right]:slide-in-from-start-2 data-[side=top]:slide-in-from-bottom-2",
           position === "popper" &&
             "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
           className
@@ -73,21 +184,13 @@ const SelectContent = React.forwardRef(
         position={position}
         {...props}
       >
-        <SelectScrollUpButton />
-        {/* The list is as tall as it needs to be, up to the max-h on the
-            content above. It must not be pinned to the height of the trigger:
-            that leaves one row showing and everything else behind a scroll
-            button, which reads as an empty dropdown. */}
-        <SelectPrimitive.Viewport
-          className={cn(
-            "p-1",
-            position === "popper" &&
-              "w-full min-w-[var(--radix-select-trigger-width)]"
-          )}
+        <SearchableOptions
+          position={position}
+          searchable={searchable}
+          searchPlaceholder={searchPlaceholder}
         >
           {children}
-        </SelectPrimitive.Viewport>
-        <SelectScrollDownButton />
+        </SearchableOptions>
       </SelectPrimitive.Content>
     </SelectPrimitive.Portal>
   )

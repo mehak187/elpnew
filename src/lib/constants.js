@@ -3,28 +3,51 @@
 /* ------------------------------------------------------------- employees */
 
 // Nationalities are written as the adjective, which is how a personnel record
-// reads: "Omani", not "Oman".
-export const NATIONALITIES = [
-  "Omani",
-  "Emirati",
-  "Saudi",
-  "Qatari",
-  "Kuwaiti",
-  "Bahraini",
-  "Yemeni",
-  "Egyptian",
-  "Jordanian",
-  "Syrian",
-  "Lebanese",
-  "Sudanese",
-  "Indian",
-  "Pakistani",
-  "Bangladeshi",
-  "Sri Lankan",
-  "Filipino",
-  "British",
-  "Other",
-];
+// reads: "Omani", not "Oman". Omani first and the Gulf after it, because that
+// is who the firm employs most; every other country follows in alphabetical
+// order, Palestine in its place among them. The firm's list does not include
+// the occupying state. "Other" is last, for anybody without a nationality.
+const GULF_NATIONALITIES = ["Omani", "Emirati", "Saudi", "Qatari", "Kuwaiti", "Bahraini"];
+
+const OTHER_NATIONALITIES = [
+  "Afghan", "Albanian", "Algerian", "American", "Andorran", "Angolan",
+  "Antiguan and Barbudan", "Argentine", "Armenian", "Australian", "Austrian",
+  "Azerbaijani", "Bahamian", "Bangladeshi", "Barbadian", "Basotho", "Belarusian",
+  "Belgian", "Belizean", "Beninese", "Bhutanese", "Bissau-Guinean", "Bolivian",
+  "Bosnian and Herzegovinian", "Botswanan", "Brazilian", "British", "Bruneian",
+  "Bulgarian", "Burkinabe", "Burmese", "Burundian", "Cabo Verdean", "Cambodian",
+  "Cameroonian", "Canadian", "Central African", "Chadian", "Chilean", "Chinese",
+  "Colombian", "Comorian", "Congolese (DR Congo)", "Congolese (Republic of the Congo)",
+  "Costa Rican", "Croatian", "Cuban", "Cypriot", "Czech", "Danish", "Djiboutian",
+  "Dominican (Dominica)", "Dominican (Dominican Republic)", "Dutch", "Ecuadorian",
+  "Egyptian", "Equatorial Guinean", "Eritrean", "Estonian", "Ethiopian", "Fijian",
+  "Filipino", "Finnish", "French", "Gabonese", "Gambian", "Georgian", "German",
+  "Ghanaian", "Greek", "Grenadian", "Guatemalan", "Guinean", "Guyanese", "Haitian",
+  "Honduran", "Hungarian", "I-Kiribati", "Icelandic", "Indian", "Indonesian",
+  "Iranian", "Iraqi", "Irish", "Italian", "Ivorian", "Jamaican", "Japanese",
+  "Jordanian", "Kazakh", "Kenyan", "Kittitian and Nevisian", "Kyrgyz", "Lao",
+  "Latvian", "Lebanese", "Liberian", "Libyan", "Liechtensteiner", "Lithuanian",
+  "Luxembourgish", "Malagasy", "Malawian", "Malaysian", "Maldivian", "Malian",
+  "Maltese", "Marshallese", "Mauritanian", "Mauritian", "Mexican", "Micronesian",
+  "Moldovan", "Monegasque", "Mongolian", "Montenegrin", "Moroccan", "Mozambican",
+  "Namibian", "Nauruan", "Nepali", "New Zealander", "Ni-Vanuatu", "Nicaraguan",
+  "Nigerian", "Nigerien", "North Korean", "North Macedonian", "Norwegian",
+  "Pakistani", "Palauan", "Palestinian", "Panamanian", "Papua New Guinean",
+  "Paraguayan", "Peruvian", "Polish", "Portuguese", "Romanian", "Russian",
+  "Rwandan", "Saint Lucian", "Salvadoran", "Samoan", "Sammarinese", "Sao Tomean",
+  "Senegalese", "Serbian", "Seychellois", "Sierra Leonean", "Singaporean",
+  "Slovak", "Slovenian", "Solomon Islander", "Somali", "South African",
+  "South Korean", "South Sudanese", "Spanish", "Sri Lankan", "Sudanese",
+  "Surinamese", "Swazi", "Swedish", "Swiss", "Syrian", "Tajik", "Tanzanian",
+  "Thai", "Timorese", "Togolese", "Tongan", "Trinidadian and Tobagonian",
+  "Tunisian", "Turkish", "Turkmen", "Tuvaluan", "Ugandan", "Ukrainian",
+  "Uruguayan", "Uzbek", "Venezuelan", "Vietnamese", "Vincentian", "Yemeni",
+  "Zambian", "Zimbabwean",
+  // Sorted here rather than trusted to the hand that typed it, so a name
+  // added later still lands in its place.
+].sort((a, b) => a.localeCompare(b, "en"));
+
+export const NATIONALITIES = [...GULF_NATIONALITIES, ...OTHER_NATIONALITIES, "Other"];
 
 export const GENDERS = ["Male", "Female"];
 
@@ -223,6 +246,7 @@ export const COUNTRY_DIAL_CODES = [
   { code: "MA", name: "Morocco", dial: "+212", flag: "🇲🇦" },
   { code: "NL", name: "Netherlands", dial: "+31", flag: "🇳🇱" },
   { code: "PK", name: "Pakistan", dial: "+92", flag: "🇵🇰" },
+  { code: "PS", name: "Palestine", dial: "+970", flag: "🇵🇸" },
   { code: "PH", name: "Philippines", dial: "+63", flag: "🇵🇭" },
   { code: "RU", name: "Russia", dial: "+7", flag: "🇷🇺" },
   { code: "SG", name: "Singapore", dial: "+65", flag: "🇸🇬" },
