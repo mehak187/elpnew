@@ -511,7 +511,7 @@ export default function DataTable({
                         className={cn(
                           // Top, not middle: where one heading wraps, the
                           // short ones beside it still start on its first line.
-                          "px-4 py-3 text-start align-top text-xs font-semibold text-table-head-ink",
+                          "px-4 py-3 text-start align-top text-[13px] font-semibold text-table-head-ink",
                           column.className
                         )}
                         style={{ width: column.width }}
@@ -584,6 +584,10 @@ export default function DataTable({
                           // 52px of row, striped on the evens and lit on
                           // hover; hover is written last so it wins.
                           "h-[52px] border-b border-container-border align-top last:border-0",
+                          // The first row starts a little further from the
+                          // headings than the rows below start from each
+                          // other, so it does not read as part of them.
+                          "[&:first-child>td]:pt-5",
                           "even:bg-table-zebra hover:bg-table-row-hover",
                           onRowClick && "cursor-pointer"
                         )}

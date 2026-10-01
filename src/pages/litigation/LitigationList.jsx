@@ -167,6 +167,7 @@ export default function LitigationList() {
             // A closed case is kept, under the ones still running.
             endedRow={(row) => isEndedStatus(row.status)}
             searchPlaceholder="Search cases..."
+            enableColumnSearch={false}
             currentPage={currentPage}
             totalPages={Math.ceil(visibleCases.length / pageSize)}
             pageSize={pageSize}

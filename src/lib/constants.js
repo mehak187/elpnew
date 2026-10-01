@@ -75,12 +75,24 @@ export const EMPLOYEE_CATEGORIES = ["Partner", "Employee"];
 export const JOB_LEVELS = ["Top Management", "Executive Management", "Staff"];
 
 /** The side of the firm's work somebody belongs to. */
-export const DEPARTMENTS = [
-  "Litigation",
-  "Execution",
-  "Administrative Affairs",
-  "Accounting",
-];
+export const DEPARTMENTS = ["Partner", "Legal Services", "Administration"];
+
+/**
+ * The job titles each department can hold.
+ *
+ * A title belongs to a department rather than to the firm at large - there is
+ * no such thing as an Accountant in Legal Services - so the list is kept here
+ * by department and the form offers only the part that applies. Choosing a
+ * department before a title is the order the work is actually decided in.
+ */
+export const JOB_TITLES = {
+  Partner: ["Founding Partner", "Partner", "Managing Partner"],
+  "Legal Services": ["Lawyer", "Legal Consultant", "Legal Associate"],
+  Administration: ["Administrator", "Accountant", "Administrative Assistant"],
+};
+
+/** Every title there is, for reading a record back whatever its department. */
+export const OCCUPATIONS = Object.values(JOB_TITLES).flat();
 
 /** What somebody actually does, which is not the same as their level. */
 /** How a person is engaged, rather than what they are engaged to do. */
@@ -90,16 +102,15 @@ export const EMPLOYMENT_TYPES = ["Full-Time", "Part-Time", "Temporary"];
 export const EMPLOYEE_CONTRACT_TYPES = ["Fixed-term", "Indefinite-term"];
 
 /** The courts a lawyer is admitted to plead before, lowest first. */
-export const PRACTICE_LEVELS = ["Trainee", "Primary", "Appeal", "Supreme"];
-
-export const OCCUPATIONS = [
-  "Legal Consultant",
-  "Lawyer",
-  "Administrator",
-  "Accountant",
-  "Junior Accountant",
-  "Other Business",
+export const PRACTICE_LEVELS = [
+  "Trainee Lawyer",
+  "Primary Lawyer",
+  "Appeal Lawyer",
+  "Supreme Court Lawyer",
+  "Non-Practicing Lawyers Register",
 ];
+
+
 
 export const EDUCATION_LEVELS = [
   "Secondary Education",

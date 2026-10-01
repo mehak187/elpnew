@@ -62,7 +62,7 @@ import {
   EMPLOYEE_CATEGORIES,
   JOB_LEVELS,
   DEPARTMENTS,
-  OCCUPATIONS,
+  JOB_TITLES,
   EMPLOYEE_STATUSES,
   LEAVING_REASONS,
   DEFAULT_DIAL_CODE,
@@ -469,11 +469,26 @@ function PhoneField({ id, label, placeholder, dialCode, onDialCode, value, onCha
  * `required` marks the cell for the save check, which reads an unchosen select
  * by the placeholder its trigger is still showing.
  */
-function ChoiceField({ id, label, placeholder, value, onChange, options, required }) {
+function ChoiceField({
+  id,
+  label,
+  placeholder,
+  value,
+  onChange,
+  options,
+  required,
+  // A field whose choices depend on another is shut until that one is
+  // answered: an empty list of options says nothing about why it is empty.
+  disabled,
+}) {
   return (
     <div className="form-field space-y-2" data-required={required || undefined}>
       <Label htmlFor={id}>{label}</Label>
-      <Select value={value} onValueChange={(next) => next && onChange(next)}>
+      <Select
+        value={value}
+        onValueChange={(next) => next && onChange(next)}
+        disabled={disabled}
+      >
         <SelectTrigger id={id}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
@@ -1907,7 +1922,7 @@ export default function EmployeeForm({ self }) {
                             <SelectValue placeholder="Select Profession / Occupation" />
                           </SelectTrigger>
                           <SelectContent>
-                            {OCCUPATIONS.map((option) => (
+                            {(JOB_TITLES[formData.department] || []).map((option) => (
                               <SelectItem key={option} value={option}>
                                 {option}
                               </SelectItem>
@@ -1995,12 +2010,24 @@ export default function EmployeeForm({ self }) {
                             options={initialBranches.map((branch) => branch.name)}
                             required
                           />
+                          {/* The department is chosen first and decides what
+                              titles there are to choose from. Changing it
+                              clears the title under it: a Partner who becomes
+                              an Administrator cannot stay a Managing Partner
+                              while nobody is looking. */}
                           <ChoiceField
                             id="department"
                             label="Department / Division"
                             placeholder="Select Department"
                             value={formData.department}
-                            onChange={(value) => set("department", value)}
+                            onChange={(value) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                department: value,
+                                occupation: "",
+                                practiceLevel: "",
+                              }))
+                            }
                             options={DEPARTMENTS}
                             required
                           />
@@ -2009,8 +2036,12 @@ export default function EmployeeForm({ self }) {
                               somebody who cannot hold one. */}
                           <ChoiceField
                             id="occupation"
-                            label="Occupation"
-                            placeholder="Select Occupation"
+                            label="Job Title"
+                            placeholder={
+                              formData.department
+                                ? "Select job title"
+                                : "Select a department first"
+                            }
                             value={formData.occupation}
                             onChange={(value) =>
                               setFormData((prev) => ({
@@ -2020,14 +2051,15 @@ export default function EmployeeForm({ self }) {
                                   value === "Lawyer" ? prev.practiceLevel : "",
                               }))
                             }
-                            options={OCCUPATIONS}
+                            options={JOB_TITLES[formData.department] || []}
+                            disabled={!formData.department}
                             required
                           />
                           {formData.occupation === "Lawyer" && (
                             <ChoiceField
                               id="practiceLevel"
-                              label="Practice Level"
-                              placeholder="Select Practice Level"
+                              label="Lawyer Grade"
+                              placeholder="Select lawyer grade"
                               value={formData.practiceLevel}
                               onChange={(value) => set("practiceLevel", value)}
                               options={PRACTICE_LEVELS}
