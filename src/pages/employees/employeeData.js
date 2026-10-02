@@ -10,6 +10,7 @@ import {
   OMANI_DOCUMENT_TYPES,
   NON_OMANI_DOCUMENT_TYPES,
   LAWYER_DOCUMENT_TYPE,
+  LAWYER_MEMBERSHIP_TYPE,
   COMMON_DOCUMENT_TYPES,
   CRITICAL_DOCUMENT_TYPES,
 } from "@/lib/constants";
@@ -58,14 +59,14 @@ export function nextEmployeeNo(records) {
  * often filed on the same day and the list is read newest first.
  */
 export const employeeDocuments = [
-  { id: 1, employeeId: 1, uploadedAt: "2026-08-26T10:30", type: "Resident Card", fileName: "Resident_Card_Mohammed.pdf", expiry: "2030-09-12", notes: "Clear copy of the resident card" },
+  { id: 1, employeeId: 1, uploadedAt: "2026-08-26T10:30", type: "Residence Card", fileName: "Resident_Card_Mohammed.pdf", expiry: "2030-09-12", notes: "Clear copy of the resident card" },
   { id: 2, employeeId: 1, uploadedAt: "2026-08-20T14:15", type: "Passport", fileName: "Passport_Mohammed.jpg", expiry: "2030-09-12", notes: "Valid until 12/09/2030" },
-  { id: 3, employeeId: 1, uploadedAt: "2026-08-15T09:45", type: "Lawyer Card (Bar Card)", fileName: "Bar_Card_Mohammed.pdf", expiry: "2027-03-31", notes: "Issued by Oman Bar Association" },
-  { id: 4, employeeId: 1, uploadedAt: "2026-08-10T11:20", type: "Academic Qualification", fileName: "Bachelor_Law.pdf", expiry: "", notes: "Bachelor of Law" },
+  { id: 3, employeeId: 1, uploadedAt: "2026-08-15T09:45", type: "Law Practice License", fileName: "Bar_Card_Mohammed.pdf", expiry: "2027-03-31", notes: "Issued by Oman Bar Association" },
+  { id: 4, employeeId: 1, uploadedAt: "2026-08-10T11:20", type: "University Degree", fileName: "Bachelor_Law.pdf", expiry: "", notes: "Bachelor of Law" },
   { id: 5, employeeId: 3, uploadedAt: "2026-08-05T13:05", type: "Experience Certificate", fileName: "Experience_Certificate.pdf", expiry: "", notes: "5 years of legal experience" },
-  { id: 6, employeeId: 3, uploadedAt: "2026-08-01T15:40", type: "Administrative & Penal Decisions", fileName: "Decision_2026_14.pdf", expiry: "", notes: "Decision No. 14/2026" },
-  { id: 7, employeeId: 7, uploadedAt: "2026-07-29T12:10", type: "Other Documents", fileName: "Training_Certificate.jpg", expiry: "2026-06-30", notes: "Legal training certificate" },
-  { id: 8, employeeId: 8, uploadedAt: "2026-07-25T16:25", type: "Other Documents", fileName: "Reference_Letter.pdf", expiry: "", notes: "Reference letter" },
+  { id: 6, employeeId: 3, uploadedAt: "2026-08-01T15:40", type: "Appointment Decision", fileName: "Decision_2026_14.pdf", expiry: "", notes: "Decision No. 14/2026" },
+  { id: 7, employeeId: 7, uploadedAt: "2026-07-29T12:10", type: "Other", fileName: "Training_Certificate.jpg", expiry: "2026-06-30", notes: "Legal training certificate" },
+  { id: 8, employeeId: 8, uploadedAt: "2026-07-25T16:25", type: "Other", fileName: "Reference_Letter.pdf", expiry: "", notes: "Reference letter" },
 ];
 
 /** The papers filed against one employee. */
@@ -87,7 +88,7 @@ export function documentTypesFor(employee) {
   const lawyer = /lawyer/i.test(String(employee?.occupation || ""));
   return [
     ...(omani ? OMANI_DOCUMENT_TYPES : NON_OMANI_DOCUMENT_TYPES),
-    ...(lawyer ? [LAWYER_DOCUMENT_TYPE] : []),
+    ...(lawyer ? [LAWYER_DOCUMENT_TYPE, LAWYER_MEMBERSHIP_TYPE] : []),
     ...COMMON_DOCUMENT_TYPES,
   ];
 }
@@ -109,15 +110,23 @@ const ONE_AT_A_TIME = [
 
 /** The heading each kind of paper is filed under. */
 const DOCUMENT_CATEGORY = {
-  "ID Card": "Identity & Residency",
-  "Resident Card": "Identity & Residency",
+  "National ID": "Identity & Residency",
+  "Residence Card": "Identity & Residency",
   Passport: "Identity & Residency",
   "Work Permit": "Identity & Residency",
-  [LAWYER_DOCUMENT_TYPE]: "Professional License",
-  "Academic Qualification": "Qualifications & Experience",
+  [LAWYER_DOCUMENT_TYPE]: "Professional Licenses",
+  [LAWYER_MEMBERSHIP_TYPE]: "Professional Licenses",
+  CV: "Qualifications & Experience",
+  "University Degree": "Qualifications & Experience",
   "Experience Certificate": "Qualifications & Experience",
-  "Administrative & Penal Decisions": "Administrative Decisions",
-  "Other Documents": "Other",
+  "Training Certificate": "Qualifications & Experience",
+  "Appointment Decision": "Administrative Decisions",
+  "Promotion Decision": "Administrative Decisions",
+  "Transfer Decision": "Administrative Decisions",
+  "Warning Decision": "Administrative Decisions",
+  "Termination Decision": "Administrative Decisions",
+  "Committee Formation Decision": "Administrative Decisions",
+  Other: "Other",
 };
 
 export const documentCategory = (type) => DOCUMENT_CATEGORY[type] || "Other";
@@ -129,8 +138,8 @@ export const documentCategory = (type) => DOCUMENT_CATEGORY[type] || "Other";
  * These are also the papers that expire; the rest are held as they are.
  */
 const RELATED_RECORD = {
-  "ID Card": { number: "civilId", expiry: "idExpiry" },
-  "Resident Card": { number: "civilId", expiry: "idExpiry" },
+  "National ID": { number: "civilId", expiry: "idExpiry" },
+  "Residence Card": { number: "civilId", expiry: "idExpiry" },
   Passport: { number: "passportNumber", expiry: "passportExpiry" },
   "Work Permit": { number: "workPermitNo", expiry: "workPermitExpiry" },
   // Asked for on Identity & Immigration; the Legal Practice section that

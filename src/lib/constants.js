@@ -299,25 +299,38 @@ export const COUNTRY_DIAL_CODES = [
  * lawyer has a bar card. The rest everybody has, so they are asked for
  * whoever the employee is.
  */
-export const OMANI_DOCUMENT_TYPES = ["ID Card"];
-export const NON_OMANI_DOCUMENT_TYPES = ["Resident Card", "Passport", "Work Permit"];
+export const OMANI_DOCUMENT_TYPES = ["National ID"];
+export const NON_OMANI_DOCUMENT_TYPES = ["Residence Card", "Passport", "Work Permit"];
 
 /**
  * The papers an employee cannot work without: when one lapses and is not
  * renewed within the grace period, their access to the system is held.
  */
 export const CRITICAL_DOCUMENT_TYPES = [
-  "Lawyer Card (Bar Card)",
-  "Resident Card",
+  "Law Practice License",
+  "Residence Card",
   "Work Permit",
 ];
-export const LAWYER_DOCUMENT_TYPE = "Lawyer Card (Bar Card)";
+export const LAWYER_DOCUMENT_TYPE = "Law Practice License";
+
+/** Held by a lawyer alongside the licence itself. */
+export const LAWYER_MEMBERSHIP_TYPE = "Professional Membership Card";
 
 export const COMMON_DOCUMENT_TYPES = [
-  "Academic Qualification",
+  // Qualifications & Experience
+  "CV",
+  "University Degree",
   "Experience Certificate",
-  "Administrative & Penal Decisions",
-  "Other Documents",
+  "Training Certificate",
+  // Administrative Decisions - one kind per decision, because a file that
+  // lumps a promotion in with a warning cannot be read at a glance.
+  "Appointment Decision",
+  "Promotion Decision",
+  "Transfer Decision",
+  "Warning Decision",
+  "Termination Decision",
+  "Committee Formation Decision",
+  "Other",
 ];
 
 /** Every type there is, for anything that has to list them all. */

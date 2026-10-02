@@ -1068,7 +1068,20 @@ export default function EmployeeForm({ self }) {
         {archivedRow ? "" : documentCategory(document.type)}
       </Td>
       <Td>
-        <span className={cn(archivedRow && "text-muted-foreground")}>{document.type}</span>
+        <span className="flex items-start gap-2">
+          <button
+            type="button"
+            onClick={() => openDocument(document)}
+            title={"View " + (document.fileName || document.type)}
+            className="shrink-0 rounded text-primary transition-colors hover:text-primary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Eye className="size-[18px]" aria-hidden="true" />
+            <span className="sr-only">View {document.fileName || document.type}</span>
+          </button>
+          <span className="min-w-0">
+            <span className={cn("font-medium", archivedRow ? "text-muted-foreground" : "text-primary")}>
+              {document.type}
+            </span>
         {version && (
           <span className="block text-xs text-muted-foreground">
             Version {version}
@@ -1090,36 +1103,32 @@ export default function EmployeeForm({ self }) {
             Version history ({older})
           </button>
         )}
+          </span>
+        </span>
       </Td>
       <Td className="whitespace-nowrap">{formatDate(document.uploadedAt)}</Td>
       <Td className="whitespace-nowrap">
         {document.expiry ? (
-          formatDate(document.expiry)
+          <>
+            {formatDate(document.expiry)}
+            <span
+              className={cn(
+                "mt-1 inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2.5 py-0.5 text-xs font-semibold",
+                DOCUMENT_STATUS_PILL[status]
+              )}
+            >
+              <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-current" />
+              {status}
+            </span>
+          </>
         ) : (
-          <span className="text-muted-foreground">-</span>
+          // A paper that does not run out has no standing to report: it is
+          // simply on file, which the row already says.
+          <span className="text-muted-foreground">&ndash;</span>
         )}
       </Td>
-      <Td className="text-center">
-        <button
-          type="button"
-          onClick={() => openDocument(document)}
-          title={"View " + (document.fileName || document.type)}
-          className="rounded p-1.5 text-primary transition-colors hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <Eye className="h-5 w-5" aria-hidden="true" />
-          <span className="sr-only">View {document.fileName || document.type}</span>
-        </button>
-      </Td>
-      <Td>
-        <span
-          className={cn(
-            "inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2.5 py-1 text-xs font-semibold",
-            DOCUMENT_STATUS_PILL[status]
-          )}
-        >
-          <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-current" />
-          {status}
-        </span>
+      <Td className="text-muted-foreground">
+        {document.notes || <span className="text-muted-foreground">&ndash;</span>}
       </Td>
     </Row>
   );
@@ -2565,7 +2574,7 @@ export default function EmployeeForm({ self }) {
                     it is worked out from the basic pay saved on Salary &
                     Banking, and payroll is where those figures come from. */}
                 {isAdding && step === "socialProtection" && (
-                  <SectionCard title="Social Protection" icon={ShieldCheck} footer={stepActions}>
+                  <SectionCard title="Social Protection Registration" icon={ShieldCheck} footer={stepActions}>
                     <div className="form-grid gap-y-6">
                       <div className="form-field space-y-2">
                         <Label htmlFor="spRegistrationNo">Registration No.</Label>
@@ -2816,11 +2825,10 @@ export default function EmployeeForm({ self }) {
                         <RecordTable minWidth={860}>
                           <HeadRow>
                             <Th width="20%">Document Category</Th>
-                            <Th width="20%">Document Type</Th>
-                            <Th width="15%">Upload Date</Th>
-                            <Th width="15%">Expiry Date</Th>
-                            <Th width="12%" className="text-center">Document</Th>
-                            <Th width="18%">Status</Th>
+                            <Th width="26%">Document Type</Th>
+                            <Th width="14%">Upload Date</Th>
+                            <Th width="18%">Expiry</Th>
+                            <Th width="22%">Notes</Th>
                           </HeadRow>
                           <tbody>
                             {/* One row for each paper held now - the current
