@@ -329,10 +329,31 @@ const PAY_FIELDS = [
 ];
 
 /** What comes off each month's pay. */
+/**
+ * What comes off the pay every month.
+ *
+ * Three of the four are counted off records the firm already holds - the
+ * loans, the advances, the disciplinary decisions - so they are shown rather
+ * than asked for. Typing over a figure that is worked out elsewhere only
+ * creates a second answer to the same question. The fourth is for whatever
+ * those three do not cover, and that one is typed.
+ */
 const DEDUCTION_FIELDS = [
-  { key: "loan", label: "Loan Installment" },
-  { key: "salaryAdvance", label: "Salary Advance Deduction" },
-  { key: "disciplinary", label: "Disciplinary Deduction" },
+  {
+    key: "loan",
+    label: "Loan Installment",
+    note: "Auto-calculated from active loan(s)",
+  },
+  {
+    key: "salaryAdvance",
+    label: "Salary Advance Deduction",
+    note: "Auto-calculated from active salary advance(s)",
+  },
+  {
+    key: "disciplinary",
+    label: "Disciplinary Deduction",
+    note: "Auto-calculated from active disciplinary record(s)",
+  },
   { key: "otherDeduction", label: "Other Deduction" },
 ];
 
@@ -514,7 +535,7 @@ function ChoiceField({
  * thousandth and "19" and "19.000" should not both be on one payslip.
  * `locked` shows a figure the page works out rather than asks for.
  */
-function MoneyField({ id, label, value, onChange, required, locked }) {
+function MoneyField({ id, label, value, onChange, required, locked, note }) {
   return (
     <div className="form-field space-y-2">
       <Label htmlFor={id}>{label}</Label>
@@ -550,6 +571,9 @@ function MoneyField({ id, label, value, onChange, required, locked }) {
         )}
         <Rial className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground" />
       </div>
+      {/* Where a figure is worked out rather than asked for, the box says so
+          under itself - a greyed field with no reason given reads as broken. */}
+      {note && <p className="text-xs text-muted-foreground">{note}</p>}
     </div>
   );
 }
@@ -823,6 +847,7 @@ const emptyFormData = {
   salaryEffectiveDate: "",
   // Where it is paid to.
   bankName: "",
+  accountHolder: "",
   accountNumber: "",
   iban: "",
   swiftCode: "",
@@ -2336,7 +2361,13 @@ export default function EmployeeForm({ self }) {
                             required={field.required}
                           />
                         ))}
-                        <MoneyField id="grossSalary" label="Gross Salary" value={gross} locked />
+                        <MoneyField
+                          id="grossSalary"
+                          label="Gross Salary"
+                          value={gross}
+                          locked
+                          note="Auto-calculated from salary components"
+                        />
                         <div className="form-field space-y-2">
                           <Label htmlFor="salaryEffectiveDate">Effective Date</Label>
                           <div className="flex items-center gap-2">
@@ -2364,7 +2395,13 @@ export default function EmployeeForm({ self }) {
                       )}
                     </SectionCard>
 
-                    <SectionCard title="Deductions">
+                    <SectionCard title="Recurring Deductions">
+                      <p className="mb-6 flex items-start gap-2 rounded-md bg-menu-hover p-3 text-sm text-primary">
+                        <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                        Recurring deductions are automatically calculated from
+                        active loans, salary advances and disciplinary records.
+                        Manual entry is allowed only for other deductions.
+                      </p>
                       <div className="form-grid gap-y-6">
                         {DEDUCTION_FIELDS.map((field) => (
                           <MoneyField
@@ -2373,6 +2410,8 @@ export default function EmployeeForm({ self }) {
                             label={field.label}
                             value={formData[field.key]}
                             onChange={onChange}
+                            note={field.note}
+                            locked={Boolean(field.note)}
                           />
                         ))}
                       </div>
@@ -2403,6 +2442,18 @@ export default function EmployeeForm({ self }) {
                           />
                           <RuleNote name="accountNumber" value={formData.accountNumber} />
                         </div>
+                        <div className="form-field space-y-2">
+                          <Label htmlFor="accountHolder">Account Holder Name</Label>
+                          <Input
+                            id="accountHolder"
+                            name="accountHolder"
+                            value={formData.accountHolder}
+                            onChange={onChange}
+                            placeholder="Enter account holder name"
+                            required
+                          />
+                        </div>
+
                         <div className="form-field space-y-2">
                           <Label htmlFor="iban">IBAN</Label>
                           <Input
@@ -2444,7 +2495,7 @@ export default function EmployeeForm({ self }) {
                         </h2>
                         <div className="mt-4 grid items-center gap-4 sm:grid-cols-3 lg:grid-cols-[1fr_1fr_1fr_auto]">
                           <PayTile label="Gross Salary" value={gross} />
-                          <PayTile label="Total Deductions" value={held} />
+                          <PayTile label="Total Recurring Deductions" value={held} />
                           <PayTile
                             label="Estimated Net Salary"
                             value={net}
