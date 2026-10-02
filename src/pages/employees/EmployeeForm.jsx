@@ -1572,11 +1572,19 @@ export default function EmployeeForm({ self }) {
     setProfileTab(key);
   };
 
-  /** Opens a request on the page it is kept on, at its own tab. */
+  /**
+   * Opens a request on the page it is kept on, at its own tab.
+   *
+   * Its kind is looked up by its key rather than taken from what was clicked:
+   * the strip hands over the request alone, and a kind left undefined would
+   * leave the cards with nothing to draw.
+   */
   const chooseRequest = (item) => {
-    setRequestCategory(item.category);
-    setRequestsTab(item.key);
-    if (item.section === "benefits") setBenefitsTab(item.tab);
+    const found = REQUEST_ITEMS.find((one) => one.key === item.key);
+    if (!found) return;
+    setRequestCategory(found.category);
+    setRequestsTab(found.key);
+    if (found.section === "benefits") setBenefitsTab(found.tab);
   };
 
   /** Shows one kind's cards, with nothing opened under them yet. */
