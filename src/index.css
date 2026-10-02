@@ -177,6 +177,12 @@
   --color-table-head-ink: var(--table-head-ink);
   --color-table-zebra: var(--table-zebra);
   --color-table-row-hover: var(--table-row-hover);
+  --color-table-row-selected: var(--table-row-selected);
+  --color-doc-present: var(--doc-present);
+  --color-doc-absent: var(--doc-absent);
+  --color-status-active: var(--status-active);
+  --color-status-pending: var(--status-pending);
+  --color-status-inactive: var(--status-inactive);
   --color-record-link: var(--record-link);
   --color-menu-selected: var(--menu-selected);
   --color-menu-selected-ink: var(--menu-selected-ink);
@@ -293,12 +299,20 @@
   /* The header is told apart by a tint, not by a colour block; the same tint
      marks the row under the pointer, because both mean "this one" and the
      system should not have two ways of saying it. */
-  --table-head: #e2e8f0;
+  --table-head: #f1f5f9;
   --table-head-ink: #35495a;
   /* Striped row, and the row under the cursor: one step and two steps
      down from white, with the heading a step below them again. */
-  --table-zebra: #f6f9fc;
-  --table-row-hover: #edf2f8;
+  --table-zebra: #f7f9fb;
+  --table-row-hover: #edf5fc;
+  --table-row-selected: #dceaf7;
+  /* A paper on file, and the dash where there is none. */
+  --doc-present: #64748b;
+  --doc-absent: #cbd5e1;
+  /* How a person stands, in the three colours the standard names. */
+  --status-active: #10b981;
+  --status-pending: #f59e0b;
+  --status-inactive: #ef4444;
   /* The reference in the first column is the way into the record. */
   --record-link: #1e3a8a;
 
@@ -418,6 +432,9 @@
   --table-head-ink: oklch(0.75 0 0);
   --table-zebra: oklch(0.21 0 0);
   --table-row-hover: oklch(0.27 0.01 260);
+  --table-row-selected: oklch(0.32 0.04 250);
+  --doc-present: oklch(0.70 0 0);
+  --doc-absent: oklch(0.42 0 0);
   --record-link: oklch(0.72 0.11 258);
   --menu-selected: oklch(0.28 0.03 260);
   --menu-selected-ink: oklch(0.93 0.01 258);

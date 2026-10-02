@@ -78,8 +78,8 @@ const Fact = ({ label, children }) => (
  * record carries about itself.
  */
 const STATUS_TONE = {
-  Active: "bg-green-500",
-  Inactive: "bg-muted-foreground",
+  Active: "bg-status-active",
+  Inactive: "bg-status-inactive",
 };
 
 /** A date as the firm writes them. */
@@ -362,7 +362,7 @@ export default function EmployeesList() {
       key: "access",
       header: "Access Level",
       width: "9%",
-      render: () => <span className="text-muted-foreground">&ndash;</span>,
+      render: () => <span className="text-doc-absent">&ndash;</span>,
     },
     {
       key: "documents",
@@ -381,7 +381,7 @@ export default function EmployeesList() {
             <Eye
               strokeWidth={1.5}
               aria-hidden="true"
-              className="mt-0.5 size-[18px] shrink-0 text-primary"
+              className="mt-0.5 size-[18px] shrink-0 text-doc-present"
             />
             <div className="min-w-0 space-y-1">
               <p className="truncate font-medium text-primary">

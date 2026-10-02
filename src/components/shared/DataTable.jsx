@@ -583,7 +583,7 @@ export default function DataTable({
                         className={cn(
                           // 52px of row, striped on the evens and lit on
                           // hover; hover is written last so it wins.
-                          "h-[52px] border-b border-container-border align-top last:border-0",
+                          "h-[56px] border-b border-container-border align-top last:border-0",
                           // The first row starts a little further from the
                           // headings than the rows below start from each
                           // other, so it does not read as part of them.
@@ -597,7 +597,7 @@ export default function DataTable({
                           <TableCell
                             key={column.key}
                             className={cn(
-                              "px-4 py-3 align-top text-start text-sm",
+                              "px-4 py-4 align-top text-start text-sm",
                               column.cellClassName
                             )}
                           >
