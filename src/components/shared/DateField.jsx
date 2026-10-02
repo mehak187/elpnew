@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { CalendarDays } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -13,18 +13,22 @@ import { cn } from "@/lib/utils";
  * in Latin digits, in both languages; `lang` and `dir` on the input are what
  * hold the digits and the order still when the page turns to Arabic.
  *
+ * What it *stores* is unchanged: an ISO date, the same YYYY-MM-DD a native
+ * date input gives, so this drops in beside one without touching anything
+ * that compares, sorts or files by date. Display and storage are different
+ * questions and only the display was ever wrong.
+ *
  * The calendar sits inside the field at its trailing edge and opens the
  * browser's own picker, so a date can still be chosen rather than typed.
  */
 
-/** DD/MM/YYYY out of what the picker hands back (YYYY-MM-DD). */
-const fromISO = (iso) => {
-  if (!iso) return "";
-  const [y, m, d] = iso.split("-");
-  return d && m && y ? d + "/" + m + "/" + y : "";
+/** DD/MM/YYYY for reading, out of the YYYY-MM-DD that is stored. */
+const toTyped = (iso) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+  return m ? m[3] + "/" + m[2] + "/" + m[1] : "";
 };
 
-/** YYYY-MM-DD for the picker, out of a complete DD/MM/YYYY. */
+/** YYYY-MM-DD to store, out of a complete DD/MM/YYYY. */
 const toISO = (text) => {
   const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text || "");
   return m ? m[3] + "-" + m[2] + "-" + m[1] : "";
@@ -37,13 +41,31 @@ const format = (raw) => {
   return parts.filter(Boolean).join("/");
 };
 
-export default function DateField({ id, value = "", onChange, className, ...props }) {
+export default function DateField({
+  id,
+  name,
+  value = "",
+  onChange,
+  className,
+  ...props
+}) {
   const pickerRef = useRef(null);
+
+  // What is being typed, while it is still too short to be a date. Held apart
+  // from the stored value so a half-typed "05/1" is not thrown away on every
+  // keystroke for failing to parse.
+  const [typing, setTyping] = useState(null);
+  const shown = typing ?? toTyped(value);
+
+  /** Reported the way a native date input reports: an event with a value. */
+  const report = (iso) =>
+    onChange?.({ target: { name, id, value: iso, type: "date" } });
 
   return (
     <div className={cn("relative", className)}>
       <Input
         id={id}
+        name={name}
         // Latin digits and day-month-year order, whichever way the page runs.
         lang="en"
         dir="ltr"
@@ -51,8 +73,14 @@ export default function DateField({ id, value = "", onChange, className, ...prop
         autoComplete="off"
         placeholder="DD/MM/YYYY"
         maxLength={10}
-        value={value}
-        onChange={(e) => onChange?.(format(e.target.value))}
+        value={shown}
+        onChange={(e) => {
+          const next = format(e.target.value);
+          setTyping(next);
+          const iso = toISO(next);
+          if (iso || next === "") report(iso);
+        }}
+        onBlur={() => setTyping(null)}
         className="pe-10"
         {...props}
       />
@@ -73,8 +101,11 @@ export default function DateField({ id, value = "", onChange, className, ...prop
         tabIndex={-1}
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 h-0 w-0 opacity-0"
-        value={toISO(value)}
-        onChange={(e) => onChange?.(fromISO(e.target.value))}
+        value={value || ""}
+        onChange={(e) => {
+          setTyping(null);
+          report(e.target.value);
+        }}
       />
     </div>
   );

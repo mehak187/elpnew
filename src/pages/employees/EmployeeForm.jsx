@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import RecordSidebar from "@/components/shared/RecordSidebar";
+import DateField from "@/components/shared/DateField";
 import PageHeader from "@/components/shared/PageHeader";
 import PhoneInput from "@/components/shared/PhoneInput";
 import { Input } from "@/components/ui/input";
@@ -649,10 +650,9 @@ function PaperFields({ label, numberName, expiryName, values, onChange }) {
       </div>
       <div className="form-field space-y-2">
         <Label htmlFor={expiryName}>{label} Expiry Date</Label>
-        <Input
+        <DateField
           id={expiryName}
           name={expiryName}
-          type="date"
           value={values[expiryName]}
           onChange={onChange}
           required
@@ -1481,10 +1481,9 @@ export default function EmployeeForm({ self }) {
                         Date of Birth
                         <Required show={asksFor} />
                       </Label>
-                      <Input
+                      <DateField
                         id="dateOfBirth"
                         name="dateOfBirth"
-                        type="date"
                         value={formData.dateOfBirth}
                         onChange={onChange}
                         required
@@ -1563,10 +1562,9 @@ export default function EmployeeForm({ self }) {
                         ID Expiry Date
                         <Required show={asksFor} />
                       </Label>
-                      <Input
+                      <DateField
                         id="idExpiry"
                         name="idExpiry"
-                        type="date"
                         value={formData.idExpiry}
                         onChange={onChange}
                       />
@@ -1598,10 +1596,9 @@ export default function EmployeeForm({ self }) {
                             Passport Expiry Date
                             <Required show={asksFor} />
                           </Label>
-                          <Input
+                          <DateField
                             id="passportExpiry"
                             name="passportExpiry"
-                            type="date"
                             value={formData.passportExpiry}
                             onChange={onChange}
                             required={isAdding}
@@ -1798,10 +1795,9 @@ export default function EmployeeForm({ self }) {
                           Date of Joining
                           <Required show={asksFor} />
                         </Label>
-                        <Input
+                        <DateField
                           id="dateOfJoining"
                           name="dateOfJoining"
-                          type="date"
                           value={formData.dateOfJoining}
                           onChange={onChange}
                           required
@@ -1838,10 +1834,9 @@ export default function EmployeeForm({ self }) {
                         <Label htmlFor="employmentEndDate">
                           Employment End Date
                         </Label>
-                        <Input
+                        <DateField
                           id="employmentEndDate"
                           name="employmentEndDate"
-                          type="date"
                           value={formData.employmentEndDate}
                           onChange={onChange}
                         />
@@ -1891,17 +1886,28 @@ export default function EmployeeForm({ self }) {
                         </Select>
                       </div>
 
+                      {/* The department is chosen first and decides which
+                          titles there are. Changing it clears the title and
+                          any lawyer grade under it, so a record cannot keep a
+                          title its department does not have. */}
                       <div className="form-field space-y-2" data-required={isAdding || undefined}>
                         <Label htmlFor="department">
-                          Department / Division
+                          Department
                           <Required show={asksFor} />
                         </Label>
                         <Select
                           value={formData.department}
-                          onValueChange={(value) => set("department", value)}
+                          onValueChange={(value) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              department: value,
+                              occupation: "",
+                              practiceLevel: "",
+                            }))
+                          }
                         >
                           <SelectTrigger id="department">
-                            <SelectValue placeholder="Select Department / Division" />
+                            <SelectValue placeholder="Select department" />
                           </SelectTrigger>
                           <SelectContent>
                             {DEPARTMENTS.map((option) => (
@@ -1915,15 +1921,29 @@ export default function EmployeeForm({ self }) {
 
                       <div className="form-field space-y-2" data-required={isAdding || undefined}>
                         <Label htmlFor="occupation">
-                          Profession / Occupation
+                          Job Title
                           <Required show={asksFor} />
                         </Label>
                         <Select
                           value={formData.occupation}
-                          onValueChange={(value) => set("occupation", value)}
+                          disabled={!formData.department}
+                          onValueChange={(value) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              occupation: value,
+                              practiceLevel:
+                                value === "Lawyer" ? prev.practiceLevel : "",
+                            }))
+                          }
                         >
                           <SelectTrigger id="occupation">
-                            <SelectValue placeholder="Select Profession / Occupation" />
+                            <SelectValue
+                              placeholder={
+                                formData.department
+                                  ? "Select job title"
+                                  : "Select a department first"
+                              }
+                            />
                           </SelectTrigger>
                           <SelectContent>
                             {(JOB_TITLES[formData.department] || []).map((option) => (
@@ -1934,6 +1954,29 @@ export default function EmployeeForm({ self }) {
                           </SelectContent>
                         </Select>
                       </div>
+
+                      {/* Only a lawyer holds a grade, so only a lawyer is
+                          asked for one. */}
+                      {formData.occupation === "Lawyer" && (
+                        <div className="form-field space-y-2">
+                          <Label htmlFor="practiceLevelRecord">Lawyer Grade</Label>
+                          <Select
+                            value={formData.practiceLevel}
+                            onValueChange={(value) => set("practiceLevel", value)}
+                          >
+                            <SelectTrigger id="practiceLevelRecord">
+                              <SelectValue placeholder="Select lawyer grade" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {PRACTICE_LEVELS.map((option) => (
+                                <SelectItem key={option} value={option}>
+                                  {option}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                     </div>
 
                     {/* Asked for only once the status says somebody has left */}
@@ -1967,10 +2010,9 @@ export default function EmployeeForm({ self }) {
                             <Label htmlFor="lastWorkingDate">
                               Last Working Date
                             </Label>
-                            <Input
+                            <DateField
                               id="lastWorkingDate"
                               name="lastWorkingDate"
-                              type="date"
                               value={formData.lastWorkingDate}
                               onChange={onChange}
                             />
@@ -2062,8 +2104,8 @@ export default function EmployeeForm({ self }) {
                               while nobody is looking. */}
                           <ChoiceField
                             id="department"
-                            label="Department / Division"
-                            placeholder="Select Department"
+                            label="Department"
+                            placeholder="Select department"
                             value={formData.department}
                             onChange={(value) =>
                               setFormData((prev) => ({
@@ -2160,10 +2202,9 @@ export default function EmployeeForm({ self }) {
                           />
                           <div className="form-field space-y-2">
                             <Label htmlFor="dateOfJoining">Date of Joining</Label>
-                            <Input
+                            <DateField
                               id="dateOfJoining"
                               name="dateOfJoining"
-                              type="date"
                               value={formData.dateOfJoining}
                               onChange={onChange}
                               required
@@ -2171,10 +2212,9 @@ export default function EmployeeForm({ self }) {
                           </div>
                           <div className="form-field space-y-2">
                             <Label htmlFor="contractStartDate">Contract Start Date</Label>
-                            <Input
+                            <DateField
                               id="contractStartDate"
                               name="contractStartDate"
-                              type="date"
                               value={formData.contractStartDate}
                               onChange={onChange}
                               required
@@ -2184,10 +2224,9 @@ export default function EmployeeForm({ self }) {
                               has to be given; an open-ended one has none. */}
                           <div className="form-field space-y-2">
                             <Label htmlFor="employmentEndDate">Contract End Date</Label>
-                            <Input
+                            <DateField
                               id="employmentEndDate"
                               name="employmentEndDate"
-                              type="date"
                               value={formData.employmentEndDate}
                               onChange={onChange}
                               required={formData.contractType === "Fixed-term"}
@@ -2301,10 +2340,9 @@ export default function EmployeeForm({ self }) {
                         <div className="form-field space-y-2">
                           <Label htmlFor="salaryEffectiveDate">Effective Date</Label>
                           <div className="flex items-center gap-2">
-                            <Input
+                            <DateField
                               id="salaryEffectiveDate"
                               name="salaryEffectiveDate"
-                              type="date"
                               value={formData.salaryEffectiveDate}
                               onChange={onChange}
                               required
@@ -2493,10 +2531,9 @@ export default function EmployeeForm({ self }) {
                       </div>
                       <div className="form-field space-y-2">
                         <Label htmlFor="spRegistrationDate">Registration Date</Label>
-                        <Input
+                        <DateField
                           id="spRegistrationDate"
                           name="spRegistrationDate"
-                          type="date"
                           value={formData.spRegistrationDate}
                           onChange={onChange}
                           required
@@ -2685,9 +2722,8 @@ export default function EmployeeForm({ self }) {
                             {docFile && documentExpires(docDraft.type) && (
                               <div className="form-field space-y-2">
                                 <Label htmlFor="docExpiry">Expiry Date</Label>
-                                <Input
+                                <DateField
                                   id="docExpiry"
-                                  type="date"
                                   value={docDraft.expiry}
                                   onChange={(e) =>
                                     setDocDraft((prev) => ({ ...prev, expiry: e.target.value }))
