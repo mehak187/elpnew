@@ -56,7 +56,24 @@ import {
   HandCoins,
   FileUser,
   FilePenLine,
+  Banknote,
+  Coins,
+  Gift,
+  Percent,
+  Clock,
+  CalendarDays,
+  Stethoscope,
+  Car,
+  Plane,
+  Ticket,
+  FileClock,
+  Award,
+  Lightbulb,
+  Star,
+  MessageSquareWarning,
+  MessageSquareX,
 } from "lucide-react";
+import { requestCountFor } from "./requestCounts";
 import {
   Dialog,
   DialogContent,
@@ -323,9 +340,9 @@ const REQUEST_CATEGORIES = [
     label: "Financial Financing",
     icon: Wallet,
     items: [
-      { key: "salaryAdvance", label: "Salary Advance", section: "benefits", tab: "salaries" },
-      { key: "loan", label: "Loan", section: "benefits", tab: "loans" },
-      { key: "assistance", label: "Assistance", section: "benefits", tab: "assistance" },
+      { key: "salaryAdvance", label: "Salary Advance", icon: Banknote, note: "Request an advance on your salary.", section: "benefits", tab: "salaries" },
+      { key: "loan", label: "Loan", icon: Coins, note: "Request a loan for approved purposes.", section: "benefits", tab: "loans" },
+      { key: "assistance", label: "Assistance", icon: HandCoins, note: "Request financial assistance for qualifying cases.", section: "benefits", tab: "assistance" },
     ],
   },
   {
@@ -333,10 +350,10 @@ const REQUEST_CATEGORIES = [
     label: "Financial Entitlements",
     icon: ChartNoAxesColumnIncreasing,
     items: [
-      { key: "bonus", label: "Bonus", section: "benefits", tab: "bonus" },
-      { key: "commission", label: "Commission", section: "benefits", tab: "commission" },
-      { key: "overtime", label: "Overtime", section: "entitlements", tab: "overtime" },
-      { key: "leavePay", label: "Leave", section: "entitlements", tab: "leaveEncashment" },
+      { key: "bonus", label: "Bonus", icon: Gift, note: "Request a bonus based on performance.", section: "benefits", tab: "bonus" },
+      { key: "commission", label: "Commission", icon: Coins, note: "Request commission entitlements.", section: "benefits", tab: "commission" },
+      { key: "overtime", label: "Overtime", icon: Clock, note: "Request overtime entitlements.", section: "entitlements", tab: "overtime" },
+      { key: "leavePay", label: "Leave", icon: CalendarDays, note: "Request leave allowance entitlements.", section: "entitlements", tab: "leaveEncashment" },
     ],
   },
   {
@@ -344,10 +361,10 @@ const REQUEST_CATEGORIES = [
     label: "Allowances",
     icon: HandCoins,
     items: [
-      { key: "medical", label: "Medical", section: "entitlements", tab: "medical" },
-      { key: "transport", label: "Transportation", section: "entitlements", tab: "transport" },
-      { key: "travel", label: "Travel", section: "entitlements", tab: "travel" },
-      { key: "airTicket", label: "Air Ticket", section: "entitlements", tab: "airTicket" },
+      { key: "medical", label: "Medical", icon: Stethoscope, note: "Claim medical expenses.", section: "entitlements", tab: "medical" },
+      { key: "transport", label: "Transportation", icon: Car, note: "Claim transport costs.", section: "entitlements", tab: "transport" },
+      { key: "travel", label: "Travel", icon: Plane, note: "Claim travel expenses.", section: "entitlements", tab: "travel" },
+      { key: "airTicket", label: "Air Ticket", icon: Ticket, note: "Claim an air ticket allowance.", section: "entitlements", tab: "airTicket" },
     ],
   },
   {
@@ -355,22 +372,43 @@ const REQUEST_CATEGORIES = [
     label: "End-of-Service Entitlements",
     icon: FileUser,
     items: [
-      { key: "notice", label: "Notice Pay", section: "entitlements", tab: "notice" },
-      { key: "gratuity", label: "End-of-Service Gratuity", section: "entitlements", tab: "endOfService" },
+      { key: "notice", label: "Notice Pay", icon: FileClock, note: "Pay in lieu of the notice period.", section: "entitlements", tab: "notice" },
+      { key: "gratuity", label: "End-of-Service Gratuity", icon: Award, note: "The benefit due on leaving the firm.", section: "entitlements", tab: "endOfService" },
     ],
   },
   {
+    // None of these has a page of its own yet; Leave and General Requests
+    // are still reached from the sidebar.
     key: "administrative",
     label: "Administrative",
     icon: FilePenLine,
     items: [
-      { key: "leave", label: "Leave", section: "leaves" },
-      { key: "general", label: "General", section: "generalRequest" },
-      { key: "grievance", label: "Grievance" },
-      { key: "complaint", label: "Complaint" },
+      { key: "suggestion", label: "Suggestion", icon: Lightbulb, note: "Share a suggestion with the administration." },
+      { key: "special", label: "Special", icon: Star, note: "Make a special request." },
+      { key: "grievance", label: "Grievance", icon: MessageSquareWarning, note: "Raise a grievance." },
+      { key: "complaint", label: "Complaint", icon: MessageSquareX, note: "File a complaint." },
     ],
   },
 ];
+
+/**
+ * The tint of each request's card, in turn along the row: violet, green,
+ * orange, then rose for a fourth. Written out whole so the stylesheet keeps
+ * every class.
+ */
+const REQUEST_CARD_TONES = [
+  { card: "border-violet-200 bg-violet-50", mark: "bg-violet-100 text-violet-700", ink: "text-violet-800" },
+  { card: "border-emerald-200 bg-emerald-50", mark: "bg-emerald-100 text-emerald-700", ink: "text-emerald-800" },
+  { card: "border-orange-200 bg-orange-50", mark: "bg-orange-100 text-orange-600", ink: "text-orange-700" },
+  { card: "border-rose-200 bg-rose-50", mark: "bg-rose-100 text-rose-600", ink: "text-rose-700" },
+];
+
+/** One row for a kind's cards, however many it has: two, three or four across. */
+const REQUEST_CARD_COLUMNS = {
+  2: "md:grid-cols-2",
+  3: "md:grid-cols-2 xl:grid-cols-3",
+  4: "md:grid-cols-2 xl:grid-cols-4",
+};
 
 const REQUEST_ITEMS = REQUEST_CATEGORIES.flatMap((category) =>
   category.items.map((item) => ({ ...item, category: category.key }))
@@ -1075,8 +1113,10 @@ export default function EmployeeForm({ self }) {
   const [activeSection, setActiveSection] = useState(() => opensOn(location.state));
   // Which tab of Employee Information, and of Requests, is open.
   const [profileTab, setProfileTab] = useState(() => location.state?.tab || "personal");
-  // The request chosen on the Requests page.
-  const [requestsTab, setRequestsTab] = useState(REQUEST_ITEMS[0].key);
+  // On the Requests page: the kind whose cards are showing, and the request
+  // opened below them, if one has been.
+  const [requestCategory, setRequestCategory] = useState(REQUEST_CATEGORIES[0].key);
+  const [requestsTab, setRequestsTab] = useState(null);
   // A correction being written on the open tab, and the record as it stood
   // when it began - put back whatever the correction's outcome.
   const [correcting, setCorrecting] = useState(false);
@@ -1341,8 +1381,8 @@ export default function EmployeeForm({ self }) {
   const onStep = (key) => !isTabbed || tab === key;
   // The request chosen on Requests, and the section on screen: the sidebar's
   // own, or the one that request is kept on.
-  const requestItem = REQUEST_ITEMS.find((item) => item.key === requestsTab) || REQUEST_ITEMS[0];
-  const shownSection = isRequests ? requestItem.section : activeSection;
+  const requestItem = REQUEST_ITEMS.find((item) => item.key === requestsTab) || null;
+  const shownSection = isRequests ? requestItem?.section : activeSection;
   // On Employee Information the fields are only read, until a correction is begun.
   const profileLocked = isProfile && !correcting;
   // Which papers apply: while adding, from what was saved on the steps before;
@@ -1521,8 +1561,15 @@ export default function EmployeeForm({ self }) {
 
   /** Opens a request on the page it is kept on, at its own tab. */
   const chooseRequest = (item) => {
+    setRequestCategory(item.category);
     setRequestsTab(item.key);
     if (item.section === "benefits") setBenefitsTab(item.tab);
+  };
+
+  /** Shows one kind's cards, with nothing opened under them yet. */
+  const openRequestCategory = (key) => {
+    setRequestCategory(key);
+    setRequestsTab(null);
   };
 
   /** Moving to another side of the file leaves a correction that was not sent. */
@@ -1530,7 +1577,7 @@ export default function EmployeeForm({ self }) {
     if (correcting) cancelCorrection();
     setCorrectionSent(false);
     // Requests opens on the request last chosen there, at its own tab.
-    if (key === "requests") chooseRequest(requestItem);
+    if (key === "requests" && requestItem) chooseRequest(requestItem);
     setActiveSection(key);
   };
 
@@ -1727,6 +1774,12 @@ export default function EmployeeForm({ self }) {
           {/* Requests heads its own page: the way back to the employee's
               information, then its mark and its name. */}
           {isRequests && (
+            <div className="space-y-3">
+            <nav aria-label="Breadcrumb" className="text-sm">
+              <span className="text-primary/60">Administration</span>
+              <span aria-hidden="true" className="px-2 text-primary/40">/</span>
+              <span className="font-semibold text-primary" aria-current="page">Requests</span>
+            </nav>
             <div className="flex items-center gap-4">
               <button
                 type="button"
@@ -1740,6 +1793,7 @@ export default function EmployeeForm({ self }) {
               <span aria-hidden="true" className="h-9 w-px bg-container-border" />
               <LayoutGrid strokeWidth={1.5} aria-hidden="true" className="size-8 shrink-0 text-primary" />
               <h1 className="text-2xl font-bold text-primary">Requests</h1>
+            </div>
             </div>
           )}
 
@@ -1782,7 +1836,7 @@ export default function EmployeeForm({ self }) {
             >
               {REQUEST_CATEGORIES.map((category, index) => {
                 const Icon = category.icon;
-                const lit = requestItem.category === category.key;
+                const lit = requestCategory === category.key;
                 return (
                   <div key={category.key} className="flex shrink-0 items-stretch">
                     {index > 0 && (
@@ -1796,7 +1850,7 @@ export default function EmployeeForm({ self }) {
                     >
                       <button
                         type="button"
-                        onClick={() => chooseRequest(category.items[0])}
+                        onClick={() => openRequestCategory(category.key)}
                         className="flex flex-col items-center gap-2 rounded-md text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         <Icon strokeWidth={1.25} aria-hidden="true" className="size-12" />
@@ -1830,6 +1884,61 @@ export default function EmployeeForm({ self }) {
             </nav>
           )}
 
+          {/* The chosen kind's requests as cards: what each is, how many this
+              employee has made, and how many are still waiting on a decision.
+              A card opens its request below. */}
+          {isRequests && (() => {
+            const category = REQUEST_CATEGORIES.find((c) => c.key === requestCategory);
+            return (
+              <section className="space-y-4">
+                <h2 className="text-xl font-bold text-primary">{category.label}</h2>
+                <div className={cn("grid gap-4", REQUEST_CARD_COLUMNS[category.items.length])}>
+                  {category.items.map((item, index) => {
+                    const tone = REQUEST_CARD_TONES[index % REQUEST_CARD_TONES.length];
+                    const { total, pending } = requestCountFor(item.key, record.name);
+                    const Icon = item.icon;
+                    const opened = item.key === requestsTab;
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => chooseRequest({ ...item, category: category.key })}
+                        aria-pressed={opened}
+                        className={cn(
+                          "flex items-center gap-4 rounded-xl border p-4 text-start transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          tone.card,
+                          opened && "ring-2 ring-primary"
+                        )}
+                      >
+                        <span className={cn("flex size-12 shrink-0 items-center justify-center rounded-lg", tone.mark)}>
+                          <Icon strokeWidth={1.5} aria-hidden="true" className="size-7" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className={cn("block text-lg font-bold", tone.ink)}>{item.label}</span>
+                          <span className="block text-sm text-primary/75">{item.note}</span>
+                        </span>
+                        <span className="shrink-0 border-s border-black/10 ps-4 text-center">
+                          <span className={cn("block text-2xl font-bold", tone.ink)}>{total}</span>
+                          <span className="block text-xs text-primary/75">Total Requests</span>
+                        </span>
+                        {/* Only said when something is still waiting. */}
+                        {pending > 0 && (
+                          <span className="shrink-0 border-s border-black/10 ps-4 text-center">
+                            <span className="flex items-center justify-center gap-1 text-2xl font-bold text-amber-600">
+                              <Clock aria-hidden="true" className="size-5" />
+                              {pending}
+                            </span>
+                            <span className="block text-xs text-primary/75">Remaining</span>
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })()}
+
           {isAdding && (
             <div className="space-y-2">
               <StepTabs
@@ -1851,7 +1960,13 @@ export default function EmployeeForm({ self }) {
           {/* On the merged page the three boxes are the frame, so the
               page's own card steps out of the way rather than drawing a
               border around three borders. */}
-          <Card className={cn((isInfo || isDocuments) && "border-0 bg-transparent shadow-none")}>
+          {/* On Requests, nothing is drawn below the cards until one is opened. */}
+          <Card
+            className={cn(
+              (isInfo || isDocuments) && "border-0 bg-transparent shadow-none",
+              isRequests && !requestItem && "hidden"
+            )}
+          >
             <CardContent
               className={cn(
                 "p-4 sm:p-6",
@@ -3399,7 +3514,7 @@ export default function EmployeeForm({ self }) {
 
                 {/* A request with no page of its own yet says so, rather
                     than having one made up for it. */}
-                {isRequests && !requestItem.section && (
+                {isRequests && requestItem && !requestItem.section && (
                   <EmptyState>{requestItem.label} requests are not set up yet.</EmptyState>
                 )}
 
