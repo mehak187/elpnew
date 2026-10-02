@@ -88,7 +88,6 @@ export function documentTypesFor(employee) {
   const lawyer = /lawyer/i.test(String(employee?.occupation || ""));
   return [
     ...(omani ? OMANI_DOCUMENT_TYPES : NON_OMANI_DOCUMENT_TYPES),
-    "Other Identity Document",
     ...(lawyer ? [LAWYER_DOCUMENT_TYPE, LAWYER_MEMBERSHIP_TYPE] : []),
     ...COMMON_DOCUMENT_TYPES,
   ];
