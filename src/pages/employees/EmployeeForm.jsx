@@ -11,6 +11,7 @@ import {
 import PageHeader from "@/components/shared/PageHeader";
 import PhoneInput from "@/components/shared/PhoneInput";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -115,6 +116,7 @@ import {
   documentExpires,
   hasRelatedRecord,
   relatedExpiry,
+  relatedNumber,
 } from "./employeeData";
 import { checkRequired } from "@/components/shared/formFields";
 
@@ -735,10 +737,10 @@ function IconField({ icon, id, label, ...props }) {
 
 
 /** How much of a note the field will take, shown as a count while typing. */
-const NOTES_LIMIT = 300;
+const NOTES_LIMIT = 500;
 
 /** A blank paper: what is asked for before one is filed. */
-const emptyDocument = { category: "", type: "", expiry: "", notes: "" };
+const emptyDocument = { category: "", type: "", number: "", expiry: "", notes: "" };
 
 /** Said in place of the upload when the paper's details are not on file yet. */
 const UPLOAD_BLOCKED =
@@ -995,7 +997,12 @@ export default function EmployeeForm({ self }) {
     setDocFile(null);
   };
   const chooseType = (type) => {
-    setDocDraft((prev) => ({ ...prev, type, expiry: "" }));
+    setDocDraft((prev) => ({
+      ...prev,
+      type,
+      number: relatedNumber(type, filedDetails),
+      expiry: relatedExpiry(type, filedDetails),
+    }));
     setDocFile(null);
   };
 
@@ -1057,6 +1064,7 @@ export default function EmployeeForm({ self }) {
         employeeId: record?.id,
         uploadedAt,
         type: docDraft.type,
+        number: docDraft.number,
         expiry: docDraft.expiry,
         ...file,
         notes: docDraft.notes,
@@ -2821,7 +2829,8 @@ export default function EmployeeForm({ self }) {
                                     />
                                   </span>
                                 )}
-                                {docTried && docDraft.type && !uploadBlocked && !docFile && (
+
+                            {docTried && docDraft.type && !uploadBlocked && !docFile && (
                                   <p className="text-xs text-destructive">
                                     Upload the document to save it.
                                   </p>
@@ -2829,32 +2838,64 @@ export default function EmployeeForm({ self }) {
                               </div>
                             )}
 
-                            {docFile && documentExpires(docDraft.type) && (
+                              {docDraft.type && (
+                            <>
                               <div className="form-field space-y-2">
-                                <Label htmlFor="docExpiry">Expiry Date</Label>
-                                <DateField
-                                  id="docExpiry"
-                                  value={docDraft.expiry}
-                                  onChange={(e) =>
-                                    setDocDraft((prev) => ({ ...prev, expiry: e.target.value }))
-                                  }
-                                  required
+                                <Label htmlFor="docNumber">Document Number</Label>
+                                <Input
+                              id="docNumber"
+                              value={docDraft.number}
+                              onChange={(e) =>
+                                setDocDraft((prev) => ({ ...prev, number: e.target.value }))
+                              }
+                              placeholder="Enter document number"
                                 />
+                                <p className="flex items-start gap-2 rounded-md bg-menu-hover p-2.5 text-xs text-primary">
+                              <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                              If this document number has been added previously,
+                              it will appear here automatically.
+                                </p>
                               </div>
+
+                              {documentExpires(docDraft.type) && (
+                                <div className="form-field space-y-2">
+                              <Label htmlFor="docExpiry">Expiry Date</Label>
+                              <DateField
+                                id="docExpiry"
+                                value={docDraft.expiry}
+                                onChange={(e) =>
+                                  setDocDraft((prev) => ({ ...prev, expiry: e.target.value }))
+                                }
+                                required
+                              />
+                              <p className="flex items-start gap-2 rounded-md bg-menu-hover p-2.5 text-xs text-primary">
+                                <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                                If this document has been added previously, the
+                                date will appear here automatically.
+                              </p>
+                                </div>
+                              )}
+                            </>
                             )}
 
-                            {docFile && (
-                              <div className="form-field space-y-2">
+
+
+                            {docDraft.type && (
+                              <div className="form-field span-12 space-y-2">
                                 <Label htmlFor="docNotes">Notes</Label>
-                                <Input
+                                <Textarea
                                   id="docNotes"
+                                  rows={3}
                                   maxLength={NOTES_LIMIT}
-                                  placeholder="Enter notes"
+                                  placeholder="Enter any additional notes"
                                   value={docDraft.notes}
                                   onChange={(e) =>
                                     setDocDraft((prev) => ({ ...prev, notes: e.target.value }))
                                   }
                                 />
+                                <p className="text-end text-xs text-muted-foreground">
+                                  {docDraft.notes.length}/{NOTES_LIMIT}
+                                </p>
                               </div>
                             )}
                           </div>

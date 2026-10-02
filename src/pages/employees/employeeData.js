@@ -159,6 +159,10 @@ export const hasRelatedRecord = (type, employee) => {
   return !related || Boolean(employee?.[related.number] && employee?.[related.expiry]);
 };
 
+/** The number the record already holds for this type, to start the copy from. */
+export const relatedNumber = (type, employee) =>
+  RELATED_RECORD[type] ? employee?.[RELATED_RECORD[type].number] || "" : "";
+
 /** The expiry the record already holds for this type, to start the copy from. */
 export const relatedExpiry = (type, employee) =>
   RELATED_RECORD[type] ? employee?.[RELATED_RECORD[type].expiry] || "" : "";
