@@ -63,16 +63,16 @@ import {
   Clock,
   CalendarDays,
   Stethoscope,
-  Car,
+  Bus,
   Plane,
   Ticket,
   FileClock,
   Award,
-  Lightbulb,
-  Star,
-  MessageSquareWarning,
-  MessageSquareX,
+  MessageCircleWarning,
+  TriangleAlert,
 } from "lucide-react";
+import { useLeaves } from "@/lib/leaves/context";
+import { annualLeaveLeft } from "./leaveData";
 import { requestCountFor } from "./requestCounts";
 import {
   Dialog,
@@ -361,10 +361,10 @@ const REQUEST_CATEGORIES = [
     label: "Allowances",
     icon: HandCoins,
     items: [
-      { key: "medical", label: "Medical", icon: Stethoscope, note: "Claim medical expenses.", section: "entitlements", tab: "medical" },
-      { key: "transport", label: "Transportation", icon: Car, note: "Claim transport costs.", section: "entitlements", tab: "transport" },
-      { key: "travel", label: "Travel", icon: Plane, note: "Claim travel expenses.", section: "entitlements", tab: "travel" },
-      { key: "airTicket", label: "Air Ticket", icon: Ticket, note: "Claim an air ticket allowance.", section: "entitlements", tab: "airTicket" },
+      { key: "medical", label: "Medical", icon: Stethoscope, tone: "blue", note: "Request medical allowances for eligible expenses.", section: "entitlements", tab: "medical" },
+      { key: "transport", label: "Transportation", icon: Bus, note: "Request transportation allowances for work related travel.", section: "entitlements", tab: "transport" },
+      { key: "travel", label: "Travel", icon: Plane, note: "Request travel allowances for business travel.", section: "entitlements", tab: "travel" },
+      { key: "airTicket", label: "Air Ticket", icon: Ticket, note: "Request air ticket allowances for official travel.", section: "entitlements", tab: "airTicket" },
     ],
   },
   {
@@ -372,21 +372,22 @@ const REQUEST_CATEGORIES = [
     label: "End-of-Service Entitlements",
     icon: FileUser,
     items: [
-      { key: "notice", label: "Notice Pay", icon: FileClock, note: "Pay in lieu of the notice period.", section: "entitlements", tab: "notice" },
-      { key: "gratuity", label: "End-of-Service Gratuity", icon: Award, note: "The benefit due on leaving the firm.", section: "entitlements", tab: "endOfService" },
+      { key: "notice", label: "Notice Pay", icon: FileClock, note: "Request notice pay based on company policies.", section: "entitlements", tab: "notice" },
+      { key: "gratuity", label: "End-of-Service Gratuity", icon: HandCoins, note: "Request end-of-service gratuity as per regulations.", section: "entitlements", tab: "endOfService" },
     ],
   },
   {
-    // None of these has a page of its own yet; Leave and General Requests
-    // are still reached from the sidebar.
+    // Grievance and Complaint have no page of their own yet.
     key: "administrative",
     label: "Administrative",
     icon: FilePenLine,
     items: [
-      { key: "suggestion", label: "Suggestion", icon: Lightbulb, note: "Share a suggestion with the administration." },
-      { key: "special", label: "Special", icon: Star, note: "Make a special request." },
-      { key: "grievance", label: "Grievance", icon: MessageSquareWarning, note: "Raise a grievance." },
-      { key: "complaint", label: "Complaint", icon: MessageSquareX, note: "File a complaint." },
+      // Leave is counted in days left rather than requests made: what a
+      // person wants to know before asking for leave is how much they have.
+      { key: "leave", label: "Leave", icon: CalendarDays, tone: "blue", stat: "leaveDays", note: "Submit leave requests including annual, sick, and other leave types.", section: "leaves" },
+      { key: "general", label: "General", icon: FilePenLine, note: "Submit general requests related to administrative matters.", section: "generalRequest" },
+      { key: "grievance", label: "Grievance", icon: MessageCircleWarning, note: "Submit grievances related to work or workplace issues." },
+      { key: "complaint", label: "Complaint", icon: TriangleAlert, note: "Submit complaints regarding any work related matter." },
     ],
   },
 ];
@@ -396,16 +397,23 @@ const REQUEST_CATEGORIES = [
  * orange, then rose for a fourth. Written out whole so the stylesheet keeps
  * every class.
  */
-const REQUEST_CARD_TONES = [
-  { card: "border-violet-200 bg-violet-50", mark: "bg-violet-100 text-violet-700", ink: "text-violet-800" },
-  { card: "border-emerald-200 bg-emerald-50", mark: "bg-emerald-100 text-emerald-700", ink: "text-emerald-800" },
-  { card: "border-orange-200 bg-orange-50", mark: "bg-orange-100 text-orange-600", ink: "text-orange-700" },
-  { card: "border-rose-200 bg-rose-50", mark: "bg-rose-100 text-rose-600", ink: "text-rose-700" },
-];
+const TONES = {
+  violet: { card: "border-violet-200 bg-violet-50", mark: "bg-violet-100 text-violet-700", ink: "text-violet-800" },
+  green: { card: "border-emerald-200 bg-emerald-50", mark: "bg-emerald-100 text-emerald-700", ink: "text-emerald-800" },
+  orange: { card: "border-orange-200 bg-orange-50", mark: "bg-orange-100 text-orange-600", ink: "text-orange-700" },
+  rose: { card: "border-rose-200 bg-rose-50", mark: "bg-rose-100 text-rose-600", ink: "text-rose-700" },
+  blue: { card: "border-blue-200 bg-blue-50", mark: "bg-blue-100 text-blue-700", ink: "text-blue-700" },
+};
 
-/** One row for a kind's cards, however many it has: two, three or four across. */
+/** The tints in turn; a request whose design names its own (`tone`) wears that. */
+const REQUEST_CARD_TONES = [TONES.violet, TONES.green, TONES.orange, TONES.rose];
+
+/**
+ * One row for a kind's cards. Two keep the width of three rather than
+ * stretching across the page, as the design draws them; four sit four across.
+ */
 const REQUEST_CARD_COLUMNS = {
-  2: "md:grid-cols-2",
+  2: "md:grid-cols-2 xl:grid-cols-3",
   3: "md:grid-cols-2 xl:grid-cols-3",
   4: "md:grid-cols-2 xl:grid-cols-4",
 };
@@ -1107,6 +1115,8 @@ export default function EmployeeForm({ self }) {
   // A page that sends somebody here can say which section to open - a newly
   // added employee opens on Documents, the next thing they need.
   const location = useLocation();
+  // Leave as it stands, for the days left on the Requests page's Leave card.
+  const { leaves } = useLeaves();
   // A record opens on Employee Information; My Profile on its own first page.
   const opensOn = (state) =>
     state?.section || (record && !self ? "profile" : "information");
@@ -1366,6 +1376,9 @@ export default function EmployeeForm({ self }) {
   );
 
   const current = SECTIONS.find((s) => s.key === activeSection) || SECTIONS[0];
+  // The employee file's own title and note - Employee Data's - kept at the
+  // head of the pages that carry a heading of their own further in.
+  const fileHeading = SECTIONS.find((s) => s.key === "information");
   // Employee Information shows the record in the same tabs it was added in.
   const isProfile = isEditMode && !self && activeSection === "profile";
   const isRequests = isEditMode && !self && activeSection === "requests";
@@ -1681,7 +1694,7 @@ export default function EmployeeForm({ self }) {
             )
           }
         />
-      ) : isProfile || isRequests ? null : (
+      ) : (
       /* Page Header.
 
           No back control here: the sidebar's own "All employees" link leads
@@ -1691,14 +1704,19 @@ export default function EmployeeForm({ self }) {
         <div className="flex items-center gap-3">
           <div>
             <div className="flex flex-wrap items-center gap-3">
+              {/* Employee Information and Requests head their own pages
+                  further in; above them the page keeps the employee file's
+                  own title, as it always had. */}
               <h1 className="text-xl font-bold text-primary sm:text-2xl">
-                {current.title || current.label}
+                {isProfile || isRequests ? fileHeading.title : current.title || current.label}
               </h1>
               {/* No standing beside the title: it is already on the row this
                   record was opened from, and the title says which record is
                   open, not how it stands. */}
             </div>
-            <p className="text-xs text-primary/75 sm:text-sm">{current.note}</p>
+            <p className="text-xs text-primary/75 sm:text-sm">
+              {isProfile || isRequests ? fileHeading.note : current.note}
+            </p>
           </div>
         </div>
         {/* No Save up here: it sits at the end of the form it saves, where
@@ -1894,7 +1912,8 @@ export default function EmployeeForm({ self }) {
                 <h2 className="text-xl font-bold text-primary">{category.label}</h2>
                 <div className={cn("grid gap-4", REQUEST_CARD_COLUMNS[category.items.length])}>
                   {category.items.map((item, index) => {
-                    const tone = REQUEST_CARD_TONES[index % REQUEST_CARD_TONES.length];
+                    const tone =
+                      TONES[item.tone] || REQUEST_CARD_TONES[index % REQUEST_CARD_TONES.length];
                     const { total, pending } = requestCountFor(item.key, record.name);
                     const Icon = item.icon;
                     const opened = item.key === requestsTab;
@@ -1918,8 +1937,23 @@ export default function EmployeeForm({ self }) {
                           <span className="block text-sm text-primary/75">{item.note}</span>
                         </span>
                         <span className="shrink-0 border-s border-black/10 ps-4 text-center">
-                          <span className={cn("block text-2xl font-bold", tone.ink)}>{total}</span>
-                          <span className="block text-xs text-primary/75">Total Requests</span>
+                          {item.stat === "leaveDays" ? (
+                            <>
+                              <span className={cn("block text-2xl font-bold", tone.ink)}>
+                                {annualLeaveLeft(leaves, record.name) ?? 0}
+                              </span>
+                              <span className="block text-xs text-primary/75">
+                                Remaining
+                                <br />
+                                Annual Leave Days
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className={cn("block text-2xl font-bold", tone.ink)}>{total}</span>
+                              <span className="block text-xs text-primary/75">Total Requests</span>
+                            </>
+                          )}
                         </span>
                         {/* Only said when something is still waiting. */}
                         {pending > 0 && (

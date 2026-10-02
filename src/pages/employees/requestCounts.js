@@ -3,6 +3,7 @@ import { loanRecords } from "./loanData";
 import { assistanceRecords, statusOf } from "./assistanceData";
 import { initialBonuses } from "./bonusData";
 import { initialEntitlements } from "./entitlementData";
+import { initialGeneralRequests } from "./generalRequestData";
 
 /**
  * How many of each kind of request one employee has made, and how many are
@@ -43,6 +44,7 @@ const COUNTERS = {
   airTicket: entitlement("airTicket"),
   notice: entitlement("notice"),
   gratuity: entitlement("endOfService"),
+  general: (name) => tally(mine(initialGeneralRequests, name), waiting),
 };
 
 /** { total, pending } for one kind of request made by one employee. */
