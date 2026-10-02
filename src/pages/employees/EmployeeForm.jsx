@@ -49,6 +49,13 @@ import {
   CircleCheck,
   UserPlus,
   ArrowRight,
+  UserCog,
+  LayoutGrid,
+  Pencil,
+  ChartNoAxesColumnIncreasing,
+  HandCoins,
+  FileUser,
+  FilePenLine,
 } from "lucide-react";
 import {
   Dialog,
@@ -105,6 +112,8 @@ import { formatDate } from "@/pages/firm/firmData";
 import {
   employeeRecords,
   employeeDocuments,
+  submitCorrectionRequest,
+  pendingCorrections,
   nextEmployeeNo,
   documentsFor,
   documentTypesFor,
@@ -118,7 +127,7 @@ import {
   relatedExpiry,
   relatedNumber,
 } from "./employeeData";
-import { checkRequired } from "@/components/shared/formFields";
+import { checkRequired, clearRequiredCheck } from "@/components/shared/formFields";
 
 /**
  * The employee record, section by section.
@@ -127,6 +136,24 @@ import { checkRequired } from "@/components/shared/formFields";
  * so any of them can be opened at any time and they all save together.
  */
 const SECTIONS = [
+  {
+    // The whole file in the tabs it was added in, read rather than edited:
+    // a change goes in as a correction request. On a record only - My
+    // Profile keeps its own pages.
+    key: "profile",
+    label: "Employee Information",
+    icon: UserCog,
+    noSave: true,
+    recordOnly: true,
+  },
+  {
+    // What the employee has asked of the firm, gathered under one heading.
+    key: "requests",
+    label: "Requests",
+    icon: LayoutGrid,
+    noSave: true,
+    recordOnly: true,
+  },
   {
     // Who the person is, what they do and how to reach them: three
     // entries in this menu that were all one answer, so they are one page
@@ -250,6 +277,10 @@ function Required({ show }) {
  * below until the standard says where it belongs.
  */
 const SECTION_GROUPS = [
+  // Sections of their own at the top of the rail, above the groups. Every
+  // group below stays as it was until its own redesign arrives.
+  { key: "profile", link: true },
+  { key: "requests", link: true },
   {
     key: "dossier",
     label: "Employee Dossier",
@@ -277,6 +308,73 @@ const SECTION_GROUPS = [
     ],
   },
 ];
+
+/**
+ * What can be asked for, by kind, as the Requests page lists it.
+ *
+ * Each request opens the page the record already keeps it on - the same
+ * section and tab the sidebar leads to - so nothing is kept twice. A request
+ * with no page of its own yet (`section` left out) says so rather than
+ * having one invented for it.
+ */
+const REQUEST_CATEGORIES = [
+  {
+    key: "financing",
+    label: "Financial Financing",
+    icon: Wallet,
+    items: [
+      { key: "salaryAdvance", label: "Salary Advance", section: "benefits", tab: "salaries" },
+      { key: "loan", label: "Loan", section: "benefits", tab: "loans" },
+      { key: "assistance", label: "Assistance", section: "benefits", tab: "assistance" },
+    ],
+  },
+  {
+    key: "entitlements",
+    label: "Financial Entitlements",
+    icon: ChartNoAxesColumnIncreasing,
+    items: [
+      { key: "bonus", label: "Bonus", section: "benefits", tab: "bonus" },
+      { key: "commission", label: "Commission", section: "benefits", tab: "commission" },
+      { key: "overtime", label: "Overtime", section: "entitlements", tab: "overtime" },
+      { key: "leavePay", label: "Leave", section: "entitlements", tab: "leaveEncashment" },
+    ],
+  },
+  {
+    key: "allowances",
+    label: "Allowances",
+    icon: HandCoins,
+    items: [
+      { key: "medical", label: "Medical", section: "entitlements", tab: "medical" },
+      { key: "transport", label: "Transportation", section: "entitlements", tab: "transport" },
+      { key: "travel", label: "Travel", section: "entitlements", tab: "travel" },
+      { key: "airTicket", label: "Air Ticket", section: "entitlements", tab: "airTicket" },
+    ],
+  },
+  {
+    key: "endOfService",
+    label: "End-of-Service Entitlements",
+    icon: FileUser,
+    items: [
+      { key: "notice", label: "Notice Pay", section: "entitlements", tab: "notice" },
+      { key: "gratuity", label: "End-of-Service Gratuity", section: "entitlements", tab: "endOfService" },
+    ],
+  },
+  {
+    key: "administrative",
+    label: "Administrative",
+    icon: FilePenLine,
+    items: [
+      { key: "leave", label: "Leave", section: "leaves" },
+      { key: "general", label: "General", section: "generalRequest" },
+      { key: "grievance", label: "Grievance" },
+      { key: "complaint", label: "Complaint" },
+    ],
+  },
+];
+
+const REQUEST_ITEMS = REQUEST_CATEGORIES.flatMap((category) =>
+  category.items.map((item) => ({ ...item, category: category.key }))
+);
 
 /**
  * Adding an employee, one step at a time.
@@ -388,9 +486,9 @@ const sumOf = (fields, values) =>
  * to; the one being filled in is underlined; the rest wait, greyed, until the
  * step before them is saved.
  */
-function StepTabs({ steps, active, done, canOpen, onSelect }) {
+function StepTabs({ steps, active, done = [], canOpen = () => true, onSelect, label = "Add employee steps" }) {
   return (
-    <nav aria-label="Add employee steps" className="overflow-x-auto">
+    <nav aria-label={label} className="overflow-x-auto">
       <ol className="flex min-w-max border-b border-container-border">
         {steps.map((step, index) => {
           const isDone = done.includes(step.key);
@@ -420,6 +518,9 @@ function StepTabs({ steps, active, done, canOpen, onSelect }) {
                     aria-hidden="true"
                     className="size-5 shrink-0 fill-green-600 text-white"
                   />
+                )}
+                {step.icon && (
+                  <step.icon strokeWidth={1.5} aria-hidden="true" className="size-5 shrink-0" />
                 )}
                 {step.label}
                 {isDone && <span className="sr-only">(completed)</span>}
@@ -755,7 +856,11 @@ const UPLOAD_BLOCKED =
  * The boxes are separated by space rather than by a divider, so the page
  * reads as three things about one person rather than one long form.
  */
-function SectionCard({ title, icon: Icon, note, aside, footer, children }) {
+/** Every field in a box that is only being read wears the one locked look. */
+const LOCKED_FIELDS =
+  "[&_input:disabled]:bg-locked [&_input:disabled]:opacity-100 [&_textarea:disabled]:bg-locked [&_textarea:disabled]:opacity-100 [&_button:disabled]:bg-locked [&_button:disabled]:opacity-100 [&_button:disabled]:text-foreground";
+
+function SectionCard({ title, icon: Icon, note, aside, footer, locked, children }) {
   return (
     <Card>
       <CardContent className="p-4 sm:p-6">
@@ -769,7 +874,7 @@ function SectionCard({ title, icon: Icon, note, aside, footer, children }) {
               <h2 className="text-xl font-bold text-primary">{title}</h2>
               {note && <p className="text-sm text-primary/75">{note}</p>}
             </div>
-            {aside}
+            {aside && <div className="ms-auto shrink-0">{aside}</div>}
           </div>
         ) : (
           <div className="mb-6 flex items-center gap-3 border-b pb-3">
@@ -777,7 +882,14 @@ function SectionCard({ title, icon: Icon, note, aside, footer, children }) {
             {aside}
           </div>
         )}
-        {children}
+        {/* Only the fields are locked, not the heading: the button there is
+            how the box is unlocked. */}
+        <fieldset
+          disabled={locked}
+          className={cn("min-w-0 border-0 p-0", locked && LOCKED_FIELDS)}
+        >
+          {children}
+        </fieldset>
         {/* The step's own Cancel and Save, inside the box they act on, under
             a rule where the last field leaves off. */}
         {footer && <div className="mt-6 border-t pt-4">{footer}</div>}
@@ -952,16 +1064,25 @@ export default function EmployeeForm({ self }) {
   const [saved, setSaved] = useState({});
   // The salary statement, opened over the pay step to read before saving.
   const [showStatement, setShowStatement] = useState(false);
-  const savedOmani = String(saved.nationality || "").trim().toLowerCase() === "omani";
-  const savedLawyer = saved.occupation === "Lawyer";
   const formRef = useRef(null);
 
   // A page that sends somebody here can say which section to open - a newly
   // added employee opens on Documents, the next thing they need.
   const location = useLocation();
-  const [activeSection, setActiveSection] = useState(
-    () => location.state?.section || "information"
-  );
+  // A record opens on Employee Information; My Profile on its own first page.
+  const opensOn = (state) =>
+    state?.section || (record && !self ? "profile" : "information");
+  const [activeSection, setActiveSection] = useState(() => opensOn(location.state));
+  // Which tab of Employee Information, and of Requests, is open.
+  const [profileTab, setProfileTab] = useState(() => location.state?.tab || "personal");
+  // The request chosen on the Requests page.
+  const [requestsTab, setRequestsTab] = useState(REQUEST_ITEMS[0].key);
+  // A correction being written on the open tab, and the record as it stood
+  // when it began - put back whatever the correction's outcome.
+  const [correcting, setCorrecting] = useState(false);
+  const [correctionBase, setCorrectionBase] = useState(null);
+  // Said once a correction has been sent, until the person moves on.
+  const [correctionSent, setCorrectionSent] = useState(false);
   // Which side of Financial Benefits is open. Held here because the tabs
   // that choose it sit in the section's heading, which this page draws.
   const [benefitsTab, setBenefitsTab] = useState("salaries");
@@ -1016,7 +1137,10 @@ export default function EmployeeForm({ self }) {
       record ? toFormData(record) : { ...emptyFormData, salaryEffectiveDate: todayIso() }
     );
     setDocuments(documentsFor(record?.id));
-    setActiveSection(location.state?.section || "information");
+    setActiveSection(opensOn(location.state));
+    setProfileTab(location.state?.tab || "personal");
+    setCorrecting(false);
+    setCorrectionSent(false);
     // Nothing of an earlier employee being added carries over to the next.
     setStep(ADD_STEPS[0].key);
     setSavedSteps([]);
@@ -1197,17 +1321,35 @@ export default function EmployeeForm({ self }) {
   // else - documents, salary, loans - is filed against an employee, and there
   // is no employee to file it against until this form is saved.
   const sections = (isEditMode ? SECTIONS : SECTIONS.slice(0, 1)).filter(
-    (section) => !(self && section.notOnOwnProfile)
+    (section) =>
+      !(self && section.notOnOwnProfile) && !(section.recordOnly && (self || !isEditMode))
   );
 
   const current = SECTIONS.find((s) => s.key === activeSection) || SECTIONS[0];
-  // While adding, the step decides what is on screen rather than the sidebar.
-  const isInfo = isAdding ? step !== "documents" : activeSection === "information";
+  // Employee Information shows the record in the same tabs it was added in.
+  const isProfile = isEditMode && !self && activeSection === "profile";
+  const isRequests = isEditMode && !self && activeSection === "requests";
+  // Adding and reading the record both go tab by tab; `tab` is the one open.
+  const isTabbed = isAdding || isProfile;
+  const tab = isAdding ? step : profileTab;
+  // While tabbed, the tab decides what is on screen rather than the sidebar.
+  const isInfo = isTabbed ? tab !== "documents" : activeSection === "information";
   // Both of these draw their own boxes, so the page's card steps out of the
   // way rather than drawing a border around borders.
-  const isDocuments = isAdding ? step === "documents" : activeSection === "documents";
-  /** Whether a box belongs on screen: all of them on a record, one step's while adding. */
-  const onStep = (key) => !isAdding || step === key;
+  const isDocuments = isTabbed ? tab === "documents" : activeSection === "documents";
+  /** Whether a box belongs on screen: all of them on Employee Data, one tab's otherwise. */
+  const onStep = (key) => !isTabbed || tab === key;
+  // The request chosen on Requests, and the section on screen: the sidebar's
+  // own, or the one that request is kept on.
+  const requestItem = REQUEST_ITEMS.find((item) => item.key === requestsTab) || REQUEST_ITEMS[0];
+  const shownSection = isRequests ? requestItem.section : activeSection;
+  // On Employee Information the fields are only read, until a correction is begun.
+  const profileLocked = isProfile && !correcting;
+  // Which papers apply: while adding, from what was saved on the steps before;
+  // on a record, from the record. Older records say a lawyer by role.
+  const paperFacts = isProfile ? formData : saved;
+  const paperOmani = String(paperFacts.nationality || "").trim().toLowerCase() === "omani";
+  const paperLawyer = paperFacts.occupation === "Lawyer" || paperFacts.role === "Lawyer";
 
   /**
    * Whether the record can be changed on this page.
@@ -1248,7 +1390,7 @@ export default function EmployeeForm({ self }) {
       employeeDocuments.push({ ...document, id: docId, employeeId: newId });
     });
     // Opened on Documents: the details are in, and the papers are next.
-    navigate("/employees/" + newId, { state: { section: "documents" } });
+    navigate("/employees/" + newId, { state: { section: "profile", tab: "documents" } });
   };
 
   /**
@@ -1260,11 +1402,14 @@ export default function EmployeeForm({ self }) {
    * Protection only follows for somebody registered - and the last one
    * hands over to Documents, where the record is finished.
    */
-  const saveStep = () => {
-    if (!checkRequired(formRef.current)) return;
-    // Filled but in the wrong shape - an email with no @ - holds the step too,
-    // and the cursor is taken to it; the field already says what is wrong.
-    // So does a character the field does not allow, already said under it.
+  /**
+   * Whether the fields on screen can be sent: nothing required left empty,
+   * and nothing in the wrong shape - an email with no @, or a character the
+   * field does not allow. Otherwise the cursor is taken to the first problem,
+   * and the field already says what is wrong with it.
+   */
+  const fieldsOnScreenValid = ({ requireAll = true } = {}) => {
+    if (requireAll && !checkRequired(formRef.current)) return false;
     const misshapen = [...formRef.current.querySelectorAll("input")].find(
       (input) =>
         !input.disabled &&
@@ -1274,8 +1419,13 @@ export default function EmployeeForm({ self }) {
     if (misshapen) {
       misshapen.scrollIntoView({ block: "center", behavior: "smooth" });
       misshapen.focus({ preventScroll: true });
-      return;
+      return false;
     }
+    return true;
+  };
+
+  const saveStep = () => {
+    if (!fieldsOnScreenValid()) return;
     console.log("Saving " + step + ":", { ...toRecord(formData), empNo: employeeNo });
     setSavedSteps((prev) => (prev.includes(step) ? prev : [...prev, step]));
     setSaved(formData);
@@ -1319,6 +1469,99 @@ export default function EmployeeForm({ self }) {
   const spEmployee = Number(formData.salary || 0) * SPF_EMPLOYEE_RATE;
   const spEmployer = Number(formData.salary || 0) * SPF_EMPLOYER_RATE;
 
+  /* ------------------------------------------------ correction requests */
+
+  /** Opens the fields of the tab on screen to be corrected. */
+  const beginCorrection = () => {
+    setCorrectionBase(formData);
+    setCorrecting(true);
+    setCorrectionSent(false);
+  };
+
+  /** Leaves the correction, putting every field back as it was. */
+  const cancelCorrection = () => {
+    if (correctionBase) setFormData(correctionBase);
+    setCorrecting(false);
+    clearRequiredCheck();
+  };
+
+  /**
+   * Sends what was changed as a request, and leaves the record as it was.
+   *
+   * A correction is asked for, not made: the employee's details change only
+   * once somebody approves it, so the fields go back to the values on record
+   * and the page says the request is waiting.
+   */
+  const submitCorrection = () => {
+    // What was typed has to be in the right shape; what was left empty is
+    // not demanded - many records predate fields the form now asks for, and a
+    // correction to one of them should not have to complete all the others.
+    if (!fieldsOnScreenValid({ requireAll: false })) return;
+    const changes = Object.keys(formData)
+      .filter((key) => String(formData[key] ?? "") !== String(correctionBase?.[key] ?? ""))
+      .map((key) => ({ field: key, from: correctionBase?.[key] ?? "", to: formData[key] }));
+    if (changes.length) {
+      submitCorrectionRequest({
+        employeeId: record.id,
+        section: profileTabLabel,
+        changes,
+      });
+    }
+    setFormData(correctionBase);
+    setCorrecting(false);
+    setCorrectionSent(changes.length > 0 ? "sent" : "nothing");
+  };
+
+  /** Moving to another tab leaves a correction that was not sent. */
+  const openProfileTab = (key) => {
+    if (correcting) cancelCorrection();
+    setCorrectionSent(false);
+    setProfileTab(key);
+  };
+
+  /** Opens a request on the page it is kept on, at its own tab. */
+  const chooseRequest = (item) => {
+    setRequestsTab(item.key);
+    if (item.section === "benefits") setBenefitsTab(item.tab);
+  };
+
+  /** Moving to another side of the file leaves a correction that was not sent. */
+  const selectSection = (key) => {
+    if (correcting) cancelCorrection();
+    setCorrectionSent(false);
+    // Requests opens on the request last chosen there, at its own tab.
+    if (key === "requests") chooseRequest(requestItem);
+    setActiveSection(key);
+  };
+
+  // Employee Information's tabs: the ones that apply to this record, as when
+  // it was added - Social Protection only for somebody registered.
+  const profileSteps = ADD_STEPS.filter((s) => !s.when || s.when(formData));
+  const profileTabLabel = ADD_STEPS.find((s) => s.key === profileTab)?.label || profileTab;
+  // Corrections already asked for on this tab, still waiting to be decided.
+  const pendingHere = isProfile ? pendingCorrections(record.id, profileTabLabel).length : 0;
+
+  // The way into a correction, at the head of every tab but Documents.
+  const correctionButton = isProfile && !correcting && (
+    <Button type="button" variant="outline" onClick={beginCorrection}>
+      <Pencil className="me-2 h-4 w-4" />
+      Correction Request
+    </Button>
+  );
+
+  // Cancel and Submit while a correction is being written.
+  const correctionActions = isProfile && correcting && (
+    <div className="flex items-center justify-end gap-3">
+      <Button type="button" variant="ghost" onClick={cancelCorrection}>
+        Cancel
+      </Button>
+      <Button type="button" onClick={submitCorrection}>
+        <Save className="me-2 h-4 w-4" />
+        Submit Request
+      </Button>
+    </div>
+  );
+
   // The step's way back, and Cancel and Save, at the end of what they act on.
   // Documents is filed paper by paper, so it has nothing to save here.
   const stepActions = isAdding && (
@@ -1352,8 +1595,10 @@ export default function EmployeeForm({ self }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     // The documents page saves each paper with its own button; Enter in one
-    // of its fields must not save, or leave, the record around it.
-    if (isDocuments) return;
+    // of its fields must not save, or leave, the record around it. Nor may it
+    // on Employee Information or Requests, where nothing is saved this way -
+    // a correction is sent with its own button.
+    if (isDocuments || isProfile || isRequests) return;
     if (isAdding) {
       // Enter in the documents search must search, not save a section.
       if (step !== "documents") saveStep();
@@ -1389,7 +1634,7 @@ export default function EmployeeForm({ self }) {
             )
           }
         />
-      ) : (
+      ) : isProfile || isRequests ? null : (
       /* Page Header.
 
           No back control here: the sidebar's own "All employees" link leads
@@ -1431,16 +1676,23 @@ export default function EmployeeForm({ self }) {
           title={formData.employeeName || "New employee"}
           subtitle={isEditMode ? employeeNo + " · " + formData.status : "New record"}
           active={activeSection}
-          onSelect={setActiveSection}
-          groups={SECTION_GROUPS.map((group) => ({
-            key: group.key,
-            label: group.label,
-            icon: group.icon,
-            items: group.items
-              .map((key) => sections.find((section) => section.key === key))
-              .filter(Boolean)
-              .map((section) => ({ key: section.key, label: section.label })),
-          })).filter((group) => group.items.length > 0)}
+          onSelect={selectSection}
+          groups={SECTION_GROUPS.map((group) => {
+            // A section of its own, shown only where the record has it.
+            if (group.link) {
+              const section = sections.find((s) => s.key === group.key);
+              return section && { key: section.key, link: true, label: section.label, icon: section.icon };
+            }
+            return {
+              key: group.key,
+              label: group.label,
+              icon: group.icon,
+              items: group.items
+                .map((key) => sections.find((section) => section.key === key))
+                .filter(Boolean)
+                .map((section) => ({ key: section.key, label: section.label })),
+            };
+          }).filter((group) => group && (group.link || group.items.length > 0))}
         />
         )}
 
@@ -1449,6 +1701,135 @@ export default function EmployeeForm({ self }) {
             stretch the whole page and push the sidebar off screen. */}
         <div className="w-full min-w-0 flex-1 space-y-4 sm:space-y-6">
           {hold && <AccessNotice hold={hold} graceDays={documentControl.graceDays} />}
+
+          {/* Whose file this is, at the head of the page: where it sits, the
+              person's mark and their name - or, on Requests, its own name. */}
+          {isProfile && (
+            <div className="space-y-3">
+              <nav aria-label="Breadcrumb" className="text-sm">
+                <span className="text-primary/60">Administration</span>
+                <span aria-hidden="true" className="px-2 text-primary/40">/</span>
+                <span className="text-primary/60">Employees</span>
+                <span aria-hidden="true" className="px-2 text-primary/40">/</span>
+                <span className="font-semibold text-primary" aria-current="page">{record.name}</span>
+              </nav>
+              <div className="flex items-center gap-4">
+                <span className="flex size-16 shrink-0 items-center justify-center rounded-full bg-menu-selected">
+                  <UserCog strokeWidth={1.5} aria-hidden="true" className="size-8 text-primary" />
+                </span>
+                <span aria-hidden="true" className="h-12 w-px bg-container-border" />
+                {/* The name on record, not one being retyped in a correction. */}
+                <h1 className="text-2xl font-bold text-primary">{record.name}</h1>
+              </div>
+            </div>
+          )}
+
+          {/* Requests heads its own page: the way back to the employee's
+              information, then its mark and its name. */}
+          {isRequests && (
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => selectSection("profile")}
+                title="Back to Employee Information"
+                className="flex size-9 shrink-0 items-center justify-center rounded-md text-primary transition-colors hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <ArrowLeft className="size-5 rtl:rotate-180" aria-hidden="true" />
+                <span className="sr-only">Back to Employee Information</span>
+              </button>
+              <span aria-hidden="true" className="h-9 w-px bg-container-border" />
+              <LayoutGrid strokeWidth={1.5} aria-hidden="true" className="size-8 shrink-0 text-primary" />
+              <h1 className="text-2xl font-bold text-primary">Requests</h1>
+            </div>
+          )}
+
+          {isProfile && (
+            <div className="space-y-3">
+              <StepTabs
+                label="Employee information"
+                steps={profileSteps}
+                active={profileTab}
+                onSelect={openProfileTab}
+              />
+              {/* What became of the last correction, and what is still waiting. */}
+              {correctionSent === "sent" && (
+                <p role="status" className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+                  Correction request submitted. The record stays as it is until the
+                  request is approved.
+                </p>
+              )}
+              {correctionSent === "nothing" && (
+                <p role="status" className="text-sm text-primary/75">
+                  Nothing was changed, so no request was sent.
+                </p>
+              )}
+              {pendingHere > 0 && correctionSent !== "sent" && (
+                <p className="text-sm font-medium text-amber-700">
+                  {pendingHere} correction request{pendingHere === 1 ? "" : "s"} pending
+                  approval for this section.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Every kind of request in one row: the kind, with its mark, and
+              under it the requests it holds. The kind holding the chosen
+              request is lit; choosing a request opens it below. */}
+          {isRequests && (
+            <nav
+              aria-label="Request types"
+              className="flex gap-0 overflow-x-auto border-b border-container-border pb-4"
+            >
+              {REQUEST_CATEGORIES.map((category, index) => {
+                const Icon = category.icon;
+                const lit = requestItem.category === category.key;
+                return (
+                  <div key={category.key} className="flex shrink-0 items-stretch">
+                    {index > 0 && (
+                      <span aria-hidden="true" className="mx-2 w-px self-stretch bg-container-border" />
+                    )}
+                    <div
+                      className={cn(
+                        "flex items-center gap-4 rounded-lg px-4 py-3",
+                        lit && "bg-menu-selected"
+                      )}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => chooseRequest(category.items[0])}
+                        className="flex flex-col items-center gap-2 rounded-md text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <Icon strokeWidth={1.25} aria-hidden="true" className="size-12" />
+                        <span className="whitespace-nowrap text-sm font-bold">{category.label}</span>
+                      </button>
+                      <ul className="space-y-1">
+                        {category.items.map((item) => {
+                          const chosen = item.key === requestsTab;
+                          return (
+                            <li key={item.key}>
+                              <button
+                                type="button"
+                                onClick={() => chooseRequest(item)}
+                                aria-current={chosen ? "true" : undefined}
+                                className={cn(
+                                  "flex items-center gap-2 whitespace-nowrap rounded px-1 text-sm text-primary transition-colors hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                  chosen ? "font-bold" : "font-medium"
+                                )}
+                              >
+                                <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-primary" />
+                                {item.label}
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  </div>
+                );
+              })}
+            </nav>
+          )}
+
           {isAdding && (
             <div className="space-y-2">
               <StepTabs
@@ -1509,15 +1890,23 @@ export default function EmployeeForm({ self }) {
                 {onStep("personal") && (
                 <SectionCard
                   title="Personal Details"
-                  icon={isAdding ? User : undefined}
-                  note={isAdding ? "Complete personal details and save to continue." : undefined}
-                  footer={stepActions}
+                  icon={isAdding ? User : isProfile ? UserCog : undefined}
+                  note={
+                    isAdding
+                      ? "Complete personal details and save to continue."
+                      : isProfile
+                        ? "View the employee's personal information."
+                        : undefined
+                  }
+                  aside={correctionButton}
+                  footer={isAdding ? stepActions : correctionActions}
+                  locked={profileLocked}
                 >
                   {/* Four to a row, in the order the person is described:
                       name, birth and sex; then nationality and the papers it
                       decides; then how to reach them. Adding sets the rows
                       closer than the standard 44px, as its design does. */}
-                  <div className={cn("form-grid", isAdding && "gap-y-6")}>
+                  <div className={cn("form-grid", isTabbed && "gap-y-6")}>
                     <div className="form-field space-y-2">
                       <Label htmlFor="arabicName">
                         Full Name (Arabic)
@@ -1567,7 +1956,7 @@ export default function EmployeeForm({ self }) {
                       />
                     </div>
 
-                    <div className="form-field space-y-2" data-required={isAdding || undefined}>
+                    <div className="form-field space-y-2" data-required={isTabbed || undefined}>
                       <Label htmlFor="gender">
                         Gender
                         <Required show={asksFor} />
@@ -1590,7 +1979,7 @@ export default function EmployeeForm({ self }) {
                     </div>
 
                     {/* Omani first in the list: most of the firm is. */}
-                    <div className="form-field space-y-2" data-required={isAdding || undefined}>
+                    <div className="form-field space-y-2" data-required={isTabbed || undefined}>
                       <Label htmlFor="nationality">
                         Nationality
                         <Required show={asksFor} />
@@ -1615,7 +2004,7 @@ export default function EmployeeForm({ self }) {
                     {/* The card the person is identified by: a citizen's ID or
                         a resident's card. Adding asks for it, and every other
                         paper's number, on Identity & Immigration instead. */}
-                    {!isAdding && (
+                    {!isTabbed && (
                     <>
                     <div className="form-field space-y-2">
                       <Label htmlFor="civilId">
@@ -1629,7 +2018,7 @@ export default function EmployeeForm({ self }) {
                         onChange={onChange}
                         placeholder="Enter ID number"
                         aria-invalid={ruleBroken("civilId", formData.civilId) || undefined}
-                        required={isAdding}
+                        required={isTabbed}
                       />
                       <RuleNote name="civilId" value={formData.civilId} />
                     </div>
@@ -1651,7 +2040,7 @@ export default function EmployeeForm({ self }) {
 
                     {/* A foreign employee is also identified by a passport; an
                         Omani is not asked for one, and the row closes up. */}
-                    {!isAdding && formData.nationality && !isOmani && (
+                    {!isTabbed && formData.nationality && !isOmani && (
                       <>
                         <div className="form-field space-y-2">
                           <Label htmlFor="passportNumber">
@@ -1664,7 +2053,7 @@ export default function EmployeeForm({ self }) {
                             value={formData.passportNumber}
                             onChange={onChange}
                             placeholder="Enter passport number"
-                            required={isAdding}
+                            required={isTabbed}
                           />
                         </div>
 
@@ -1678,7 +2067,7 @@ export default function EmployeeForm({ self }) {
                             name="passportExpiry"
                             value={formData.passportExpiry}
                             onChange={onChange}
-                            required={isAdding}
+                            required={isTabbed}
                           />
                         </div>
                       </>
@@ -1707,7 +2096,7 @@ export default function EmployeeForm({ self }) {
                       onDialCode={(value) => set("dialCode", value)}
                       value={formData.phone}
                       onChange={(e) => set("phone", e.target.value)}
-                      required={isAdding}
+                      required={isTabbed}
                     />
 
                     <div className="form-field space-y-2">
@@ -1721,7 +2110,7 @@ export default function EmployeeForm({ self }) {
                         value={formData.address}
                         onChange={onChange}
                         placeholder="Enter full address"
-                        required={isAdding}
+                        required={isTabbed}
                       />
                     </div>
 
@@ -1738,14 +2127,14 @@ export default function EmployeeForm({ self }) {
                         onChange={onChange}
                         placeholder="Enter contact name"
                         aria-invalid={ruleBroken("emergencyName", formData.emergencyName) || undefined}
-                        required={isAdding}
+                        required={isTabbed}
                       />
                       <RuleNote name="emergencyName" value={formData.emergencyName} />
                     </div>
 
                     {/* Who they are to the employee, kept on the record. Not
                         asked for when the employee is added. */}
-                    {!isAdding && (
+                    {!isTabbed && (
                     <div className="form-field space-y-2">
                       <Label htmlFor="emergencyRelationship">
                         Relationship to Employee
@@ -1779,15 +2168,15 @@ export default function EmployeeForm({ self }) {
                       onDialCode={(value) => set("emergencyDialCode", value)}
                       value={formData.emergencyPhone}
                       onChange={(e) => set("emergencyPhone", e.target.value)}
-                      required={isAdding}
+                      required={isTabbed}
                     />
                   </div>
                 </SectionCard>
                 )}
 
-                {/* On a record. Adding asks for the job in its own shape,
-                    further down. */}
-                {!isAdding && (
+                {/* On Employee Data. The tabbed pages ask for the job in its
+                    own shape, further down. */}
+                {!isTabbed && (
                 <SectionCard title="Employment Details">
                   <div className="space-y-6">
                     <div className="form-grid">
@@ -2103,9 +2492,14 @@ export default function EmployeeForm({ self }) {
 
                 {/* The job and the contract it is held on, as a new employee
                     is taken on: where they work and what as, then the terms. */}
-                {isAdding && step === "employment" && (
+                {isTabbed && tab === "employment" && (
                   <>
-                  <SectionCard title="Employment & Contract">
+                  <SectionCard
+                    title="Employment & Contract"
+                    aside={correctionButton}
+                    footer={correctionActions}
+                    locked={profileLocked}
+                  >
                     <div className="space-y-6">
                       <section>
                         <h3 className="mb-4 text-base font-bold text-primary">
@@ -2349,17 +2743,22 @@ export default function EmployeeForm({ self }) {
                     the ID card for everybody, the lawyer's card for a lawyer,
                     passport and visa for a foreigner. Numbers only - the
                     papers themselves are filed on Documents. */}
-                {isAdding && step === "identity" && (
-                  <SectionCard title="Identity & Immigration" footer={stepActions}>
+                {isTabbed && tab === "identity" && (
+                  <SectionCard
+                    title="Identity & Immigration"
+                    aside={correctionButton}
+                    footer={isAdding ? stepActions : correctionActions}
+                    locked={profileLocked}
+                  >
                     <div className="form-grid gap-y-6">
                       <PaperFields
-                        label={savedOmani ? "Civil ID" : "Resident Card"}
+                        label={paperOmani ? "Civil ID" : "Resident Card"}
                         numberName="civilId"
                         expiryName="idExpiry"
                         values={formData}
                         onChange={onChange}
                       />
-                      {savedLawyer && (
+                      {paperLawyer && (
                         <PaperFields
                           label="Lawyer Card"
                           numberName="lawyerCardNo"
@@ -2368,7 +2767,7 @@ export default function EmployeeForm({ self }) {
                           onChange={onChange}
                         />
                       )}
-                      {!savedOmani && (
+                      {!paperOmani && (
                         <>
                           <PaperFields
                             label="Passport"
@@ -2399,9 +2798,13 @@ export default function EmployeeForm({ self }) {
 
                 {/* What the employee is paid, what comes off it, where it is
                     sent, and what the first payroll will come to. */}
-                {isAdding && step === "salary" && (
+                {isTabbed && tab === "salary" && (
                   <>
-                    <SectionCard title="Salary Information">
+                    <SectionCard
+                      title="Salary Information"
+                      aside={correctionButton}
+                      locked={profileLocked}
+                    >
                       <div className="form-grid gap-y-6">
                         <div className="form-field space-y-2" data-required="true">
                           <Label htmlFor="salaryEffectiveDate">
@@ -2451,7 +2854,7 @@ export default function EmployeeForm({ self }) {
                       )}
                     </SectionCard>
 
-                    <SectionCard title="Recurring Deductions">
+                    <SectionCard title="Recurring Deductions" locked={profileLocked}>
                       <p className="mb-6 flex items-start gap-2 rounded-md bg-menu-hover p-3 text-sm text-primary">
                         <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                         Recurring deductions are automatically calculated from
@@ -2473,7 +2876,7 @@ export default function EmployeeForm({ self }) {
                       </div>
                     </SectionCard>
 
-                    <SectionCard title="Bank Information">
+                    <SectionCard title="Bank Information" locked={profileLocked}>
                       <div className="form-grid gap-y-6">
                         <ChoiceField
                           id="bankName"
@@ -2576,6 +2979,9 @@ export default function EmployeeForm({ self }) {
                     </Card>
 
                     {stepActions}
+                    {/* A correction to pay covers all three boxes above, so it
+                        is sent from under the last of them. */}
+                    {correctionActions}
 
                     <Dialog open={showStatement} onOpenChange={setShowStatement}>
                       <DialogContent className="sm:max-w-lg">
@@ -2620,8 +3026,14 @@ export default function EmployeeForm({ self }) {
                 {/* The Fund's number and date are asked for; what is paid into
                     it is worked out from the basic pay saved on Salary &
                     Banking, and payroll is where those figures come from. */}
-                {isAdding && step === "socialProtection" && (
-                  <SectionCard title="Social Protection Registration" icon={ShieldCheck} footer={stepActions}>
+                {isTabbed && tab === "socialProtection" && (
+                  <SectionCard
+                    title="Social Protection Registration"
+                    icon={ShieldCheck}
+                    aside={correctionButton}
+                    footer={isAdding ? stepActions : correctionActions}
+                    locked={profileLocked}
+                  >
                     <div className="form-grid gap-y-6">
                       <div className="form-field space-y-2">
                         <Label htmlFor="spRegistrationNo">Registration No.</Label>
@@ -2962,7 +3374,7 @@ export default function EmployeeForm({ self }) {
                   </Card>
                 )}
 
-                {activeSection === "benefits" && (
+                {shownSection === "benefits" && (
                   <FinancialBenefitsSection
                     employee={formData}
                     tab={benefitsTab}
@@ -2974,11 +3386,21 @@ export default function EmployeeForm({ self }) {
                   />
                 )}
 
-                {activeSection === "entitlements" && (
+                {shownSection === "entitlements" && (
                   <EntitlementsSection
+                    // From Requests it opens on the entitlement chosen there,
+                    // and opens afresh when another is chosen.
+                    key={isRequests ? requestItem.key : "entitlements"}
+                    tab={isRequests ? requestItem.tab : undefined}
                     employee={formData}
                     canEdit={!readOnly}
                   />
+                )}
+
+                {/* A request with no page of its own yet says so, rather
+                    than having one made up for it. */}
+                {isRequests && !requestItem.section && (
+                  <EmptyState>{requestItem.label} requests are not set up yet.</EmptyState>
                 )}
 
                 {activeSection === "daily" && (
@@ -2995,11 +3417,11 @@ export default function EmployeeForm({ self }) {
                   <ViolationsSection employee={formData} canEdit={!readOnly} />
                 )}
 
-                {activeSection === "leaves" && (
+                {shownSection === "leaves" && (
                   <LeavesSection employee={formData} canReview={!readOnly} />
                 )}
 
-                {activeSection === "generalRequest" && (
+                {shownSection === "generalRequest" && (
                   <GeneralRequestSection employee={formData} canDecide={!readOnly} />
                 )}
 

@@ -23,8 +23,11 @@ export default function EntitlementsSection({
   employee,
   // The firm decides what it pays; on My Profile the entitlements are read.
   canEdit = true,
+  // Which entitlement to open on, when the page that opens it already knows -
+  // Requests opens straight on the one that was chosen there.
+  tab: initialTab,
 }) {
-  const [tab, setTab] = useState(ENTITLEMENT_TABS[0].key);
+  const [tab, setTab] = useState(initialTab || ENTITLEMENT_TABS[0].key);
   const [query, setQuery] = useState("");
   const [records, setRecords] = useState(initialEntitlements);
   // Whether the window is open, and on which tab it was opened.

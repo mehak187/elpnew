@@ -68,6 +68,36 @@ export const employeeDocuments = [
   { id: 8, employeeId: 8, uploadedAt: "2026-07-25T16:25", type: "Other", fileName: "Reference_Letter.pdf", expiry: "", notes: "Reference letter" },
 ];
 
+/**
+ * Corrections asked for on an employee's record, waiting to be decided.
+ *
+ * A correction never changes the record by itself: it is held here, with what
+ * each field says now and what it should say, until somebody approves it.
+ * This list is where `POST /api/correction-requests` will send it once there
+ * is a server; until then it lasts as long as the browser session.
+ */
+export const correctionRequests = [];
+
+/** Files a correction request as Pending, and returns it. */
+export function submitCorrectionRequest({ employeeId, section, changes }) {
+  const request = {
+    id: correctionRequests.reduce((max, r) => Math.max(max, r.id), 0) + 1,
+    employeeId,
+    section,
+    changes,
+    status: "Pending",
+    submittedAt: new Date().toISOString(),
+  };
+  correctionRequests.push(request);
+  return request;
+}
+
+/** The corrections still waiting on one employee's record, for one section. */
+export const pendingCorrections = (employeeId, section) =>
+  correctionRequests.filter(
+    (r) => r.employeeId === employeeId && r.section === section && r.status === "Pending"
+  );
+
 /** The papers filed against one employee. */
 export const documentsFor = (employeeId) =>
   employeeDocuments.filter((doc) => doc.employeeId === employeeId);

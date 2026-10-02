@@ -95,8 +95,10 @@ export default function RecordSidebar({
   const rtl =
     typeof document !== "undefined" && document.documentElement.dir === "rtl";
 
+  // A group marked `link` is a section of its own rather than a heading over
+  // several: it opens when clicked, and holds nothing.
   const groupHolding = (key) =>
-    groups.find((group) => group.items.some((item) => item.key === key));
+    groups.find((group) => !group.link && group.items.some((item) => item.key === key));
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -133,10 +135,36 @@ export default function RecordSidebar({
     onSelect?.(key);
   };
 
+  /** A section of its own at the top level: its icon and name, nothing under it. */
+  const linkRow = (group, afterSelect) => {
+    const Icon = group.icon;
+    const current = active === group.key;
+    return (
+      <button
+        key={group.key}
+        type="button"
+        onClick={() => {
+          select(group.key);
+          afterSelect?.();
+        }}
+        aria-current={current ? "page" : undefined}
+        className={cn(
+          "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-start text-sm text-primary transition-colors",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          current ? "bg-menu-selected font-bold" : "font-semibold hover:bg-menu-hover"
+        )}
+      >
+        {Icon && <Icon strokeWidth={1.5} className="size-[18px] shrink-0" />}
+        <span className="flex-1 truncate">{group.label}</span>
+      </button>
+    );
+  };
+
   /** The groups as a plain open list, for the narrow-screen overlay. */
   const overlayGroups = (
     <div className="space-y-1 p-2">
       {groups.map((group) => {
+        if (group.link) return linkRow(group, () => setSheetOpen(false));
         const Icon = group.icon;
         return (
           <div key={group.key}>
@@ -260,6 +288,33 @@ export default function RecordSidebar({
       >
         {groups.map((group) => {
           const Icon = group.icon;
+
+          if (group.link) {
+            // Narrowed to icons, a section of its own is just its icon.
+            if (collapsed) {
+              return (
+                <button
+                  key={group.key}
+                  type="button"
+                  title={group.label}
+                  onClick={() => select(group.key)}
+                  aria-current={active === group.key ? "page" : undefined}
+                  className={cn(
+                    "hidden size-12 items-center justify-center rounded-md border-s-[3px] transition-colors lg:flex",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    active === group.key
+                      ? "border-s-primary bg-menu-selected text-primary"
+                      : "border-s-transparent text-primary hover:bg-menu-hover"
+                  )}
+                >
+                  {Icon && <Icon strokeWidth={1.5} className="size-5" />}
+                  <span className="sr-only">{group.label}</span>
+                </button>
+              );
+            }
+            return linkRow(group);
+          }
+
           const expanded = isOpen(group.key);
           const holds = group.items.some((item) => item.key === active);
 
