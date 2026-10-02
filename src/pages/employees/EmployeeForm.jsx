@@ -4,6 +4,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import RecordSidebar from "@/components/shared/RecordSidebar";
 import DateField from "@/components/shared/DateField";
+import {
+  documentCategoryIcon,
+  documentTypeIcon,
+} from "./documentIcons";
 import PageHeader from "@/components/shared/PageHeader";
 import PhoneInput from "@/components/shared/PhoneInput";
 import { Input } from "@/components/ui/input";
@@ -512,6 +516,9 @@ function ChoiceField({
   // A field whose choices depend on another is shut until that one is
   // answered: an empty list of options says nothing about why it is empty.
   disabled,
+  // Given a mark for an option, the list is scanned rather than read: the eye
+  // finds the right line without working through the ones above it.
+  iconFor,
 }) {
   return (
     <div className="form-field space-y-2" data-required={required || undefined}>
@@ -525,11 +532,23 @@ function ChoiceField({
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
-          {options.map((option) => (
-            <SelectItem key={option} value={option}>
-              {option}
-            </SelectItem>
-          ))}
+          {options.map((option) => {
+            const Icon = iconFor && iconFor(option);
+            return (
+              <SelectItem key={option} value={option}>
+                <span className="flex items-center gap-2.5">
+                  {Icon && (
+                    <Icon
+                      strokeWidth={1.5}
+                      aria-hidden="true"
+                      className="size-[18px] shrink-0 text-primary"
+                    />
+                  )}
+                  {option}
+                </span>
+              </SelectItem>
+            );
+          })}
         </SelectContent>
       </Select>
     </div>
@@ -2710,6 +2729,7 @@ export default function EmployeeForm({ self }) {
                               value={docDraft.category}
                               onChange={chooseCategory}
                               options={docCategories}
+                              iconFor={documentCategoryIcon}
                               required
                             />
 
@@ -2728,11 +2748,21 @@ export default function EmployeeForm({ self }) {
                                       <SelectValue placeholder="Select type" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {typesInCategory.map((type) => (
-                                        <SelectItem key={type} value={type}>
-                                          {documentTypeLabel(type)}
-                                        </SelectItem>
-                                      ))}
+                                      {typesInCategory.map((type) => {
+                                        const TypeIcon = documentTypeIcon(type);
+                                        return (
+                                          <SelectItem key={type} value={type}>
+                                            <span className="flex items-center gap-2.5">
+                                              <TypeIcon
+                                                strokeWidth={1.5}
+                                                aria-hidden="true"
+                                                className="size-[18px] shrink-0 text-primary"
+                                              />
+                                              {documentTypeLabel(type)}
+                                            </span>
+                                          </SelectItem>
+                                        );
+                                      })}
                                     </SelectContent>
                                   </Select>
                                   {/* Open only once there is a type, and only

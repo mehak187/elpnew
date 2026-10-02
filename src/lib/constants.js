@@ -299,8 +299,8 @@ export const COUNTRY_DIAL_CODES = [
  * lawyer has a bar card. The rest everybody has, so they are asked for
  * whoever the employee is.
  */
-export const OMANI_DOCUMENT_TYPES = ["National ID"];
-export const NON_OMANI_DOCUMENT_TYPES = ["Residence Card", "Passport", "Work Permit"];
+/** The identity papers, offered to everybody in the order the board sets. */
+export const IDENTITY_DOCUMENT_TYPES = ["National ID", "Passport", "Residence Card"];
 
 /**
  * The papers an employee cannot work without: when one lapses and is not
@@ -309,7 +309,6 @@ export const NON_OMANI_DOCUMENT_TYPES = ["Residence Card", "Passport", "Work Per
 export const CRITICAL_DOCUMENT_TYPES = [
   "Law Practice License",
   "Residence Card",
-  "Work Permit",
 ];
 export const LAWYER_DOCUMENT_TYPE = "Law Practice License";
 
@@ -347,8 +346,7 @@ export const COMMON_DOCUMENT_TYPES = [
 
 /** Every type there is, for anything that has to list them all. */
 export const EMPLOYEE_DOCUMENT_TYPES = [
-  ...OMANI_DOCUMENT_TYPES,
-  ...NON_OMANI_DOCUMENT_TYPES,
+  ...IDENTITY_DOCUMENT_TYPES,
   LAWYER_DOCUMENT_TYPE,
   ...COMMON_DOCUMENT_TYPES,
 ];

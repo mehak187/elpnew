@@ -7,8 +7,7 @@ import { expiryState, EXPIRY_LABEL, daysUntil, addDays } from "@/lib/expiry";
  */
 
 import {
-  OMANI_DOCUMENT_TYPES,
-  NON_OMANI_DOCUMENT_TYPES,
+  IDENTITY_DOCUMENT_TYPES,
   LAWYER_DOCUMENT_TYPE,
   LAWYER_MEMBERSHIP_TYPE,
   COMMON_DOCUMENT_TYPES,
@@ -80,15 +79,15 @@ export const hasDocuments = (employeeId) =>
 /**
  * The document types one employee can file.
  *
- * An Omani carries an ID card where a foreigner carries a resident card and a
- * passport; only a lawyer has a bar card. Everything else everybody has.
+ * Every category offers its whole list, to everybody. Which papers a person
+ * actually holds is answered by what they file, not by the system deciding
+ * in advance which ones they are allowed to have.
  */
-export function documentTypesFor(employee) {
-  const omani = String(employee?.nationality || "").trim().toLowerCase() === "omani";
-  const lawyer = /lawyer/i.test(String(employee?.occupation || ""));
+export function documentTypesFor() {
   return [
-    ...(omani ? OMANI_DOCUMENT_TYPES : NON_OMANI_DOCUMENT_TYPES),
-    ...(lawyer ? [LAWYER_DOCUMENT_TYPE, LAWYER_MEMBERSHIP_TYPE] : []),
+    ...IDENTITY_DOCUMENT_TYPES,
+    LAWYER_DOCUMENT_TYPE,
+    LAWYER_MEMBERSHIP_TYPE,
     ...COMMON_DOCUMENT_TYPES,
   ];
 }
@@ -103,8 +102,7 @@ export const DOCUMENT_EXPIRING_DAYS = 90;
  * are never versioned.
  */
 const ONE_AT_A_TIME = [
-  ...OMANI_DOCUMENT_TYPES,
-  ...NON_OMANI_DOCUMENT_TYPES,
+  ...IDENTITY_DOCUMENT_TYPES,
   LAWYER_DOCUMENT_TYPE,
 ];
 
@@ -113,7 +111,6 @@ const DOCUMENT_CATEGORY = {
   "National ID": "Identity & Residency",
   "Residence Card": "Identity & Residency",
   Passport: "Identity & Residency",
-  "Work Permit": "Identity & Residency",
   [LAWYER_DOCUMENT_TYPE]: "Professional Licenses",
   [LAWYER_MEMBERSHIP_TYPE]: "Professional Licenses",
   CV: "Qualifications & Experience",
