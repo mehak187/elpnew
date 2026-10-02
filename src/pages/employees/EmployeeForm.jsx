@@ -226,7 +226,13 @@ const SECTIONS = [
  */
 function Required({ show }) {
   if (!show) return null;
-  return ;
+  // Hidden from a screen reader: the control it marks carries `required`, and
+  // that is what gets announced. Read out as well, the asterisk is noise.
+  return (
+    <span aria-hidden="true" className="ms-1 text-destructive">
+      *
+    </span>
+  );
 }
 
 /**
@@ -538,7 +544,10 @@ function ChoiceField({
 function MoneyField({ id, label, value, onChange, required, locked, note }) {
   return (
     <div className="form-field space-y-2">
-      <Label htmlFor={id}>{label}</Label>
+      <Label htmlFor={id}>
+        {label}
+        <Required show={required} />
+      </Label>
       <div className="relative">
         {locked ? (
           <Input
@@ -2360,25 +2369,11 @@ export default function EmployeeForm({ self }) {
                   <>
                     <SectionCard title="Salary Information">
                       <div className="form-grid gap-y-6">
-                        {PAY_FIELDS.map((field) => (
-                          <MoneyField
-                            key={field.key}
-                            id={field.key}
-                            label={field.label}
-                            value={formData[field.key]}
-                            onChange={onChange}
-                            required={field.required}
-                          />
-                        ))}
-                        <MoneyField
-                          id="grossSalary"
-                          label="Gross Salary"
-                          value={gross}
-                          locked
-                          note="Auto-calculated from salary components"
-                        />
-                        <div className="form-field space-y-2">
-                          <Label htmlFor="salaryEffectiveDate">Effective Date</Label>
+                        <div className="form-field space-y-2" data-required="true">
+                          <Label htmlFor="salaryEffectiveDate">
+                            Effective Date
+                            <Required show />
+                          </Label>
                           <div className="flex items-center gap-2">
                             <DateField
                               id="salaryEffectiveDate"
@@ -2395,6 +2390,24 @@ export default function EmployeeForm({ self }) {
                             )}
                           </div>
                         </div>
+                        {PAY_FIELDS.map((field) => (
+                          <MoneyField
+                            key={field.key}
+                            id={field.key}
+                            label={field.label}
+                            value={formData[field.key]}
+                            onChange={onChange}
+                            required={field.required}
+                          />
+                        ))}
+                        <MoneyField
+                          id="grossSalary"
+                          label="Gross Salary"
+                          value={gross}
+                          locked
+                          required
+                          note="Auto-calculated from salary components"
+                        />
                       </div>
                       {scheduled && (
                         <p className="mt-4 text-sm text-primary/75">
