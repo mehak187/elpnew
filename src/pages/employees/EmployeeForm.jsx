@@ -74,6 +74,7 @@ import {
   EMPLOYMENT_TYPES,
   EMPLOYEE_CONTRACT_TYPES,
   PRACTICE_LEVELS,
+  documentTypeLabel,
   RECEIVING_BANKS,
 } from "@/lib/constants";
 import { initialBranches } from "@/pages/firm/firmData";
@@ -292,8 +293,9 @@ const ADD_STEPS = [
   { key: "identity", label: "Identity & Immigration" },
   // Pay once the person and the job are settled.
   { key: "salary", label: "Salary & Banking" },
-  // Only for somebody registered with the Fund, as Employment says; anybody
-  // else skips it.
+  // Walked through only by somebody the firm registers with the Fund, which
+  // Employment & Contract has already asked. Saving pay takes a registered
+  // employee here and everybody else straight on to Documents.
   {
     key: "socialProtection",
     label: "Social Protection",
@@ -1229,7 +1231,7 @@ export default function EmployeeForm({ self }) {
    * gaps and takes the cursor to the first, and the step stays where it is.
    * Which step is next is read from what is being saved now - Social
    * Protection only follows for somebody registered - and the last one
-   * finishes the employee and opens their record.
+   * hands over to Documents, where the record is finished.
    */
   const saveStep = () => {
     if (!checkRequired(formRef.current)) return;
@@ -1253,11 +1255,9 @@ export default function EmployeeForm({ self }) {
 
     const flow = flowFor(formData);
     const next = flow[flow.findIndex((s) => s.key === step) + 1];
-    if (!next) {
-      finishEmployee();
-      return;
-    }
-    setStep(next.key);
+    // Past the last section asked for, the papers are what is left. The record
+    // itself is made from Documents, so a draft is never created half-filed.
+    setStep(next ? next.key : "documents");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -1305,7 +1305,14 @@ export default function EmployeeForm({ self }) {
         <Button type="button" variant="ghost" onClick={() => navigate("/employees")}>
           Cancel
         </Button>
-        {step !== "documents" && (
+        {step === "documents" ? (
+          // Papers are filed one at a time above; this is what says the draft
+          // is done with and makes the employee.
+          <Button type="button" onClick={finishEmployee}>
+            <Save className="me-2 h-4 w-4" />
+            Finish
+          </Button>
+        ) : (
           <Button type="submit">
             <Save className="me-2 h-4 w-4" />
             Save
@@ -2723,7 +2730,7 @@ export default function EmployeeForm({ self }) {
                                     <SelectContent>
                                       {typesInCategory.map((type) => (
                                         <SelectItem key={type} value={type}>
-                                          {type}
+                                          {documentTypeLabel(type)}
                                         </SelectItem>
                                       ))}
                                     </SelectContent>

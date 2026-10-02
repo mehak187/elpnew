@@ -88,6 +88,7 @@ export function documentTypesFor(employee) {
   const lawyer = /lawyer/i.test(String(employee?.occupation || ""));
   return [
     ...(omani ? OMANI_DOCUMENT_TYPES : NON_OMANI_DOCUMENT_TYPES),
+    "Other Identity Document",
     ...(lawyer ? [LAWYER_DOCUMENT_TYPE, LAWYER_MEMBERSHIP_TYPE] : []),
     ...COMMON_DOCUMENT_TYPES,
   ];
@@ -126,7 +127,10 @@ const DOCUMENT_CATEGORY = {
   "Warning Decision": "Administrative Decisions",
   "Termination Decision": "Administrative Decisions",
   "Committee Formation Decision": "Administrative Decisions",
-  Other: "Other",
+  "Other Identity Document": "Identity & Residency",
+  "Other Professional Licence": "Professional Licenses",
+  "Other Qualification": "Qualifications & Experience",
+  "Other Decision": "Administrative Decisions",
 };
 
 export const documentCategory = (type) => DOCUMENT_CATEGORY[type] || "Other";

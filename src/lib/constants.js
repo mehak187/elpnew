@@ -316,6 +316,18 @@ export const LAWYER_DOCUMENT_TYPE = "Law Practice License";
 /** Held by a lawyer alongside the licence itself. */
 export const LAWYER_MEMBERSHIP_TYPE = "Professional Membership Card";
 
+/** The catch-all each category ends with, kept apart by the category it ends. */
+export const OTHER_DOCUMENT_TYPES = [
+  "Other Identity Document",
+  "Other Professional Licence",
+  "Other Qualification",
+  "Other Decision",
+];
+
+/** What a catch-all is called in a list where its category is already known. */
+export const documentTypeLabel = (type) =>
+  OTHER_DOCUMENT_TYPES.includes(type) ? "Other" : type;
+
 export const COMMON_DOCUMENT_TYPES = [
   // Qualifications & Experience
   "CV",
@@ -330,7 +342,7 @@ export const COMMON_DOCUMENT_TYPES = [
   "Warning Decision",
   "Termination Decision",
   "Committee Formation Decision",
-  "Other",
+  ...OTHER_DOCUMENT_TYPES,
 ];
 
 /** Every type there is, for anything that has to list them all. */
