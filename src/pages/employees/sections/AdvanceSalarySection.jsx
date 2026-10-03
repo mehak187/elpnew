@@ -13,16 +13,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import AiSearch from "@/components/shared/AiSearch";
-import { DecisionChoice } from "@/components/shared/RequestSteps";
 import { Card, CardContent } from "@/components/ui/card";
 import { Bordered, EmptyState } from "@/components/shared/panels";
-import {
-  FieldLabel,
-  Settled,
-  Choice,
-  Attach,
-  checkRequired,
-} from "@/components/shared/formFields";
+import DateField from "@/components/shared/DateField";
+import { Choice, checkRequired } from "@/components/shared/formFields";
 import {
   RecordTable,
   HeadRow,
@@ -36,16 +30,38 @@ import { cn } from "@/lib/utils";
 import { amountValue } from "@/lib/money";
 import { firmToday } from "@/lib/expiry";
 import { smartSearch } from "@/lib/search/smartSearch";
-import { Check, FileText, History, Info, Plus, Wallet, X } from "lucide-react";
+import {
+  CalendarDays,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  CircleCheck,
+  Clock,
+  Download,
+  FileText,
+  Info,
+  MessageCircle,
+  Plus,
+  Printer,
+  Send,
+  User,
+  Wallet,
+  X,
+} from "lucide-react";
 import { useAdvances } from "@/lib/advances/context";
 import { amount, formatDate } from "../loanData";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
-import { PAYING_ACCOUNTS } from "@/pages/firm/firmData";
+import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
+import { advanceSummaryPdf } from "../advanceSummaryPdf";
 import {
   ADVANCE_BOOKING,
   ADVANCE_PURPOSES,
   ADVANCE_STATUS_CHIP,
   ADVANCE_STATUS_TONE,
+  DECISION_STATUS,
+  DISBURSEMENT_CATEGORIES,
+  DISBURSEMENT_SUBCATEGORIES,
+  DISBURSEMENT_TYPES,
   OTHER_PURPOSE,
   advancesFor,
   deductedFrom,
@@ -54,6 +70,18 @@ import {
 } from "../advanceSalaryData";
 
 const REASON_LIMIT = 500;
+const COMMENT_LIMIT = 300;
+// Remarks longer than this are cut to two lines until "Show more".
+const REMARKS_PREVIEW = 180;
+
+/** What management can answer an advance with, as the review names it. */
+const ADVANCE_DECISIONS = [
+  { key: "full", label: "Full Approval" },
+  { key: "partial", label: "Partial Approval" },
+  // Handed back to be sent again: nothing granted, nothing refused.
+  { key: "completion", label: "Return Request" },
+  { key: "rejected", label: "Rejection" },
+];
 
 /**
  * The months an advance can come out of: this one and the two after it, as
@@ -80,12 +108,18 @@ const emptyDraft = () => {
 };
 
 /** "03 Oct 2026", as the head of the request gives its date. */
-const longDate = (iso) =>
-  new Date(iso + "T00:00").toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+// Spelled out here: the browser's own short month is "Sept" in some places.
+const longDate = (iso) => {
+  const [year, month, day] = String(iso).split("-");
+  return `${day} ${SHORT_MONTHS[Number(month) - 1]} ${year}`;
+};
+
+/** "SA-2026-00012" as the review reads it: "SA ( 12/2026 )". */
+const shortRequestNo = (requestNo) => {
+  const [prefix, year, count] = String(requestNo).split("-");
+  return count ? `${prefix} ( ${Number(count)}/${year} )` : requestNo;
+};
 
 /** The red mark of a field that must be answered. */
 function Star() {
@@ -135,9 +169,13 @@ function AdvanceSteps({ steps, active, onChange }) {
                 className={cn(
                   "flex size-11 items-center justify-center rounded-full text-lg font-semibold",
                   open
-                    ? "bg-blue-600 text-white"
+                    ? step.activeTone === "navy"
+                      ? "bg-primary text-white"
+                      : "bg-blue-600 text-white"
                     : done
-                      ? "bg-green-600 text-white"
+                      ? step.doneTone === "green"
+                        ? "bg-green-700 text-white"
+                        : "bg-primary text-white"
                       : "bg-slate-200 text-primary"
                 )}
               >
@@ -148,7 +186,11 @@ function AdvanceSteps({ steps, active, onChange }) {
               <span
                 className={cn(
                   "text-center text-sm sm:text-base",
-                  open ? "font-bold text-blue-700" : "text-primary"
+                  open
+                    ? step.activeTone === "navy"
+                      ? "font-bold text-primary"
+                      : "font-bold text-blue-700"
+                    : "text-primary"
                 )}
               >
                 {step.title}
@@ -215,7 +257,16 @@ export function AdvanceSalaryForm({
 
   // Which stage of the request is open. A request already on the list is
   // opened to be decided, not written again.
-  const [stage, setStage] = useState(openRequest ? "decision" : "request");
+  // Which stage of the request is open. A request already on the list opens
+  // where it has got to: granted and not yet paid, on the financial
+  // department's stage; otherwise on management's.
+  const [stage, setStage] = useState(() =>
+    !openRequest
+      ? "request"
+      : openRequest.status === "Approved" && openRequest.decidedOn && !openRequest.paidOn
+        ? "finance"
+        : "decision"
+  );
   const [decision, setDecision] = useState(openRequest?.decision || "");
   const [comment, setComment] = useState(openRequest?.managementComment || "");
   // What is being approved, where that is not simply what was asked for.
@@ -225,11 +276,14 @@ export function AdvanceSalaryForm({
   const [pay, setPay] = useState({
     ...ADVANCE_BOOKING,
     method: openRequest?.method || "",
-    bankAccount: openRequest?.bankAccount || "",
-    paymentDate: openRequest?.paymentDate || "",
+    paymentDate: openRequest?.paymentDate || firmToday(),
     reference: openRequest?.reference || "",
+    financeComment: openRequest?.financeComment || "",
   });
-  const [receipt, setReceipt] = useState(null);
+  const [showAllRemarks, setShowAllRemarks] = useState(false);
+  // The transaction summary, once the payment is processed: shown in place
+  // of the form, to be printed and filed.
+  const [pdfUrl, setPdfUrl] = useState("");
 
   // Whatever an earlier request had attached to it.
   const attachedName = openRequest?.attachment || "";
@@ -254,10 +308,15 @@ export function AdvanceSalaryForm({
   const amending = decision === "partial";
   // Only something granted reaches the financial department.
   const granted = Boolean(decision) && !rejected && !returning;
-  const approvedAmount = amending ? Number(approved) || 0 : requested;
+  // Older requests were approved before a decision was written on them.
+  const approvedAmount = amending
+    ? Number(approved) || 0
+    : Number(openRequest?.approvedAmount) || requested;
   const afterDeduction = Number(
     (net - (stage === "request" ? requested : approvedAmount)).toFixed(3)
   );
+  // Management's answer as it was saved: what the financial department acts on.
+  const decided = openRequest?.status === "Approved";
 
   // "Other" is a purpose only once it is said what it is, in the remarks.
   const specifying = draft.purpose === OTHER_PURPOSE;
@@ -269,18 +328,20 @@ export function AdvanceSalaryForm({
     draft.purpose &&
     (!specifying || draft.reason.trim());
 
-  // Nothing leaves the firm on a refusal or a hand-back, so neither has to
-  // say how; an approval does, before it can be saved.
-  const canSave =
+  // A partial approval says how much, and no more than was asked for.
+  const canConfirm =
     canDecide &&
     Boolean(decision) &&
-    (!granted ||
-      (approvedAmount > 0 &&
-        approvedAmount <= requested &&
-        pay.method &&
-        pay.bankAccount &&
-        pay.paymentDate &&
-        pay.reference.trim()));
+    (!amending || (approvedAmount > 0 && approvedAmount < requested));
+
+  // Money only leaves once it is said how and when; anything but cash has a
+  // reference to trace it by.
+  const canProcess =
+    canDecide &&
+    decided &&
+    pay.method &&
+    pay.paymentDate &&
+    (pay.method === "Cash" || pay.reference.trim());
 
   const submit = () => {
     if (!checkRequired() || !canSubmit) return;
@@ -298,8 +359,12 @@ export function AdvanceSalaryForm({
     onClose();
   };
 
-  const saveDecision = () => {
-    if (!canSave || !openRequest) return;
+  /**
+   * Management's answer, saved as it is given. A refusal or a hand-back ends
+   * here; a grant goes on to the financial department, which pays it.
+   */
+  const confirmDecision = () => {
+    if (!canConfirm || !openRequest) return;
     decideAdvance(openRequest.id, {
       decision,
       // A hand-back leaves the request where it was: still waiting, with
@@ -307,20 +372,40 @@ export function AdvanceSalaryForm({
       status: rejected ? "Rejected" : returning ? "Pending" : "Approved",
       approvedAmount: granted ? approvedAmount : 0,
       managementComment: comment.trim(),
-      decidedOn: new Date().toISOString().slice(0, 10),
-      ...(granted
-        ? {
-            ...ADVANCE_BOOKING,
-            method: pay.method,
-            bankAccount: pay.bankAccount,
-            paymentDate: pay.paymentDate,
-            reference: pay.reference.trim(),
-            receipt: receipt?.name || "",
-          }
-        : {}),
+      decidedOn: firmToday(),
+      decidedBy: CURRENT_USER.name,
     });
-    onClose();
+    if (granted) setStage("finance");
+    else onClose();
   };
+
+  /**
+   * The payment, recorded, and the whole transaction put on one page: the
+   * request, management's decision and the disbursement, to print and file
+   * in the employee's personnel record.
+   */
+  const processPayment = async () => {
+    if (!canProcess || !openRequest) return;
+    const payment = {
+      ...pay,
+      reference: pay.reference.trim(),
+      financeComment: pay.financeComment.trim(),
+      paidOn: firmToday(),
+      paidBy: CURRENT_USER.name,
+    };
+    decideAdvance(openRequest.id, payment);
+    setPdfUrl(
+      await advanceSummaryPdf({
+        advance: { ...openRequest, ...payment },
+        employee,
+        net,
+      })
+    );
+  };
+
+  // The first stage of a new request is the one being written; every other
+  // view of the request is reviewing it.
+  const writing = stage === "request" && !openRequest;
 
   return (
     <div className="space-y-6">
@@ -338,11 +423,16 @@ export function AdvanceSalaryForm({
             <DialogTitle className="text-2xl font-bold text-primary">
               Salary Advance Request
             </DialogTitle>
-            <span className="rounded-md bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
-              {requestNo}
-            </span>
+            {/* While it is being written the number sits by the title, with
+                the limit a click away; once sent, it moves to the right. */}
+            {writing && (
+              <span className="rounded-md bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
+                {requestNo}
+              </span>
+            )}
             {/* What may be asked for, kept a click away: the figures behind
                 the limit the amount is checked against. */}
+            {writing && (
             <PopoverPrimitive.Root>
               <PopoverPrimitive.Trigger asChild>
                 <button
@@ -375,18 +465,36 @@ export function AdvanceSalaryForm({
                 </PopoverPrimitive.Content>
               </PopoverPrimitive.Portal>
             </PopoverPrimitive.Root>
+            )}
           </div>
           <DialogDescription className="text-sm text-primary/75">
-            Request a salary advance for the selected month.
+            {writing
+              ? "Request a salary advance for the selected month."
+              : stage === "finance"
+                ? "Review the management decision and process the payment."
+                : "Review the request and record your decision."}
           </DialogDescription>
         </div>
-        <p className="ms-auto flex flex-wrap items-center gap-3 pt-2 text-sm text-primary">
-          <span>
-            {employee?.empNo || ""} <span className="px-1">|</span> {employee?.name || ""}
-          </span>
+        <div className="ms-auto flex flex-wrap items-center gap-3 pt-2 text-sm text-primary">
+          {writing ? (
+            <span>
+              {employee?.empNo || ""} <span className="px-1">|</span> {employee?.name || ""}
+            </span>
+          ) : (
+            <>
+              <span>{employee?.empNo || ""}</span>
+              <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+              <span>{employee?.name || ""}</span>
+            </>
+          )}
           <span aria-hidden="true" className="h-5 w-px bg-container-border" />
           <span>{longDate(requestedOn)}</span>
-        </p>
+          {!writing && (
+            <span className="rounded-md bg-blue-50 px-3 py-1.5 font-semibold text-blue-700">
+              {shortRequestNo(requestNo)}
+            </span>
+          )}
+        </div>
         {/* The window's own close, at the size the design draws it. */}
         <DialogClose className="absolute end-5 top-5 rounded-md p-1 text-primary transition-colors hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <X className="size-7" aria-hidden="true" />
@@ -394,6 +502,43 @@ export function AdvanceSalaryForm({
         </DialogClose>
       </div>
 
+      {/* Once paid, the whole transaction on one page, shown where the form
+          was: printed from here and filed in the personnel record. */}
+      {pdfUrl ? (
+        <div className="space-y-4">
+          <p
+            role="status"
+            className="flex items-center gap-2 rounded-lg bg-green-50 px-4 py-3 text-sm font-medium text-green-800"
+          >
+            <CircleCheck className="size-5 shrink-0" aria-hidden="true" />
+            Payment processed. Print the summary below and file it in the
+            employee&apos;s personnel record.
+          </p>
+          <iframe
+            title={"Transaction summary " + requestNo}
+            src={pdfUrl}
+            className="h-[65vh] w-full rounded-lg border"
+          />
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <Button asChild variant="outline" className="min-w-36">
+              <a href={pdfUrl} download={requestNo + " - Transaction Summary.pdf"}>
+                <Download className="me-2 h-4 w-4" aria-hidden="true" />
+                Download PDF
+              </a>
+            </Button>
+            <Button asChild variant="outline" className="min-w-36">
+              <a href={pdfUrl} target="_blank" rel="noreferrer">
+                <Printer className="me-2 h-4 w-4" aria-hidden="true" />
+                Open to Print
+              </a>
+            </Button>
+            <Button type="button" className="min-w-36" onClick={onClose}>
+              Done
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
       <AdvanceSteps
         active={stage}
         onChange={setStage}
@@ -402,7 +547,9 @@ export function AdvanceSalaryForm({
           {
             key: "decision",
             title: "Management Comment",
-            done: Boolean(openRequest?.decision),
+            done: Boolean(openRequest?.decidedOn || decided),
+            // A grant is ticked in green: it is what lets the money go.
+            doneTone: decided ? "green" : undefined,
             // Nothing can be decided until there is a request to decide: a
             // new one is saved first, and opened back off the list.
             disabled: !openRequest,
@@ -410,9 +557,11 @@ export function AdvanceSalaryForm({
           {
             key: "finance",
             title: "Financial Department Actions",
-            done: Boolean(openRequest?.reference),
-            // Only an advance that was granted is paid out.
-            disabled: !openRequest || !granted,
+            done: Boolean(openRequest?.paidOn),
+            activeTone: "navy",
+            // Only an advance that was granted is paid out, once the grant
+            // is saved.
+            disabled: !decided,
           },
         ]}
       />
@@ -421,7 +570,7 @@ export function AdvanceSalaryForm({
         <div className="space-y-6 rounded-xl border p-4 sm:p-6">
           {/* The salary it comes out of, which month, how much, and what is
               left - each beside the next, divided by a rule. */}
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-[1fr_1.2fr_1fr_1fr] xl:divide-x xl:divide-container-border xl:[&>*:not(:first-child)]:ps-6">
+          <div className="grid gap-6 md:grid-cols-2 xl:gap-x-0 *:min-w-0 xl:grid-cols-[1fr_1.2fr_1fr_1fr] xl:divide-x xl:divide-container-border xl:[&>*:not(:first-child)]:ps-6 xl:[&>*:not(:last-child)]:pe-6">
             <Figure
               label={draft.deductMonth + " " + draft.deductYear + " Salary"}
               value={net}
@@ -497,7 +646,7 @@ export function AdvanceSalaryForm({
             <Figure label="Remaining Salary After Deduction" value={afterDeduction} />
           </div>
 
-          <div className="grid gap-6 border-t pt-6 md:grid-cols-[1fr_2fr] md:divide-x md:divide-container-border md:[&>*:last-child]:ps-6">
+          <div className="grid gap-6 md:gap-x-0 *:min-w-0 border-t pt-6 md:grid-cols-[1fr_2fr] md:divide-x md:divide-container-border md:[&>*:last-child]:ps-6 md:[&>*:first-child]:pe-6">
             <div className="form-field space-y-2" data-required="true">
               <Label htmlFor="advance-purpose" className="font-semibold text-primary">
                 Purpose
@@ -547,40 +696,76 @@ export function AdvanceSalaryForm({
         </div>
       )}
 
-      {stage === "decision" && (
+      {stage !== "request" && (
         <>
           {/* What was asked for, read off the request rather than asked for
-              again. Whatever was attached hangs under it. */}
-          <Bordered title="Salary Advance Request Details">
-            <div className="form-grid">
-              <Settled
-                id="advance-requested"
-                label="Requested Advance Amount"
-                value={amount(requested)}
-              />
-              <Settled
-                id="advance-month-said"
-                label="Deduct From Salary Of"
-                value={deductedFrom(draft)}
-              />
-              <Settled
-                id="advance-purpose-said"
-                label="Purpose"
-                value={draft.purpose || "-"}
-              />
-              <Settled
-                id="advance-after-said"
-                label="Estimated Salary After Deduction"
-                value={amount(afterDeduction)}
-              />
-            </div>
+              again: five figures side by side, then the employee's own words
+              and whatever was attached. */}
+          <section className="space-y-4 rounded-xl border bg-blue-50/30 p-4 sm:p-5">
+            <h3 className="flex items-center gap-3 text-xl font-bold text-primary">
+              <span
+                aria-hidden="true"
+                className="flex size-10 items-center justify-center rounded-lg bg-blue-50"
+              >
+                <FileText className="size-5" strokeWidth={1.5} />
+              </span>
+              Request Summary
+            </h3>
+            <dl className="grid gap-4 lg:gap-x-0 *:min-w-0 rounded-lg bg-white px-4 py-3 sm:grid-cols-2 lg:grid-cols-5 lg:divide-x lg:divide-container-border lg:[&>*:not(:first-child)]:ps-6 lg:[&>*:not(:last-child)]:pe-6">
+              {[
+                [draft.deductMonth + " " + draft.deductYear + " Salary", amountValue(net), "money"],
+                ["Advance Amount (Requested)", amountValue(requested), "held"],
+                [
+                  stage === "finance"
+                    ? "Remaining Salary After Approved Amount"
+                    : "Remaining Salary After Deduction",
+                  amountValue(afterDeduction),
+                  "money",
+                ],
+                ["Purpose", draft.purpose || "-"],
+                ["Deduct From Salary Of", deductedFrom(draft)],
+              ].map(([label, value, kind]) => (
+                // A label that runs to two lines pushes nothing down: every
+                // figure sits on the same line at the foot of its column.
+                <div key={label} className="flex flex-col gap-1">
+                  <dt className="text-sm text-primary">{label}</dt>
+                  <dd
+                    className={cn(
+                      "mt-auto font-bold",
+                      kind ? "text-xl" : "pt-1 text-sm",
+                      kind === "held" ? "text-red-600" : "text-primary"
+                    )}
+                  >
+                    {value}
+                    {kind && <Rial className="ms-2 text-sm font-normal text-primary/75" />}
+                  </dd>
+                </div>
+              ))}
+            </dl>
             {(draft.reason || attachedName) && (
-              <div className="mt-4 space-y-2 text-sm">
+              <div className="space-y-2 rounded-lg border bg-blue-50/50 px-4 py-3 text-sm">
+                <p className="font-semibold text-primary">Employee Remarks</p>
                 {draft.reason && (
-                  <p className="text-primary">
-                    <span className="font-semibold">Remarks: </span>
-                    {draft.reason}
-                  </p>
+                  <div className="flex items-start gap-4">
+                    <p className={cn("flex-1 text-primary/85", !showAllRemarks && "line-clamp-2")}>
+                      {draft.reason}
+                    </p>
+                    {/* Offered only where the remarks run past two lines. */}
+                    {draft.reason.length > REMARKS_PREVIEW && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllRemarks((open) => !open)}
+                        aria-expanded={showAllRemarks}
+                        className="flex shrink-0 items-center gap-1 font-medium text-blue-700 hover:text-blue-800"
+                      >
+                        {showAllRemarks ? "Show less" : "Show more"}
+                        <ChevronDown
+                          aria-hidden="true"
+                          className={cn("size-4 transition-transform", showAllRemarks && "rotate-180")}
+                        />
+                      </button>
+                    )}
+                  </div>
                 )}
                 {attachedName && (
                   <button
@@ -594,137 +779,284 @@ export function AdvanceSalaryForm({
                 )}
               </div>
             )}
-          </Bordered>
+          </section>
 
-          <DecisionChoice
-            value={decision}
-            onChange={setDecision}
-            disabled={!canDecide}
-          />
-
-          {/* A refusal is only as good as its reason; on an approval the
-              comment is a note. */}
-          <Bordered title="Management Comment">
-            <div className="space-y-2">
-              <Textarea
-                id="advance-comment"
-                rows={4}
-                maxLength={REASON_LIMIT}
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder={
-                  rejected
-                    ? "Enter the reason for rejection"
-                    : "Enter a note on this decision"
-                }
-              />
-              <p className="text-end text-xs text-muted-foreground">
-                {comment.length} / {REASON_LIMIT}
+          {/* Management's answer and its comment, in one box. A refusal is
+              only as good as its reason; on an approval the comment is a
+              note. */}
+          {stage === "decision" && (
+          <section className="space-y-4 rounded-xl border p-4 sm:p-5">
+            <h3 className="border-s-4 border-primary ps-3 text-lg font-bold text-primary">
+              Management Decision
+            </h3>
+            {/* On the employee's own page the choices are shown but shut:
+                nobody decides their own request, and saying so stops the
+                shut cards reading as broken. */}
+            {!canDecide && (
+              <p className="flex items-center gap-2 rounded-lg bg-amber-50 px-4 py-2.5 text-sm text-amber-800">
+                <Info className="size-4 shrink-0" aria-hidden="true" />
+                {decision
+                  ? "Decided by management. Shown here for your reference."
+                  : "Awaiting management decision. Only management can decide this request."}
               </p>
+            )}
+            <div
+              role="radiogroup"
+              aria-label="Management decision"
+              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+            >
+              {ADVANCE_DECISIONS.map((option) => {
+                const chosen = decision === option.key;
+                return (
+                  <button
+                    key={option.key}
+                    type="button"
+                    role="radio"
+                    aria-checked={chosen}
+                    disabled={!canDecide}
+                    onClick={() => setDecision(option.key)}
+                    className={cn(
+                      "flex items-center gap-4 rounded-lg border px-5 py-3 text-start font-semibold text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default",
+                      chosen ? "border-blue-600 bg-blue-50" : "bg-blue-50/40 hover:bg-blue-50"
+                    )}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        "flex size-6 shrink-0 items-center justify-center rounded-full border-2",
+                        chosen ? "border-blue-600" : "border-primary"
+                      )}
+                    >
+                      {chosen && <span className="size-3 rounded-full bg-blue-600" />}
+                    </span>
+                    {option.label}
+                  </button>
+                );
+              })}
             </div>
-          </Bordered>
-        </>
-      )}
-
-      {/* What the financial department does with an advance that was
-          granted: how much goes out, how, and the proof it did. */}
-      {stage === "finance" && (
-        <Bordered title="Expense & Disbursement Details">
-          <div className="form-grid">
-            <Settled id="advance-expense-type" label="Expense Type" value={pay.expenseType} />
-            <Settled id="advance-category" label="Category" value={pay.category} />
-            <Settled id="advance-subcategory" label="Subcategory" value={pay.subcategory} />
-
-            {/* The one figure a partial approval changes. A full approval
-                grants what was asked for, so there it is only shown. */}
-            {amending ? (
-              <div className="flex h-full flex-col justify-end gap-2">
-                <FieldLabel htmlFor="advance-approved">
+            {amending && (
+              <div className="form-field max-w-xs space-y-2">
+                <label htmlFor="advance-approved" className="block text-sm font-semibold text-primary">
                   Approved Amount (<Rial />)
-                </FieldLabel>
+                  <Star />
+                </label>
                 <Input
                   id="advance-approved"
                   inputMode="decimal"
                   value={approved}
                   onChange={(e) => setApproved(e.target.value.replace(/[^\d.]/g, ""))}
                   placeholder="0.000"
-                  className={cn(approvedAmount > requested && "border-destructive")}
+                  disabled={!canDecide}
+                  aria-invalid={approvedAmount >= requested || undefined}
+                  className={cn(approvedAmount >= requested && "border-destructive")}
                 />
+                {approvedAmount >= requested && (
+                  <p className="text-xs text-destructive">
+                    A partial approval is less than the {amount(requested)} requested.
+                  </p>
+                )}
               </div>
-            ) : (
-              <Settled
-                id="advance-approved"
-                label="Approved Amount"
-                value={amount(approvedAmount)}
-                payable
-              />
             )}
-
-            <Choice
-              id="advance-method"
-              label="Payment Method"
-              value={pay.method}
-              onChange={(value) => value && setPaid("method", value)}
-              placeholder="Select method"
-              options={PAYMENT_METHODS}
-            />
-
-            {/* One choice, not two: the account carries the bank it is held
-                at, so they cannot be set to disagree. */}
-            <Choice
-              id="advance-bank"
-              label="Bank Account"
-              value={pay.bankAccount}
-              onChange={(value) => value && setPaid("bankAccount", value)}
-              placeholder="Select bank account"
-              options={PAYING_ACCOUNTS}
-            />
-
-            <div className="flex h-full flex-col justify-end gap-2">
-              <FieldLabel htmlFor="advance-pay-date">Payment Date</FieldLabel>
-              <Input
-                id="advance-pay-date"
-                type="date"
-                value={pay.paymentDate}
-                onChange={(e) => setPaid("paymentDate", e.target.value)}
+            <div className="space-y-2">
+              <label htmlFor="advance-comment" className="block text-sm font-semibold text-primary">
+                Management Comment
+              </label>
+              <Textarea
+                id="advance-comment"
+                rows={3}
+                maxLength={COMMENT_LIMIT}
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                disabled={!canDecide}
+                placeholder="Enter your comment here..."
               />
+              <p className="text-end text-xs text-muted-foreground">
+                {comment.length}/{COMMENT_LIMIT}
+              </p>
             </div>
+          </section>
+          )}
 
-            {/* What the bank called the transfer, and the proof of it. */}
-            <div className="flex h-full flex-col justify-end gap-2">
-              <FieldLabel htmlFor="advance-reference">Transfer No.</FieldLabel>
-              <div className="flex w-full min-w-0 items-center gap-2">
-                <Input
-                  id="advance-reference"
-                  className="min-w-0 flex-1"
-                  value={pay.reference}
-                  onChange={(e) => setPaid("reference", e.target.value)}
-                  placeholder="TRX-0000-00000"
-                />
-                <Attach file={receipt} onPick={setReceipt} label="transfer receipt" />
-              </div>
-            </div>
-          </div>
-        </Bordered>
+          {stage === "finance" && (
+            <>
+              {/* Management's answer, as it was saved: read here, not
+                  changed - the financial department acts on it. */}
+              <section className="space-y-4 rounded-xl border bg-blue-50/30 p-4 sm:p-5">
+                <div className="flex flex-wrap items-center gap-3">
+                  <h3 className="flex items-center gap-3 text-xl font-bold text-primary">
+                    <MessageCircle className="size-6" strokeWidth={1.5} aria-hidden="true" />
+                    Management Comment
+                  </h3>
+                  <span className="flex items-center gap-1.5 rounded-md bg-green-50 px-3 py-1 text-sm font-semibold text-green-800">
+                    <CircleCheck className="size-4" aria-hidden="true" />
+                    Status: {DECISION_STATUS[openRequest?.decision] || "Approved"}
+                  </span>
+                  <div className="ms-auto flex flex-wrap items-center gap-4 text-sm text-primary">
+                    <span className="flex items-center gap-2">
+                      <CalendarDays className="size-4" aria-hidden="true" />
+                      Decision Date:
+                      <span className="font-semibold">
+                        {openRequest?.decidedOn ? longDate(openRequest.decidedOn) : "-"}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <User className="size-4" aria-hidden="true" />
+                      Approved By:
+                      <span className="font-semibold">{openRequest?.decidedBy || "-"}</span>
+                    </span>
+                  </div>
+                </div>
+                <div className="grid gap-4 rounded-lg bg-white px-4 py-3 *:min-w-0 md:grid-cols-[1fr_1fr_2fr] md:gap-x-0 md:divide-x md:divide-container-border md:[&>*:not(:first-child)]:ps-6 md:[&>*:not(:last-child)]:pe-6">
+                  <div className="space-y-1">
+                    <p className="text-sm text-primary">Approved Amount</p>
+                    <p className="w-fit rounded-md bg-green-50 px-3 py-1.5 text-xl font-bold text-green-700">
+                      {amountValue(approvedAmount)}
+                      <Rial className="ms-2 text-sm font-normal text-primary/75" />
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-primary">Remaining Salary After Approved Amount</p>
+                    <p className="py-1.5 text-xl font-bold text-primary">
+                      {amountValue(afterDeduction)}
+                      <Rial className="ms-2 text-sm font-normal text-primary/75" />
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-primary">Comment</p>
+                    <p className="rounded-md border bg-blue-50/40 px-3 py-2 text-sm text-primary">
+                      {openRequest?.managementComment || "No comment."}
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              {/* What the financial department does with it: how it is
+                  booked, when and how it goes out, and what traces it. */}
+              <section className="space-y-4 rounded-xl border p-4 sm:p-5">
+                <h3 className="border-s-4 border-primary ps-3 text-lg font-bold text-primary">
+                  Financial Department Actions
+                </h3>
+                {/* On the employee's own page the fields are shown but shut,
+                    and say why. */}
+                {!canDecide && (
+                  <p className="flex items-center gap-2 rounded-lg bg-amber-50 px-4 py-2.5 text-sm text-amber-800">
+                    <Info className="size-4 shrink-0" aria-hidden="true" />
+                    {openRequest?.paidOn
+                      ? "Paid by the financial department. Shown here for your reference."
+                      : "Awaiting payment. Only the financial department can process it."}
+                  </p>
+                )}
+                {/* The firm's twelve-column field grid, four to a row: the
+                    choices size themselves to it. */}
+                <div className="form-grid gap-y-4">
+                  <Choice
+                    id="advance-expense-type"
+                    label="Disbursement Type"
+                    value={pay.expenseType}
+                    onChange={(value) => value && setPaid("expenseType", value)}
+                    options={DISBURSEMENT_TYPES}
+                    disabled={!canDecide}
+                  />
+                  <Choice
+                    id="advance-category"
+                    label="Category"
+                    value={pay.category}
+                    onChange={(value) => value && setPaid("category", value)}
+                    options={DISBURSEMENT_CATEGORIES}
+                    disabled={!canDecide}
+                  />
+                  <Choice
+                    id="advance-subcategory"
+                    label="Sub-Category"
+                    value={pay.subcategory}
+                    onChange={(value) => value && setPaid("subcategory", value)}
+                    options={DISBURSEMENT_SUBCATEGORIES}
+                    disabled={!canDecide}
+                  />
+                  <div className="form-field space-y-2">
+                    <Label htmlFor="advance-pay-date">Disbursement Date</Label>
+                    <DateField
+                      id="advance-pay-date"
+                      name="paymentDate"
+                      value={pay.paymentDate}
+                      onChange={(e) => setPaid("paymentDate", e.target.value)}
+                      disabled={!canDecide}
+                    />
+                  </div>
+                  <Choice
+                    id="advance-method"
+                    label="Payment Method"
+                    value={pay.method}
+                    onChange={(value) => value && setPaid("method", value)}
+                    placeholder="Select method"
+                    options={PAYMENT_METHODS}
+                    disabled={!canDecide}
+                  />
+                  {/* What the bank or the cheque called the payment. */}
+                  <div className="form-field space-y-2">
+                    <Label htmlFor="advance-reference">Reference No.</Label>
+                    <Input
+                      id="advance-reference"
+                      value={pay.reference}
+                      onChange={(e) => setPaid("reference", e.target.value)}
+                      placeholder="Enter reference number"
+                      disabled={!canDecide}
+                    />
+                  </div>
+                  <div className="form-field span-6 space-y-2">
+                    <Label htmlFor="advance-finance-comment">Financial Comment</Label>
+                    <Textarea
+                      id="advance-finance-comment"
+                      rows={2}
+                      maxLength={COMMENT_LIMIT}
+                      value={pay.financeComment}
+                      onChange={(e) => setPaid("financeComment", e.target.value)}
+                      disabled={!canDecide}
+                      placeholder="Enter your comment here..."
+                    />
+                    <p className="text-end text-xs text-muted-foreground">
+                      {pay.financeComment.length}/{COMMENT_LIMIT}
+                    </p>
+                  </div>
+                </div>
+              </section>
+            </>
+          )}
+        </>
       )}
 
       {/* Plain buttons: this form sits inside the employee form, which either
           would otherwise submit. */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-blue-50/50 px-4 py-4">
+      <div
+        className={cn(
+          "flex flex-wrap items-center justify-between gap-3",
+          writing && "rounded-xl bg-blue-50/50 px-4 py-4"
+        )}
+      >
         {/* What was decided before is the list behind this form - offered
             where a decision is being read, not where one is being written. */}
-        {stage !== "request" && (
-          <Button type="button" variant="ghost" onClick={onClose}>
-            <History className="me-2 h-4 w-4" />
-            History
-          </Button>
+        {!writing && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex w-full items-center gap-4 rounded-xl border bg-blue-50/40 px-4 py-3 text-start transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-auto sm:min-w-md"
+          >
+            <Clock className="size-8 shrink-0 text-primary" strokeWidth={1.5} aria-hidden="true" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-lg font-bold text-primary">History</span>
+              <span className="block text-sm text-primary/75">
+                View this request timeline and employee&apos;s previous requests
+              </span>
+            </span>
+            <ChevronRight className="size-5 shrink-0 text-primary" aria-hidden="true" />
+          </button>
         )}
 
         <div className="ms-auto flex flex-wrap items-center gap-3">
           <Button type="button" variant="outline" className="min-w-36" onClick={onClose}>
             Cancel
           </Button>
-          {stage === "request" ? (
+          {stage === "request" &&
             // A request already sent is read here, not sent again.
             !openRequest && (
               <Button
@@ -734,24 +1066,34 @@ export function AdvanceSalaryForm({
               >
                 Submit Request
               </Button>
-            )
-          ) : (
-            // The employee asks; only the firm's side answers, so on their
-            // own page there is nothing here to press. A grant goes on to
-            // the financial department before it is saved.
-            canDecide &&
-            (stage === "decision" && granted ? (
-              <Button type="button" onClick={() => setStage("finance")}>
-                Next
-              </Button>
-            ) : (
-              <Button type="button" onClick={saveDecision}>
-                Save
-              </Button>
-            ))
+            )}
+          {/* The employee asks; only the firm's side answers, so on their own
+              page there is nothing here to press. */}
+          {stage === "decision" && canDecide && (
+            <Button
+              type="button"
+              className="min-w-48 bg-blue-600 text-white hover:bg-blue-700"
+              disabled={!canConfirm}
+              onClick={confirmDecision}
+            >
+              Confirm Decision
+            </Button>
+          )}
+          {stage === "finance" && canDecide && !openRequest?.paidOn && (
+            <Button
+              type="button"
+              className="min-w-48"
+              disabled={!canProcess}
+              onClick={processPayment}
+            >
+              <Send className="me-2 h-4 w-4" aria-hidden="true" />
+              Process Payment
+            </Button>
           )}
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

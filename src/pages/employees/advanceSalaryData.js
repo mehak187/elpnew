@@ -25,8 +25,22 @@ export const ADVANCE_STATUS_CHIP = {
 /** How an advance is filed once it is paid: the same booking every time. */
 export const ADVANCE_BOOKING = {
   expenseType: "Employee Expenses",
-  category: "Salaries",
+  category: "Salary",
   subcategory: "Salary Advance",
+};
+
+/**
+ * What the financial department can book an advance as. The booking above is
+ * what it is set to; the lists say what else it may be put under.
+ */
+export const DISBURSEMENT_TYPES = ["Employee Expenses", "Employee Advances & Loans"];
+export const DISBURSEMENT_CATEGORIES = ["Salary", "Advances & Loans"];
+export const DISBURSEMENT_SUBCATEGORIES = ["Salary Advance", "Other Employee Advance"];
+
+/** How a saved decision reads on the review's status chip. */
+export const DECISION_STATUS = {
+  full: "Fully Approved",
+  partial: "Partially Approved",
 };
 
 /** What an advance can be asked for. The last asks the employee to say. */
