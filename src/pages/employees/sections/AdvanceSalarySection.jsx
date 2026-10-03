@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { DialogClose, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -36,7 +36,7 @@ import { cn } from "@/lib/utils";
 import { amountValue } from "@/lib/money";
 import { firmToday } from "@/lib/expiry";
 import { smartSearch } from "@/lib/search/smartSearch";
-import { Check, FileText, History, Info, Plus, Wallet } from "lucide-react";
+import { Check, FileText, History, Info, Plus, Wallet, X } from "lucide-react";
 import { useAdvances } from "@/lib/advances/context";
 import { amount, formatDate } from "../loanData";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
@@ -104,7 +104,7 @@ function Star() {
 function AdvanceSteps({ steps, active, onChange }) {
   const at = steps.findIndex((step) => step.key === active);
   return (
-    <ol className="flex items-start rounded-xl border bg-blue-50/40 px-4 py-5 sm:px-8">
+    <ol className="flex items-start rounded-xl border bg-blue-50/40 px-4 py-3 sm:px-6">
       {steps.map((step, index) => {
         const open = index === at;
         const done = step.done && !open;
@@ -114,7 +114,7 @@ function AdvanceSteps({ steps, active, onChange }) {
             {!last && (
               <span
                 aria-hidden="true"
-                className="absolute start-[calc(50%+2rem)] end-[calc(-50%+2rem)] top-6 h-0.5 overflow-hidden rounded-full bg-slate-200"
+                className="absolute start-[calc(50%+2rem)] end-[calc(-50%+2rem)] top-5.5 h-0.5 overflow-hidden rounded-full bg-slate-200"
               >
                 <span
                   className={cn(
@@ -133,22 +133,22 @@ function AdvanceSteps({ steps, active, onChange }) {
             >
               <span
                 className={cn(
-                  "flex size-12 items-center justify-center rounded-full text-lg font-semibold",
+                  "flex size-11 items-center justify-center rounded-full text-lg font-semibold",
                   open
                     ? "bg-blue-600 text-white"
                     : done
                       ? "bg-green-600 text-white"
-                      : "bg-slate-200 text-primary",
-                  step.disabled && "opacity-60"
+                      : "bg-slate-200 text-primary"
                 )}
               >
                 {done ? <Check className="size-6" aria-label="Done" /> : index + 1}
               </span>
+              {/* Not greyed when it cannot be opened yet: the design reads
+                  every stage's name at full strength. */}
               <span
                 className={cn(
                   "text-center text-sm sm:text-base",
-                  open ? "font-bold text-primary" : "text-primary/75",
-                  step.disabled && "opacity-60"
+                  open ? "font-bold text-blue-700" : "text-primary"
                 )}
               >
                 {step.title}
@@ -326,7 +326,7 @@ export function AdvanceSalaryForm({
     <div className="space-y-6">
       {/* The request's head: what it is and its number, then whose it is and
           when it was asked - the close button sits beyond them. */}
-      <div className="flex flex-wrap items-start gap-4 pe-8">
+      <div className="flex flex-wrap items-start gap-4 pe-16">
         <span
           aria-hidden="true"
           className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-primary"
@@ -387,6 +387,11 @@ export function AdvanceSalaryForm({
           <span aria-hidden="true" className="h-5 w-px bg-container-border" />
           <span>{longDate(requestedOn)}</span>
         </p>
+        {/* The window's own close, at the size the design draws it. */}
+        <DialogClose className="absolute end-5 top-5 rounded-md p-1 text-primary transition-colors hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <X className="size-7" aria-hidden="true" />
+          <span className="sr-only">Close</span>
+        </DialogClose>
       </div>
 
       <AdvanceSteps
@@ -416,7 +421,7 @@ export function AdvanceSalaryForm({
         <div className="space-y-6 rounded-xl border p-4 sm:p-6">
           {/* The salary it comes out of, which month, how much, and what is
               left - each beside the next, divided by a rule. */}
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4 xl:divide-x xl:divide-container-border xl:[&>*:not(:first-child)]:ps-6">
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-[1fr_1.2fr_1fr_1fr] xl:divide-x xl:divide-container-border xl:[&>*:not(:first-child)]:ps-6">
             <Figure
               label={draft.deductMonth + " " + draft.deductYear + " Salary"}
               value={net}
@@ -451,7 +456,7 @@ export function AdvanceSalaryForm({
                         }))
                       }
                       className={cn(
-                        "border-s px-1 text-xs transition-colors first:border-s-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                        "whitespace-nowrap border-s px-1 text-xs tracking-tight transition-colors first:border-s-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                         chosen ? "bg-blue-600 text-white" : "text-primary hover:bg-menu-hover"
                       )}
                     >
@@ -462,11 +467,13 @@ export function AdvanceSalaryForm({
               </div>
             </div>
 
+            {/* Labelled like the figures either side of it, so all four
+                labels and boxes sit on one line. */}
             <div className="form-field space-y-2">
-              <Label htmlFor="advance-amount" className="font-semibold">
+              <label htmlFor="advance-amount" className="block text-sm font-semibold text-primary">
                 Advance Amount (<Rial />)
                 <Star />
-              </Label>
+              </label>
               <div className="relative">
                 <Input
                   id="advance-amount"
@@ -492,7 +499,7 @@ export function AdvanceSalaryForm({
 
           <div className="grid gap-6 border-t pt-6 md:grid-cols-[1fr_2fr] md:divide-x md:divide-container-border md:[&>*:last-child]:ps-6">
             <div className="form-field space-y-2" data-required="true">
-              <Label htmlFor="advance-purpose" className="font-semibold">
+              <Label htmlFor="advance-purpose" className="font-semibold text-primary">
                 Purpose
                 <Star />
               </Label>
@@ -513,7 +520,7 @@ export function AdvanceSalaryForm({
             {/* Optional, except where the purpose is "Other": then this is
                 where it is said. */}
             <div className="form-field space-y-2">
-              <Label htmlFor="advance-reason" className="font-semibold">
+              <Label htmlFor="advance-reason" className="font-semibold text-primary">
                 {specifying ? (
                   <>
                     Additional Remarks
@@ -720,7 +727,11 @@ export function AdvanceSalaryForm({
           {stage === "request" ? (
             // A request already sent is read here, not sent again.
             !openRequest && (
-              <Button type="button" className="min-w-48" onClick={submit}>
+              <Button
+                type="button"
+                className="min-w-48 bg-blue-600 text-white hover:bg-blue-700"
+                onClick={submit}
+              >
                 Submit Request
               </Button>
             )

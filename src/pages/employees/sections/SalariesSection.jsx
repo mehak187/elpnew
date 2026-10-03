@@ -1049,8 +1049,9 @@ export default function SalariesSection({
         open={addingAdvance}
         onOpenChange={(open) => !open && closeAdd()}
       >
-        <DialogContent className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
-          {/* The form heads itself: its title, number and whose it is. */}
+        <DialogContent hideClose className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
+          {/* The form heads itself: its title, number, whose it is and the
+              close beside them. */}
           <AdvanceSalaryForm
             employee={employee}
             net={net}
