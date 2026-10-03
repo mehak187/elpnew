@@ -16,7 +16,7 @@ import AiSearch from "@/components/shared/AiSearch";
 import { Card, CardContent } from "@/components/ui/card";
 import { Bordered, EmptyState } from "@/components/shared/panels";
 import DateField from "@/components/shared/DateField";
-import { Choice, checkRequired } from "@/components/shared/formFields";
+import { checkRequired } from "@/components/shared/formFields";
 import {
   RecordTable,
   HeadRow,
@@ -200,6 +200,30 @@ function AdvanceSteps({ steps, active, onChange }) {
         );
       })}
     </ol>
+  );
+}
+
+/**
+ * One thing chosen from a list, label over box. Stacked from the top, so a
+ * row of these lines up with a date, an input or a taller comment beside it.
+ */
+function Pick({ id, label, value, onChange, placeholder, options, disabled }) {
+  return (
+    <div className="form-field space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Select value={value} onValueChange={onChange} disabled={disabled}>
+        <SelectTrigger id={id}>
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option} value={option}>
+              {option}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
 
@@ -948,8 +972,8 @@ export function AdvanceSalaryForm({
                 )}
                 {/* The firm's twelve-column field grid, four to a row: the
                     choices size themselves to it. */}
-                <div className="form-grid gap-y-4">
-                  <Choice
+                <div className="form-grid items-start gap-y-4">
+                  <Pick
                     id="advance-expense-type"
                     label="Disbursement Type"
                     value={pay.expenseType}
@@ -957,7 +981,7 @@ export function AdvanceSalaryForm({
                     options={DISBURSEMENT_TYPES}
                     disabled={!canDecide}
                   />
-                  <Choice
+                  <Pick
                     id="advance-category"
                     label="Category"
                     value={pay.category}
@@ -965,7 +989,7 @@ export function AdvanceSalaryForm({
                     options={DISBURSEMENT_CATEGORIES}
                     disabled={!canDecide}
                   />
-                  <Choice
+                  <Pick
                     id="advance-subcategory"
                     label="Sub-Category"
                     value={pay.subcategory}
@@ -983,7 +1007,7 @@ export function AdvanceSalaryForm({
                       disabled={!canDecide}
                     />
                   </div>
-                  <Choice
+                  <Pick
                     id="advance-method"
                     label="Payment Method"
                     value={pay.method}
@@ -1005,9 +1029,9 @@ export function AdvanceSalaryForm({
                   </div>
                   <div className="form-field span-6 space-y-2">
                     <Label htmlFor="advance-finance-comment">Financial Comment</Label>
-                    <Textarea
+                    {/* One line, the height of the fields beside it. */}
+                    <Input
                       id="advance-finance-comment"
-                      rows={2}
                       maxLength={COMMENT_LIMIT}
                       value={pay.financeComment}
                       onChange={(e) => setPaid("financeComment", e.target.value)}
