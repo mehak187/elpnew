@@ -827,3 +827,37 @@
 .table-hover-lines tbody tr:hover > td {
   background-color: var(--secondary);
 }
+
+/*
+ * A field the browser filled in itself keeps the look of every other field.
+ *
+ * Chrome paints autofilled fields its own pale blue, with !important, so the
+ * fields it happened to fill read as different in kind from the rest when
+ * they are not. That paint cannot be overridden directly; a shadow of the
+ * field's own colour laid inside it covers it, and the text keeps the field's
+ * ink. Unlayered, so the focus and error rings below still win over the
+ * utilities, and written as separate rules so a browser that knows only one
+ * of the two names still reads the other.
+ */
+input:-webkit-autofill {
+  -webkit-text-fill-color: var(--text-strong);
+  caret-color: var(--text-strong);
+  box-shadow: 0 0 0 1000px var(--field-background) inset;
+}
+input:autofill {
+  -webkit-text-fill-color: var(--text-strong);
+  caret-color: var(--text-strong);
+  box-shadow: 0 0 0 1000px var(--field-background) inset;
+}
+input:-webkit-autofill:focus-visible {
+  box-shadow: 0 0 0 1000px var(--field-background) inset, var(--focus-ring);
+}
+input:autofill:focus-visible {
+  box-shadow: 0 0 0 1000px var(--field-background) inset, var(--focus-ring);
+}
+input:-webkit-autofill[aria-invalid="true"]:focus-visible {
+  box-shadow: 0 0 0 1000px var(--field-background) inset, var(--error-ring);
+}
+input:autofill[aria-invalid="true"]:focus-visible {
+  box-shadow: 0 0 0 1000px var(--field-background) inset, var(--error-ring);
+}

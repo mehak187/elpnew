@@ -70,6 +70,7 @@ import {
   Award,
   MessageCircleWarning,
   TriangleAlert,
+  Check,
 } from "lucide-react";
 import { useLeaves } from "@/lib/leaves/context";
 import { annualLeaveLeft } from "./leaveData";
@@ -433,34 +434,49 @@ const REQUEST_ITEMS = REQUEST_CATEGORIES.flatMap((category) =>
  * begins; the ones not reached yet are shown but cannot be opened.
  */
 const ADD_STEPS = [
-  { key: "personal", label: "Personal Details" },
-  {
-    key: "employment",
-    label: "Employment & Contract",
-    hint: "Complete this section and save to continue to Identity & Immigration.",
-  },
+  { key: "personal", label: "Personal Information" },
+  // The job, then the terms it is held on, each saved before the next.
+  { key: "employment", label: "Employment Information" },
+  { key: "contract", label: "Contract Information" },
   // After the job, because which papers apply follows from it: a lawyer's
   // card only for a lawyer, a passport and visa only for a foreigner.
   { key: "identity", label: "Identity & Immigration" },
-  // Pay once the person and the job are settled.
-  { key: "salary", label: "Salary & Banking" },
+  // Pay once the person and the job are settled, then where it is paid to.
+  { key: "payroll", label: "Payroll Information" },
+  { key: "banking", label: "Banking Information" },
   // Walked through only by somebody the firm registers with the Fund, which
-  // Employment & Contract has already asked. Saving pay takes a registered
-  // employee here and everybody else straight on to Documents.
+  // Contract Information has already asked; everybody else goes straight on
+  // to Documents.
+  {
+    key: "socialProtection",
+    label: "Social Protection Information",
+    when: (values) => values.socialProtection === "Yes",
+  },
+  // Last: the papers, filed against the employee the steps above built.
+  // Finishing here creates the record and opens it.
+  { key: "documents", label: "Documents" },
+];
+
+/**
+ * Employee Information's tabs on a record, each showing one or more of the
+ * parts Add Employee asks for a step at a time.
+ */
+const PROFILE_TABS = [
+  { key: "personal", label: "Personal Details", parts: ["personal"] },
+  { key: "employment", label: "Employment & Contract", parts: ["employment", "contract"] },
+  { key: "identity", label: "Identity & Immigration", parts: ["identity"] },
+  { key: "salary", label: "Salary & Banking", parts: ["payroll", "banking"] },
   {
     key: "socialProtection",
     label: "Social Protection",
+    parts: ["socialProtection"],
     when: (values) => values.socialProtection === "Yes",
   },
-  // Not a step in the sequence: papers can be filed whenever there is an
-  // employee to file them against, so the tab opens once Personal Details is
-  // saved and the record is finished without it.
-  { key: "documents", label: "Documents", standalone: true },
+  { key: "documents", label: "Documents", parts: ["documents"] },
 ];
 
-/** The sections a record with these values is saved through, in order. */
-const flowFor = (values) =>
-  ADD_STEPS.filter((s) => !s.standalone && (!s.when || s.when(values)));
+/** The steps a record with these values is added through, in order. */
+const flowFor = (values) => ADD_STEPS.filter((s) => !s.when || s.when(values));
 
 /** Said under the tabs while the draft is being built, where no step says more. */
 const DRAFT_NOTE = "Draft employee · sections are saved one at a time";
@@ -570,6 +586,81 @@ function StepTabs({ steps, active, done = [], canOpen = () => true, onSelect, la
                   <step.icon strokeWidth={1.5} aria-hidden="true" className="size-5 shrink-0" />
                 )}
                 {step.label}
+                {isDone && <span className="sr-only">(completed)</span>}
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
+
+/**
+ * Add Employee's steps as a numbered track: each step a circle on one line,
+ * green with a check once saved, navy with its number while being filled in,
+ * grey until reached; the line between two steps turns green once the first is
+ * done. The step being filled in is named in bold with a bar under it.
+ */
+function NumberedSteps({ steps, active, done, canOpen, onSelect }) {
+  return (
+    <nav
+      aria-label="Add employee steps"
+      className="overflow-x-auto rounded-xl border border-container-border bg-card px-4 py-4"
+    >
+      <ol className="flex min-w-max">
+        {steps.map((step, index) => {
+          const isDone = done.includes(step.key);
+          const isActive = step.key === active;
+          const reachable = canOpen(step.key);
+          const last = index === steps.length - 1;
+          return (
+            <li key={step.key} className="relative flex min-w-28 flex-1 flex-col items-center">
+              {/* The line on to the next step, from this circle's edge to
+                  the next one's. */}
+              {!last && (
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "absolute top-[18px] h-0.5 start-[calc(50%+24px)] end-[calc(-50%+24px)]",
+                    isDone ? "bg-green-600" : "bg-slate-200"
+                  )}
+                />
+              )}
+              <button
+                type="button"
+                disabled={!reachable}
+                onClick={() => onSelect(step.key)}
+                aria-current={isActive ? "step" : undefined}
+                className="flex flex-col items-center gap-2 rounded-md px-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed"
+              >
+                <span
+                  className={cn(
+                    "flex size-9 items-center justify-center rounded-full text-sm font-semibold",
+                    isDone && !isActive && "bg-green-600 text-white",
+                    isActive && "bg-blue-900 text-white",
+                    !isDone && !isActive && "bg-slate-200 text-slate-600"
+                  )}
+                >
+                  {isDone && !isActive ? (
+                    <Check className="size-5" strokeWidth={3} aria-hidden="true" />
+                  ) : (
+                    index + 1
+                  )}
+                </span>
+                <span
+                  className={cn(
+                    "max-w-32 text-center text-sm leading-tight",
+                    isActive ? "font-bold text-blue-900" : reachable ? "text-primary" : "text-muted-foreground"
+                  )}
+                >
+                  {step.label}
+                </span>
+                {/* The bar under the step being filled in. */}
+                <span
+                  aria-hidden="true"
+                  className={cn("h-1 w-full rounded-full", isActive ? "bg-blue-900" : "bg-transparent")}
+                />
                 {isDone && <span className="sr-only">(completed)</span>}
               </button>
             </li>
@@ -1391,8 +1482,14 @@ export default function EmployeeForm({ self }) {
   // Both of these draw their own boxes, so the page's card steps out of the
   // way rather than drawing a border around borders.
   const isDocuments = isTabbed ? tab === "documents" : activeSection === "documents";
+  // The parts a record's tab shows: Employment & Contract shows both halves of
+  // the job, Salary & Banking both pay and bank; adding shows one part a step.
+  const profileParts = PROFILE_TABS.find((t) => t.key === profileTab)?.parts || [];
+  /** Whether a part of the file is on screen while going tab by tab. */
+  const shows = (part) =>
+    isAdding ? step === part : isProfile ? profileParts.includes(part) : false;
   /** Whether a box belongs on screen: all of them on Employee Data, one tab's otherwise. */
-  const onStep = (key) => !isTabbed || tab === key;
+  const onStep = (key) => !isTabbed || shows(key);
   // The request chosen on Requests, and the section on screen: the sidebar's
   // own, or the one that request is kept on.
   const requestItem = REQUEST_ITEMS.find((item) => item.key === requestsTab) || null;
@@ -1493,7 +1590,11 @@ export default function EmployeeForm({ self }) {
   };
 
   // The steps on the bar: every one that applies to what has been saved.
-  const shownSteps = ADD_STEPS.filter((s) => !s.when || s.when(saved));
+  // Until Contract Information is saved, the form's own answer decides - so
+  // Social Protection is on the track from the start for a registered
+  // employee, as it is by default - and the saved answer after that.
+  const stepFacts = savedSteps.includes("contract") ? saved : formData;
+  const shownSteps = ADD_STEPS.filter((s) => !s.when || s.when(stepFacts));
   const savedFlow = flowFor(saved);
   // The section before this one, to go back to without losing anything.
   const previousStep = savedFlow[savedFlow.findIndex((s) => s.key === step) - 1];
@@ -1605,8 +1706,8 @@ export default function EmployeeForm({ self }) {
 
   // Employee Information's tabs: the ones that apply to this record, as when
   // it was added - Social Protection only for somebody registered.
-  const profileSteps = ADD_STEPS.filter((s) => !s.when || s.when(formData));
-  const profileTabLabel = ADD_STEPS.find((s) => s.key === profileTab)?.label || profileTab;
+  const profileSteps = PROFILE_TABS.filter((s) => !s.when || s.when(formData));
+  const profileTabLabel = PROFILE_TABS.find((s) => s.key === profileTab)?.label || profileTab;
   // Corrections already asked for on this tab, still waiting to be decided.
   const pendingHere = isProfile ? pendingCorrections(record.id, profileTabLabel).length : 0;
 
@@ -1962,7 +2063,7 @@ export default function EmployeeForm({ self }) {
 
           {isAdding && (
             <div className="space-y-2">
-              <StepTabs
+              <NumberedSteps
                 steps={shownSteps}
                 active={step}
                 done={savedSteps}
@@ -2025,7 +2126,7 @@ export default function EmployeeForm({ self }) {
                     this record was opened from, and it is a field below. */}
                 {onStep("personal") && (
                 <SectionCard
-                  title="Personal Details"
+                  title={isAdding ? "Personal Information" : "Personal Details"}
                   icon={isAdding ? User : isProfile ? UserCog : undefined}
                   note={
                     isAdding
@@ -2628,15 +2729,22 @@ export default function EmployeeForm({ self }) {
 
                 {/* The job and the contract it is held on, as a new employee
                     is taken on: where they work and what as, then the terms. */}
-                {isTabbed && tab === "employment" && (
+                {(shows("employment") || shows("contract")) && (
                   <>
                   <SectionCard
-                    title="Employment & Contract"
+                    // Adding asks for the job and the contract as two steps;
+                    // the record shows them together.
+                    title={
+                      isAdding
+                        ? ADD_STEPS.find((s) => s.key === step)?.label
+                        : "Employment & Contract"
+                    }
                     aside={correctionButton}
                     footer={correctionActions}
                     locked={profileLocked}
                   >
                     <div className="space-y-6">
+                      {shows("employment") && (
                       <section>
                         <h3 className="mb-4 text-base font-bold text-primary">
                           Organizational Information
@@ -2783,8 +2891,10 @@ export default function EmployeeForm({ self }) {
                           </div>
                         </div>
                       </section>
+                      )}
 
-                      <section className="border-t pt-6">
+                      {shows("contract") && (
+                      <section className={cn(shows("employment") && "border-t pt-6")}>
                         <h3 className="mb-4 text-base font-bold text-primary">
                           Contract &amp; Timeline
                         </h3>
@@ -2868,6 +2978,7 @@ export default function EmployeeForm({ self }) {
                           />
                         </div>
                       </section>
+                      )}
                     </div>
                   </SectionCard>
                   {stepActions}
@@ -2879,7 +2990,7 @@ export default function EmployeeForm({ self }) {
                     the ID card for everybody, the lawyer's card for a lawyer,
                     passport and visa for a foreigner. Numbers only - the
                     papers themselves are filed on Documents. */}
-                {isTabbed && tab === "identity" && (
+                {shows("identity") && (
                   <SectionCard
                     title="Identity & Immigration"
                     aside={correctionButton}
@@ -2934,10 +3045,13 @@ export default function EmployeeForm({ self }) {
 
                 {/* What the employee is paid, what comes off it, where it is
                     sent, and what the first payroll will come to. */}
-                {isTabbed && tab === "salary" && (
+                {(shows("payroll") || shows("banking")) && (
                   <>
+                    {/* Pay and what comes off it: Payroll Information. */}
+                    {shows("payroll") && (
+                    <>
                     <SectionCard
-                      title="Salary Information"
+                      title={isAdding ? "Payroll Information" : "Salary Information"}
                       aside={correctionButton}
                       locked={profileLocked}
                     >
@@ -3011,8 +3125,15 @@ export default function EmployeeForm({ self }) {
                         ))}
                       </div>
                     </SectionCard>
+                    </>
+                    )}
 
-                    <SectionCard title="Bank Information" locked={profileLocked}>
+                    {/* Where it is paid to: Banking Information. */}
+                    {shows("banking") && (
+                    <SectionCard
+                      title={isAdding ? "Banking Information" : "Bank Information"}
+                      locked={profileLocked}
+                    >
                       <div className="form-grid gap-y-6">
                         <ChoiceField
                           id="bankName"
@@ -3078,11 +3199,13 @@ export default function EmployeeForm({ self }) {
                         </div>
                       </div>
                     </SectionCard>
+                    )}
 
                     {/* The first payroll this pay goes into, worked out from
                         the lines above as they are typed. An estimate: the
                         month's own absences and changes settle the final
                         figure when payroll is run. */}
+                    {shows("payroll") && (
                     <Card>
                       <CardContent className="p-4 sm:p-6">
                         <h2 className="text-lg font-bold text-primary">
@@ -3113,6 +3236,7 @@ export default function EmployeeForm({ self }) {
                         </p>
                       </CardContent>
                     </Card>
+                    )}
 
                     {stepActions}
                     {/* A correction to pay covers all three boxes above, so it
@@ -3162,9 +3286,9 @@ export default function EmployeeForm({ self }) {
                 {/* The Fund's number and date are asked for; what is paid into
                     it is worked out from the basic pay saved on Salary &
                     Banking, and payroll is where those figures come from. */}
-                {isTabbed && tab === "socialProtection" && (
+                {shows("socialProtection") && (
                   <SectionCard
-                    title="Social Protection Registration"
+                    title={isAdding ? "Social Protection Information" : "Social Protection Registration"}
                     icon={ShieldCheck}
                     aside={correctionButton}
                     footer={isAdding ? stepActions : correctionActions}
