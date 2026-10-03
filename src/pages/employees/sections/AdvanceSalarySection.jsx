@@ -41,6 +41,7 @@ import {
   FileText,
   Info,
   MessageCircle,
+  Undo2,
   Plus,
   Printer,
   Send,
@@ -53,6 +54,7 @@ import { amount, formatDate } from "../loanData";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 import { advanceSummaryPdf } from "../advanceSummaryPdf";
+import { employeeRecords } from "../employeeData";
 import {
   ADVANCE_BOOKING,
   ADVANCE_PURPOSES,
@@ -284,8 +286,11 @@ export function AdvanceSalaryForm({
   // Which stage of the request is open. A request already on the list opens
   // where it has got to: granted and not yet paid, on the financial
   // department's stage; otherwise on management's.
+  // A request handed back is reopened on the first stage, to be corrected.
+  const returned =
+    openRequest?.status === "Pending" && openRequest?.decision === "completion";
   const [stage, setStage] = useState(() =>
-    !openRequest
+    !openRequest || returned
       ? "request"
       : openRequest.status === "Approved" && openRequest.decidedOn && !openRequest.paidOn
         ? "finance"
@@ -398,6 +403,9 @@ export function AdvanceSalaryForm({
       managementComment: comment.trim(),
       decidedOn: firmToday(),
       decidedBy: CURRENT_USER.name,
+      // Said under the name wherever the decision is shown.
+      decidedByTitle:
+        employeeRecords.find((record) => record.name === CURRENT_USER.name)?.designation || "",
     });
     if (granted) setStage("finance");
     else onClose();
@@ -408,6 +416,38 @@ export function AdvanceSalaryForm({
    * request, management's decision and the disbursement, to print and file
    * in the employee's personnel record.
    */
+  /**
+   * A returned request, corrected and sent back to management. What it was
+   * returned for is kept on it, so its history shows each round; the decision
+   * is cleared, so management decides it afresh.
+   */
+  const resubmit = () => {
+    if (!checkRequired() || !canSubmit || !openRequest) return;
+    decideAdvance(openRequest.id, {
+      amount: requested,
+      deductMonth: draft.deductMonth,
+      deductYear: draft.deductYear,
+      purpose: draft.purpose,
+      reason: draft.reason.trim(),
+      returns: [
+        ...(openRequest.returns || []),
+        {
+          returnedOn: openRequest.decidedOn,
+          returnedBy: openRequest.decidedBy,
+          comment: openRequest.managementComment,
+        },
+      ],
+      resubmittedOn: firmToday(),
+      status: "Pending",
+      decision: "",
+      managementComment: "",
+      decidedOn: "",
+      decidedBy: "",
+      decidedByTitle: "",
+    });
+    onClose();
+  };
+
   const processPayment = async () => {
     if (!canProcess || !openRequest) return;
     const payment = {
@@ -430,6 +470,8 @@ export function AdvanceSalaryForm({
   // The first stage of a new request is the one being written; every other
   // view of the request is reviewing it.
   const writing = stage === "request" && !openRequest;
+  // A returned request, open to be corrected and sent again.
+  const correcting = stage === "request" && returned;
 
   return (
     <div className="space-y-6">
@@ -445,7 +487,7 @@ export function AdvanceSalaryForm({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3">
             <DialogTitle className="text-2xl font-bold text-primary">
-              Salary Advance Request
+              {correcting ? "Salary Advance Request Correction" : "Salary Advance Request"}
             </DialogTitle>
             {/* While it is being written the number sits by the title, with
                 the limit a click away; once sent, it moves to the right. */}
@@ -494,7 +536,9 @@ export function AdvanceSalaryForm({
           <DialogDescription className="text-sm text-primary/75">
             {writing
               ? "Request a salary advance for the selected month."
-              : stage === "finance"
+              : correcting
+                ? "Review the management comments, correct the request, and resubmit it."
+                : stage === "finance"
                 ? "Review the management decision and process the payment."
                 : "Review the request and record your decision."}
           </DialogDescription>
@@ -567,11 +611,20 @@ export function AdvanceSalaryForm({
         active={stage}
         onChange={setStage}
         steps={[
-          { key: "request", title: "Submit Request", done: Boolean(openRequest) },
+          returned
+            ? {
+                key: "request",
+                title: "Request Correction",
+                done: false,
+                activeTone: "navy",
+              }
+            : { key: "request", title: "Submit Request", done: Boolean(openRequest) },
           {
             key: "decision",
             title: "Management Comment",
-            done: Boolean(openRequest?.decidedOn || decided),
+            // Handing a request back is not deciding it: management has it
+            // again once it is resubmitted.
+            done: !returned && Boolean(openRequest?.decidedOn || decided),
             // A grant is ticked in green: it is what lets the money go.
             doneTone: decided ? "green" : undefined,
             // Nothing can be decided until there is a request to decide: a
@@ -590,7 +643,146 @@ export function AdvanceSalaryForm({
         ]}
       />
 
-      {stage === "request" && (
+      {/* A returned request: why it came back and who sent it, what
+          management said, then the request itself, open to be put right. */}
+      {correcting && (
+        <>
+          <section className="flex flex-wrap items-center gap-4 rounded-xl border border-red-200 border-s-4 border-s-red-700 bg-red-50 px-4 py-3">
+            <span
+              aria-hidden="true"
+              className="flex size-12 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-700"
+            >
+              <Undo2 className="size-6" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-lg font-bold text-red-800">Returned for Correction</h3>
+              <p className="text-sm text-primary">
+                Please review the management comments below, correct the request
+                information and resubmit it.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 border-s border-red-200 ps-4">
+              <CalendarDays className="size-6 text-primary" strokeWidth={1.5} aria-hidden="true" />
+              <div className="text-sm">
+                <p className="text-primary/75">Returned Date</p>
+                <p className="font-bold text-primary">
+                  {openRequest?.decidedOn ? longDate(openRequest.decidedOn) : "-"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 border-s border-red-200 ps-4">
+              <User className="size-6 text-primary" strokeWidth={1.5} aria-hidden="true" />
+              <div className="text-sm">
+                <p className="text-primary/75">Returned By</p>
+                <p className="font-bold text-primary">{openRequest?.decidedBy || "-"}</p>
+                {openRequest?.decidedByTitle && (
+                  <p className="text-xs text-primary/75">{openRequest.decidedByTitle}</p>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className="space-y-3 rounded-xl border bg-blue-50/40 p-4">
+            <h3 className="flex items-center gap-3 font-bold text-primary">
+              <MessageCircle className="size-6" strokeWidth={1.5} aria-hidden="true" />
+              Management Comment
+            </h3>
+            <p className="rounded-lg border bg-blue-50/60 px-4 py-2.5 text-sm text-primary sm:ms-9">
+              {openRequest?.managementComment || "No comment."}
+            </p>
+          </section>
+
+          <section className="space-y-4 rounded-xl border p-4 sm:p-5">
+            <h3 className="border-s-4 border-primary ps-3 text-lg font-bold text-primary">
+              Request Information
+            </h3>
+            <div className="form-grid items-start gap-y-4">
+              <div className="space-y-2">
+                <p className="text-sm text-primary">
+                  {draft.deductMonth + " " + draft.deductYear + " Salary"}
+                </p>
+                <p className="flex h-12 items-center gap-2 rounded-lg bg-locked px-4">
+                  <span className="text-xl font-bold text-primary/75">{amountValue(net)}</span>
+                  <Rial className="text-sm text-muted-foreground" />
+                </p>
+              </div>
+              <div className="form-field space-y-2">
+                <Label htmlFor="advance-amount">Advance Amount (Requested)</Label>
+                <div className="relative">
+                  <Input
+                    id="advance-amount"
+                    inputMode="decimal"
+                    value={draft.amount}
+                    onChange={(e) => set("amount", e.target.value.replace(/[^\d.]/g, ""))}
+                    placeholder="0.000"
+                    required
+                    aria-invalid={overLimit || undefined}
+                    className={cn("h-12 pe-16 font-semibold", overLimit && "border-destructive")}
+                  />
+                  <Rial className="pointer-events-none absolute end-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground" />
+                </div>
+                {overLimit && (
+                  <p className="text-xs text-destructive">
+                    More than the eligible limit of {amount(limit)}
+                  </p>
+                )}
+              </div>
+              <Pick
+                id="advance-purpose"
+                label="Purpose"
+                value={draft.purpose}
+                onChange={(value) => value && set("purpose", value)}
+                placeholder="Select a purpose"
+                options={ADVANCE_PURPOSES}
+              />
+              {/* The same three months as when it was asked, as a list here;
+                  one that has since passed stays on it while it is chosen. */}
+              <Pick
+                id="advance-month"
+                label="Deduct From Salary Of"
+                value={draft.deductMonth + " " + draft.deductYear}
+                onChange={(value) => {
+                  if (!value) return;
+                  const [month, year] = value.split(" ");
+                  setDraft((prev) => ({ ...prev, deductMonth: month, deductYear: year }));
+                }}
+                options={[
+                  ...new Set([
+                    draft.deductMonth + " " + draft.deductYear,
+                    ...deductOptions().map((option) => option.month + " " + option.year),
+                  ]),
+                ]}
+              />
+              <div className="form-field span-12 space-y-2">
+                <Label htmlFor="advance-reason">
+                  {specifying ? (
+                    <>
+                      Employee Remarks
+                      <Star />
+                    </>
+                  ) : (
+                    "Employee Remarks"
+                  )}
+                </Label>
+                <Textarea
+                  id="advance-reason"
+                  rows={3}
+                  maxLength={REASON_LIMIT}
+                  value={draft.reason}
+                  onChange={(e) => set("reason", e.target.value)}
+                  required={specifying}
+                  placeholder={specifying ? "Please specify the purpose..." : "Enter your remarks..."}
+                />
+                <p className="text-end text-xs text-muted-foreground">
+                  {draft.reason.length}/{REASON_LIMIT}
+                </p>
+              </div>
+            </div>
+          </section>
+        </>
+      )}
+
+      {stage === "request" && !correcting && (
         <div className="space-y-6 rounded-xl border p-4 sm:p-6">
           {/* The salary it comes out of, which month, how much, and what is
               left - each beside the next, divided by a rule. */}
@@ -1065,7 +1257,12 @@ export function AdvanceSalaryForm({
             onClick={onClose}
             className="flex w-full items-center gap-4 rounded-xl border bg-blue-50/40 px-4 py-3 text-start transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-auto sm:min-w-md"
           >
-            <Clock className="size-8 shrink-0 text-primary" strokeWidth={1.5} aria-hidden="true" />
+            <span
+              aria-hidden="true"
+              className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary text-white"
+            >
+              <Clock className="size-6" strokeWidth={1.75} />
+            </span>
             <span className="min-w-0 flex-1">
               <span className="block text-lg font-bold text-primary">History</span>
               <span className="block text-sm text-primary/75">
@@ -1091,6 +1288,12 @@ export function AdvanceSalaryForm({
                 Submit Request
               </Button>
             )}
+          {correcting && (
+            <Button type="button" className="min-w-48" disabled={!canSubmit} onClick={resubmit}>
+              <Send className="me-2 h-4 w-4" aria-hidden="true" />
+              Resubmit Request
+            </Button>
+          )}
           {/* The employee asks; only the firm's side answers, so on their own
               page there is nothing here to press. */}
           {stage === "decision" && canDecide && (

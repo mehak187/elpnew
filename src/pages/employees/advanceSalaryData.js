@@ -199,4 +199,72 @@ export const initialAdvances = [
     reason: "University fees for the autumn term.",
     status: "Pending",
   },
+  {
+    // Handed back by management to be corrected: it opens on the employee's
+    // own page as a correction, to be resubmitted.
+    id: 7,
+    requestNo: "SA-2026-00007",
+    employee: "Mohammed Al Yahyaei",
+    requestedOn: "2026-10-01",
+    amount: 400,
+    deductMonth: "October",
+    deductYear: "2026",
+    purpose: "Emergency Case",
+    reason:
+      "Requesting a salary advance due to urgent family medical expenses. My father is scheduled for a medical procedure and I need to cover the treatment costs and related expenses.",
+    status: "Pending",
+    decision: "completion",
+    managementComment:
+      "The requested amount is higher than the permitted limit. Please adjust the amount and resubmit the request.",
+    decidedOn: "2026-10-03",
+    decidedBy: "Khalid Al Hinai",
+    decidedByTitle: "Partner",
+  },
+  {
+    // Waiting on management, on the record of the employee the designs show.
+    id: 8,
+    requestNo: "SA-2026-00008",
+    employee: "Ahmed Al Balushi",
+    requestedOn: "2026-10-03",
+    amount: 400,
+    deductMonth: "October",
+    deductYear: "2026",
+    purpose: "Emergency Case",
+    reason:
+      "Requesting a salary advance due to urgent family medical expenses. My father is scheduled for a medical procedure and I need to cover the treatment costs and related expenses.",
+    status: "Pending",
+  },
+  {
+    // Waiting on management, on the record of the person signed in.
+    id: 9,
+    requestNo: "SA-2026-00009",
+    employee: "Mohammed Al Yahyaei",
+    requestedOn: "2026-10-04",
+    amount: 150,
+    deductMonth: "November",
+    deductYear: "2026",
+    purpose: "Medical Expenses",
+    reason: "Dental treatment not covered by insurance.",
+    status: "Pending",
+  },
+  {
+    // Partly granted and not yet paid: it opens on the financial
+    // department's stage.
+    id: 10,
+    requestNo: "SA-2026-00010",
+    employee: "Ahmed Al Balushi",
+    requestedOn: "2026-10-02",
+    amount: 400,
+    deductMonth: "October",
+    deductYear: "2026",
+    purpose: "Family Expenses",
+    reason: "Travel costs for a family emergency.",
+    status: "Approved",
+    decision: "partial",
+    approvedAmount: 300,
+    managementComment: "Approved partially due to the nature of the case.",
+    decidedOn: "2026-10-04",
+    decidedBy: "Khalid Al Hinai",
+    decidedByTitle: "Partner",
+  },
 ];
