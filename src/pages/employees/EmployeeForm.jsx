@@ -16,7 +16,9 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -71,6 +73,10 @@ import {
   MessageCircleWarning,
   TriangleAlert,
   Check,
+  MapPin,
+  Briefcase,
+  Network,
+  Scale,
 } from "lucide-react";
 import { useLeaves } from "@/lib/leaves/context";
 import { annualLeaveLeft } from "./leaveData";
@@ -96,6 +102,15 @@ import {
   JOB_TITLES,
   EMPLOYEE_STATUSES,
   DECISION_MAKERS,
+  EMPLOYEE_POSITIONS,
+  EMPLOYMENT_CONTRACT_GROUPS,
+  CONTRACT_TERMS,
+  PROBATION_PERIODS,
+  DEFAULT_PROBATION,
+  NOTICE_PERIODS,
+  DEPARTMENT_GROUPS,
+  GRADE_GROUPS,
+  LAWYER_GRADES,
   MANAGEMENT_DECISION_REASONS,
   LEAVING_REASONS,
   DEFAULT_DIAL_CODE,
@@ -760,10 +775,41 @@ function ChoiceField({
   // Given a mark for an option, the list is scanned rather than read: the eye
   // finds the right line without working through the ones above it.
   iconFor,
+  // A mark before the label, and a word of explanation behind an (i) after it.
+  icon: LabelIcon,
+  info,
+  // How an option reads in the list, where that is more than the value kept.
+  optionLabel,
 }) {
+  const item = (option) => {
+    const Icon = iconFor && iconFor(option);
+    return (
+      <SelectItem key={option} value={option}>
+        <span className="flex items-center gap-2.5">
+          {Icon && (
+            <Icon
+              strokeWidth={1.5}
+              aria-hidden="true"
+              className="size-[18px] shrink-0 text-primary"
+            />
+          )}
+          {optionLabel ? optionLabel(option) : option}
+        </span>
+      </SelectItem>
+    );
+  };
   return (
     <div className="form-field space-y-2" data-required={required || undefined}>
-      <Label htmlFor={id}>{label}</Label>
+      <Label htmlFor={id} className={cn(LabelIcon && "flex items-center gap-2 font-semibold")}>
+        {LabelIcon && <LabelIcon strokeWidth={1.5} aria-hidden="true" className="size-5 shrink-0" />}
+        {label}
+        {info && (
+          <span title={info} className="inline-flex text-primary/70">
+            <Info className="size-4" aria-hidden="true" />
+            <span className="sr-only">{info}</span>
+          </span>
+        )}
+      </Label>
       <Select
         value={value}
         onValueChange={(next) => next && onChange(next)}
@@ -773,23 +819,19 @@ function ChoiceField({
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
-          {options.map((option) => {
-            const Icon = iconFor && iconFor(option);
-            return (
-              <SelectItem key={option} value={option}>
-                <span className="flex items-center gap-2.5">
-                  {Icon && (
-                    <Icon
-                      strokeWidth={1.5}
-                      aria-hidden="true"
-                      className="size-[18px] shrink-0 text-primary"
-                    />
-                  )}
-                  {option}
-                </span>
-              </SelectItem>
-            );
-          })}
+          {/* An option is a word, or a group of them under a heading. */}
+          {options.map((option) =>
+            typeof option === "object" && option.group ? (
+              <SelectGroup key={option.group}>
+                <SelectLabel className="bg-muted/50 px-2 py-1 text-xs font-bold text-primary">
+                  {option.group}
+                </SelectLabel>
+                {option.options.map(item)}
+              </SelectGroup>
+            ) : (
+              item(option)
+            )
+          )}
         </SelectContent>
       </Select>
     </div>
@@ -1101,6 +1143,13 @@ const emptyFormData = {
 
   // Only a lawyer is admitted to a court, so only a lawyer has a level.
   practiceLevel: "",
+  // Where they stand in the firm, and their grade - a lawyer's grade being
+  // their practice level, which it sets.
+  position: "",
+  grade: "",
+  // The terms the contract is held on.
+  probationPeriod: DEFAULT_PROBATION,
+  noticePeriod: "",
   decisionMaker: "",
   managementReason: "",
   workDialCode: DEFAULT_DIAL_CODE,
@@ -2735,9 +2784,11 @@ export default function EmployeeForm({ self }) {
                     // Adding asks for the job and the contract as two steps;
                     // the record shows them together.
                     title={
-                      isAdding
-                        ? ADD_STEPS.find((s) => s.key === step)?.label
-                        : "Employment & Contract"
+                      !isAdding
+                        ? "Employment & Contract"
+                        : step === "contract"
+                          ? "Contract Details"
+                          : ADD_STEPS.find((s) => s.key === step)?.label
                     }
                     aside={correctionButton}
                     footer={correctionActions}
@@ -2746,9 +2797,12 @@ export default function EmployeeForm({ self }) {
                     <div className="space-y-6">
                       {shows("employment") && (
                       <section>
-                        <h3 className="mb-4 text-base font-bold text-primary">
-                          Organizational Information
-                        </h3>
+                        {/* Named only where it shares the box with the contract. */}
+                        {shows("contract") && (
+                          <h3 className="mb-4 text-base font-bold text-primary">
+                            Organizational Information
+                          </h3>
+                        )}
                         <div className="form-grid gap-y-6">
                           {/* Inactive asks who decided it, and the firm's
                               own decision asks on what ground. Each answer is
@@ -2758,6 +2812,7 @@ export default function EmployeeForm({ self }) {
                           <ChoiceField
                             id="status"
                             label="Employee Status"
+                            icon={User}
                             value={formData.status}
                             onChange={(value) =>
                               setFormData((prev) => ({
@@ -2769,7 +2824,7 @@ export default function EmployeeForm({ self }) {
                                   value === "Inactive" ? prev.managementReason : "",
                               }))
                             }
-                            options={EMPLOYEE_STATUSES}
+                            options={["Active", "Inactive"]}
                             required
                           />
                           {formData.status === "Inactive" && (
@@ -2806,68 +2861,64 @@ export default function EmployeeForm({ self }) {
                           <ChoiceField
                             id="branch"
                             label="Branch / Work Location"
+                            icon={MapPin}
                             placeholder="Select Branch"
                             value={formData.branch}
                             onChange={(value) => set("branch", value)}
                             options={initialBranches.map((branch) => branch.name)}
                             required
                           />
-                          {/* The department is chosen first and decides what
-                              titles there are to choose from. Changing it
-                              clears the title under it: a Partner who becomes
-                              an Administrator cannot stay a Managing Partner
-                              while nobody is looking. */}
+                          <ChoiceField
+                            id="position"
+                            label="Position"
+                            icon={Briefcase}
+                            placeholder="Select position"
+                            value={formData.position}
+                            onChange={(value) => set("position", value)}
+                            options={EMPLOYEE_POSITIONS}
+                            required
+                          />
                           <ChoiceField
                             id="department"
                             label="Department"
+                            icon={Network}
                             placeholder="Select department"
                             value={formData.department}
-                            onChange={(value) =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                department: value,
-                                occupation: "",
-                                practiceLevel: "",
-                              }))
-                            }
-                            options={DEPARTMENTS}
+                            onChange={(value) => set("department", value)}
+                            options={DEPARTMENT_GROUPS}
                             required
                           />
-                          {/* Choosing anything but Lawyer takes the practice
-                              level away with it, so no level is saved for
-                              somebody who cannot hold one. */}
+                        </div>
+
+                        {/* The grade, on a row of its own. A lawyer's grade is
+                            their practice level, so it is asked once: choosing
+                            one makes the employee a lawyer for everything that
+                            follows - the lawyer's card among their papers, the
+                            level on the employees list. */}
+                        <div className="form-grid mt-6 gap-y-6 border-t pt-6">
                           <ChoiceField
-                            id="occupation"
-                            label="Job Title"
-                            placeholder={
-                              formData.department
-                                ? "Select job title"
-                                : "Select a department first"
-                            }
-                            value={formData.occupation}
-                            onChange={(value) =>
+                            id="grade"
+                            label="Select Grade"
+                            icon={Scale}
+                            info="A consultant's grade, or a lawyer's practice level."
+                            placeholder="Select grade"
+                            value={formData.grade}
+                            onChange={(value) => {
+                              const lawyer = LAWYER_GRADES.includes(value);
                               setFormData((prev) => ({
                                 ...prev,
-                                occupation: value,
-                                practiceLevel:
-                                  value === "Lawyer" ? prev.practiceLevel : "",
-                              }))
-                            }
-                            options={JOB_TITLES[formData.department] || []}
-                            disabled={!formData.department}
+                                grade: value,
+                                practiceLevel: lawyer ? value : "",
+                                occupation: lawyer ? "Lawyer" : value,
+                              }));
+                            }}
+                            options={GRADE_GROUPS}
                             required
                           />
-                          {formData.occupation === "Lawyer" && (
-                            <ChoiceField
-                              id="practiceLevel"
-                              label="Lawyer Grade"
-                              placeholder="Select lawyer grade"
-                              value={formData.practiceLevel}
-                              onChange={(value) => set("practiceLevel", value)}
-                              options={PRACTICE_LEVELS}
-                              required
-                            />
-                          )}
+                        </div>
+
+                        {/* How the firm reaches them at work. */}
+                        <div className="form-grid mt-6 gap-y-6 border-t pt-6">
                           <PhoneField
                             id="workPhone"
                             label="Work Phone Number"
@@ -2895,30 +2946,45 @@ export default function EmployeeForm({ self }) {
 
                       {shows("contract") && (
                       <section className={cn(shows("employment") && "border-t pt-6")}>
-                        <h3 className="mb-4 text-base font-bold text-primary">
-                          Contract &amp; Timeline
-                        </h3>
+                        {/* Named only where it shares the box with the job. */}
+                        {shows("employment") && (
+                          <h3 className="mb-4 text-base font-bold text-primary">
+                            Contract &amp; Timeline
+                          </h3>
+                        )}
                         <div className="form-grid gap-y-6">
+                          {/* How they are engaged and on what term, chosen
+                              together and kept as the two answers it is. A term
+                              without an end drops the end date it no longer has. */}
                           <ChoiceField
-                            id="employmentType"
-                            label="Employment Type"
-                            placeholder="Select Employment Type"
-                            value={formData.employmentType}
-                            onChange={(value) => set("employmentType", value)}
-                            options={EMPLOYMENT_TYPES}
-                            required
-                          />
-                          <ChoiceField
-                            id="contractType"
-                            label="Contract Type"
-                            placeholder="Select Contract Type"
-                            value={formData.contractType}
-                            onChange={(value) => set("contractType", value)}
-                            options={EMPLOYEE_CONTRACT_TYPES}
+                            id="employmentContract"
+                            label={<>Employment Type &amp; Contract Type<Required show={asksFor} /></>}
+                            placeholder="Select"
+                            value={
+                              formData.employmentType && formData.contractType
+                                ? formData.employmentType +
+                                  " - " +
+                                  (Object.keys(CONTRACT_TERMS).find(
+                                    (term) => CONTRACT_TERMS[term] === formData.contractType
+                                  ) || "")
+                                : ""
+                            }
+                            onChange={(value) => {
+                              const [type, term] = value.split(" - ");
+                              const contractType = CONTRACT_TERMS[term];
+                              setFormData((prev) => ({
+                                ...prev,
+                                employmentType: type,
+                                contractType,
+                                employmentEndDate:
+                                  contractType === "Fixed-term" ? prev.employmentEndDate : "",
+                              }));
+                            }}
+                            options={EMPLOYMENT_CONTRACT_GROUPS}
                             required
                           />
                           <div className="form-field space-y-2">
-                            <Label htmlFor="dateOfJoining">Date of Joining</Label>
+                            <Label htmlFor="dateOfJoining">Date of Joining<Required show={asksFor} /></Label>
                             <DateField
                               id="dateOfJoining"
                               name="dateOfJoining"
@@ -2928,7 +2994,7 @@ export default function EmployeeForm({ self }) {
                             />
                           </div>
                           <div className="form-field space-y-2">
-                            <Label htmlFor="contractStartDate">Contract Start Date</Label>
+                            <Label htmlFor="contractStartDate">Contract Start Date<Required show={asksFor} /></Label>
                             <DateField
                               id="contractStartDate"
                               name="contractStartDate"
@@ -2938,22 +3004,50 @@ export default function EmployeeForm({ self }) {
                             />
                           </div>
                           {/* A fixed-term contract is one with an end, so it
-                              has to be given; an open-ended one has none. */}
-                          <div className="form-field space-y-2">
-                            <Label htmlFor="employmentEndDate">Contract End Date</Label>
-                            <DateField
-                              id="employmentEndDate"
-                              name="employmentEndDate"
-                              value={formData.employmentEndDate}
-                              onChange={onChange}
-                              required={formData.contractType === "Fixed-term"}
-                            />
-                          </div>
+                              is asked for, and only then; an open-ended one
+                              has none. */}
+                          {formData.contractType === "Fixed-term" && (
+                            <div className="form-field space-y-2">
+                              <Label htmlFor="employmentEndDate">Contract End Date</Label>
+                              <DateField
+                                id="employmentEndDate"
+                                name="employmentEndDate"
+                                value={formData.employmentEndDate}
+                                onChange={onChange}
+                                required
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* The terms, on a row of their own. */}
+                        <div className="form-grid mt-6 gap-y-6">
+                          <ChoiceField
+                            id="probationPeriod"
+                            label={<>Probation Period<Required show={asksFor} /></>}
+                            placeholder="Select"
+                            value={formData.probationPeriod}
+                            onChange={(value) => set("probationPeriod", value)}
+                            options={PROBATION_PERIODS}
+                            optionLabel={(option) =>
+                              option === DEFAULT_PROBATION ? option + " (Default)" : option
+                            }
+                            required
+                          />
+                          <ChoiceField
+                            id="noticePeriod"
+                            label={<>Notice Period<Required show={asksFor} /></>}
+                            placeholder="Select"
+                            value={formData.noticePeriod}
+                            onChange={(value) => set("noticePeriod", value)}
+                            options={NOTICE_PERIODS}
+                            required
+                          />
                           {/* The one leave figure on the record. Leave taken
                               is recorded on the leave page, not here. */}
                           <div className="form-field space-y-2">
                             <Label htmlFor="annualLeaveDays">
-                              Annual Leave Entitlement (Days)
+                              Number of Vacation Days<Required show={asksFor} />
                             </Label>
                             <Input
                               id="annualLeaveDays"
@@ -2962,7 +3056,7 @@ export default function EmployeeForm({ self }) {
                               inputMode="numeric"
                               min="0"
                               step="1"
-                              placeholder="30"
+                              placeholder="Enter number of days"
                               value={formData.annualLeaveDays}
                               onChange={onChange}
                               required
@@ -2970,7 +3064,8 @@ export default function EmployeeForm({ self }) {
                           </div>
                           <ChoiceField
                             id="socialProtection"
-                            label="Social Protection Registration"
+                            label={<>Registration in Social Protection<Required show={asksFor} /></>}
+                            placeholder="Select"
                             value={formData.socialProtection}
                             onChange={(value) => set("socialProtection", value)}
                             options={["Yes", "No"]}

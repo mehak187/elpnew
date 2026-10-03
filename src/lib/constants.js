@@ -109,12 +109,62 @@ export const JOB_TITLES = {
 /** Every title there is, for reading a record back whatever its department. */
 export const OCCUPATIONS = Object.values(JOB_TITLES).flat();
 
+/* Employment Information, as Add Employee now asks it. */
+
+/** Where somebody stands in the firm's line of authority. */
+export const EMPLOYEE_POSITIONS = ["Partner", "Manager", "Employee"];
+
+/** The firm's departments, the legal work apart from what supports it. */
+export const DEPARTMENT_GROUPS = [
+  { group: "LEGAL", options: ["Litigation", "Advisory & Contracts"] },
+  {
+    group: "SUPPORT SERVICES",
+    options: ["Administration", "Finance", "Human Resources", "Information Technology"],
+  },
+];
+
+/**
+ * A grade: a consultant's seniority, or the courts a lawyer may plead
+ * before. A lawyer's grade is their practice level, so it is asked once.
+ */
+export const LAWYER_GRADES = [
+  "Trainee Lawyer",
+  "Primary Court Lawyer",
+  "Appeal Court Lawyer",
+  "Supreme Court Lawyer",
+  "Non-Practicing Lawyer",
+];
+
+export const GRADE_GROUPS = [
+  { group: "Consultant Grade", options: ["Senior Associate", "Associate", "Legal Advisor"] },
+  { group: "Lawyer Grade / Practice Level", options: LAWYER_GRADES },
+];
+
 /** What somebody actually does, which is not the same as their level. */
 /** How a person is engaged, rather than what they are engaged to do. */
 export const EMPLOYMENT_TYPES = ["Full-Time", "Part-Time", "Temporary"];
 
 /** How long an employee's contract runs: to a date, or until it is ended. */
 export const EMPLOYEE_CONTRACT_TYPES = ["Fixed-term", "Indefinite-term"];
+
+/** The two contract terms as Contract Details names them, each to its stored value. */
+export const CONTRACT_TERMS = { "Fixed Term": "Fixed-term", "Indefinite Term": "Indefinite-term" };
+
+/**
+ * How somebody is engaged and on what term, asked as one choice - "Full-Time -
+ * Fixed Term" - and kept as the two answers it is.
+ */
+export const EMPLOYMENT_CONTRACT_GROUPS = EMPLOYMENT_TYPES.map((type) => ({
+  group: type,
+  options: Object.keys(CONTRACT_TERMS).map((term) => type + " - " + term),
+}));
+
+/** How long a new employee is on probation; fifteen days unless agreed otherwise. */
+export const PROBATION_PERIODS = ["15 Days", "1 Month", "2 Months", "3 Months"];
+export const DEFAULT_PROBATION = "15 Days";
+
+/** The notice either side gives to end the contract. */
+export const NOTICE_PERIODS = ["1 Month", "2 Months", "3 Months", "4 Months"];
 
 /** The courts a lawyer is admitted to plead before, lowest first. */
 export const PRACTICE_LEVELS = [
