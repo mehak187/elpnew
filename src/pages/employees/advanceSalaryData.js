@@ -29,15 +29,30 @@ export const ADVANCE_BOOKING = {
   subcategory: "Salary Advance",
 };
 
-/** "SAR-001", counted across the firm so a number is never reused. */
-export const nextAdvanceNo = (advances) =>
-  "SAR-" +
+/** What an advance can be asked for. The last asks the employee to say. */
+export const ADVANCE_PURPOSES = [
+  "Emergency Case",
+  "Education Expenses",
+  "Medical Expenses",
+  "Family Expenses",
+  "Other (Please specify)",
+];
+export const OTHER_PURPOSE = "Other (Please specify)";
+
+/**
+ * "SA-2026-00012": the year it was asked in, then a count across the firm so
+ * a number is never reused. The count is the number's last part.
+ */
+export const nextAdvanceNo = (advances, year = new Date().getFullYear()) =>
+  "SA-" +
+  year +
+  "-" +
   String(
     advances.reduce(
-      (max, a) => Math.max(max, Number(String(a.requestNo || "").replace(/\D/g, "")) || 0),
+      (max, a) => Math.max(max, Number(String(a.requestNo || "").split("-").pop()) || 0),
       0
     ) + 1
-  ).padStart(3, "0");
+  ).padStart(5, "0");
 
 /** The months, as an advance names the one it comes out of. */
 const MONTHS = [
@@ -99,68 +114,74 @@ export const deductedFrom = (advance) =>
 export const initialAdvances = [
   {
     id: 1,
-    requestNo: "SAR-001",
+    requestNo: "SA-2026-00001",
     employee: "Mohammed Al Yahyaei",
     requestedOn: "2026-03-04",
     amount: 500,
     deductMonth: "April",
     deductYear: "2026",
+    purpose: "Education Expenses",
     reason: "School fees for the new term.",
     status: "Approved",
   },
   {
     id: 2,
-    requestNo: "SAR-002",
+    requestNo: "SA-2026-00002",
     employee: "Priya Sharma",
     requestedOn: "2026-04-12",
     amount: 200,
     deductMonth: "May",
     deductYear: "2026",
+    purpose: "Family Expenses",
     reason: "Flights home for a family wedding.",
     status: "Approved",
   },
   {
     id: 3,
-    requestNo: "SAR-003",
+    requestNo: "SA-2026-00003",
     employee: "Mohammed Al Yahyaei",
     requestedOn: "2026-05-19",
     amount: 400,
     deductMonth: "June",
     deductYear: "2026",
+    purpose: "Emergency Case",
     reason: "Car repairs after an accident.",
     status: "Rejected",
   },
   {
     id: 4,
-    requestNo: "SAR-004",
+    requestNo: "SA-2026-00004",
     employee: "Fatima Al Rashdi",
     requestedOn: "2026-06-08",
     amount: 350,
     deductMonth: "July",
     deductYear: "2026",
+    purpose: "Other (Please specify)",
     reason: "Deposit on a new flat.",
     status: "Approved",
   },
   {
     id: 5,
-    requestNo: "SAR-005",
+    requestNo: "SA-2026-00005",
     employee: "Mohammed Al Yahyaei",
     requestedOn: "2026-07-21",
     amount: 600,
     deductMonth: "August",
     deductYear: "2026",
+    purpose: "Medical Expenses",
     reason: "Medical treatment not covered by insurance.",
     status: "Approved",
   },
   {
     // Still waiting: the one request on the list with nothing decided yet.
     id: 6,
-    requestNo: "SAR-006",
+    requestNo: "SA-2026-00006",
     employee: "Mohammed Al Yahyaei",
     requestedOn: "2026-09-08",
     amount: 300,
     deductMonth: "October",
     deductYear: "2026",
+    purpose: "Education Expenses",
     reason: "University fees for the autumn term.",
     status: "Pending",
   },

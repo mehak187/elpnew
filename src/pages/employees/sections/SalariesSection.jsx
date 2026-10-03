@@ -1050,9 +1050,7 @@ export default function SalariesSection({
         onOpenChange={(open) => !open && closeAdd()}
       >
         <DialogContent className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Salary Advance Request</DialogTitle>
-          </DialogHeader>
+          {/* The form heads itself: its title, number and whose it is. */}
           <AdvanceSalaryForm
             employee={employee}
             net={net}
