@@ -78,6 +78,8 @@ import {
   Network,
   Scale,
   Calculator,
+  Users,
+  FileWarning,
 } from "lucide-react";
 import { useLeaves } from "@/lib/leaves/context";
 import { annualLeaveLeft } from "./leaveData";
@@ -251,6 +253,16 @@ const SECTIONS = [
     note: "Notices addressed to this employee",
   },
   {
+    // The firm's own running record of the employee - the day's work, how it
+    // is judged, and what was done wrong - gathered under one heading, as
+    // Requests gathers what the employee asks.
+    key: "management",
+    label: "Employee Management",
+    icon: Users,
+    noSave: true,
+    recordOnly: true,
+  },
+  {
     key: "daily",
     label: "Daily Activities",
     icon: CalendarClock,
@@ -315,6 +327,9 @@ const SECTION_GROUPS = [
   // group below stays as it was until its own redesign arrives.
   { key: "profile", link: true },
   { key: "requests", link: true },
+  { key: "circulars", link: true },
+  { key: "management", link: true },
+  { key: "permissions", link: true },
   {
     key: "dossier",
     label: "Employee Dossier",
@@ -331,15 +346,31 @@ const SECTION_GROUPS = [
     key: "other",
     label: "Other sections",
     icon: ListTree,
-    items: [
-      "generalRequest",
-      "leaves",
-      "circulars",
-      "daily",
-      "performance",
-      "violations",
-      "permissions",
-    ],
+    // Daily activities, performance and violations open from Employee
+    // Management where a record has it; My Profile keeps them here.
+    items: ["generalRequest", "leaves", "daily", "performance", "violations"],
+  },
+];
+
+/** What Employee Management opens, each its mark, its name and what it holds. */
+const MANAGEMENT_ITEMS = [
+  {
+    key: "daily",
+    label: "Daily Activities",
+    icon: CalendarDays,
+    note: "View and manage the employee's daily activities, records and reports.",
+  },
+  {
+    key: "performance",
+    label: "Performance Evaluation",
+    icon: ChartNoAxesColumnIncreasing,
+    note: "View employee evaluations, rating and performance history.",
+  },
+  {
+    key: "violations",
+    label: "Violations & Penalties",
+    icon: FileWarning,
+    note: "View recorded violations, penalties and related documents.",
   },
 ];
 
@@ -1264,6 +1295,8 @@ export default function EmployeeForm({ self }) {
   // opened below them, if one has been.
   const [requestCategory, setRequestCategory] = useState(REQUEST_CATEGORIES[0].key);
   const [requestsTab, setRequestsTab] = useState(null);
+  // What is open under Employee Management: nothing until a card is chosen.
+  const [managementTab, setManagementTab] = useState(null);
   // A correction being written on the open tab, and the record as it stood
   // when it began - put back whatever the correction's outcome.
   const [correcting, setCorrecting] = useState(false);
@@ -1538,7 +1571,18 @@ export default function EmployeeForm({ self }) {
   // The request chosen on Requests, and the section on screen: the sidebar's
   // own, or the one that request is kept on.
   const requestItem = REQUEST_ITEMS.find((item) => item.key === requestsTab) || null;
-  const shownSection = isRequests ? requestItem?.section : activeSection;
+  const isManagement = isEditMode && !self && activeSection === "management";
+  const shownSection = isRequests
+    ? requestItem?.section
+    : isManagement
+      ? managementTab
+      : activeSection;
+  // The side of the file whose Save is at the foot of the page: under
+  // Employee Management, the one opened there.
+  const savesFor = SECTIONS.find((s) => s.key === shownSection) || current;
+  // Where a record has Employee Management, what it opens is left out of
+  // the sidebar's other sections.
+  const hasManagement = sections.some((s) => s.key === "management");
   // On Employee Information the fields are only read, until a correction is begun.
   const profileLocked = isProfile && !correcting;
   // Which papers apply: while adding, from what was saved on the steps before;
@@ -1865,14 +1909,16 @@ export default function EmployeeForm({ self }) {
                   further in; above them the page keeps the employee file's
                   own title, as it always had. */}
               <h1 className="text-xl font-bold text-primary sm:text-2xl">
-                {isProfile || isRequests ? fileHeading.title : current.title || current.label}
+                {isProfile || isRequests || isManagement
+                  ? fileHeading.title
+                  : current.title || current.label}
               </h1>
               {/* No standing beside the title: it is already on the row this
                   record was opened from, and the title says which record is
                   open, not how it stands. */}
             </div>
             <p className="text-xs text-primary/75 sm:text-sm">
-              {isProfile || isRequests ? fileHeading.note : current.note}
+              {isProfile || isRequests || isManagement ? fileHeading.note : current.note}
             </p>
           </div>
         </div>
@@ -1912,6 +1958,10 @@ export default function EmployeeForm({ self }) {
               items: group.items
                 .map((key) => sections.find((section) => section.key === key))
                 .filter(Boolean)
+                .filter(
+                  (section) =>
+                    !(hasManagement && MANAGEMENT_ITEMS.some((item) => item.key === section.key))
+                )
                 .map((section) => ({ key: section.key, label: section.label })),
             };
           }).filter((group) => group && (group.link || group.items.length > 0))}
@@ -2108,6 +2158,70 @@ export default function EmployeeForm({ self }) {
             );
           })()}
 
+          {/* Employee Management heads its own page as Requests does, then
+              lists what it opens: each its mark, its name and what it holds,
+              side by side. The one opened is lit; it is shown below. */}
+          {isManagement && (
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <nav aria-label="Breadcrumb" className="text-sm">
+                  <span className="text-primary/60">Employee</span>
+                  <span aria-hidden="true" className="px-2 text-primary/40">/</span>
+                  <span className="font-semibold text-primary" aria-current="page">
+                    Employee Management
+                  </span>
+                </nav>
+                <div className="flex items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => selectSection("profile")}
+                    title="Back to Employee Information"
+                    className="flex size-9 shrink-0 items-center justify-center rounded-md text-primary transition-colors hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <ArrowLeft className="size-5 rtl:rotate-180" aria-hidden="true" />
+                    <span className="sr-only">Back to Employee Information</span>
+                  </button>
+                  <span aria-hidden="true" className="h-9 w-px bg-container-border" />
+                  <LayoutGrid strokeWidth={1.5} aria-hidden="true" className="size-8 shrink-0 text-primary" />
+                  <h1 className="text-2xl font-bold text-primary">Employee Management</h1>
+                </div>
+              </div>
+              <nav
+                aria-label="Employee management"
+                className="grid gap-4 border-b border-container-border pb-6 md:grid-cols-3 md:gap-0"
+              >
+                {MANAGEMENT_ITEMS.map((item, index) => {
+                  const Icon = item.icon;
+                  const lit = managementTab === item.key;
+                  return (
+                    <div
+                      key={item.key}
+                      className={cn("flex", index > 0 && "md:border-s md:border-container-border md:ps-4", index < MANAGEMENT_ITEMS.length - 1 && "md:pe-4")}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setManagementTab(item.key)}
+                        aria-current={lit ? "true" : undefined}
+                        className={cn(
+                          "flex w-full items-start gap-5 rounded-lg p-4 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          lit ? "bg-blue-50" : "hover:bg-menu-hover"
+                        )}
+                      >
+                        <Icon strokeWidth={1.25} aria-hidden="true" className="size-14 shrink-0 text-foreground" />
+                        <span className="min-w-0">
+                          <span className="block text-lg font-bold text-primary">{item.label}</span>
+                          <span className="mt-2 block text-sm leading-relaxed text-primary/75">
+                            {item.note}
+                          </span>
+                        </span>
+                      </button>
+                    </div>
+                  );
+                })}
+              </nav>
+            </div>
+          )}
+
           {isAdding && (
             <div className="space-y-2">
               <NumberedSteps
@@ -2133,7 +2247,8 @@ export default function EmployeeForm({ self }) {
           <Card
             className={cn(
               (isInfo || isDocuments) && "border-0 bg-transparent shadow-none",
-              isRequests && !requestItem && "hidden"
+              isRequests && !requestItem && "hidden",
+              isManagement && !managementTab && "hidden"
             )}
           >
             <CardContent
@@ -3726,7 +3841,7 @@ export default function EmployeeForm({ self }) {
                   <EmptyState>{requestItem.label} requests are not set up yet.</EmptyState>
                 )}
 
-                {activeSection === "daily" && (
+                {shownSection === "daily" && (
                   <DailyActivitiesSection employee={formData} />
                 )}
 
@@ -3734,9 +3849,9 @@ export default function EmployeeForm({ self }) {
                   <EmployeeCircularsSection employee={formData} self={self} />
                 )}
 
-                {activeSection === "performance" && <PerformanceSection />}
+                {shownSection === "performance" && <PerformanceSection />}
 
-                {activeSection === "violations" && (
+                {shownSection === "violations" && (
                   <ViolationsSection employee={formData} canEdit={!readOnly} />
                 )}
 
@@ -3756,11 +3871,11 @@ export default function EmployeeForm({ self }) {
                 {/* Save at the end of what it saves, where the last field
                     leaves off. A section that saves its own records has
                     nothing here: there is no draft on the page to save. */}
-                {!isAdding && !current.noSave && !readOnly && (
+                {!isAdding && !savesFor.noSave && !readOnly && (
                   <div className="flex justify-end">
                     <Button type="submit">
                       <Save className="me-2 h-4 w-4" />
-                      {current.save || "Save"}
+                      {savesFor.save || "Save"}
                     </Button>
                   </div>
                 )}
