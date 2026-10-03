@@ -77,6 +77,7 @@ import {
   Briefcase,
   Network,
   Scale,
+  Calculator,
 } from "lucide-react";
 import { useLeaves } from "@/lib/leaves/context";
 import { annualLeaveLeft } from "./leaveData";
@@ -925,55 +926,48 @@ function AccessNotice({ hold, graceDays }) {
   );
 }
 
-/** One figure of the coming payroll: what it is, then the amount. */
-function PayTile({ label, value, className }) {
-  return (
-    <div className="rounded-lg border px-4 py-3">
-      <p className="text-sm text-primary/75">{label}</p>
-      <p className={cn("text-xl font-bold text-primary", className)}>
-        {amountValue(value)} <Rial className="text-sm font-medium" />
-      </p>
-    </div>
-  );
-}
+/** How each figure of the coming payroll is coloured, by what it is. */
+const PAY_TILE_TONES = {
+  earnings: { box: "bg-blue-50", badge: "bg-blue-100 text-blue-700", value: "text-primary" },
+  deductions: { box: "bg-red-50", badge: "bg-red-100 text-red-600", value: "text-red-700" },
+  net: { box: "bg-violet-50", badge: "bg-violet-100 text-violet-700", value: "text-primary" },
+  payable: { box: "bg-emerald-50", badge: "bg-emerald-100 text-emerald-700", value: "text-emerald-700" },
+};
 
-/**
- * One side of a salary statement: each line that has an amount, then its
- * total. Lines at nothing are left out - a statement lists what is paid.
- */
-function StatementLines({ title, fields, values, total, totalLabel }) {
-  const lines = fields.filter((field) => Number(values[field.key] || 0) > 0);
+/** One figure of the coming payroll: its icon, what it is, then the amount. */
+function PayTile({ label, value, icon, tone }) {
+  const Icon = icon;
+  const colors = PAY_TILE_TONES[tone];
   return (
-    <div className="space-y-2">
-      <p className="text-sm font-semibold text-primary">{title}</p>
-      {lines.length === 0 ? (
-        <p className="text-sm text-muted-foreground">None</p>
-      ) : (
-        lines.map((field) => (
-          <div key={field.key} className="flex items-center justify-between text-sm">
-            <span className="text-primary/75">{field.label}</span>
-            <span className="text-primary">
-              {amountValue(values[field.key])} <Rial />
-            </span>
-          </div>
-        ))
-      )}
-      <div className="flex items-center justify-between border-t pt-2 text-sm font-semibold">
-        <span className="text-primary">{totalLabel}</span>
-        <span className="text-primary">
-          {amountValue(total)} <Rial />
-        </span>
+    <div className={cn("flex items-center gap-4 rounded-lg px-5 py-4", colors.box)}>
+      <span
+        aria-hidden="true"
+        className={cn("flex size-14 shrink-0 items-center justify-center rounded-full", colors.badge)}
+      >
+        <Icon className="size-7" strokeWidth={1.75} />
+      </span>
+      <div className="min-w-0">
+        <p className={cn("text-sm font-semibold", colors.value)}>{label}</p>
+        <p className={cn("text-2xl font-bold", value < 0 ? "text-destructive" : colors.value)}>
+          {amountValue(value)}{" "}
+          <Rial className="text-sm font-medium text-muted-foreground" />
+        </p>
       </div>
     </div>
   );
 }
 
 /** A paper's number and the day it runs out, side by side on the grid. */
-function PaperFields({ label, numberName, expiryName, values, onChange }) {
+function PaperFields({ label, numberName, expiryName, values, onChange, required = true }) {
+  // A paper that must be on the record is marked so; one that may be left out
+  // - a passport, a visa, a work permit - carries no mark and is not demanded.
   return (
     <>
       <div className="form-field space-y-2">
-        <Label htmlFor={numberName}>{label} No.</Label>
+        <Label htmlFor={numberName}>
+          {label} No.
+          <Required show={required} />
+        </Label>
         <Input
           id={numberName}
           name={numberName}
@@ -981,18 +975,21 @@ function PaperFields({ label, numberName, expiryName, values, onChange }) {
           onChange={onChange}
           placeholder="Enter number"
           aria-invalid={ruleBroken(numberName, values[numberName]) || undefined}
-          required
+          required={required}
         />
         <RuleNote name={numberName} value={values[numberName]} />
       </div>
       <div className="form-field space-y-2">
-        <Label htmlFor={expiryName}>{label} Expiry Date</Label>
+        <Label htmlFor={expiryName}>
+          {label} Expiry Date
+          <Required show={required} />
+        </Label>
         <DateField
           id={expiryName}
           name={expiryName}
           value={values[expiryName]}
           onChange={onChange}
-          required
+          required={required}
         />
       </div>
     </>
@@ -1250,7 +1247,6 @@ export default function EmployeeForm({ self }) {
   // retyped: a nationality changed but not saved has not changed yet.
   const [saved, setSaved] = useState({});
   // The salary statement, opened over the pay step to read before saving.
-  const [showStatement, setShowStatement] = useState(false);
   const formRef = useRef(null);
 
   // A page that sends somebody here can say which section to open - a newly
@@ -1659,6 +1655,8 @@ export default function EmployeeForm({ self }) {
   const gross = sumOf(PAY_FIELDS, formData);
   const held = sumOf(DEDUCTION_FIELDS, formData);
   const net = gross - held;
+  // What can actually be sent to the bank: nothing, if deductions outrun pay.
+  const payable = Math.max(net, 0);
   const today = todayIso();
   const effective = formData.salaryEffectiveDate;
   // A salary starting later is scheduled; it is paid from the first payroll
@@ -2456,6 +2454,82 @@ export default function EmployeeForm({ self }) {
                       onChange={(e) => set("emergencyPhone", e.target.value)}
                       required={isTabbed}
                     />
+
+                    {/* The employee's standing, on a row of its own. Inactive
+                        asks for the last day, who decided it, and - unless it
+                        was the employee's own decision - the firm's decision.
+                        Each answer is dropped when the one above it changes,
+                        so a record cannot keep a reason for an ending that is
+                        no longer there. */}
+                    {isTabbed && (
+                      <div className="form-grid gap-y-6" style={{ gridColumn: "1 / -1" }}>
+                        <ChoiceField
+                          id="status"
+                          label="Employee Status"
+                          value={formData.status}
+                          onChange={(value) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              status: value,
+                              lastWorkingDate:
+                                value === "Inactive" ? prev.lastWorkingDate : "",
+                              decisionMaker:
+                                value === "Inactive" ? prev.decisionMaker : "",
+                              managementReason:
+                                value === "Inactive" ? prev.managementReason : "",
+                            }))
+                          }
+                          options={["Active", "Inactive"]}
+                          required
+                        />
+                        {formData.status === "Inactive" && (
+                          <>
+                            <div className="form-field space-y-2">
+                              <Label htmlFor="lastWorkingDate">
+                                Last Working Day
+                                <Required show />
+                              </Label>
+                              <DateField
+                                id="lastWorkingDate"
+                                name="lastWorkingDate"
+                                value={formData.lastWorkingDate}
+                                onChange={onChange}
+                                required
+                              />
+                            </div>
+                            <ChoiceField
+                              id="decisionMaker"
+                              label="Decision Maker"
+                              placeholder="Select decision maker"
+                              value={formData.decisionMaker}
+                              onChange={(value) =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  decisionMaker: value,
+                                  managementReason:
+                                    value === "Employee Decision"
+                                      ? ""
+                                      : prev.managementReason,
+                                }))
+                              }
+                              options={DECISION_MAKERS}
+                              required
+                            />
+                            {formData.decisionMaker !== "Employee Decision" && (
+                              <ChoiceField
+                                id="managementReason"
+                                label="Management Decision"
+                                placeholder="Select management decision"
+                                value={formData.managementReason}
+                                onChange={(value) => set("managementReason", value)}
+                                options={MANAGEMENT_DECISION_REASONS}
+                                required
+                              />
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </SectionCard>
                 )}
@@ -2804,60 +2878,6 @@ export default function EmployeeForm({ self }) {
                           </h3>
                         )}
                         <div className="form-grid gap-y-6">
-                          {/* Inactive asks who decided it, and the firm's
-                              own decision asks on what ground. Each answer is
-                              dropped when the one above it changes, so a
-                              record cannot keep a reason for an ending that
-                              is no longer there. */}
-                          <ChoiceField
-                            id="status"
-                            label="Employee Status"
-                            icon={User}
-                            value={formData.status}
-                            onChange={(value) =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                status: value,
-                                decisionMaker:
-                                  value === "Inactive" ? prev.decisionMaker : "",
-                                managementReason:
-                                  value === "Inactive" ? prev.managementReason : "",
-                              }))
-                            }
-                            options={["Active", "Inactive"]}
-                            required
-                          />
-                          {formData.status === "Inactive" && (
-                            <ChoiceField
-                              id="decisionMaker"
-                              label="Decision Maker"
-                              placeholder="Select decision maker"
-                              value={formData.decisionMaker}
-                              onChange={(value) =>
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  decisionMaker: value,
-                                  managementReason:
-                                    value === "Management Decision"
-                                      ? prev.managementReason
-                                      : "",
-                                }))
-                              }
-                              options={DECISION_MAKERS}
-                              required
-                            />
-                          )}
-                          {formData.decisionMaker === "Management Decision" && (
-                            <ChoiceField
-                              id="managementReason"
-                              label="Management Decision Reason"
-                              placeholder="Select reason"
-                              value={formData.managementReason}
-                              onChange={(value) => set("managementReason", value)}
-                              options={MANAGEMENT_DECISION_REASONS}
-                              required
-                            />
-                          )}
                           <ChoiceField
                             id="branch"
                             label="Branch / Work Location"
@@ -3111,12 +3131,16 @@ export default function EmployeeForm({ self }) {
                       )}
                       {!paperOmani && (
                         <>
+                          {/* Asked of a foreign employee but not demanded: the
+                              resident card above is what the record cannot be
+                              without. */}
                           <PaperFields
                             label="Passport"
                             numberName="passportNumber"
                             expiryName="passportExpiry"
                             values={formData}
                             onChange={onChange}
+                            required={false}
                           />
                           <PaperFields
                             label="Visa"
@@ -3124,6 +3148,7 @@ export default function EmployeeForm({ self }) {
                             expiryName="visaExpiry"
                             values={formData}
                             onChange={onChange}
+                            required={false}
                           />
                           <PaperFields
                             label="Work Permit"
@@ -3131,6 +3156,7 @@ export default function EmployeeForm({ self }) {
                             expiryName="workPermitExpiry"
                             values={formData}
                             onChange={onChange}
+                            required={false}
                           />
                         </>
                       )}
@@ -3144,12 +3170,43 @@ export default function EmployeeForm({ self }) {
                   <>
                     {/* Pay and what comes off it: Payroll Information. */}
                     {shows("payroll") && (
-                    <>
                     <SectionCard
                       title={isAdding ? "Payroll Information" : "Salary Information"}
+                      icon={Wallet}
                       aside={correctionButton}
+                      footer={isAdding && stepActions}
                       locked={profileLocked}
                     >
+                      {/* The first payroll this pay goes into, worked out from
+                          the lines below as they are typed. An estimate: the
+                          month's own absences and changes settle the final
+                          figure when payroll is run. */}
+                      <div className="mb-6 space-y-4">
+                        <div className="flex items-center gap-4 rounded-lg bg-blue-50/60 px-5 py-4">
+                          <span
+                            aria-hidden="true"
+                            className="flex size-14 shrink-0 items-center justify-center rounded-full border bg-white text-primary"
+                          >
+                            <CalendarDays className="size-7" strokeWidth={1.5} />
+                          </span>
+                          <div className="min-w-0">
+                            <h3 className="text-xl font-bold text-primary">
+                              Next Payroll <span aria-hidden="true">•</span>{" "}
+                              <span className="text-blue-700">{payrollMonth}</span>
+                            </h3>
+                            <p className="text-sm text-primary/75">
+                              This is the employee's salary for the next month that
+                              will be deposited into their bank account.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                          <PayTile label="Total Earnings" value={gross} icon={Coins} tone="earnings" />
+                          <PayTile label="Total Deductions" value={held} icon={Wallet} tone="deductions" />
+                          <PayTile label="Net Salary" value={net} icon={Calculator} tone="net" />
+                          <PayTile label="Amount Payable" value={payable} icon={HandCoins} tone="payable" />
+                        </div>
+                      </div>
                       <div className="form-grid gap-y-6">
                         <div className="form-field space-y-2" data-required="true">
                           <Label htmlFor="salaryEffectiveDate">
@@ -3190,23 +3247,6 @@ export default function EmployeeForm({ self }) {
                           required
                           note="Auto-calculated from salary components"
                         />
-                      </div>
-                      {scheduled && (
-                        <p className="mt-4 text-sm text-primary/75">
-                          Effective {formatDate(effective)}. Current salary remains in
-                          force until that date.
-                        </p>
-                      )}
-                    </SectionCard>
-
-                    <SectionCard title="Recurring Deductions" locked={profileLocked}>
-                      <p className="mb-6 flex items-start gap-2 rounded-md bg-menu-hover p-3 text-sm text-primary">
-                        <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                        Recurring deductions are automatically calculated from
-                        active loans, salary advances and disciplinary records.
-                        Manual entry is allowed only for other deductions.
-                      </p>
-                      <div className="form-grid gap-y-6">
                         {DEDUCTION_FIELDS.map((field) => (
                           <MoneyField
                             key={field.key}
@@ -3219,14 +3259,22 @@ export default function EmployeeForm({ self }) {
                           />
                         ))}
                       </div>
+                      {scheduled && (
+                        <p className="mt-4 text-sm text-primary/75">
+                          Effective {formatDate(effective)}. Current salary remains in
+                          force until that date.
+                        </p>
+                      )}
                     </SectionCard>
-                    </>
                     )}
 
-                    {/* Where it is paid to: Banking Information. */}
+                    {/* Where it is paid to: Banking Information. A correction
+                        to pay covers both boxes, so it is sent from under
+                        this, the last of them. */}
                     {shows("banking") && (
                     <SectionCard
                       title={isAdding ? "Banking Information" : "Bank Information"}
+                      footer={isAdding ? stepActions : correctionActions}
                       locked={profileLocked}
                     >
                       <div className="form-grid gap-y-6">
@@ -3295,86 +3343,6 @@ export default function EmployeeForm({ self }) {
                       </div>
                     </SectionCard>
                     )}
-
-                    {/* The first payroll this pay goes into, worked out from
-                        the lines above as they are typed. An estimate: the
-                        month's own absences and changes settle the final
-                        figure when payroll is run. */}
-                    {shows("payroll") && (
-                    <Card>
-                      <CardContent className="p-4 sm:p-6">
-                        <h2 className="text-lg font-bold text-primary">
-                          Next Payroll <span aria-hidden="true">•</span> {payrollMonth}
-                        </h2>
-                        <div className="mt-4 grid items-center gap-4 sm:grid-cols-3 lg:grid-cols-[1fr_1fr_1fr_auto]">
-                          <PayTile label="Gross Salary" value={gross} />
-                          <PayTile label="Total Recurring Deductions" value={held} />
-                          <PayTile
-                            label="Estimated Net Salary"
-                            value={net}
-                            className={net < 0 ? "text-destructive" : "text-emerald-700"}
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            className="justify-self-start font-semibold text-primary"
-                            onClick={() => setShowStatement(true)}
-                          >
-                            View Salary Statement
-                            <ArrowRight className="ms-2 h-4 w-4" aria-hidden="true" />
-                          </Button>
-                        </div>
-                        <p className="mt-3 text-sm text-primary/75">
-                          {amountValue(gross)} &minus; {amountValue(held)} ={" "}
-                          {amountValue(net)} · Final amount is confirmed at payroll
-                          processing.
-                        </p>
-                      </CardContent>
-                    </Card>
-                    )}
-
-                    {stepActions}
-                    {/* A correction to pay covers all three boxes above, so it
-                        is sent from under the last of them. */}
-                    {correctionActions}
-
-                    <Dialog open={showStatement} onOpenChange={setShowStatement}>
-                      <DialogContent className="sm:max-w-lg">
-                        <DialogHeader>
-                          <DialogTitle>Salary Statement · {payrollMonth}</DialogTitle>
-                          <DialogDescription>
-                            {saved.employeeName || formData.employeeName} · Employee No.{" "}
-                            {employeeNo}
-                          </DialogDescription>
-                        </DialogHeader>
-                        <StatementLines
-                          title="Earnings"
-                          fields={PAY_FIELDS}
-                          values={formData}
-                          total={gross}
-                          totalLabel="Gross Salary"
-                        />
-                        <StatementLines
-                          title="Deductions"
-                          fields={DEDUCTION_FIELDS}
-                          values={formData}
-                          total={held}
-                          totalLabel="Total Deductions"
-                        />
-                        <div className="flex items-center justify-between border-t pt-3 text-base font-bold">
-                          <span className="text-primary">Estimated Net Salary</span>
-                          <span className={net < 0 ? "text-destructive" : "text-emerald-700"}>
-                            {amountValue(net)} <Rial />
-                          </span>
-                        </div>
-                        {formData.bankName && (
-                          <p className="text-sm text-primary/75">
-                            Paid to {formData.bankName}
-                            {formData.accountNumber && " · " + formData.accountNumber}
-                          </p>
-                        )}
-                      </DialogContent>
-                    </Dialog>
                   </>
                 )}
 
