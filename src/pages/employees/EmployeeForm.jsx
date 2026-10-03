@@ -388,9 +388,9 @@ const REQUEST_CATEGORIES = [
     label: "Financial Financing",
     icon: Wallet,
     items: [
-      { key: "salaryAdvance", label: "Salary Advance", icon: Banknote, note: "Request an advance on your salary.", section: "benefits", tab: "salaries" },
-      { key: "loan", label: "Loan", icon: Coins, note: "Request a loan for approved purposes.", section: "benefits", tab: "loans" },
-      { key: "assistance", label: "Assistance", icon: HandCoins, note: "Request financial assistance for qualifying cases.", section: "benefits", tab: "assistance" },
+      { key: "salaryAdvance", label: "Salary Advance", icon: Banknote, section: "benefits", tab: "salaries" },
+      { key: "loan", label: "Loan", icon: Coins, section: "benefits", tab: "loans" },
+      { key: "assistance", label: "Assistance", icon: HandCoins, section: "benefits", tab: "assistance" },
     ],
   },
   {
@@ -398,10 +398,10 @@ const REQUEST_CATEGORIES = [
     label: "Financial Entitlements",
     icon: ChartNoAxesColumnIncreasing,
     items: [
-      { key: "bonus", label: "Bonus", icon: Gift, note: "Request a bonus based on performance.", section: "benefits", tab: "bonus" },
-      { key: "commission", label: "Commission", icon: Coins, note: "Request commission entitlements.", section: "benefits", tab: "commission" },
-      { key: "overtime", label: "Overtime", icon: Clock, note: "Request overtime entitlements.", section: "entitlements", tab: "overtime" },
-      { key: "leavePay", label: "Leave", icon: CalendarDays, note: "Request leave allowance entitlements.", section: "entitlements", tab: "leaveEncashment" },
+      { key: "bonus", label: "Bonus", icon: Gift, section: "benefits", tab: "bonus" },
+      { key: "commission", label: "Commission", icon: Coins, section: "benefits", tab: "commission" },
+      { key: "overtime", label: "Overtime", icon: Clock, section: "entitlements", tab: "overtime" },
+      { key: "leavePay", label: "Leave", icon: CalendarDays, section: "entitlements", tab: "leaveEncashment" },
     ],
   },
   {
@@ -409,10 +409,10 @@ const REQUEST_CATEGORIES = [
     label: "Allowances",
     icon: HandCoins,
     items: [
-      { key: "medical", label: "Medical", icon: Stethoscope, tone: "blue", note: "Request medical allowances for eligible expenses.", section: "entitlements", tab: "medical" },
-      { key: "transport", label: "Transportation", icon: Bus, note: "Request transportation allowances for work related travel.", section: "entitlements", tab: "transport" },
-      { key: "travel", label: "Travel", icon: Plane, note: "Request travel allowances for business travel.", section: "entitlements", tab: "travel" },
-      { key: "airTicket", label: "Air Ticket", icon: Ticket, note: "Request air ticket allowances for official travel.", section: "entitlements", tab: "airTicket" },
+      { key: "medical", label: "Medical", icon: Stethoscope, tone: "blue", section: "entitlements", tab: "medical" },
+      { key: "transport", label: "Transportation", icon: Bus, section: "entitlements", tab: "transport" },
+      { key: "travel", label: "Travel", icon: Plane, section: "entitlements", tab: "travel" },
+      { key: "airTicket", label: "Air Ticket", icon: Ticket, section: "entitlements", tab: "airTicket" },
     ],
   },
   {
@@ -420,8 +420,8 @@ const REQUEST_CATEGORIES = [
     label: "End-of-Service Entitlements",
     icon: FileUser,
     items: [
-      { key: "notice", label: "Notice Pay", icon: FileClock, note: "Request notice pay based on company policies.", section: "entitlements", tab: "notice" },
-      { key: "gratuity", label: "End-of-Service Gratuity", icon: HandCoins, note: "Request end-of-service gratuity as per regulations.", section: "entitlements", tab: "endOfService" },
+      { key: "notice", label: "Notice Pay", icon: FileClock, section: "entitlements", tab: "notice" },
+      { key: "gratuity", label: "End-of-Service Gratuity", icon: HandCoins, section: "entitlements", tab: "endOfService" },
     ],
   },
   {
@@ -432,10 +432,11 @@ const REQUEST_CATEGORIES = [
     items: [
       // Leave is counted in days left rather than requests made: what a
       // person wants to know before asking for leave is how much they have.
-      { key: "leave", label: "Leave", icon: CalendarDays, tone: "blue", stat: "leaveDays", note: "Submit leave requests including annual, sick, and other leave types.", section: "leaves" },
-      { key: "general", label: "General", icon: FilePenLine, note: "Submit general requests related to administrative matters.", section: "generalRequest" },
-      { key: "grievance", label: "Grievance", icon: MessageCircleWarning, note: "Submit grievances related to work or workplace issues." },
-      { key: "complaint", label: "Complaint", icon: TriangleAlert, note: "Submit complaints regarding any work related matter." },
+      // No description under these four: the name says what each is.
+      { key: "leave", label: "Leave", icon: CalendarDays, tone: "blue", stat: "leaveDays", section: "leaves" },
+      { key: "general", label: "General", icon: FilePenLine, section: "generalRequest" },
+      { key: "grievance", label: "Grievance", icon: MessageCircleWarning },
+      { key: "complaint", label: "Complaint", icon: TriangleAlert },
     ],
   },
 ];
@@ -2142,7 +2143,11 @@ export default function EmployeeForm({ self }) {
                             )}
                           </span>
                         </span>
-                        <span className="block text-sm leading-snug text-primary/75">{item.note}</span>
+                        {/* Only where the card carries one: the administrative
+                            cards are their name and figure alone. */}
+                        {item.note && (
+                          <span className="block text-sm leading-snug text-primary/75">{item.note}</span>
+                        )}
                         {/* Only said when something is still waiting. */}
                         {pending > 0 && (
                           <span className="mt-auto inline-flex w-fit items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
