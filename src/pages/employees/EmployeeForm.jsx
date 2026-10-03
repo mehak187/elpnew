@@ -379,7 +379,7 @@ const REQUEST_CATEGORIES = [
   {
     // Grievance and Complaint have no page of their own yet.
     key: "administrative",
-    label: "Administrative",
+    label: "Administrative Requests",
     icon: FilePenLine,
     items: [
       // Leave is counted in days left rather than requests made: what a
@@ -409,13 +409,14 @@ const TONES = {
 const REQUEST_CARD_TONES = [TONES.violet, TONES.green, TONES.orange, TONES.rose];
 
 /**
- * One row for a kind's cards. Two keep the width of three rather than
- * stretching across the page, as the design draws them; four sit four across.
+ * A kind's cards always share one row on a desktop: as many columns as it has
+ * requests. Two keep the width of three rather than stretching across the
+ * page, as the design draws them. A narrow screen stacks them.
  */
 const REQUEST_CARD_COLUMNS = {
-  2: "md:grid-cols-2 xl:grid-cols-3",
-  3: "md:grid-cols-2 xl:grid-cols-3",
-  4: "md:grid-cols-2 xl:grid-cols-4",
+  2: "sm:grid-cols-2 lg:grid-cols-3",
+  3: "sm:grid-cols-2 lg:grid-cols-3",
+  4: "sm:grid-cols-2 lg:grid-cols-4",
 };
 
 const REQUEST_ITEMS = REQUEST_CATEGORIES.flatMap((category) =>
@@ -1852,58 +1853,33 @@ export default function EmployeeForm({ self }) {
             </div>
           )}
 
-          {/* Every kind of request in one row: the kind, with its mark, and
-              under it the requests it holds. The kind holding the chosen
-              request is lit; choosing a request opens it below. */}
+          {/* Every kind of request in one row, each its mark and its name.
+              The chosen kind is lit; its requests are the cards below. */}
           {isRequests && (
             <nav
               aria-label="Request types"
-              className="flex gap-0 overflow-x-auto border-b border-container-border pb-4"
+              className="flex items-stretch overflow-x-auto border-b border-container-border pb-4"
             >
               {REQUEST_CATEGORIES.map((category, index) => {
                 const Icon = category.icon;
                 const lit = requestCategory === category.key;
                 return (
-                  <div key={category.key} className="flex shrink-0 items-stretch">
+                  <div key={category.key} className="flex min-w-0 flex-1 items-stretch">
                     {index > 0 && (
                       <span aria-hidden="true" className="mx-2 w-px self-stretch bg-container-border" />
                     )}
-                    <div
+                    <button
+                      type="button"
+                      onClick={() => openRequestCategory(category.key)}
+                      aria-current={lit ? "true" : undefined}
                       className={cn(
-                        "flex items-center gap-4 rounded-lg px-4 py-3",
-                        lit && "bg-menu-selected"
+                        "flex flex-1 flex-col items-center justify-center gap-2 rounded-lg px-4 py-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        lit ? "bg-blue-50 text-blue-700" : "text-primary hover:bg-menu-hover"
                       )}
                     >
-                      <button
-                        type="button"
-                        onClick={() => openRequestCategory(category.key)}
-                        className="flex flex-col items-center gap-2 rounded-md text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <Icon strokeWidth={1.25} aria-hidden="true" className="size-12" />
-                        <span className="whitespace-nowrap text-sm font-bold">{category.label}</span>
-                      </button>
-                      <ul className="space-y-1">
-                        {category.items.map((item) => {
-                          const chosen = item.key === requestsTab;
-                          return (
-                            <li key={item.key}>
-                              <button
-                                type="button"
-                                onClick={() => chooseRequest(item)}
-                                aria-current={chosen ? "true" : undefined}
-                                className={cn(
-                                  "flex items-center gap-2 whitespace-nowrap rounded px-1 text-sm text-primary transition-colors hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                                  chosen ? "font-bold" : "font-medium"
-                                )}
-                              >
-                                <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-primary" />
-                                {item.label}
-                              </button>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
+                      <Icon strokeWidth={1.25} aria-hidden="true" className="size-12" />
+                      <span className="whitespace-nowrap text-sm font-semibold">{category.label}</span>
+                    </button>
                   </div>
                 );
               })}
@@ -1932,45 +1908,48 @@ export default function EmployeeForm({ self }) {
                         onClick={() => chooseRequest({ ...item, category: category.key })}
                         aria-pressed={opened}
                         className={cn(
-                          "flex items-center gap-4 rounded-xl border p-4 text-start transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          // Narrow enough for a whole kind to share one row:
+                          // the mark, the name and the figure across the top,
+                          // and the description under them the card's full
+                          // width, so it never breaks a word to a line.
+                          "flex h-full flex-col gap-3 rounded-xl border p-4 text-start transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                           tone.card,
                           opened && "ring-2 ring-primary"
                         )}
                       >
-                        <span className={cn("flex size-12 shrink-0 items-center justify-center rounded-lg", tone.mark)}>
-                          <Icon strokeWidth={1.5} aria-hidden="true" className="size-7" />
+                        <span className="flex w-full items-start gap-3">
+                          <span className={cn("flex size-11 shrink-0 items-center justify-center rounded-lg", tone.mark)}>
+                            <Icon strokeWidth={1.5} aria-hidden="true" className="size-6" />
+                          </span>
+                          <span className={cn("min-w-0 flex-1 pt-2 text-base font-bold leading-tight", tone.ink)}>
+                            {item.label}
+                          </span>
+                          <span className="shrink-0 text-end">
+                            {item.stat === "leaveDays" ? (
+                              <>
+                                <span className={cn("block text-2xl font-bold leading-none", tone.ink)}>
+                                  {annualLeaveLeft(leaves, record.name) ?? 0}
+                                </span>
+                                <span className="mt-1 block max-w-24 text-[11px] leading-tight text-primary/75">
+                                  Remaining Annual Leave Days
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <span className={cn("block text-2xl font-bold leading-none", tone.ink)}>{total}</span>
+                                <span className="mt-1 block text-[11px] leading-tight text-primary/75">
+                                  Total Requests
+                                </span>
+                              </>
+                            )}
+                          </span>
                         </span>
-                        <span className="min-w-0 flex-1">
-                          <span className={cn("block text-lg font-bold", tone.ink)}>{item.label}</span>
-                          <span className="block text-sm text-primary/75">{item.note}</span>
-                        </span>
-                        <span className="shrink-0 border-s border-black/10 ps-4 text-center">
-                          {item.stat === "leaveDays" ? (
-                            <>
-                              <span className={cn("block text-2xl font-bold", tone.ink)}>
-                                {annualLeaveLeft(leaves, record.name) ?? 0}
-                              </span>
-                              <span className="block text-xs text-primary/75">
-                                Remaining
-                                <br />
-                                Annual Leave Days
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              <span className={cn("block text-2xl font-bold", tone.ink)}>{total}</span>
-                              <span className="block text-xs text-primary/75">Total Requests</span>
-                            </>
-                          )}
-                        </span>
+                        <span className="block text-sm leading-snug text-primary/75">{item.note}</span>
                         {/* Only said when something is still waiting. */}
                         {pending > 0 && (
-                          <span className="shrink-0 border-s border-black/10 ps-4 text-center">
-                            <span className="flex items-center justify-center gap-1 text-2xl font-bold text-amber-600">
-                              <Clock aria-hidden="true" className="size-5" />
-                              {pending}
-                            </span>
-                            <span className="block text-xs text-primary/75">Remaining</span>
+                          <span className="mt-auto inline-flex w-fit items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                            <Clock aria-hidden="true" className="size-3.5" />
+                            {pending} Remaining
                           </span>
                         )}
                       </button>
