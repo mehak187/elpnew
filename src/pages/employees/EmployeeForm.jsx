@@ -512,12 +512,11 @@ const ADD_STEPS = [
  * names, that Add Employee walks through - one part of the file each - so a
  * record reads back in the order it was built.
  */
-// The record's tabs are the steps it was added in, less Document Intake -
-// on a record its papers are the Documents tab, kept last.
-const PROFILE_TABS = [
-  ...ADD_STEPS.filter((step) => step.key !== "intake"),
-  { key: "documents", label: "Documents" },
-].map((step) => ({ ...step, parts: [step.key] }));
+// The record's tabs are the steps it was added in, in the same order: where
+// adding opens on Document Intake, the record's papers are its first tab.
+const PROFILE_TABS = ADD_STEPS.map((step) =>
+  step.key === "intake" ? { key: "documents", label: step.label } : step
+).map((step) => ({ ...step, parts: [step.key] }));
 
 /** The steps a record with these values is added through, in order. */
 const flowFor = (values) => ADD_STEPS.filter((s) => !s.when || s.when(values));
