@@ -671,7 +671,7 @@ function NumberedSteps({
                   className={cn(
                     "relative flex size-9 items-center justify-center rounded-full text-sm font-semibold",
                     isDone && !isActive && "bg-green-600 text-white",
-                    isActive && "bg-blue-900 text-white",
+                    isActive && "bg-primary text-primary-foreground",
                     !isDone && !isActive && "bg-slate-200 text-slate-600"
                   )}
                 >
@@ -698,7 +698,7 @@ function NumberedSteps({
                 <span
                   className={cn(
                     "max-w-32 text-center text-sm leading-tight",
-                    isActive ? "font-bold text-blue-900" : reachable ? "text-primary" : "text-muted-foreground"
+                    isActive ? "font-bold text-primary" : reachable ? "text-primary" : "text-muted-foreground"
                   )}
                 >
                   {step.label}
@@ -2131,7 +2131,7 @@ export default function EmployeeForm({ self }) {
                           aria-hidden="true"
                           className="absolute start-[calc(50%+32px)] end-[calc(-50%+32px)] top-5 h-0.5 overflow-hidden rounded-full bg-slate-200"
                         >
-                          {lit && <span className="block h-full w-1/2 bg-blue-700" />}
+                          {lit && <span className="block h-full w-1/2 bg-primary" />}
                         </span>
                       )}
                       <button
@@ -2140,7 +2140,7 @@ export default function EmployeeForm({ self }) {
                         aria-current={lit ? "true" : undefined}
                         className={cn(
                           "flex flex-col items-center gap-2 rounded-md px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                          lit ? "text-blue-700" : "text-primary hover:text-blue-700"
+                          lit ? "text-primary" : "text-primary/70 hover:text-primary"
                         )}
                       >
                         <Icon strokeWidth={1.5} aria-hidden="true" className="size-10" />
@@ -2163,7 +2163,7 @@ export default function EmployeeForm({ self }) {
             return (
               <section className="space-y-4">
                 <h2 className="flex items-center gap-2 text-xl font-bold text-primary">
-                  <category.icon strokeWidth={1.75} aria-hidden="true" className="size-7 text-blue-700" />
+                  <category.icon strokeWidth={1.75} aria-hidden="true" className="size-7 text-primary" />
                   {category.label}
                 </h2>
                 <div className={cn("grid gap-4", REQUEST_CARD_COLUMNS[category.items.length])}>
