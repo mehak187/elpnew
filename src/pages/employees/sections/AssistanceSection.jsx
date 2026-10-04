@@ -1,7 +1,7 @@
 import {
   useState } from "react";
 import { Button } from "@/components/ui/button";
-import AiSearch from "@/components/shared/AiSearch";
+import RequestTable from "@/components/shared/RequestTable";
 import { Input } from "@/components/ui/input";
 import { Bordered, EmptyState } from "@/components/shared/panels";
 import {
@@ -12,7 +12,6 @@ import {
   Attach,
   checkRequired,
 } from "@/components/shared/formFields";
-import { smartSearch } from "@/lib/search/smartSearch";
 import { amountValue, money } from "@/lib/money";
 import {
   Dialog,
@@ -46,7 +45,6 @@ import {
 } from "../assistanceData";
 
 const NOTES_LIMIT = 300;
-const PAGE_SIZE = 10;
 
 const emptyDraft = {
   ...DEFAULT_ASSISTANCE_BOOKING,
@@ -94,8 +92,6 @@ export default function AssistanceSection({
   const [records, setRecords] = useState(assistanceRecords);
   const [draft, setDraft] = useState(emptyDraft);
   const [proof, setProof] = useState(null);
-  const [page, setPage] = useState(1);
-  const [query, setQuery] = useState("");
   // Which stage of the request is open, and what management decided.
   const [stage, setStage] = useState("request");
   const [decision, setDecision] = useState("");
@@ -185,7 +181,6 @@ export default function AssistanceSection({
     setOpenId(id);
     // Management decides on what was asked for, until it grants something else.
     setReview({ ...emptyReview, approved: draft.amount });
-    setPage(1);
     setStage("decision");
   };
 
@@ -267,21 +262,115 @@ export default function AssistanceSection({
   // Newest request first, read off the date it was made - and only this
   // person's. What the firm gave a colleague, and why they had to ask for it,
   // is nobody else's business.
-  const ordered = smartSearch(
-    records
-      .filter((record) => record.employee === employee?.name)
-      .sort(
-        (a, b) =>
-          String(b.requestDate).localeCompare(String(a.requestDate)) ||
-          b.id - a.id
-      ),
-    query
-  );
+  const rows = records
+    .filter((record) => record.employee === employee?.name)
+    .sort(
+      (a, b) =>
+        String(b.requestDate).localeCompare(String(a.requestDate)) ||
+        b.id - a.id
+    )
+    .map((record, index) => ({ ...record, no: index + 1, status: statusOf(record) }));
 
-  const totalPages = Math.max(1, Math.ceil(ordered.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const start = (currentPage - 1) * PAGE_SIZE;
-  const shown = ordered.slice(start, start + PAGE_SIZE);
+  const columns = [
+    {
+      // A request waiting on a decision carries its temporary number and
+      // opens back into the form; a decided one takes its place in the run.
+      key: "no",
+      header: "No.",
+      width: "8%",
+      render: (value, record) =>
+        record.status === "Pending" || record.status === "Rejected" ? (
+          <button
+            type="button"
+            onClick={() => track(record)}
+            className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            {record.requestNo || value}
+          </button>
+        ) : (
+          <span className="font-medium text-primary">{value}</span>
+        ),
+    },
+    {
+      key: "requestDate",
+      header: "Request Date",
+      width: "12%",
+      render: (value) => <span className="whitespace-nowrap text-primary">{formatDate(value)}</span>,
+    },
+    {
+      // What was asked for, who for, and why, with the paper it was made with.
+      key: "subcategory",
+      header: "Assistance Details",
+      width: "22%",
+      render: (value, record) => (
+        <>
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold text-primary">{value}</span>
+            {record.proof && (
+              <button
+                type="button"
+                onClick={() => openProof(record)}
+                title={record.proof}
+                className="rounded focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                {isImage(record.proof) ? (
+                  <FileImage className="h-4 w-4 shrink-0 text-green-600" />
+                ) : (
+                  <FileText className="h-4 w-4 shrink-0 text-red-600" />
+                )}
+                <span className="sr-only">Open {record.proof}</span>
+              </button>
+            )}
+          </span>
+          <span className="block text-xs text-muted-foreground">{record.purpose}</span>
+        </>
+      ),
+    },
+    {
+      key: "amount",
+      header: "Amount (OMR)",
+      width: "12%",
+      render: (value) => <span className="whitespace-nowrap font-bold text-green-700">{amountValue(value)}</span>,
+    },
+    {
+      // Nothing until a payment has been settled on.
+      key: "method",
+      header: "Payment Details",
+      width: "20%",
+      render: (value, record) =>
+        value ? (
+          <>
+            <span className="block font-semibold text-primary">{value}</span>
+            <span className="block text-xs text-muted-foreground">
+              {record.reference || record.account}
+            </span>
+            {(record.paymentDate || record.disbursementDate) && (
+              <span className="block text-xs text-muted-foreground">
+                {formatDate(record.paymentDate || record.disbursementDate)}
+              </span>
+            )}
+          </>
+        ) : (
+          <span className="text-muted-foreground">-</span>
+        ),
+    },
+    {
+      key: "notes",
+      header: "Notes",
+      width: "16%",
+      render: (value) => <span className="text-muted-foreground">{value || "-"}</span>,
+    },
+    {
+      key: "status",
+      header: "Status",
+      width: "10%",
+      render: (value) => (
+        <span className={cn("block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold", STATUS_CHIP[value])}>
+          {value}
+        </span>
+      ),
+    },
+  ];
 
   // Adding takes over the section: the list describes assistance already
   // given, and none of it helps while a new request is being written.
@@ -700,196 +789,19 @@ export default function AssistanceSection({
         </DialogContent>
       </Dialog>
 
-      {/* The search on the left, where every list in the system has it, and
-          the way to add on the right. */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <AiSearch
-          value={query}
-          onChange={(value) => {
-            setQuery(value);
-            setPage(1);
-          }}
-          placeholder="Ask about assistance..."
-        />
-        {addLabel && !adding && (
-          <Button variant="outline" type="button" className="ms-auto" onClick={onOpenAdd}>
-            <Plus className="me-2 h-4 w-4" />
-            {addLabel}
-          </Button>
-        )}
-      </div>
-
-      {ordered.length === 0 ? (
-        <EmptyState>No assistance has been requested yet.</EmptyState>
-      ) : (
-        <>
-          <RecordTable minWidth={960}>
-              <HeadRow>
-                  {/* Widths are set here rather than left to the browser, so
-                      the two columns that carry sentences get the room and
-                      the dates and figures stay on one line. */}
-                  <Th width="6%">No.</Th>
-                  <Th width="12%">Request Date</Th>
-                  <Th width="24%">Assistance Details</Th>
-                  {/* The unit is said once, in the heading, so the figures
-                      under it can be read against each other. */}
-                  <Th width="13%" className="text-end">
-                    Amount (OMR)
-                  </Th>
-                  <Th width="25%">Payment Details</Th>
-                  <Th width="20%">Notes</Th>
-              </HeadRow>
-              <tbody>
-                {shown.map((record, index) => {
-                  const status = statusOf(record);
-
-                  return (
-                    <Row key={record.id}>
-                      {/* A request waiting on a decision carries its
-                          temporary number and opens back into the form; a
-                          decided one simply takes its place in the run. The
-                          paper it was made with is beside what it is for,
-                          not beside the number. */}
-                      <Td className="whitespace-nowrap font-medium text-primary">
-                        {status === "Pending" || status === "Rejected" ? (
-                          <button
-                            type="button"
-                            onClick={() => track(record)}
-                            className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
-                          >
-                            {record.requestNo || start + index + 1}
-                          </button>
-                        ) : (
-                          start + index + 1
-                        )}
-
-                        {/* Where it stands, under the number it belongs to. */}
-                        <span
-                          className={cn(
-                            "mt-1 block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold",
-                            STATUS_CHIP[status]
-                          )}
-                        >
-                          {status}
-                        </span>
-                      </Td>
-
-                      <Td className="whitespace-nowrap text-primary">
-                        {formatDate(record.requestDate)}
-                      </Td>
-
-                      {/* What was asked for, who for, and why. Where it has
-                          got to is said under its number. */}
-                      <Td className="text-start">
-                        <span className="flex flex-wrap items-center gap-2">
-                          <span className="font-semibold text-primary">
-                            {record.subcategory}
-                          </span>
-                          {/* The paper the request was made with, beside what
-                              it was made for. */}
-                          {record.proof && (
-                            <button
-                              type="button"
-                              onClick={() => openProof(record)}
-                              title={record.proof}
-                              className="rounded focus:outline-none focus:ring-2 focus:ring-ring"
-                            >
-                              {isImage(record.proof) ? (
-                                <FileImage className="h-4 w-4 shrink-0 text-green-600" />
-                              ) : (
-                                <FileText className="h-4 w-4 shrink-0 text-red-600" />
-                              )}
-                              <span className="sr-only">
-                                Open {record.proof}
-                              </span>
-                            </button>
-                          )}
-                        </span>
-                        <span className="block text-xs text-muted-foreground">
-                          {record.purpose}
-                        </span>
-                      </Td>
-
-                      <Td className="whitespace-nowrap text-end font-bold text-green-700">
-                        {amountValue(record.amount)}
-                      </Td>
-
-                      {/* Nothing is shown here until a payment has been
-                          settled on: a request nobody has decided has none. */}
-                      <Td className="text-start">
-                        {record.method ? (
-                          <>
-                            <span className="block font-semibold text-primary">
-                              {record.method}
-                            </span>
-                            <span className="block text-xs text-muted-foreground">
-                              {record.reference || record.account}
-                            </span>
-                            {(record.paymentDate || record.disbursementDate) && (
-                              <span className="block text-xs text-muted-foreground">
-                                {formatDate(
-                                  record.paymentDate || record.disbursementDate
-                                )}
-                              </span>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </Td>
-
-                      <Td className="text-start text-muted-foreground">
-                        {record.notes || "-"}
-                      </Td>
-                    </Row>
-                  );
-                })}
-              </tbody>
-          </RecordTable>
-
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4 text-sm text-muted-foreground">
-            <span>
-              Showing {start + 1} to{" "}
-              {Math.min(start + PAGE_SIZE, ordered.length)} of {ordered.length}{" "}
-              entries
-            </span>
-            <div className="flex items-center gap-1">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                disabled={currentPage <= 1}
-                onClick={() => setPage(currentPage - 1)}
-              >
-                ‹<span className="sr-only">Previous page</span>
-              </Button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-                <Button
-                  key={n}
-                  type="button"
-                  variant={n === currentPage ? "default" : "ghost"}
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setPage(n)}
-                >
-                  {n}
-                </Button>
-              ))}
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                disabled={currentPage >= totalPages}
-                onClick={() => setPage(currentPage + 1)}
-              >
-                ›<span className="sr-only">Next page</span>
-              </Button>
-            </div>
-          </div>
-        </>
-      )}
+      <RequestTable
+        rows={rows}
+        columns={columns}
+        searchPlaceholder="Search by request no., type or purpose..."
+        itemLabel="assistance requests"
+        exportFileName="assistance.csv"
+        filterBy={[
+          { key: "status", label: "Status" },
+          { key: "subcategory", label: "Assistance Type" },
+        ]}
+        onAdd={addLabel && !adding ? onOpenAdd : null}
+        addLabel={addLabel}
+      />
       </CardContent>
     </Card>
   );

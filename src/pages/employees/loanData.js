@@ -396,6 +396,40 @@ export const loanRecords = [
       { due: "2026-08-31", amount: 50, date: "2026-08-31" },
     ],
   },
+  // Aisha Al Kindi: one loan running, one waiting on a decision.
+  {
+    id: 5,
+    employee: "Aisha Al Kindi",
+    kind: NEW_LOAN,
+    status: LOAN_APPROVED,
+    loanAmount: 3000,
+    merged: 0,
+    disbursementDate: "2026-07-01",
+    bankName: "National Bank of Oman",
+    accountNumber: "031201234567",
+    monthly: 300,
+    firstDue: "2026-07-31",
+    payments: [
+      { due: "2026-07-31", amount: 300, date: "2026-07-31" },
+      { due: "2026-08-31", amount: 300, date: "2026-08-31" },
+      { due: "2026-09-30", amount: 300, date: "2026-09-30" },
+    ],
+  },
+  {
+    id: 6,
+    requestNo: "LNR-006",
+    employee: "Aisha Al Kindi",
+    kind: NEW_LOAN,
+    status: LOAN_PENDING,
+    loanAmount: 1500,
+    merged: 0,
+    disbursementDate: "",
+    bankName: "",
+    accountNumber: "",
+    monthly: 150,
+    firstDue: "2026-11-30",
+    payments: [],
+  },
 ];
 
 /** Everything one employee has borrowed. */

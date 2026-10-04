@@ -50,7 +50,7 @@ import {
 import UploadIcon from "@/components/shared/UploadIcon";
 import { cn } from "@/lib/utils";
 import { amountValue } from "@/lib/money";
-import { smartSearch } from "@/lib/search/smartSearch";
+import RequestTable from "@/components/shared/RequestTable";
 import { useLeaves } from "@/lib/leaves/context";
 import { formatDate } from "@/pages/firm/firmData";
 import { remainingBalance } from "../leaveData";
@@ -212,7 +212,8 @@ export default function EntitlementTab({
   employee,
   records,
   onRecords,
-  query,
+  // The words on the button that asks for one.
+  addLabel,
   adding,
   onCloseAdd,
   onOpenAdd,
@@ -256,7 +257,14 @@ export default function EntitlementTab({
   const settled = open?.status === ENTITLEMENT_APPROVED;
   const refused = open?.status === ENTITLEMENT_REJECTED;
 
-  const mine = smartSearch(entitlementsFor(records, employee?.name, kind), query);
+  const mine = entitlementsFor(records, employee?.name, kind).map((record, index) => ({
+    ...record,
+    no: record.entitlementNo || record.requestNo || index + 1,
+    detail:
+      record.leaveType && modeOf(record.kind) === "leaveDays"
+        ? record.leaveType
+        : record.assistanceType || label,
+  }));
 
   // "January" rather than "01", as the card under the decision writes it.
   const monthName =
@@ -1858,75 +1866,80 @@ export default function EntitlementTab({
         </DialogContent>
       </Dialog>
 
-      {mine.length === 0 ? (
-        <EmptyState>
-          No {label.toLowerCase()} has been requested yet.
-        </EmptyState>
-      ) : (
-        <RecordTable minWidth={900}>
-          <HeadRow>
-            <Th width="12%">No.</Th>
-            <Th width="16%">Request Date</Th>
-            <Th width="34%">Request Details</Th>
-            <Th width="14%">Quantity</Th>
-            <Th width="24%" className="text-end">
-              Amount (OMR)
-            </Th>
-          </HeadRow>
-          <tbody>
-            {mine.map((record, index) => (
-              <Row key={record.id}>
-                {/* A request waiting on a decision carries its temporary
-                    number and opens back into the form. */}
-                <Td className="whitespace-nowrap font-medium text-primary">
-                  {record.entitlementNo ? (
-                    record.entitlementNo
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => track(record)}
-                      className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
-                    >
-                      {record.requestNo || index + 1}
-                    </button>
-                  )}
-
-                  {/* Where it stands, under the number it belongs to. */}
-                  <span
-                    className={cn(
-                      "mt-1 block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold",
-                      ENTITLEMENT_STATUS_CHIP[record.status]
-                    )}
-                  >
-                    {record.status}
-                  </span>
-                </Td>
-
-                <Td className="whitespace-nowrap">
-                  {formatDate(record.requestDate)}
-                </Td>
-
-                <Td className="text-start">
-                  <span className="block font-semibold text-primary">
-                    {record.leaveType && modeOf(record.kind) === "leaveDays"
-                      ? record.leaveType
-                      : record.assistanceType || label}
-                  </span>
-                  <span className="block text-xs text-muted-foreground">
-                    {record.reason}
-                  </span>
-                </Td>
-
-                <Td className="whitespace-nowrap">{measure(record)}</Td>
-
-                <Td className="whitespace-nowrap text-end font-bold text-green-700">
-                  {amountValue(record.amount)}
-                </Td>
-              </Row>
-            ))}
-          </tbody>
-        </RecordTable>
-      )}
+      <RequestTable
+        rows={mine}
+        columns={[
+          {
+            // A request waiting on a decision carries its temporary number
+            // and opens back into the form.
+            key: "no",
+            header: "No.",
+            width: "12%",
+            render: (value, record) =>
+              record.entitlementNo ? (
+                <span className="font-medium text-primary">{value}</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => track(record)}
+                  className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  {value}
+                </button>
+              ),
+          },
+          {
+            key: "requestDate",
+            header: "Request Date",
+            width: "14%",
+            render: (value) => <span className="whitespace-nowrap">{formatDate(value)}</span>,
+          },
+          {
+            key: "detail",
+            header: "Request Details",
+            width: "28%",
+            render: (value, record) => (
+              <>
+                <span className="block font-semibold text-primary">{value}</span>
+                <span className="block text-xs text-muted-foreground">{record.reason}</span>
+              </>
+            ),
+          },
+          {
+            key: "quantity",
+            header: "Quantity",
+            width: "12%",
+            render: (_, record) => <span className="whitespace-nowrap">{measure(record)}</span>,
+            exportValue: (record) => measure(record),
+          },
+          {
+            key: "amount",
+            header: "Amount (OMR)",
+            width: "16%",
+            render: (value) => <span className="whitespace-nowrap font-bold text-green-700">{amountValue(value)}</span>,
+          },
+          {
+            key: "status",
+            header: "Status",
+            width: "12%",
+            render: (value) => (
+              <span
+                className={cn(
+                  "block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold",
+                  ENTITLEMENT_STATUS_CHIP[value]
+                )}
+              >
+                {value}
+              </span>
+            ),
+          },
+        ]}
+        searchPlaceholder={"Search " + label.toLowerCase() + " requests..."}
+        itemLabel={label.toLowerCase() + " requests"}
+        exportFileName={kind + ".csv"}
+        onAdd={!adding ? onOpenAdd : null}
+        addLabel={addLabel}
+      />
     </>
   );
 }

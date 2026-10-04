@@ -10,14 +10,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/panels";
-import AiSearch from "@/components/shared/AiSearch";
+import RequestTable from "@/components/shared/RequestTable";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { smartSearch } from "@/lib/search/smartSearch";
 import { RequestSteps } from "@/components/shared/RequestSteps";
 import {
   Group,
@@ -84,9 +83,12 @@ export default function GeneralRequestSection({ employee, canDecide = true }) {
   // The form is a window over the list rather than the page itself: the list
   // is what this section is, and stays where it was behind the window.
   const [adding, setAdding] = useState(false);
-  const [query, setQuery] = useState("");
 
-  const mine = smartSearch(requestsFor(requests, employee.name), query);
+  const mine = requestsFor(requests, employee.name).map((request, index) => ({
+    ...request,
+    no: index + 1,
+    dateText: shortDate(request.date),
+  }));
   const open = requests.find((request) => request.id === openId) || null;
   const settled = Boolean(open) && open.status !== "Pending";
 
@@ -463,97 +465,87 @@ export default function GeneralRequestSection({ employee, canDecide = true }) {
       </Dialog>
 
       <Card>
-        <CardContent className="space-y-4 p-4 sm:p-6">
-          {/* The search on the left, where every list in the system has it,
-              and the way to add on the right. */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <AiSearch
-              value={query}
-              onChange={setQuery}
-              placeholder="Ask about requests..."
-            />
-            {!adding && (
-              <Button
-                variant="outline"
-                type="button"
-                className="ms-auto"
-                onClick={() => {
-                  clear();
-                  setAdding(true);
-                }}
-              >
-                <Plus className="me-2 h-4 w-4" />
-                Add Request
-              </Button>
-            )}
-          </div>
-
-          {mine.length === 0 ? (
-            <EmptyState>
-              {query
-                ? "No request matches that search."
-                : "No requests have been submitted yet."}
-            </EmptyState>
-          ) : (
-            <RecordTable minWidth={980}>
-              <HeadRow>
-                <Th width="4%">#</Th>
-                <Th width="13%">Request No.</Th>
-                <Th width="15%">Request Type</Th>
-                <Th width="22%">Employee Comment</Th>
-                <Th width="10%">Request Date</Th>
-                <Th width="9%">Status</Th>
-                <Th width="15%">Management Comment</Th>
-                <Th width="12%">Reviewed By</Th>
-              </HeadRow>
-              <tbody>
-                {mine.map((request, index) => (
-                  <TableRow key={request.id}>
-                    <Td className="font-medium text-primary">{index + 1}</Td>
-                    {/* The number is the way back into the request. */}
-                    <Td className="whitespace-nowrap">
-                      <RecordLink onClick={() => track(request)}>
-                        {request.requestNo}
-                        </RecordLink>
-                    </Td>
-                    <Td className="text-start">{request.requestType}</Td>
-                    <Td className="text-start">
-                      <span className="inline-flex items-start gap-1.5">
-                        {request.document && (
-                          <Paperclip
-                            className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground"
-                            aria-label="Has a supporting document"
-                          />
-                        )}
-                        {request.comment}
-                      </span>
-                    </Td>
-                    <Td className="whitespace-nowrap">
-                      {shortDate(request.date)}
-                    </Td>
-                    <Td>
-                      <span
-                        className={cn(
-                          "inline-block whitespace-nowrap rounded-md px-3 py-1 text-xs font-semibold",
-                          REQUEST_STATUS_TONE[request.status]
-                        )}
-                      >
-                        {request.status}
-                      </span>
-                    </Td>
-                    {/* Blank until someone has decided, so nothing
-                        suggests an answer that has not been given. */}
-                    <Td className="text-start text-muted-foreground">
-                      {request.remarks || "-"}
-                    </Td>
-                    <Td className="text-muted-foreground">
-                      {request.reviewedBy || "-"}
-                    </Td>
-                  </TableRow>
-                ))}
-              </tbody>
-            </RecordTable>
-          )}
+        <CardContent className="p-4 sm:p-6">
+          <RequestTable
+            rows={mine}
+            columns={[
+              { key: "no", header: "#", width: "5%", render: (value) => <span className="font-medium text-primary">{value}</span> },
+              {
+                // The number is the way back into the request.
+                key: "requestNo",
+                header: "Request No.",
+                width: "13%",
+                render: (value, request) => <RecordLink onClick={() => track(request)}>{value}</RecordLink>,
+              },
+              { key: "requestType", header: "Request Type", width: "15%" },
+              {
+                key: "comment",
+                header: "Employee Comment",
+                width: "21%",
+                render: (value, request) => (
+                  <span className="inline-flex items-start gap-1.5">
+                    {request.document && (
+                      <Paperclip
+                        className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                        aria-label="Has a supporting document"
+                      />
+                    )}
+                    {value}
+                  </span>
+                ),
+              },
+              {
+                key: "dateText",
+                header: "Request Date",
+                width: "10%",
+                render: (value) => <span className="whitespace-nowrap">{value}</span>,
+              },
+              {
+                key: "status",
+                header: "Status",
+                width: "10%",
+                render: (value) => (
+                  <span
+                    className={cn(
+                      "inline-block whitespace-nowrap rounded-md px-3 py-1 text-xs font-semibold",
+                      REQUEST_STATUS_TONE[value]
+                    )}
+                  >
+                    {value}
+                  </span>
+                ),
+              },
+              {
+                // Blank until someone has decided.
+                key: "remarks",
+                header: "Management Comment",
+                width: "14%",
+                render: (value) => <span className="text-muted-foreground">{value || "-"}</span>,
+              },
+              {
+                key: "reviewedBy",
+                header: "Reviewed By",
+                width: "12%",
+                render: (value) => <span className="text-muted-foreground">{value || "-"}</span>,
+              },
+            ]}
+            searchPlaceholder="Search by request no., type or comment..."
+            itemLabel="general requests"
+            exportFileName="general-requests.csv"
+            filterBy={[
+              { key: "status", label: "Status" },
+              { key: "requestType", label: "Request Type" },
+            ]}
+            onAdd={
+              !adding
+                ? () => {
+                    clear();
+                    setAdding(true);
+                  }
+                : null
+            }
+            addLabel="Add Request"
+          />
         </CardContent>
       </Card>
     </div>

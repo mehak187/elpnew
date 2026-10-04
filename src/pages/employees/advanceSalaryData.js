@@ -20,7 +20,17 @@ export const ADVANCE_STATUS_CHIP = {
   Pending: "bg-amber-100 text-amber-800",
   Approved: "bg-green-100 text-green-800",
   Rejected: "bg-red-100 text-red-800",
+  // Handed back by management, waiting on the employee to correct it.
+  Returned: "bg-orange-100 text-orange-800",
 };
+
+/**
+ * Where a request stands, as the list says it. A request handed back is
+ * still waiting, but on the employee rather than on management - so it is
+ * said apart from one that has not been looked at yet.
+ */
+export const advanceStatusOf = (advance) =>
+  advance.status === "Pending" && advance.decision === "completion" ? "Returned" : advance.status;
 
 /** How an advance is filed once it is paid: the same booking every time. */
 export const ADVANCE_BOOKING = {
@@ -287,5 +297,78 @@ export const initialAdvances = [
     decidedOn: "2026-10-03",
     decidedBy: "Khalid Al Hinai",
     decidedByTitle: "Partner",
+  },
+  // Aisha Al Kindi: a request at every stage, on the record the client tests.
+  {
+    id: 12,
+    requestNo: "SA-2026-00012",
+    employee: "Aisha Al Kindi",
+    requestedOn: "2026-10-03",
+    amount: 400,
+    deductMonth: "October",
+    deductYear: "2026",
+    purpose: "Emergency Case",
+    reason:
+      "Requesting a salary advance due to urgent family medical expenses. My father is scheduled for a medical procedure and I need to cover the treatment costs and related expenses.",
+    status: "Pending",
+  },
+  {
+    id: 13,
+    requestNo: "SA-2026-00013",
+    employee: "Aisha Al Kindi",
+    requestedOn: "2026-10-02",
+    amount: 400,
+    deductMonth: "October",
+    deductYear: "2026",
+    purpose: "Family Expenses",
+    reason: "Travel costs for a family emergency.",
+    status: "Approved",
+    decision: "partial",
+    approvedAmount: 300,
+    managementComment: "Approved partially due to the nature of the case.",
+    decidedOn: "2026-10-04",
+    decidedBy: "Khalid Al Hinai",
+    decidedByTitle: "Partner",
+  },
+  {
+    id: 14,
+    requestNo: "SA-2026-00014",
+    employee: "Aisha Al Kindi",
+    requestedOn: "2026-10-01",
+    amount: 900,
+    deductMonth: "November",
+    deductYear: "2026",
+    purpose: "Education Expenses",
+    reason: "University fees for my son's first semester.",
+    status: "Pending",
+    decision: "completion",
+    managementComment:
+      "The requested amount is higher than the permitted limit. Please adjust the amount and resubmit the request.",
+    decidedOn: "2026-10-03",
+    decidedBy: "Khalid Al Hinai",
+    decidedByTitle: "Partner",
+  },
+  {
+    id: 15,
+    requestNo: "SA-2026-00015",
+    employee: "Aisha Al Kindi",
+    requestedOn: "2026-08-12",
+    amount: 250,
+    deductMonth: "September",
+    deductYear: "2026",
+    purpose: "Medical Expenses",
+    reason: "Dental treatment not covered by insurance.",
+    status: "Approved",
+    decision: "full",
+    approvedAmount: 250,
+    managementComment: "Approved.",
+    decidedOn: "2026-08-14",
+    decidedBy: "Khalid Al Hinai",
+    decidedByTitle: "Partner",
+    method: "Bank Transfer",
+    paymentDate: "2026-08-16",
+    reference: "TRX-2026-00412",
+    paidOn: "2026-08-16",
+    paidBy: "Mohammed Al Yahyaei",
   },
 ];

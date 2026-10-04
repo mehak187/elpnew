@@ -10,11 +10,10 @@ import {
   Td,
 } from "@/components/shared/RecordTable";
 import FormHeading from "@/components/shared/FormHeading";
-import AiSearch from "@/components/shared/AiSearch";
+import RequestTable from "@/components/shared/RequestTable";
 import TabBar from "@/components/shared/TabBar";
 import { Plus, Eye, EyeOff } from "lucide-react";
 import { withRial } from "@/lib/money";
-import { smartSearch } from "@/lib/search/smartSearch";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -85,7 +84,6 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd, canDecide = tr
   // written for a client, the list shows only what is already agreed with that
   // client - which is what the new one has to be judged against.
   const [clientFilter, setClientFilter] = useState("");
-  const [query, setQuery] = useState("");
 
   const filtering = adding && Boolean(clientFilter);
   const clientName =
@@ -94,7 +92,13 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd, canDecide = tr
   const shown = filtering
     ? records.filter((record) => record.clientNo === clientFilter)
     : records;
-  const found = smartSearch(shown, query);
+  // What the table shows: the number it goes by, and where it stands.
+  const rows = shown.map((record) => ({
+    ...record,
+    no: record.commissionNo || record.requestNo,
+    status: record.status || COMMISSION_PAID,
+    dateText: commissionDate(record),
+  }));
 
   /** Closing the form, by either button, puts the whole list back. */
   const close = () => {
@@ -208,105 +212,90 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd, canDecide = tr
 
       <Card>
         <CardContent className="space-y-4 p-4 sm:p-6">
-          {/* The search on the left, where every list in the system has it,
-              and the name of the list on the right. */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <AiSearch
-              value={query}
-              onChange={setQuery}
-              placeholder="Ask about commission..."
-            />
-            {!adding && (
-              <Button variant="outline" type="button" className="ms-auto" onClick={onOpenAdd}>
-                <Plus className="me-2 h-4 w-4" />
-                Add Commission
-              </Button>
-            )}
-          </div>
-
-          {found.length === 0 ? (
-            <EmptyState>
-              {filtering
-                ? "No commission has been agreed with this employee on " +
-                  clientName +
-                  " yet."
-                : "No commission has been agreed with this employee."}
-            </EmptyState>
-          ) : (
-            <RecordTable minWidth={1080}>
-              <HeadRow>
-                <Th width="13%">Commission No.</Th>
-                <Th width="13%">Commission Date</Th>
-                <Th width="18%">Client Name</Th>
-                <Th width="18%">Payee</Th>
-                <Th width="24%">Legal Fees &amp; Commission</Th>
-                <Th width="18%">Notes</Th>
-              </HeadRow>
-              <tbody>
-                {found.map((record) => (
-                  <Row key={record.id}>
-                    {/* A commission waiting on payment carries its temporary
-                        number and opens back into the form. */}
-                    <Td className="whitespace-nowrap font-medium text-primary">
-                      {record.commissionNo ? (
-                        record.commissionNo
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => track(record)}
-                          className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
-                        >
-                          {record.requestNo}
-                        </button>
-                      )}
-
-                      {/* Where it stands, under the number it belongs to. */}
-                      <span
-                        className={cn(
-                          "mt-1 block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold",
-                          COMMISSION_STATUS_CHIP[record.status || COMMISSION_PAID]
-                        )}
-                      >
-                        {record.status || COMMISSION_PAID}
-                      </span>
-                    </Td>
-                    <Td className="whitespace-nowrap text-primary">
-                      {commissionDate(record)}
-                    </Td>
-                    <Td className="text-start">{record.clientName}</Td>
-                    <Td className="text-start">{record.paidTo}</Td>
-
-                    {/* What it was worked out from, then what it came to:
-                        the fees before VAT, the rate, and the commission. */}
-                    <Td className="text-start">
-                      <span className="block">
-                        <span className="text-muted-foreground">
-                          Before VAT:{" "}
-                        </span>
-                        {money(feesFor(record))}
-                      </span>
-                      <span className="block">
-                        <span className="text-muted-foreground">
-                          Commission:{" "}
-                        </span>
-                        {record.rate}%
-                      </span>
-                      <span className="block font-bold text-green-700">
-                        <span className="font-normal text-muted-foreground">
-                          Paid Commission:{" "}
-                        </span>
-                        {money(commissionOn(record))}
-                      </span>
-                    </Td>
-
-                    <Td className="text-start text-muted-foreground">
-                      {record.notes || "-"}
-                    </Td>
-                  </Row>
-                ))}
-              </tbody>
-            </RecordTable>
-          )}
+          <RequestTable
+            rows={rows}
+            columns={[
+              {
+                // A commission waiting on payment carries its temporary
+                // number and opens back into the form.
+                key: "no",
+                header: "Commission No.",
+                width: "13%",
+                render: (value, record) =>
+                  record.commissionNo ? (
+                    <span className="font-medium text-primary">{value}</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => track(record)}
+                      className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      {value}
+                    </button>
+                  ),
+              },
+              {
+                key: "dateText",
+                header: "Commission Date",
+                width: "12%",
+                render: (value) => <span className="whitespace-nowrap text-primary">{value}</span>,
+              },
+              { key: "clientName", header: "Client Name", width: "15%" },
+              { key: "paidTo", header: "Payee", width: "14%" },
+              {
+                // What it was worked out from, then what it came to.
+                key: "rate",
+                header: "Legal Fees & Commission",
+                width: "20%",
+                render: (value, record) => (
+                  <>
+                    <span className="block">
+                      <span className="text-muted-foreground">Before VAT: </span>
+                      {money(feesFor(record))}
+                    </span>
+                    <span className="block">
+                      <span className="text-muted-foreground">Commission: </span>
+                      {value}%
+                    </span>
+                    <span className="block font-bold text-green-700">
+                      <span className="font-normal text-muted-foreground">Paid Commission: </span>
+                      {money(commissionOn(record))}
+                    </span>
+                  </>
+                ),
+              },
+              {
+                key: "notes",
+                header: "Notes",
+                width: "14%",
+                render: (value) => <span className="text-muted-foreground">{value || "-"}</span>,
+              },
+              {
+                key: "status",
+                header: "Status",
+                width: "12%",
+                render: (value) => (
+                  <span
+                    className={cn(
+                      "block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold",
+                      COMMISSION_STATUS_CHIP[value]
+                    )}
+                  >
+                    {value}
+                  </span>
+                ),
+              },
+            ]}
+            searchPlaceholder="Search by commission no., client or payee..."
+            itemLabel="commissions"
+            exportFileName="commissions.csv"
+            filterBy={[
+              { key: "status", label: "Status" },
+              { key: "clientName", label: "Client" },
+            ]}
+            onAdd={!adding ? onOpenAdd : null}
+            addLabel="Add Commission"
+          />
         </CardContent>
       </Card>
     </div>
@@ -331,6 +320,9 @@ export default function FinancialBenefitsSection({
   onTabChange,
   // The firm sets what it pays; on My Profile the figures are only read.
   canEdit = true,
+  // Opened from Requests: the request's own list and nothing else - no tabs,
+  // since the cards above choose, and no salary breakdown.
+  listOnly = false,
 }) {
   // Which tab's form is open, if any.
   const [adding, setAdding] = useState(null);
@@ -388,7 +380,7 @@ export default function FinancialBenefitsSection({
           on the right the tabs and the buttons that act on what is open. A
           heading above the tabs would only name the tab that is already
           highlighted. */}
-      {!formHasHeading && (
+      {!formHasHeading && !listOnly && (
       <div className="flex flex-wrap items-center justify-between gap-3">
         <FormHeading title={current.label} note={current.note} icon={current.icon} />
 
@@ -413,6 +405,7 @@ export default function FinancialBenefitsSection({
           addLabel={showsAdd ? addLabel : ""}
           canEdit={canEdit}
           advance={!canEdit}
+          advanceOnly={listOnly}
         />
       )}
 

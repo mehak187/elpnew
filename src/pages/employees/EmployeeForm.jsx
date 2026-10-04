@@ -2341,7 +2341,7 @@ export default function EmployeeForm({ self }) {
           {/* On Requests, nothing is drawn below the cards until one is opened. */}
           <Card
             className={cn(
-              (isInfo || isDocuments) && "border-0 bg-transparent shadow-none",
+              (isInfo || isDocuments || isRequests) && "border-0 bg-transparent shadow-none",
               isRequests && !requestItem && "hidden",
               isManagement && !managementTab && "hidden"
             )}
@@ -2349,7 +2349,7 @@ export default function EmployeeForm({ self }) {
             <CardContent
               className={cn(
                 "p-4 sm:p-6",
-                (isInfo || isDocuments) && "space-y-4 p-0 sm:space-y-6 sm:p-0"
+                (isInfo || isDocuments || isRequests) && "space-y-4 p-0 sm:space-y-6 sm:p-0"
               )}
             >
               <form
@@ -3924,6 +3924,8 @@ export default function EmployeeForm({ self }) {
                     onSaveSalary={(payslip) =>
                       setFormData((prev) => ({ ...prev, ...payslip }))
                     }
+                    // From Requests: the chosen request's list alone.
+                    listOnly={isRequests}
                   />
                 )}
 
@@ -3932,6 +3934,7 @@ export default function EmployeeForm({ self }) {
                     // From Requests it opens on the entitlement chosen there,
                     // and opens afresh when another is chosen.
                     key={isRequests ? requestItem.key : "entitlements"}
+                    listOnly={isRequests}
                     tab={isRequests ? requestItem.tab : undefined}
                     employee={formData}
                     canEdit={!readOnly}

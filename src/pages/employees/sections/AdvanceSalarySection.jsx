@@ -1,5 +1,4 @@
 import { useState } from "react";
-import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import AiSearch from "@/components/shared/AiSearch";
+import RequestTable from "@/components/shared/RequestTable";
 import { Card, CardContent } from "@/components/ui/card";
 import { Bordered, EmptyState } from "@/components/shared/panels";
 import DateField from "@/components/shared/DateField";
@@ -29,7 +28,6 @@ import { Rial } from "@/components/shared/Rial";
 import { cn } from "@/lib/utils";
 import { amountValue } from "@/lib/money";
 import { firmToday } from "@/lib/expiry";
-import { smartSearch } from "@/lib/search/smartSearch";
 import {
   CalendarDays,
   Check,
@@ -60,6 +58,7 @@ import {
   ADVANCE_PURPOSES,
   ADVANCE_STATUS_CHIP,
   ADVANCE_STATUS_TONE,
+  advanceStatusOf,
   DECISION_STATUS,
   DISBURSEMENT_CATEGORIES,
   DISBURSEMENT_SUBCATEGORIES,
@@ -73,8 +72,9 @@ import {
 
 const REASON_LIMIT = 500;
 const COMMENT_LIMIT = 300;
-// Remarks longer than this are cut to two lines until "Show more".
-const REMARKS_PREVIEW = 180;
+// Remarks longer than this carry "Show more", and are cut to two lines until
+// it is pressed - a sentence or two of remarks has it, as the design shows.
+const REMARKS_PREVIEW = 80;
 
 /** What management can answer an advance with, as the review names it. */
 const ADVANCE_DECISIONS = [
@@ -117,10 +117,10 @@ const longDate = (iso) => {
   return `${day} ${SHORT_MONTHS[Number(month) - 1]} ${year}`;
 };
 
-/** "SA-2026-00012" as the review reads it: "SA ( 12/2026 )". */
+/** "SA-2026-00012" as the head of the request reads it: "SA 12/2026". */
 const shortRequestNo = (requestNo) => {
   const [prefix, year, count] = String(requestNo).split("-");
-  return count ? `${prefix} ( ${Number(count)}/${year} )` : requestNo;
+  return count ? `${prefix} ${Number(count)}/${year}` : requestNo;
 };
 
 /** The red mark of a field that must be answered. */
@@ -154,7 +154,7 @@ function AdvanceSteps({ steps, active, onChange }) {
               >
                 <span
                   className={cn(
-                    "block h-full bg-blue-600",
+                    "block h-full bg-primary",
                     index < at ? "w-full" : open ? "w-1/2" : "w-0"
                   )}
                 />
@@ -173,7 +173,7 @@ function AdvanceSteps({ steps, active, onChange }) {
                   open
                     ? step.activeTone === "navy"
                       ? "bg-primary text-white"
-                      : "bg-blue-600 text-white"
+                      : "bg-primary text-primary-foreground"
                     : done
                       ? step.doneTone === "green"
                         ? "bg-green-700 text-white"
@@ -191,7 +191,7 @@ function AdvanceSteps({ steps, active, onChange }) {
                   open
                     ? step.activeTone === "navy"
                       ? "font-bold text-primary"
-                      : "font-bold text-blue-700"
+                      : "font-bold text-primary"
                     : "text-primary"
                 )}
               >
@@ -322,7 +322,6 @@ export function AdvanceSalaryForm({
 
   // What is already owed on earlier advances, and so what is left to ask for:
   // an advance cannot be taken twice out of the same salary.
-  const basic = Number(employee?.salary) || 0;
   const outstanding = outstandingAdvance(advances, employee?.name);
   const limit = Math.max(0, Number((net - outstanding).toFixed(3)));
   const requested = Number(draft.amount) || 0;
@@ -489,49 +488,6 @@ export function AdvanceSalaryForm({
             <DialogTitle className="text-2xl font-bold text-primary">
               {correcting ? "Salary Advance Request Correction" : "Salary Advance Request"}
             </DialogTitle>
-            {/* While it is being written the number sits by the title, with
-                the limit a click away; once sent, it moves to the right. */}
-            {writing && (
-              <span className="rounded-md bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
-                {requestNo}
-              </span>
-            )}
-            {/* What may be asked for, kept a click away: the figures behind
-                the limit the amount is checked against. */}
-            {writing && (
-            <PopoverPrimitive.Root>
-              <PopoverPrimitive.Trigger asChild>
-                <button
-                  type="button"
-                  className="rounded-full text-primary/70 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <Info className="size-6" aria-hidden="true" />
-                  <span className="sr-only">Advance limit details</span>
-                </button>
-              </PopoverPrimitive.Trigger>
-              <PopoverPrimitive.Portal>
-                <PopoverPrimitive.Content
-                  align="start"
-                  sideOffset={8}
-                  className="z-50 w-72 space-y-2 rounded-lg border bg-popover p-4 text-sm shadow-md"
-                >
-                  {[
-                    ["Current Basic Salary", basic],
-                    ["Current Net Salary", net],
-                    ["Outstanding Salary Advance", outstanding],
-                    ["Eligible Advance Limit", limit],
-                  ].map(([label, value]) => (
-                    <p key={label} className="flex justify-between gap-4">
-                      <span className="text-primary/75">{label}</span>
-                      <span className="font-semibold text-primary">
-                        {amountValue(value)} <Rial />
-                      </span>
-                    </p>
-                  ))}
-                </PopoverPrimitive.Content>
-              </PopoverPrimitive.Portal>
-            </PopoverPrimitive.Root>
-            )}
           </div>
           <DialogDescription className="text-sm text-primary/75">
             {writing
@@ -544,24 +500,17 @@ export function AdvanceSalaryForm({
           </DialogDescription>
         </div>
         <div className="ms-auto flex flex-wrap items-center gap-3 pt-2 text-sm text-primary">
-          {writing ? (
-            <span>
-              {employee?.empNo || ""} <span className="px-1">|</span> {employee?.name || ""}
-            </span>
-          ) : (
-            <>
-              <span>{employee?.empNo || ""}</span>
-              <span aria-hidden="true" className="h-5 w-px bg-container-border" />
-              <span>{employee?.name || ""}</span>
-            </>
-          )}
+          {/* Whose it is, when it was asked, and its number - the same on
+              every stage of the request. */}
+          <span>{employee?.empNo || ""}</span>
+          <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+          <span>{employee?.name || ""}</span>
           <span aria-hidden="true" className="h-5 w-px bg-container-border" />
           <span>{longDate(requestedOn)}</span>
-          {!writing && (
-            <span className="rounded-md bg-blue-50 px-3 py-1.5 font-semibold text-blue-700">
-              {shortRequestNo(requestNo)}
-            </span>
-          )}
+          <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+          <span className="rounded-md bg-primary/10 px-3 py-1.5 text-base font-bold text-primary">
+            {shortRequestNo(requestNo)}
+          </span>
         </div>
         {/* The window's own close, at the size the design draws it. */}
         <DialogClose className="absolute end-5 top-5 rounded-md p-1 text-primary transition-colors hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
@@ -822,7 +771,7 @@ export function AdvanceSalaryForm({
                       }
                       className={cn(
                         "whitespace-nowrap border-s px-1 text-xs tracking-tight transition-colors first:border-s-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                        chosen ? "bg-blue-600 text-white" : "text-primary hover:bg-menu-hover"
+                        chosen ? "bg-primary text-primary-foreground" : "text-primary hover:bg-menu-hover"
                       )}
                     >
                       {option.month} {option.year}
@@ -966,13 +915,13 @@ export function AdvanceSalaryForm({
                     <p className={cn("flex-1 text-primary/85", !showAllRemarks && "line-clamp-2")}>
                       {draft.reason}
                     </p>
-                    {/* Offered only where the remarks run past two lines. */}
+                    {/* Offered wherever the remarks are more than a line. */}
                     {draft.reason.length > REMARKS_PREVIEW && (
                       <button
                         type="button"
                         onClick={() => setShowAllRemarks((open) => !open)}
                         aria-expanded={showAllRemarks}
-                        className="flex shrink-0 items-center gap-1 font-medium text-blue-700 hover:text-blue-800"
+                        className="flex shrink-0 items-center gap-1 font-medium text-primary hover:text-primary/80"
                       >
                         {showAllRemarks ? "Show less" : "Show more"}
                         <ChevronDown
@@ -1033,17 +982,17 @@ export function AdvanceSalaryForm({
                     onClick={() => setDecision(option.key)}
                     className={cn(
                       "flex items-center gap-4 rounded-lg border px-5 py-3 text-start font-semibold text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default",
-                      chosen ? "border-blue-600 bg-blue-50" : "bg-blue-50/40 hover:bg-blue-50"
+                      chosen ? "border-primary bg-primary/5" : "bg-blue-50/40 hover:bg-blue-50"
                     )}
                   >
                     <span
                       aria-hidden="true"
                       className={cn(
                         "flex size-6 shrink-0 items-center justify-center rounded-full border-2",
-                        chosen ? "border-blue-600" : "border-primary"
+                        chosen ? "border-primary" : "border-primary"
                       )}
                     >
-                      {chosen && <span className="size-3 rounded-full bg-blue-600" />}
+                      {chosen && <span className="size-3 rounded-full bg-primary" />}
                     </span>
                     {option.label}
                   </button>
@@ -1282,7 +1231,7 @@ export function AdvanceSalaryForm({
             !openRequest && (
               <Button
                 type="button"
-                className="min-w-48 bg-blue-600 text-white hover:bg-blue-700"
+                className="min-w-48"
                 onClick={submit}
               >
                 Submit Request
@@ -1299,7 +1248,7 @@ export function AdvanceSalaryForm({
           {stage === "decision" && canDecide && (
             <Button
               type="button"
-              className="min-w-48 bg-blue-600 text-white hover:bg-blue-700"
+              className="min-w-48"
               disabled={!canConfirm}
               onClick={confirmDecision}
             >
@@ -1338,92 +1287,89 @@ export function AdvanceRequests({
   addLabel = "",
   // Clicking a request's number opens it back up, to be followed or decided.
   onOpenRequest = null,
+  // Further ways to add, beside the main one: [{ label, onClick }].
+  moreAdds = [],
 }) {
   const { advances } = useAdvances();
-  const [query, setQuery] = useState("");
-  const mine = advancesFor(advances, employee?.name);
-  const shown = smartSearch(mine, query);
+  const rows =advancesFor(advances, employee?.name).map((advance) => ({
+    ...advance,
+    deductFrom: deductedFrom(advance),
+    // Shown, not stored: a handed-back request reads "Returned".
+    status: advanceStatusOf(advance),
+  }));
+
+  const columns = [
+    {
+      key: "requestNo",
+      header: "Request No.",
+      width: "14%",
+      render: (value, advance) =>
+        onOpenRequest ? (
+          <RecordLink onClick={() => onOpenRequest(advance)}>{value}</RecordLink>
+        ) : (
+          <span className="font-medium text-primary">{value}</span>
+        ),
+    },
+    {
+      key: "requestedOn",
+      header: "Request Date",
+      width: "13%",
+      render: (value) => <span className="whitespace-nowrap text-primary">{formatDate(value)}</span>,
+    },
+    {
+      // No unit in the heading: every figure below carries it.
+      key: "amount",
+      header: "Requested Amount",
+      width: "15%",
+      render: (value) => <span className="whitespace-nowrap font-bold text-green-700">{amount(value)}</span>,
+      exportValue: (row) => row.amount,
+    },
+    { key: "deductFrom", header: "Deducted From", width: "14%" },
+    {
+      key: "purpose",
+      header: "Request Details",
+      width: "30%",
+      render: (value, advance) => (
+        <span className="text-muted-foreground">
+          {value && <span className="block font-medium text-primary">{value}</span>}
+          {advance.reason}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      width: "14%",
+      render: (value) => (
+        <span
+          className={cn(
+            "flex w-fit rounded-full px-2 py-0.5 text-xs font-semibold",
+            ADVANCE_STATUS_CHIP[value] || ADVANCE_STATUS_TONE[value]
+          )}
+        >
+          {value}
+        </span>
+      ),
+    },
+  ];
 
   return (
     <Card>
-      <CardContent className="space-y-4 p-4 sm:p-6">
-        {/* The search on the left, where every list in the system has it, and
-            the way to add on the right. */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <AiSearch
-            value={query}
-            onChange={setQuery}
-            placeholder="Ask about salary advances..."
-          />
-          {onAdd && (
-            <Button variant="outline" type="button" className="ms-auto" onClick={onAdd}>
-              <Plus className="me-2 h-4 w-4" />
-              {addLabel}
-            </Button>
-          )}
-        </div>
-
-        {shown.length === 0 ? (
-          <EmptyState>
-            {mine.length === 0
-              ? "No salary advance has been requested yet."
-              : "No salary advance matches that search."}
-          </EmptyState>
-        ) : (
-          <RecordTable minWidth={860}>
-            <HeadRow>
-              <Th width="14%">Request No.</Th>
-              <Th width="14%">Request Date</Th>
-              {/* No unit in the heading: every figure below carries it. */}
-              <Th width="16%" className="text-end">
-                Requested Amount
-              </Th>
-              <Th width="16%">Deducted From</Th>
-              <Th width="40%">Request Details</Th>
-            </HeadRow>
-            <tbody>
-              {shown.map((advance) => (
-                <Row key={advance.id}>
-                  {/* Where the request stands is said under its own number
-                      rather than in a column of its own. */}
-                  <Td className="whitespace-nowrap font-medium text-primary">
-                    {onOpenRequest ? (
-                      <RecordLink onClick={() => onOpenRequest(advance)}>
-                        {advance.requestNo}
-                        </RecordLink>
-                    ) : (
-                      advance.requestNo
-                    )}
-                    <span
-                      className={cn(
-                        "mt-1 flex w-fit rounded-full px-2 py-0.5 text-xs font-semibold",
-                        ADVANCE_STATUS_CHIP[advance.status] ||
-                          ADVANCE_STATUS_TONE[advance.status]
-                      )}
-                    >
-                      {advance.status}
-                    </span>
-                  </Td>
-                  <Td className="whitespace-nowrap text-primary">
-                    {formatDate(advance.requestedOn)}
-                  </Td>
-                  <Td className="whitespace-nowrap text-end font-bold text-green-700">
-                    {amount(advance.amount)}
-                  </Td>
-                  <Td className="whitespace-nowrap text-primary">
-                    {deductedFrom(advance)}
-                  </Td>
-                  <Td className="text-start text-muted-foreground">
-                    {advance.purpose && (
-                      <span className="block font-medium text-primary">{advance.purpose}</span>
-                    )}
-                    {advance.reason}
-                  </Td>
-                </Row>
-              ))}
-            </tbody>
-          </RecordTable>
-        )}
+      <CardContent className="p-4 sm:p-6">
+        <RequestTable
+          rows={rows}
+          columns={columns}
+          searchPlaceholder="Search by request no., month or purpose..."
+          itemLabel="salary advances"
+          exportFileName="salary-advances.csv"
+          filterBy={[
+            { key: "status", label: "Status" },
+            { key: "purpose", label: "Purpose" },
+          ]}
+          onAdd={onAdd}
+          addLabel={addLabel}
+          moreAdds={moreAdds}
+        />
       </CardContent>
     </Card>
   );

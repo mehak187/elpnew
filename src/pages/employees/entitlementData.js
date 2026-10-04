@@ -266,6 +266,36 @@ export const initialEntitlements = [
     attachment: "transport-claim.pdf",
     rejectionReason: "",
   },
+  {
+    // Aisha Al Kindi: a medical claim waiting, a transport claim paid.
+    id: 6,
+    kind: "medical",
+    employee: "Aisha Al Kindi",
+    requestNo: "MAR-006",
+    entitlementNo: "",
+    requestDate: "2026-09-25",
+    amount: 120,
+    reason: "Prescription and consultation not covered by insurance.",
+    status: ENTITLEMENT_PENDING,
+    attachment: "medical-receipt.pdf",
+    rejectionReason: "",
+  },
+  {
+    id: 7,
+    kind: "transport",
+    employee: "Aisha Al Kindi",
+    requestNo: "TRA-007",
+    entitlementNo: "ENT-007",
+    requestDate: "2026-08-28",
+    amount: 30,
+    approvedAmount: 30,
+    reason: "Court visits in Salalah for the month.",
+    status: ENTITLEMENT_APPROVED,
+    decisionDate: "2026-08-30",
+    decidedBy: "Khalid Al Hinai",
+    managementComment: "Approved as claimed.",
+    rejectionReason: "",
+  },
 ];
 
 /**

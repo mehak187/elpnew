@@ -1,11 +1,8 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { EmptyState } from "@/components/shared/panels";
-import AiSearch from "@/components/shared/AiSearch";
 import FormHeading from "@/components/shared/FormHeading";
 import TabBar from "@/components/shared/TabBar";
-import { Plus, FileSpreadsheet } from "lucide-react";
+import { FileSpreadsheet } from "lucide-react";
 import { ENTITLEMENT_TABS } from "../entitlementTabs";
 import { initialEntitlements } from "../entitlementData";
 import EntitlementTab from "./EntitlementTab";
@@ -26,9 +23,11 @@ export default function EntitlementsSection({
   // Which entitlement to open on, when the page that opens it already knows -
   // Requests opens straight on the one that was chosen there.
   tab: initialTab,
+  // Opened from Requests: the chosen entitlement's list alone - the cards
+  // above already choose which.
+  listOnly = false,
 }) {
   const [tab, setTab] = useState(initialTab || ENTITLEMENT_TABS[0].key);
-  const [query, setQuery] = useState("");
   const [records, setRecords] = useState(initialEntitlements);
   // Whether the window is open, and on which tab it was opened.
   const [adding, setAdding] = useState(null);
@@ -48,32 +47,21 @@ export default function EntitlementsSection({
           Not beside the name, as a shorter set of tabs would be: nine of these
           labels and a heading cannot share a line without the tabs folding
           onto a second one, and a folded set stops looking like one set. */}
-      <FormHeading
-        icon={FileSpreadsheet}
-        title="Employee Entitlements"
-        note="Manage employee allowances and end-of-service entitlements"
-      />
+      {!listOnly && (
+        <>
+          <FormHeading
+            icon={FileSpreadsheet}
+            title="Employee Entitlements"
+            note="Manage employee allowances and end-of-service entitlements"
+          />
 
-      <TabBar options={ENTITLEMENT_TABS} value={tab} onChange={setTab} fit />
+          <TabBar options={ENTITLEMENT_TABS} value={tab} onChange={setTab} fit />
+        </>
+      )}
 
-      {/* What is searched, and the way to ask for one.
-          The button names the entitlement the open tab is on, and asks for it
-          rather than adding it: nothing here is granted by writing it down -
-          every one of the nine is a request the office still has to answer.
-          A button that said "Add" would promise otherwise. */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <AiSearch value={query} onChange={setQuery} placeholder="Search..." />
-        <Button variant="outline"
-          type="button"
-          className="ms-auto"
-          onClick={() => setAdding(tab)}
-          disabled={adding === tab}
-        >
-          <Plus className="me-2 h-4 w-4" />
-          {"Request " + current.label}
-        </Button>
-      </div>
-
+      {/* The button names the entitlement the open tab is on, and asks for
+          it rather than adding it: every one of the nine is a request the
+          office still has to answer. It sits on the table's own row. */}
       <Card>
         <CardContent className="p-4 sm:p-6">
           {/* Every tab is the same page over a different entitlement, so one
@@ -86,7 +74,7 @@ export default function EntitlementsSection({
             employee={employee}
             records={records}
             onRecords={setRecords}
-            query={query}
+            addLabel={"Request " + current.label}
             adding={adding === tab}
             onCloseAdd={() => setAdding(null)}
             onOpenAdd={() => setAdding(tab)}

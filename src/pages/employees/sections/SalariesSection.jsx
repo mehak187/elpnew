@@ -370,6 +370,8 @@ export default function SalariesSection({
   // My Profile, where the employee cannot record a payment to themselves but
   // can ask for part of their salary in advance.
   advance = false,
+  // Opened from Requests: the salary advances alone.
+  advanceOnly = false,
 }) {
   // Opened on what the employee is already paid, so the page shows the salary
   // in force rather than a blank form somebody has to fill in from memory.
@@ -391,6 +393,8 @@ export default function SalariesSection({
   const [reason, setReason] = useState("");
   // The advance request opened off its own list, if one is.
   const [openAdvanceId, setOpenAdvanceId] = useState(null);
+  // A new advance asked for from the employee's record rather than My Profile.
+  const [newAdvance, setNewAdvance] = useState(false);
 
   const openRequest = history.find((row) => row.id === openId) || null;
   const settled = Boolean(openRequest?.salaryNo);
@@ -500,6 +504,7 @@ export default function SalariesSection({
     setRejecting(false);
     setReason("");
     setOpenAdvanceId(null);
+    setNewAdvance(false);
     onCloseAdd();
   };
 
@@ -622,7 +627,7 @@ export default function SalariesSection({
   // An advance is what the employee asks for out of their own salary: on My
   // Profile it is the only thing that opens here, and on the firm's side it
   // opens whenever one of those requests is picked off the list to decide.
-  const addingAdvance = Boolean(adding && (advance || openAdvanceId));
+  const addingAdvance = Boolean(adding && (advance || openAdvanceId || newAdvance));
 
   // The form opens over the page rather than pushing it down: the list it is
   // filed into stays where it was, behind it.
@@ -1067,6 +1072,9 @@ export default function SalariesSection({
       {/* What the employee is paid: opening the tab is what shows it, with
           the history of payments under it. Shown, not asked for - a salary is
           changed by recording one, which is what Add Salary is for. */}
+      {/* From Requests, only the advances: the salary itself and its history
+          are on Financial Benefits. */}
+      {!advanceOnly && (
       <div id="salary-details" className="space-y-6 rounded-lg border p-4 sm:p-6">
         {/* The firm sets what somebody is paid, so on their own page the
             figures are read and not typed. Left open they were editable by
@@ -1209,6 +1217,7 @@ export default function SalariesSection({
           </div>
         )}
       </div>
+      )}
 
       {/* What has been asked for out of the salary above. The firm sees its
           own record of an advance in the payments; this is the employee's. */}
@@ -1218,8 +1227,29 @@ export default function SalariesSection({
         employee={employee}
         // The one thing the employee may do with their own salary, on the row
         // above the list it is added to.
-        onAdd={advance && addLabel && !adding ? () => onOpenAdd?.() : null}
+        // From Requests, where the salary's own list is not shown, the firm's
+        // Add Salary sits here instead.
+        onAdd={
+          (advance || (advanceOnly && canEdit)) && addLabel && !adding
+            ? () => onOpenAdd?.()
+            : null
+        }
         addLabel={addLabel}
+        // On the employee's record, an advance can be asked for on their
+        // behalf too, beside Add Salary.
+        moreAdds={
+          !advance && canEdit && !adding
+            ? [
+                {
+                  label: "Salary Advance Request",
+                  onClick: () => {
+                    setNewAdvance(true);
+                    onOpenAdd?.();
+                  },
+                },
+              ]
+            : []
+        }
         onOpenRequest={
           adding
             ? null
@@ -1232,14 +1262,16 @@ export default function SalariesSection({
 
 
       {/* What has been paid, month by month */}
-      <SalaryHistory
-        history={history}
-        // A request that has not been approved opens back into the form, to
-        // be followed, corrected or decided.
-        onOpenRequest={canEdit ? trackRequest : null}
-        onAdd={canEdit && !adding ? () => onOpenAdd?.() : null}
-        addLabel={addLabel}
-      />
+      {!advanceOnly && (
+        <SalaryHistory
+          history={history}
+          // A request that has not been approved opens back into the form, to
+          // be followed, corrected or decided.
+          onOpenRequest={canEdit ? trackRequest : null}
+          onAdd={canEdit && !adding ? () => onOpenAdd?.() : null}
+          addLabel={addLabel}
+        />
+      )}
     </div>
   );
 }
