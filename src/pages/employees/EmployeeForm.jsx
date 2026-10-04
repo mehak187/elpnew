@@ -2597,18 +2597,6 @@ export default function EmployeeForm({ self }) {
                         </Select>
                       </div>
 
-                      <IconField
-                        icon={Mail}
-                        id="workEmail"
-                        name="workEmail"
-                        type="email"
-                        label={<>Work Email<Required show={asksFor} /></>}
-                        placeholder="name@firm.com"
-                        value={formData.workEmail}
-                        onChange={onChange}
-                        required={isAdding}
-                      />
-
                       <div className="form-field space-y-2">
                         <Label htmlFor="dateOfJoining">
                           Date of Joining
@@ -3009,6 +2997,33 @@ export default function EmployeeForm({ self }) {
                                 options={GRADE_GROUPS}
                                 required
                               />
+
+                            {/* How the firm reaches them at work, beside the
+                                grade once one is chosen. */}
+                            {formData.grade && (
+                              <>
+                                <PhoneField
+                                  id="workPhone"
+                                  label="Work Phone Number"
+                                  placeholder="Enter work phone number"
+                                  dialCode={formData.workDialCode}
+                                  onDialCode={(value) => set("workDialCode", value)}
+                                  value={formData.workPhone}
+                                  onChange={(e) => set("workPhone", e.target.value)}
+                                />
+                                <IconField
+                                  icon={Mail}
+                                  id="workEmail"
+                                  name="workEmail"
+                                  type="email"
+                                  label={<>Work Email<Required show={asksFor} /></>}
+                                  placeholder="name@firm.com"
+                                  value={formData.workEmail}
+                                  onChange={onChange}
+                                  required={isAdding}
+                                />
+                              </>
+                            )}
                             </div>
 
                           </>
