@@ -507,22 +507,11 @@ const ADD_STEPS = [
 ];
 
 /**
- * Employee Information's tabs on a record, each showing one or more of the
- * parts Add Employee asks for a step at a time.
+ * Employee Information's tabs on a record: the same steps, under the same
+ * names, that Add Employee walks through - one part of the file each - so a
+ * record reads back in the order it was built.
  */
-const PROFILE_TABS = [
-  { key: "personal", label: "Personal Details", parts: ["personal"] },
-  { key: "employment", label: "Employment & Contract", parts: ["employment", "contract"] },
-  { key: "identity", label: "Identity & Immigration", parts: ["identity"] },
-  { key: "salary", label: "Salary & Banking", parts: ["payroll", "banking"] },
-  {
-    key: "socialProtection",
-    label: "Social Protection",
-    parts: ["socialProtection"],
-    when: (values) => values.socialProtection === "Yes",
-  },
-  { key: "documents", label: "Documents", parts: ["documents"] },
-];
+const PROFILE_TABS = ADD_STEPS.map((step) => ({ ...step, parts: [step.key] }));
 
 /** The steps a record with these values is added through, in order. */
 const flowFor = (values) => ADD_STEPS.filter((s) => !s.when || s.when(values));
@@ -592,69 +581,22 @@ const sumOf = (fields, values) =>
   fields.reduce((total, field) => total + Number(values[field.key] || 0), 0);
 
 /**
- * The bar of steps across the top of Add Employee.
- *
- * A step that has been saved carries a green check and stays open to go back
- * to; the one being filled in is underlined; the rest wait, greyed, until the
- * step before them is saved.
- */
-function StepTabs({ steps, active, done = [], canOpen = () => true, onSelect, label = "Add employee steps" }) {
-  return (
-    <nav aria-label={label} className="overflow-x-auto">
-      <ol className="flex min-w-max border-b border-container-border">
-        {steps.map((step, index) => {
-          const isDone = done.includes(step.key);
-          const isActive = step.key === active;
-          const reachable = canOpen(step.key);
-          return (
-            <li key={step.key} className="flex items-center">
-              {index > 0 && (
-                <span aria-hidden="true" className="h-5 w-px bg-container-border" />
-              )}
-              <button
-                type="button"
-                disabled={!reachable}
-                onClick={() => onSelect(step.key)}
-                aria-current={isActive ? "step" : undefined}
-                className={cn(
-                  "-mb-px flex items-center gap-2 border-b-2 px-6 py-3 text-[15px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  isActive
-                    ? "border-primary font-semibold text-primary"
-                    : "border-transparent",
-                  !isActive && reachable && "text-primary hover:bg-menu-hover",
-                  !reachable && "cursor-not-allowed text-muted-foreground"
-                )}
-              >
-                {isDone && (
-                  <CircleCheck
-                    aria-hidden="true"
-                    className="size-5 shrink-0 fill-green-600 text-white"
-                  />
-                )}
-                {step.icon && (
-                  <step.icon strokeWidth={1.5} aria-hidden="true" className="size-5 shrink-0" />
-                )}
-                {step.label}
-                {isDone && <span className="sr-only">(completed)</span>}
-              </button>
-            </li>
-          );
-        })}
-      </ol>
-    </nav>
-  );
-}
-
-/**
  * Add Employee's steps as a numbered track: each step a circle on one line,
  * green with a check once saved, navy with its number while being filled in,
  * grey until reached; the line between two steps turns green once the first is
  * done. The step being filled in is named in bold with a bar under it.
  */
-function NumberedSteps({ steps, active, done, canOpen, onSelect }) {
+function NumberedSteps({
+  steps,
+  active,
+  done = [],
+  canOpen = () => true,
+  onSelect,
+  label = "Add employee steps",
+}) {
   return (
     <nav
-      aria-label="Add employee steps"
+      aria-label={label}
       className="overflow-x-auto rounded-xl border border-container-border bg-card px-4 py-4"
     >
       <ol className="flex min-w-max">
@@ -2026,10 +1968,15 @@ export default function EmployeeForm({ self }) {
 
           {isProfile && (
             <div className="space-y-3">
-              <StepTabs
+              {/* The record's sections as a numbered track: the ones before
+                  the open section are ticked off, the rest still ahead. */}
+              <NumberedSteps
                 label="Employee information"
                 steps={profileSteps}
                 active={profileTab}
+                done={profileSteps
+                  .slice(0, profileSteps.findIndex((s) => s.key === profileTab))
+                  .map((s) => s.key)}
                 onSelect={openProfileTab}
               />
               {/* What became of the last correction, and what is still waiting. */}
@@ -2901,14 +2848,12 @@ export default function EmployeeForm({ self }) {
                 {(shows("employment") || shows("contract")) && (
                   <>
                   <SectionCard
-                    // Adding asks for the job and the contract as two steps;
-                    // the record shows them together.
+                    // The job and the contract are a step each, on a record
+                    // as when it is added.
                     title={
-                      !isAdding
-                        ? "Employment & Contract"
-                        : step === "contract"
-                          ? "Contract Details"
-                          : ADD_STEPS.find((s) => s.key === step)?.label
+                      tab === "contract"
+                        ? "Contract Details"
+                        : ADD_STEPS.find((s) => s.key === tab)?.label
                     }
                     aside={correctionButton}
                     footer={correctionActions}
@@ -3007,7 +2952,10 @@ export default function EmployeeForm({ self }) {
                                 placeholder="Select Branch"
                                 value={formData.branch}
                                 onChange={(value) => set("branch", value)}
-                                options={initialBranches.map((branch) => branch.name)}
+                                // Sohar is not a place employees are posted to.
+                                options={initialBranches
+                                  .map((branch) => branch.name)
+                                  .filter((name) => name !== "Sohar")}
                                 required
                               />
                               <ChoiceField
@@ -3063,30 +3011,6 @@ export default function EmployeeForm({ self }) {
                               />
                             </div>
 
-                            {/* How the firm reaches them at work. */}
-                            <div className="form-grid mt-6 gap-y-6 border-t pt-6">
-                              <PhoneField
-                                id="workPhone"
-                                label="Work Phone Number"
-                                placeholder="Enter work phone number"
-                                dialCode={formData.workDialCode}
-                                onDialCode={(value) => set("workDialCode", value)}
-                                value={formData.workPhone}
-                                onChange={(e) => set("workPhone", e.target.value)}
-                              />
-                              <div className="form-field space-y-2">
-                                <Label htmlFor="workEmail">Work Email</Label>
-                                <Input
-                                  id="workEmail"
-                                  name="workEmail"
-                                  type="email"
-                                  placeholder="name@firm.com"
-                                  value={formData.workEmail}
-                                  onChange={onChange}
-                                  required
-                                />
-                              </div>
-                            </div>
                           </>
                         )}
                       </section>
@@ -3302,7 +3226,7 @@ export default function EmployeeForm({ self }) {
                       title={isAdding ? "Payroll Information" : "Salary Information"}
                       icon={Wallet}
                       aside={correctionButton}
-                      footer={isAdding && stepActions}
+                      footer={isAdding ? stepActions : correctionActions}
                       locked={profileLocked}
                     >
                       {/* The first payroll this pay goes into, worked out from
@@ -3403,6 +3327,7 @@ export default function EmployeeForm({ self }) {
                     <SectionCard
                       title="Bank Information"
                       icon={Landmark}
+                      aside={!isAdding && correctionButton}
                       footer={isAdding ? stepActions : correctionActions}
                       locked={profileLocked}
                     >
