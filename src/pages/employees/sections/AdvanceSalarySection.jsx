@@ -58,6 +58,7 @@ import {
   ADVANCE_PURPOSES,
   ADVANCE_STATUS_CHIP,
   ADVANCE_STATUS_TONE,
+  advanceStatusOf,
   DECISION_STATUS,
   DISBURSEMENT_CATEGORIES,
   DISBURSEMENT_SUBCATEGORIES,
@@ -1293,6 +1294,8 @@ export function AdvanceRequests({
   const rows =advancesFor(advances, employee?.name).map((advance) => ({
     ...advance,
     deductFrom: deductedFrom(advance),
+    // Shown, not stored: a handed-back request reads "Returned".
+    status: advanceStatusOf(advance),
   }));
 
   const columns = [

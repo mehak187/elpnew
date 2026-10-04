@@ -20,7 +20,17 @@ export const ADVANCE_STATUS_CHIP = {
   Pending: "bg-amber-100 text-amber-800",
   Approved: "bg-green-100 text-green-800",
   Rejected: "bg-red-100 text-red-800",
+  // Handed back by management, waiting on the employee to correct it.
+  Returned: "bg-orange-100 text-orange-800",
 };
+
+/**
+ * Where a request stands, as the list says it. A request handed back is
+ * still waiting, but on the employee rather than on management - so it is
+ * said apart from one that has not been looked at yet.
+ */
+export const advanceStatusOf = (advance) =>
+  advance.status === "Pending" && advance.decision === "completion" ? "Returned" : advance.status;
 
 /** How an advance is filed once it is paid: the same booking every time. */
 export const ADVANCE_BOOKING = {
