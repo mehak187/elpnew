@@ -78,6 +78,7 @@ import {
   Network,
   Scale,
   Calculator,
+  Landmark,
   Users,
   FileWarning,
 } from "lucide-react";
@@ -3441,10 +3442,11 @@ export default function EmployeeForm({ self }) {
                           />
                           <RuleNote name="iban" value={formData.iban} />
                         </div>
-                        {/* Only a transfer abroad needs it, so it is not
-                            demanded of an Omani bank account. */}
                         <div className="form-field space-y-2">
-                          <Label htmlFor="swiftCode">SWIFT Code</Label>
+                          <Label htmlFor="swiftCode">
+                            SWIFT Code
+                            <Required show={asksFor} />
+                          </Label>
                           <Input
                             id="swiftCode"
                             name="swiftCode"
@@ -3452,6 +3454,7 @@ export default function EmployeeForm({ self }) {
                             onChange={onChange}
                             placeholder="Enter SWIFT code"
                             aria-invalid={ruleBroken("swiftCode", formData.swiftCode) || undefined}
+                            required
                           />
                           <RuleNote name="swiftCode" value={formData.swiftCode} />
                         </div>
