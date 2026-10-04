@@ -2950,40 +2950,11 @@ export default function EmployeeForm({ self }) {
                             options={["Active", "Inactive"]}
                             required
                           />
-                          <ChoiceField
-                            id="branch"
-                            label="Branch / Work Location"
-                            icon={MapPin}
-                            placeholder="Select Branch"
-                            value={formData.branch}
-                            onChange={(value) => set("branch", value)}
-                            options={initialBranches.map((branch) => branch.name)}
-                            required
-                          />
-                          <ChoiceField
-                            id="position"
-                            label="Position"
-                            icon={Briefcase}
-                            placeholder="Select position"
-                            value={formData.position}
-                            onChange={(value) => set("position", value)}
-                            options={EMPLOYEE_POSITIONS}
-                            required
-                          />
-                          <ChoiceField
-                            id="department"
-                            label="Department"
-                            icon={Network}
-                            placeholder="Select department"
-                            value={formData.department}
-                            onChange={(value) => set("department", value)}
-                            options={DEPARTMENT_GROUPS}
-                            required
-                          />
-                        </div>
-
-                        {formData.status === "Inactive" && (
-                          <div className="form-grid mt-6 gap-y-6 border-t pt-6">
+                          {/* Inactive asks only what the leaving needs - the
+                              last day, who decided it and the firm's decision -
+                              beside the status, and nothing else on the step. */}
+                          {formData.status === "Inactive" ? (
+                            <>
                             <div className="form-field space-y-2">
                               <Label htmlFor="lastWorkingDate">
                                 Last Working Day
@@ -3026,60 +2997,98 @@ export default function EmployeeForm({ self }) {
                                 required
                               />
                             )}
-                          </div>
+                            </>
+                          ) : (
+                            <>
+                              <ChoiceField
+                                id="branch"
+                                label="Branch / Work Location"
+                                icon={MapPin}
+                                placeholder="Select Branch"
+                                value={formData.branch}
+                                onChange={(value) => set("branch", value)}
+                                options={initialBranches.map((branch) => branch.name)}
+                                required
+                              />
+                              <ChoiceField
+                                id="position"
+                                label="Position"
+                                icon={Briefcase}
+                                placeholder="Select position"
+                                value={formData.position}
+                                onChange={(value) => set("position", value)}
+                                options={EMPLOYEE_POSITIONS}
+                                required
+                              />
+                              <ChoiceField
+                                id="department"
+                                label="Department"
+                                icon={Network}
+                                placeholder="Select department"
+                                value={formData.department}
+                                onChange={(value) => set("department", value)}
+                                options={DEPARTMENT_GROUPS}
+                                required
+                              />
+                            </>
+                          )}
+                        </div>
+
+                        {formData.status !== "Inactive" && (
+                          <>
+                            {/* The grade, on a row of its own. A lawyer's grade is
+                                their practice level, so it is asked once: choosing
+                                one makes the employee a lawyer for everything that
+                                follows - the lawyer's card among their papers, the
+                                level on the employees list. */}
+                            <div className="form-grid mt-6 gap-y-6 border-t pt-6">
+                              <ChoiceField
+                                id="grade"
+                                label="Select Grade"
+                                icon={Scale}
+                                info="A consultant's grade, or a lawyer's practice level."
+                                placeholder="Select grade"
+                                value={formData.grade}
+                                onChange={(value) => {
+                                  const lawyer = LAWYER_GRADES.includes(value);
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    grade: value,
+                                    practiceLevel: lawyer ? value : "",
+                                    occupation: lawyer ? "Lawyer" : value,
+                                  }));
+                                }}
+                                options={GRADE_GROUPS}
+                                required
+                              />
+                            </div>
+
+                            {/* How the firm reaches them at work. */}
+                            <div className="form-grid mt-6 gap-y-6 border-t pt-6">
+                              <PhoneField
+                                id="workPhone"
+                                label="Work Phone Number"
+                                placeholder="Enter work phone number"
+                                dialCode={formData.workDialCode}
+                                onDialCode={(value) => set("workDialCode", value)}
+                                value={formData.workPhone}
+                                onChange={(e) => set("workPhone", e.target.value)}
+                              />
+                              <div className="form-field space-y-2">
+                                <Label htmlFor="workEmail">Work Email</Label>
+                                <Input
+                                  id="workEmail"
+                                  name="workEmail"
+                                  type="email"
+                                  placeholder="name@firm.com"
+                                  value={formData.workEmail}
+                                  onChange={onChange}
+                                  required
+                                />
+                              </div>
+                            </div>
+                          </>
                         )}
-
-                        {/* The grade, on a row of its own. A lawyer's grade is
-                            their practice level, so it is asked once: choosing
-                            one makes the employee a lawyer for everything that
-                            follows - the lawyer's card among their papers, the
-                            level on the employees list. */}
-                        <div className="form-grid mt-6 gap-y-6 border-t pt-6">
-                          <ChoiceField
-                            id="grade"
-                            label="Select Grade"
-                            icon={Scale}
-                            info="A consultant's grade, or a lawyer's practice level."
-                            placeholder="Select grade"
-                            value={formData.grade}
-                            onChange={(value) => {
-                              const lawyer = LAWYER_GRADES.includes(value);
-                              setFormData((prev) => ({
-                                ...prev,
-                                grade: value,
-                                practiceLevel: lawyer ? value : "",
-                                occupation: lawyer ? "Lawyer" : value,
-                              }));
-                            }}
-                            options={GRADE_GROUPS}
-                            required
-                          />
-                        </div>
-
-                        {/* How the firm reaches them at work. */}
-                        <div className="form-grid mt-6 gap-y-6 border-t pt-6">
-                          <PhoneField
-                            id="workPhone"
-                            label="Work Phone Number"
-                            placeholder="Enter work phone number"
-                            dialCode={formData.workDialCode}
-                            onDialCode={(value) => set("workDialCode", value)}
-                            value={formData.workPhone}
-                            onChange={(e) => set("workPhone", e.target.value)}
-                          />
-                          <div className="form-field space-y-2">
-                            <Label htmlFor="workEmail">Work Email</Label>
-                            <Input
-                              id="workEmail"
-                              name="workEmail"
-                              type="email"
-                              placeholder="name@firm.com"
-                              value={formData.workEmail}
-                              onChange={onChange}
-                              required
-                            />
-                          </div>
-                        </div>
                       </section>
                       )}
 
