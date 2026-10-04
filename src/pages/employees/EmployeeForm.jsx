@@ -651,11 +651,7 @@ function NumberedSteps({
                 >
                   {step.label}
                 </span>
-                {/* The bar under the step being filled in. */}
-                <span
-                  aria-hidden="true"
-                  className={cn("h-1 w-full rounded-full", isActive ? "bg-blue-900" : "bg-transparent")}
-                />
+                {/* No bar under the open step: its circle and bold name say it. */}
                 {isDone && <span className="sr-only">(completed)</span>}
               </button>
             </li>
