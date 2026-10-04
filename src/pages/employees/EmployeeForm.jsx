@@ -137,8 +137,9 @@ import ViolationsSection from "./sections/ViolationsSection";
 import EmployeeCircularsSection from "./sections/CircularsSection";
 import LeavesSection from "./sections/LeavesSection";
 import GeneralRequestSection from "./sections/GeneralRequestSection";
-import DocumentIntake from "./sections/DocumentIntake";
-import { intakeType } from "./documentIntake";
+import DocumentIntake, { IntakeReview } from "./sections/DocumentIntake";
+import { INTAKE_FIELDS, fieldElementId, fieldStep, intakeType } from "./documentIntake";
+import { useDocumentIntake } from "./useDocumentIntake";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 import {
   RecordTable,
@@ -151,8 +152,6 @@ import { formatDate } from "@/pages/firm/firmData";
 import {
   employeeRecords,
   employeeDocuments,
-  submitCorrectionRequest,
-  pendingCorrections,
   nextEmployeeNo,
   documentsFor,
   documentTypesFor,
@@ -162,7 +161,6 @@ import {
   documentVersions,
   accessHold,
   documentExpires,
-  hasRelatedRecord,
   relatedExpiry,
   relatedNumber,
 } from "./employeeData";
@@ -176,9 +174,8 @@ import { checkRequired, clearRequiredCheck } from "@/components/shared/formField
  */
 const SECTIONS = [
   {
-    // The whole file in the tabs it was added in, read rather than edited:
-    // a change goes in as a correction request. On a record only - My
-    // Profile keeps its own pages.
+    // The whole file in the tabs it was added in, open to be changed and
+    // saved. On a record only - My Profile keeps its own pages.
     key: "profile",
     label: "Employee Information",
     icon: UserCog,
@@ -515,7 +512,12 @@ const ADD_STEPS = [
  * names, that Add Employee walks through - one part of the file each - so a
  * record reads back in the order it was built.
  */
-const PROFILE_TABS = ADD_STEPS.map((step) => ({ ...step, parts: [step.key] }));
+// The record's tabs are the steps it was added in, less Document Intake -
+// on a record its papers are the Documents tab, kept last.
+const PROFILE_TABS = [
+  ...ADD_STEPS.filter((step) => step.key !== "intake"),
+  { key: "documents", label: "Documents" },
+].map((step) => ({ ...step, parts: [step.key] }));
 
 /** The steps a record with these values is added through, in order. */
 const flowFor = (values) => ADD_STEPS.filter((s) => !s.when || s.when(values));
@@ -597,6 +599,9 @@ function NumberedSteps({
   canOpen = () => true,
   onSelect,
   label = "Add employee steps",
+  // Steps still holding a missing field ("missing") or a value to review
+  // ("review"): a red or amber dot on the step's circle.
+  flags = {},
 }) {
   return (
     <nav
@@ -631,7 +636,7 @@ function NumberedSteps({
               >
                 <span
                   className={cn(
-                    "flex size-9 items-center justify-center rounded-full text-sm font-semibold",
+                    "relative flex size-9 items-center justify-center rounded-full text-sm font-semibold",
                     isDone && !isActive && "bg-green-600 text-white",
                     isActive && "bg-blue-900 text-white",
                     !isDone && !isActive && "bg-slate-200 text-slate-600"
@@ -642,7 +647,21 @@ function NumberedSteps({
                   ) : (
                     index + 1
                   )}
+                  {flags[step.key] && (
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        "absolute -end-0.5 -top-0.5 size-3 rounded-full ring-2 ring-white",
+                        flags[step.key] === "missing" ? "bg-red-600" : "bg-amber-500"
+                      )}
+                    />
+                  )}
                 </span>
+                {flags[step.key] && (
+                  <span className="sr-only">
+                    {flags[step.key] === "missing" ? "(required information missing)" : "(review required)"}
+                  </span>
+                )}
                 <span
                   className={cn(
                     "max-w-32 text-center text-sm leading-tight",
@@ -995,9 +1014,6 @@ const NOTES_LIMIT = 500;
 /** A blank paper: what is asked for before one is filed. */
 const emptyDocument = { category: "", type: "", number: "", expiry: "", notes: "" };
 
-/** Said in place of the upload when the paper's details are not on file yet. */
-const UPLOAD_BLOCKED =
-  "This document cannot be uploaded yet. Please complete the required information first in the relevant section.";
 
 /** The first field of the form a section's header button jumps to. */
 /** Sections where the header button opens a form instead of scrolling to one. */
@@ -1241,12 +1257,8 @@ export default function EmployeeForm({ self }) {
   const [requestsTab, setRequestsTab] = useState(null);
   // What is open under Employee Management: nothing until a card is chosen.
   const [managementTab, setManagementTab] = useState(null);
-  // A correction being written on the open tab, and the record as it stood
-  // when it began - put back whatever the correction's outcome.
-  const [correcting, setCorrecting] = useState(false);
-  const [correctionBase, setCorrectionBase] = useState(null);
-  // Said once a correction has been sent, until the person moves on.
-  const [correctionSent, setCorrectionSent] = useState(false);
+  // Said once Employee Information has been saved, until the person moves on.
+  const [profileSaved, setProfileSaved] = useState(false);
   // Which side of Financial Benefits is open. Held here because the tabs
   // that choose it sit in the section's heading, which this page draws.
   const [benefitsTab, setBenefitsTab] = useState("salaries");
@@ -1261,8 +1273,12 @@ export default function EmployeeForm({ self }) {
   // This person's papers, not every paper in the firm.
   const [documents, setDocuments] = useState(() => documentsFor(record?.id));
   const [docDraft, setDocDraft] = useState(emptyDocument);
-  // The papers uploaded on Document Intake while a new employee is added.
-  const [intakeDocs, setIntakeDocs] = useState([]);
+  // The papers uploaded on Document Intake while a new employee is added, and
+  // every value they filled with its source, confidence and review status.
+  const intake = useDocumentIntake(formData, setFormData);
+  // Set once the last step's Save has been tried with fields still missing:
+  // from then on the gaps are marked even without papers to read.
+  const [finalTried, setFinalTried] = useState(false);
   const [docFile, setDocFile] = useState(null);
   // The page is the list of documents until someone asks to add to it.
   const [addingDoc, setAddingDoc] = useState(false);
@@ -1305,13 +1321,13 @@ export default function EmployeeForm({ self }) {
     setDocuments(documentsFor(record?.id));
     setActiveSection(opensOn(location.state));
     setProfileTab(location.state?.tab || "personal");
-    setCorrecting(false);
-    setCorrectionSent(false);
+    setProfileSaved(false);
     // Nothing of an earlier employee being added carries over to the next.
     setStep(ADD_STEPS[0].key);
     setSavedSteps([]);
     setSaved({});
-    setIntakeDocs([]);
+    intake.reset();
+    setFinalTried(false);
     closeDocForm();
   }
 
@@ -1477,9 +1493,8 @@ export default function EmployeeForm({ self }) {
   const typesInCategory = docTypes.filter(
     (type) => documentCategory(type) === docDraft.category
   );
-  // A paper whose details are not on file yet cannot be uploaded.
-  const uploadBlocked =
-    Boolean(docDraft.type) && !hasRelatedRecord(docDraft.type, filedDetails);
+  // Papers are uploaded whenever they are to hand - before the details they
+  // carry are on the record, which is what Document Intake is for.
 
   const set = (name, value) => setFormData((prev) => ({ ...prev, [name]: value }));
   const onChange = (e) => set(e.target.name, e.target.value);
@@ -1530,8 +1545,6 @@ export default function EmployeeForm({ self }) {
   // Where a record has Employee Management, what it opens is left out of
   // the sidebar's other sections.
   const hasManagement = sections.some((s) => s.key === "management");
-  // On Employee Information the fields are only read, until a correction is begun.
-  const profileLocked = isProfile && !correcting;
   // Which papers apply: while adding, from what was saved on the steps before;
   // on a record, from the record. Older records say a lawyer by role.
   const paperFacts = isProfile ? formData : saved;
@@ -1570,6 +1583,19 @@ export default function EmployeeForm({ self }) {
       // What the list shows a person as doing.
       designation: formData.occupation,
       role: formData.occupation,
+      // Where each value came from: Value | Source Document | Confidence |
+      // Review Status.
+      fieldSources: Object.fromEntries(
+        Object.entries(intake.meta).map(([key, entry]) => [
+          key,
+          {
+            value: formData[key],
+            source: entry.source,
+            confidence: entry.confidence,
+            status: entry.status,
+          },
+        ])
+      ),
     });
     let docId = employeeDocuments.reduce((max, d) => Math.max(max, d.id), 0);
     documents.forEach((document) => {
@@ -1577,7 +1603,9 @@ export default function EmployeeForm({ self }) {
       employeeDocuments.push({ ...document, id: docId, employeeId: newId });
     });
     // The papers from Document Intake, filed under what each kind is kept as.
-    intakeDocs.forEach((doc) => {
+    intake.docs
+      .filter((doc) => doc.status !== "failed")
+      .forEach((doc) => {
       docId += 1;
       employeeDocuments.push({
         id: docId,
@@ -1626,17 +1654,31 @@ export default function EmployeeForm({ self }) {
     return true;
   };
 
+  /**
+   * Saves the step on screen and opens the next one.
+   *
+   * While the employee is a draft, a missing field does not hold anybody on a
+   * step - only a value in the wrong shape does. Every required field is
+   * demanded once, on the last step's Save, which completes the profile; if
+   * any is missing it opens the first step with a gap, and every step with
+   * one is marked on the bar.
+   */
   const saveStep = () => {
-    if (!fieldsOnScreenValid()) return;
+    if (!fieldsOnScreenValid({ requireAll: false })) return;
     console.log("Saving " + step + ":", { ...toRecord(formData), empNo: employeeNo });
     setSavedSteps((prev) => (prev.includes(step) ? prev : [...prev, step]));
     setSaved(formData);
 
     const flow = flowFor(formData);
     const next = flow[flow.findIndex((s) => s.key === step) + 1];
-    // The last section asked for is the end: the record is made, with its
-    // papers, and opened.
     if (!next) {
+      if (intake.missingKeys.length) {
+        setFinalTried(true);
+        setStep(fieldStep(intake.missingKeys[0]));
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+      // Complete: the record is made, with its papers, and opened.
       finishEmployee();
       return;
     }
@@ -1660,9 +1702,40 @@ export default function EmployeeForm({ self }) {
   const savedFlow = flowFor(saved);
   // The section before this one, to go back to without losing anything.
   const previousStep = savedFlow[savedFlow.findIndex((s) => s.key === step) - 1];
-  // A tab opens once it has been saved or is the one being filled in; the
-  // papers can be gone back to at any time.
-  const canOpen = (key) => savedSteps.includes(key) || key === step || key === "intake";
+  // A draft can be moved through freely: every step opens at any time.
+  const canOpen = () => true;
+
+  // What the papers left to do, marked once there is something to mark: after
+  // the papers are read, or once completing has been tried.
+  const marking = isAdding && (intake.settled || finalTried);
+  const missingMarks = marking ? intake.missingKeys : [];
+  const reviewMarks = marking ? intake.reviewKeys.filter((key) => !missingMarks.includes(key)) : [];
+  // Which steps still hold a gap, or a value to review - shown on the bar.
+  const stepFlags = {};
+  reviewMarks.forEach((key) => (stepFlags[fieldStep(key)] = "review"));
+  missingMarks.forEach((key) => (stepFlags[fieldStep(key)] = "missing"));
+  // The fields themselves: a red border and "Required information missing",
+  // or an amber one and "Review required". A stylesheet keyed to the fields'
+  // ids, so every kind of control on every step is marked the same way.
+  const markRule = (keys, colour, words) =>
+    keys
+      .map((key) => {
+        const field = `#employee-form .form-field:has(#${fieldElementId(key)})`;
+        return (
+          `${field} :is(input, textarea, button[role="combobox"], .rounded-field){border-color:${colour}}` +
+          `${field}::after{content:"${words}";display:block;margin-top:4px;font-size:12px;color:${colour}}`
+        );
+      })
+      .join("");
+  const fieldMarkCss =
+    markRule(missingMarks, "#dc2626", "Required information missing") +
+    markRule(reviewMarks, "#d97706", "Review required");
+  // The values on the open step that still wait on a person.
+  const reviewHere = marking
+    ? reviewMarks
+        .filter((key) => fieldStep(key) === step)
+        .map((key) => ({ key, label: INTAKE_FIELDS[key]?.label || key, entry: intake.meta[key] }))
+    : [];
 
   // The month's pay, worked out from its parts rather than typed, so the
   // totals can never disagree with the lines they add up.
@@ -1685,53 +1758,34 @@ export default function EmployeeForm({ self }) {
   const spEmployee = Number(formData.salary || 0) * SPF_EMPLOYEE_RATE;
   const spEmployer = Number(formData.salary || 0) * SPF_EMPLOYER_RATE;
 
-  /* ------------------------------------------------ correction requests */
+  /* ------------------------------------------- editing Employee Information */
 
-  /** Opens the fields of the tab on screen to be corrected. */
-  const beginCorrection = () => {
-    setCorrectionBase(formData);
-    setCorrecting(true);
-    setCorrectionSent(false);
-  };
-
-  /** Leaves the correction, putting every field back as it was. */
-  const cancelCorrection = () => {
-    if (correctionBase) setFormData(correctionBase);
-    setCorrecting(false);
+  /** Puts every field back as the record last saved it. */
+  const cancelProfileEdit = () => {
+    setFormData(toFormData(record));
+    setProfileSaved(false);
     clearRequiredCheck();
   };
 
   /**
-   * Sends what was changed as a request, and leaves the record as it was.
+   * Saves the record as it is now on screen.
    *
-   * A correction is asked for, not made: the employee's details change only
-   * once somebody approves it, so the fields go back to the values on record
-   * and the page says the request is waiting.
+   * What was typed has to be in the right shape; what was left empty is not
+   * demanded - many records predate fields the form now asks for, and a change
+   * to one of them should not have to complete all the others.
    */
-  const submitCorrection = () => {
-    // What was typed has to be in the right shape; what was left empty is
-    // not demanded - many records predate fields the form now asks for, and a
-    // correction to one of them should not have to complete all the others.
+  const saveProfile = () => {
     if (!fieldsOnScreenValid({ requireAll: false })) return;
-    const changes = Object.keys(formData)
-      .filter((key) => String(formData[key] ?? "") !== String(correctionBase?.[key] ?? ""))
-      .map((key) => ({ field: key, from: correctionBase?.[key] ?? "", to: formData[key] }));
-    if (changes.length) {
-      submitCorrectionRequest({
-        employeeId: record.id,
-        section: profileTabLabel,
-        changes,
-      });
-    }
-    setFormData(correctionBase);
-    setCorrecting(false);
-    setCorrectionSent(changes.length > 0 ? "sent" : "nothing");
+    Object.assign(record, toRecord(formData), {
+      designation: formData.occupation || record.designation,
+      role: formData.occupation || record.role,
+    });
+    setProfileSaved(true);
   };
 
-  /** Moving to another tab leaves a correction that was not sent. */
+  /** Moving to another tab keeps what was typed; the save note goes. */
   const openProfileTab = (key) => {
-    if (correcting) cancelCorrection();
-    setCorrectionSent(false);
+    setProfileSaved(false);
     setProfileTab(key);
   };
 
@@ -1756,10 +1810,9 @@ export default function EmployeeForm({ self }) {
     setRequestsTab(null);
   };
 
-  /** Moving to another side of the file leaves a correction that was not sent. */
+  /** Moving to another side of the file. */
   const selectSection = (key) => {
-    if (correcting) cancelCorrection();
-    setCorrectionSent(false);
+    setProfileSaved(false);
     // Requests opens on the request last chosen there, at its own tab.
     if (key === "requests" && requestItem) chooseRequest(requestItem);
     setActiveSection(key);
@@ -1768,27 +1821,17 @@ export default function EmployeeForm({ self }) {
   // Employee Information's tabs: the ones that apply to this record, as when
   // it was added - Social Protection only for somebody registered.
   const profileSteps = PROFILE_TABS.filter((s) => !s.when || s.when(formData));
-  const profileTabLabel = PROFILE_TABS.find((s) => s.key === profileTab)?.label || profileTab;
-  // Corrections already asked for on this tab, still waiting to be decided.
-  const pendingHere = isProfile ? pendingCorrections(record.id, profileTabLabel).length : 0;
 
-  // The way into a correction, at the head of every tab but Documents.
-  const correctionButton = isProfile && !correcting && (
-    <Button type="button" variant="outline" onClick={beginCorrection}>
-      <Pencil className="me-2 h-4 w-4" />
-      Correction Request
-    </Button>
-  );
-
-  // Cancel and Submit while a correction is being written.
-  const correctionActions = isProfile && correcting && (
+  // The fields of Employee Information are open to change; Cancel and Save
+  // at the foot of each tab.
+  const profileActions = isProfile && (
     <div className="flex items-center justify-end gap-3">
-      <Button type="button" variant="ghost" onClick={cancelCorrection}>
+      <Button type="button" variant="ghost" onClick={cancelProfileEdit}>
         Cancel
       </Button>
-      <Button type="button" onClick={submitCorrection}>
+      <Button type="button" onClick={saveProfile}>
         <Save className="me-2 h-4 w-4" />
-        Submit Request
+        Save
       </Button>
     </div>
   );
@@ -1996,22 +2039,9 @@ export default function EmployeeForm({ self }) {
                   .map((s) => s.key)}
                 onSelect={openProfileTab}
               />
-              {/* What became of the last correction, and what is still waiting. */}
-              {correctionSent === "sent" && (
-                <p role="status" className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-                  Correction request submitted. The record stays as it is until the
-                  request is approved.
-                </p>
-              )}
-              {correctionSent === "nothing" && (
-                <p role="status" className="text-sm text-primary/75">
-                  Nothing was changed, so no request was sent.
-                </p>
-              )}
-              {pendingHere > 0 && correctionSent !== "sent" && (
-                <p className="text-sm font-medium text-amber-700">
-                  {pendingHere} correction request{pendingHere === 1 ? "" : "s"} pending
-                  approval for this section.
+              {profileSaved && (
+                <p role="status" className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+                  Changes saved.
                 </p>
               )}
             </div>
@@ -2197,9 +2227,10 @@ export default function EmployeeForm({ self }) {
               <NumberedSteps
                 steps={shownSteps}
                 active={step}
-                done={savedSteps}
+                done={savedSteps.filter((key) => !stepFlags[key])}
                 canOpen={canOpen}
                 onSelect={setStep}
+                flags={stepFlags}
               />
               {/* What the step asks for, where the step says it; otherwise,
                   once there is a draft, that it is saved a section at a time. */}
@@ -2208,6 +2239,16 @@ export default function EmployeeForm({ self }) {
                   {currentStep.hint || DRAFT_NOTE}
                 </p>
               )}
+              {/* Completing was tried with gaps: said once, over the bar
+                  that shows where they are. */}
+              {finalTried && missingMarks.length > 0 && (
+                <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                  {missingMarks.length} required field{missingMarks.length === 1 ? " is" : "s are"} still
+                  missing. Complete the steps marked in red to save the employee.
+                </p>
+              )}
+              {fieldMarkCss && <style>{fieldMarkCss}</style>}
+              <IntakeReview items={reviewHere} onConfirm={intake.confirm} />
             </div>
           )}
           {/* On the merged page the three boxes are the frame, so the
@@ -2259,18 +2300,7 @@ export default function EmployeeForm({ self }) {
                 {/* Step one of adding: the papers, read into the profile. */}
                 {shows("intake") && (
                   <DocumentIntake
-                    documents={intakeDocs}
-                    onDocuments={setIntakeDocs}
-                    employee={formData}
-                    // Only into fields still empty: what was typed stays.
-                    onFill={(values) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        ...Object.fromEntries(
-                          Object.entries(values).filter(([key]) => !prev[key])
-                        ),
-                      }))
-                    }
+                    intake={intake}
                     onContinue={continueFromIntake}
                     onCancel={() => navigate("/employees")}
                   />
@@ -2287,9 +2317,7 @@ export default function EmployeeForm({ self }) {
                         ? "View the employee's personal information."
                         : undefined
                   }
-                  aside={correctionButton}
-                  footer={isAdding ? stepActions : correctionActions}
-                  locked={profileLocked}
+                  footer={isAdding ? stepActions : profileActions}
                 >
                   {/* Four to a row, in the order the person is described:
                       name, birth and sex; then nationality and the papers it
@@ -2880,9 +2908,7 @@ export default function EmployeeForm({ self }) {
                         ? "Contract Details"
                         : ADD_STEPS.find((s) => s.key === tab)?.label
                     }
-                    aside={correctionButton}
-                    footer={correctionActions}
-                    locked={profileLocked}
+                    footer={profileActions}
                   >
                     <div className="space-y-6">
                       {shows("employment") && (
@@ -3212,9 +3238,7 @@ export default function EmployeeForm({ self }) {
                 {shows("identity") && (
                   <SectionCard
                     title="Identity & Immigration"
-                    aside={correctionButton}
-                    footer={isAdding ? stepActions : correctionActions}
-                    locked={profileLocked}
+                    footer={isAdding ? stepActions : profileActions}
                   >
                     <div className="form-grid gap-y-6">
                       <PaperFields
@@ -3277,9 +3301,7 @@ export default function EmployeeForm({ self }) {
                     <SectionCard
                       title={isAdding ? "Payroll Information" : "Salary Information"}
                       icon={Wallet}
-                      aside={correctionButton}
-                      footer={isAdding ? stepActions : correctionActions}
-                      locked={profileLocked}
+                      footer={isAdding ? stepActions : profileActions}
                     >
                       {/* The first payroll this pay goes into, worked out from
                           the lines below as they are typed. An estimate: the
@@ -3372,16 +3394,12 @@ export default function EmployeeForm({ self }) {
                     </SectionCard>
                     )}
 
-                    {/* Where it is paid to: Banking Information. A correction
-                        to pay covers both boxes, so it is sent from under
-                        this, the last of them. */}
+                    {/* Where it is paid to: Banking Information. */}
                     {shows("banking") && (
                     <SectionCard
                       title="Bank Information"
                       icon={Landmark}
-                      aside={!isAdding && correctionButton}
-                      footer={isAdding ? stepActions : correctionActions}
-                      locked={profileLocked}
+                      footer={isAdding ? stepActions : profileActions}
                     >
                       {/* Four to a row, all asked for. No account holder's
                           name: the account is the employee's own. */}
@@ -3457,9 +3475,7 @@ export default function EmployeeForm({ self }) {
                   <SectionCard
                     title={isAdding ? "Social Protection Information" : "Social Protection Registration"}
                     icon={ShieldCheck}
-                    aside={correctionButton}
-                    footer={isAdding ? stepActions : correctionActions}
-                    locked={profileLocked}
+                    footer={isAdding ? stepActions : profileActions}
                   >
                     <div className="form-grid gap-y-6">
                       <div className="form-field space-y-2">
@@ -3619,11 +3635,11 @@ export default function EmployeeForm({ self }) {
                                     variant="ghost"
                                     size="icon"
                                     className="shrink-0 text-primary [&_svg]:size-6"
-                                    disabled={!docDraft.type || uploadBlocked}
+                                    disabled={!docDraft.type}
                                     title="Upload document"
-                                    asChild={Boolean(docDraft.type) && !uploadBlocked}
+                                    asChild={Boolean(docDraft.type)}
                                   >
-                                    {docDraft.type && !uploadBlocked ? (
+                                    {docDraft.type ? (
                                       <label className="cursor-pointer">
                                         <CloudUpload aria-hidden="true" />
                                         <span className="sr-only">Upload document</span>
@@ -3653,11 +3669,6 @@ export default function EmployeeForm({ self }) {
                                     )}
                                   </Button>
                                 </div>
-                                {uploadBlocked && (
-                                  <p role="alert" className="text-xs text-destructive">
-                                    {UPLOAD_BLOCKED}
-                                  </p>
-                                )}
                                 {docFile && (
                                   <span className="inline-flex max-w-full items-center gap-2 rounded-md border border-green-200 bg-green-50 px-2.5 py-1.5 text-sm text-primary">
                                     <FileText className="size-4 shrink-0" aria-hidden="true" />
@@ -3669,7 +3680,7 @@ export default function EmployeeForm({ self }) {
                                   </span>
                                 )}
 
-                            {docTried && docDraft.type && !uploadBlocked && !docFile && (
+                            {docTried && docDraft.type && !docFile && (
                                   <p className="text-xs text-destructive">
                                     Upload the document to save it.
                                   </p>

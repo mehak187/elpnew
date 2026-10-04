@@ -6,7 +6,9 @@ import { formatDate } from "@/pages/firm/firmData";
 import {
   ArrowRight,
   Check,
+  ChevronDown,
   CircleAlert,
+  CircleX,
   CloudUpload,
   Eye,
   File,
@@ -26,14 +28,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import {
-  INTAKE_ACCEPT,
-  INTAKE_TYPES,
-  PROFILE_REQUIRED,
-  extractDemo,
-  intakeFileProblem,
-  intakeType,
-} from "../documentIntake";
+import { INTAKE_ACCEPT, INTAKE_TYPES, intakeFileProblem, intakeType } from "../documentIntake";
 
 /** Each kind's mark and colour, on its tile and its chip in the table. */
 const LOOK = {
@@ -47,30 +42,84 @@ const LOOK = {
   other: { icon: File, tile: "bg-slate-100 text-slate-600", chip: "bg-slate-100 text-slate-700" },
 };
 
-// How long the demo takes to "read" a paper, so the step shows it working.
-const READ_MS = 900;
+/** How each standing of a paper reads in the table. */
+function DocumentStatus({ status }) {
+  if (status === "processing")
+    return (
+      <span className="flex items-center gap-2 font-medium text-blue-700">
+        <Loader2 className="size-5 animate-spin" aria-hidden="true" />
+        Processing
+      </span>
+    );
+  if (status === "review")
+    return (
+      <span className="flex items-center gap-2 font-medium text-amber-600">
+        <TriangleAlert className="size-5 fill-amber-500 text-white" aria-hidden="true" />
+        Review Required
+      </span>
+    );
+  if (status === "failed")
+    return (
+      <span className="flex items-center gap-2 font-medium text-red-700">
+        <CircleX className="size-5 fill-red-600 text-white" aria-hidden="true" />
+        Failed
+      </span>
+    );
+  return (
+    <span className="flex items-center gap-2 font-medium text-green-700">
+      <span className="flex size-5 items-center justify-center rounded-full bg-green-600 text-white">
+        <Check className="size-3.5" aria-hidden="true" />
+      </span>
+      Processed
+    </span>
+  );
+}
+
+/** A small icon button on a row of the table. */
+function RowAction({ label, onClick, danger, children }) {
+  return (
+    <button
+      type="button"
+      title={label}
+      onClick={onClick}
+      className={cn(
+        "rounded-md p-1.5 text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        danger ? "hover:bg-red-50 hover:text-destructive" : "hover:bg-menu-hover"
+      )}
+    >
+      {children}
+      <span className="sr-only">{label}</span>
+    </button>
+  );
+}
 
 /**
  * Step one of Add Employee: the papers first, and the profile filled in from
  * them.
  *
- * A paper is added under the tile for its kind. Once read, whatever it says
- * is written into the profile's empty fields - never over something already
- * there - and the table says what was found and whether anything needs a
- * person to look at it. The steps after this one are then mostly checking.
+ * Papers can be dropped several at once without saying what they are: each
+ * is classified, read, mapped onto the profile and checked against the
+ * others, and the draft is filled. A tile's + uploads a paper already known
+ * to be of that kind. A kind guessed wrong is put right in the table, and the
+ * paper is read again as that kind.
  */
-export default function DocumentIntake({ documents, onDocuments, employee, onFill, onContinue, onCancel }) {
-  // The kind being uploaded, while the upload panel is open.
+export default function DocumentIntake({ intake, onContinue, onCancel }) {
+  const { docs, busy, summary } = intake;
+  // The upload panel: closed, open for any paper (""), or for one kind.
   const [uploading, setUploading] = useState(null);
   const [problem, setProblem] = useState("");
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef(null);
   const panelRef = useRef(null);
+  // The row whose paper is being replaced, while its file is chosen.
+  const replaceRef = useRef(null);
+  const replacing = useRef(null);
+  const open = uploading !== null;
 
   // The upload panel closes on a click anywhere outside it, or on Escape.
   // A click on another tile closes it here and opens it again for that kind.
   useEffect(() => {
-    if (!uploading) return;
+    if (!open) return;
     const close = () => {
       setUploading(null);
       setProblem("");
@@ -86,78 +135,7 @@ export default function DocumentIntake({ documents, onDocuments, employee, onFil
       document.removeEventListener("mousedown", onPointer);
       document.removeEventListener("keydown", onKey);
     };
-  }, [uploading]);
-  // Counted on from the papers already on the list, so each keeps its own id.
-  const nextId = useRef(documents.reduce((max, d) => Math.max(max, d.id), 0));
-
-  /**
-   * Reads a paper against the profile as it stands in `base`: what it says
-   * goes into the fields still empty there, and `base` is brought up to date,
-   * so the next paper read with it does not count the same field again.
-   */
-  const read = (doc, base, fills) => {
-    const result = extractDemo(doc.typeKey);
-    const filled = Object.keys(result.values).filter((key) => !base[key]);
-    filled.forEach((key) => {
-      base[key] = result.values[key];
-      fills[key] = result.values[key];
-    });
-    return {
-      number: result.number,
-      expiry: result.expiry,
-      review: result.review,
-      filled: filled.length,
-      status: result.review ? "review" : "processed",
-    };
-  };
-
-  const add = (file) => {
-    const wrong = intakeFileProblem(file);
-    if (wrong) {
-      setProblem(wrong);
-      return;
-    }
-    nextId.current += 1;
-    const doc = {
-      id: nextId.current,
-      typeKey: uploading,
-      fileName: file.name,
-      fileUrl: URL.createObjectURL(file),
-      status: "processing",
-      filled: 0,
-      review: 0,
-    };
-    onDocuments((prev) => [...prev, doc]);
-    closePanel();
-    setTimeout(() => {
-      const fills = {};
-      const result = read(doc, { ...employee }, fills);
-      onFill(fills);
-      onDocuments((prev) => prev.map((d) => (d.id === doc.id ? { ...d, ...result } : d)));
-    }, READ_MS);
-  };
-
-  /** Reads every paper again, filling whatever has since been emptied. */
-  const reprocess = () => {
-    const papers = documents;
-    onDocuments((prev) => prev.map((d) => ({ ...d, status: "processing" })));
-    setTimeout(() => {
-      const base = { ...employee };
-      const fills = {};
-      const results = Object.fromEntries(papers.map((d) => [d.id, read(d, base, fills)]));
-      onFill(fills);
-      // What a paper filled before still counts; anything newly filled adds.
-      onDocuments((prev) =>
-        prev.map((d) =>
-          results[d.id]
-            ? { ...d, ...results[d.id], filled: (d.filled || 0) + results[d.id].filled }
-            : d
-        )
-      );
-    }, READ_MS);
-  };
-
-  const remove = (id) => onDocuments((prev) => prev.filter((d) => d.id !== id));
+  }, [open]);
 
   const openPanel = (typeKey) => {
     setUploading(typeKey);
@@ -169,33 +147,40 @@ export default function DocumentIntake({ documents, onDocuments, employee, onFil
     setDragging(false);
   };
 
-  // The summary under the table.
-  const done = documents.filter((d) => d.status === "processed").length;
-  const filledCount = documents.reduce((sum, d) => sum + (d.filled || 0), 0);
-  const reviewCount = documents.reduce(
-    (sum, d) => sum + (d.status === "review" ? d.review || 0 : 0),
-    0
-  );
-  const missingCount = PROFILE_REQUIRED.filter((key) => !employee[key]).length;
-  const busy = documents.some((d) => d.status === "processing");
+  /** Every file that can be taken is; the rest are named and why. */
+  const take = (fileList) => {
+    const files = [...fileList];
+    const wrong = files.map(intakeFileProblem).filter(Boolean);
+    const good = files.filter((file) => !intakeFileProblem(file));
+    if (good.length) intake.upload(good, uploading || null);
+    if (wrong.length) setProblem(wrong.join(" "));
+    else closePanel();
+  };
+
+  const kind = uploading ? intakeType(uploading)?.label : "";
 
   return (
     <Card>
       <CardContent className="relative p-4 sm:p-6">
-        {/* The step's head, as every step of Add Employee has it. */}
-        <div className="mb-6 flex items-center gap-3 border-b pb-4">
+        {/* The step's head, as every step of Add Employee has it, with the
+            way to upload any paper without saying first what it is. */}
+        <div className="mb-6 flex flex-wrap items-center gap-3 border-b pb-4">
           <span aria-hidden="true" className="w-1 self-stretch rounded-full bg-primary" />
           <FileText strokeWidth={1.5} aria-hidden="true" className="size-8 shrink-0 text-primary" />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h2 className="text-xl font-bold text-primary">Document Intake</h2>
             <p className="text-sm text-primary/75">
               Upload employee documents. SADEED will classify them, extract the
               information and automatically fill the employee profile.
             </p>
           </div>
+          <Button type="button" variant="outline" onClick={() => openPanel("")}>
+            <Upload className="me-2 h-4 w-4" aria-hidden="true" />
+            Upload Documents
+          </Button>
         </div>
 
-        {/* One tile per kind of paper; the + under it adds one. */}
+        {/* One tile per kind of paper; the + under it adds one of that kind. */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
           {INTAKE_TYPES.map((type) => {
             const look = LOOK[type.key];
@@ -231,19 +216,19 @@ export default function DocumentIntake({ documents, onDocuments, employee, onFil
           })}
         </div>
 
-        {/* Where the paper is dropped or chosen, over the tiles' right side. */}
-        {uploading && (
+        {/* Where papers are dropped or chosen, over the tiles' right side. */}
+        {open && (
           <div
             ref={panelRef}
             role="dialog"
-            aria-label={"Upload " + intakeType(uploading)?.label}
+            aria-label="Upload Documents"
             className="absolute end-4 top-4 z-20 w-[calc(100%-2rem)] space-y-4 rounded-xl border bg-card p-5 shadow-xl sm:end-6 sm:top-6 sm:w-md"
           >
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-lg font-bold text-primary">
                 Upload Document
                 <span className="ms-2 rounded-md bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">
-                  {intakeType(uploading)?.label}
+                  {kind || "Type detected automatically"}
                 </span>
               </h3>
               <button
@@ -264,8 +249,7 @@ export default function DocumentIntake({ documents, onDocuments, employee, onFil
               onDrop={(e) => {
                 e.preventDefault();
                 setDragging(false);
-                const file = e.dataTransfer.files?.[0];
-                if (file) add(file);
+                if (e.dataTransfer.files?.length) take(e.dataTransfer.files);
               }}
               onClick={() => inputRef.current?.click()}
               className={cn(
@@ -276,8 +260,8 @@ export default function DocumentIntake({ documents, onDocuments, employee, onFil
               <span className="flex size-14 items-center justify-center rounded-full bg-blue-100 text-blue-700">
                 <CloudUpload className="size-7" aria-hidden="true" />
               </span>
-              <p className="font-semibold text-primary">Drag &amp; drop your file here</p>
-              <p className="text-sm text-primary/75">or click to browse</p>
+              <p className="font-semibold text-primary">Drag &amp; drop your files here</p>
+              <p className="text-sm text-primary/75">or click to browse - several at once</p>
               <Button
                 type="button"
                 variant="outline"
@@ -296,12 +280,13 @@ export default function DocumentIntake({ documents, onDocuments, employee, onFil
               <input
                 ref={inputRef}
                 type="file"
+                multiple
                 accept={INTAKE_ACCEPT}
                 className="hidden"
                 onChange={(e) => {
-                  const file = e.target.files?.[0];
+                  const files = e.target.files;
+                  if (files?.length) take(files);
                   e.target.value = "";
-                  if (file) add(file);
                 }}
               />
             </div>
@@ -318,14 +303,31 @@ export default function DocumentIntake({ documents, onDocuments, employee, onFil
           </div>
         )}
 
+        {/* The file that replaces a row's paper, chosen from the row. */}
+        <input
+          ref={replaceRef}
+          type="file"
+          accept={INTAKE_ACCEPT}
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (file && replacing.current && !intakeFileProblem(file)) {
+              intake.replace(replacing.current, file);
+            }
+            replacing.current = null;
+          }}
+        />
+
         {/* What has been uploaded, and what was read from each. */}
         <section className="mt-6 overflow-hidden rounded-xl border">
           <h3 className="px-4 py-3 font-bold text-primary">
-            Uploaded Documents ({documents.length})
+            Uploaded Documents ({docs.length})
           </h3>
-          {documents.length === 0 ? (
+          {docs.length === 0 ? (
             <p className="border-t px-4 py-8 text-center text-sm text-muted-foreground">
-              No documents uploaded yet. Choose a document type above to start.
+              No documents uploaded yet. Upload them all at once, or choose a
+              document type above.
             </p>
           ) : (
             <div className="overflow-x-auto">
@@ -343,65 +345,74 @@ export default function DocumentIntake({ documents, onDocuments, employee, onFil
                   </tr>
                 </thead>
                 <tbody>
-                  {documents.map((doc) => {
-                    const type = intakeType(doc.typeKey);
-                    return (
-                      <tr key={doc.id} className="border-t">
-                        <td className="px-4 py-2.5 text-primary">{doc.fileName}</td>
-                        <td className="px-4 py-2.5">
-                          <span className={cn("rounded-md px-2 py-1 text-xs font-medium", LOOK[doc.typeKey].chip)}>
-                            {type?.label}
+                  {docs.map((doc) => (
+                    <tr key={doc.id} className="border-t">
+                      <td className="px-4 py-2.5 text-primary">{doc.fileName}</td>
+                      <td className="px-4 py-2.5">
+                        {/* The kind as classified, open to be put right. */}
+                        {doc.typeKey ? (
+                          <span className="relative inline-flex items-center">
+                            <select
+                              aria-label={"Document type of " + doc.fileName}
+                              value={doc.typeKey}
+                              disabled={doc.status === "processing"}
+                              onChange={(e) => intake.retype(doc.id, e.target.value)}
+                              className={cn(
+                                "cursor-pointer appearance-none rounded-md py-1 ps-2 pe-6 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                LOOK[doc.typeKey].chip
+                              )}
+                            >
+                              {INTAKE_TYPES.map((type) => (
+                                <option key={type.key} value={type.key}>
+                                  {type.label}
+                                </option>
+                              ))}
+                            </select>
+                            <ChevronDown
+                              aria-hidden="true"
+                              className="pointer-events-none absolute end-1.5 size-3.5 text-current opacity-70"
+                            />
                           </span>
-                        </td>
-                        <td className="px-4 py-2.5 text-primary">{doc.number || "-"}</td>
-                        <td className="px-4 py-2.5 text-primary">
-                          {doc.expiry ? formatDate(doc.expiry) : "-"}
-                        </td>
-                        <td className="px-4 py-2.5">
-                          {doc.status === "processing" ? (
-                            <span className="flex items-center gap-2 font-medium text-blue-700">
-                              <Loader2 className="size-5 animate-spin" aria-hidden="true" />
-                              Processing
-                            </span>
-                          ) : doc.status === "review" ? (
-                            <span className="flex items-center gap-2 font-medium text-amber-600">
-                              <TriangleAlert className="size-5 fill-amber-500 text-white" aria-hidden="true" />
-                              Review Required
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-2 font-medium text-green-700">
-                              <span className="flex size-5 items-center justify-center rounded-full bg-green-600 text-white">
-                                <Check className="size-3.5" aria-hidden="true" />
-                              </span>
-                              Processed
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <div className="flex justify-end gap-1">
-                            <button
-                              type="button"
-                              title={"View " + doc.fileName}
-                              onClick={() => window.open(doc.fileUrl, "_blank", "noopener,noreferrer")}
-                              className="rounded-md p-1.5 text-primary hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            >
-                              <Eye className="size-4" aria-hidden="true" />
-                              <span className="sr-only">View {doc.fileName}</span>
-                            </button>
-                            <button
-                              type="button"
-                              title={"Remove " + doc.fileName}
-                              onClick={() => remove(doc.id)}
-                              className="rounded-md p-1.5 text-primary hover:bg-red-50 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            >
-                              <Trash2 className="size-4" aria-hidden="true" />
-                              <span className="sr-only">Remove {doc.fileName}</span>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Classifying...</span>
+                        )}
+                        {doc.qualification && (
+                          <span className="mt-1 block text-xs text-primary/75">
+                            {doc.qualification.degree} · {doc.qualification.institution}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 text-primary">{doc.number || "-"}</td>
+                      <td className="px-4 py-2.5 text-primary">
+                        {doc.expiry ? formatDate(doc.expiry) : "-"}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <DocumentStatus status={doc.status} />
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <div className="flex justify-end gap-1">
+                          <RowAction
+                            label={"View " + doc.fileName}
+                            onClick={() => window.open(doc.fileUrl, "_blank", "noopener,noreferrer")}
+                          >
+                            <Eye className="size-4" aria-hidden="true" />
+                          </RowAction>
+                          <RowAction
+                            label={"Replace " + doc.fileName}
+                            onClick={() => {
+                              replacing.current = doc.id;
+                              replaceRef.current?.click();
+                            }}
+                          >
+                            <Upload className="size-4" aria-hidden="true" />
+                          </RowAction>
+                          <RowAction label={"Delete " + doc.fileName} onClick={() => intake.remove(doc.id)} danger>
+                            <Trash2 className="size-4" aria-hidden="true" />
+                          </RowAction>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -409,18 +420,18 @@ export default function DocumentIntake({ documents, onDocuments, employee, onFil
         </section>
 
         {/* What the papers have done for the profile so far. */}
-        {documents.length > 0 && (
+        {docs.length > 0 && (
           <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3 rounded-xl border border-green-100 bg-green-50/40 px-4 py-3">
             <p className="flex items-center gap-2 font-semibold text-green-700">
               <span className="flex size-7 items-center justify-center rounded-full bg-green-600 text-white">
                 <Check className="size-4" aria-hidden="true" />
               </span>
-              {done} of {documents.length} documents processed successfully
+              {summary.processed} of {summary.total} Documents Processed
             </p>
             {[
-              { icon: FileText, tone: "text-blue-600", value: filledCount, label: "Fields filled automatically" },
-              { icon: TriangleAlert, tone: "text-amber-500", value: reviewCount, label: "Fields need review" },
-              { icon: CircleAlert, tone: "text-red-600", value: missingCount, label: "Fields still missing" },
+              { icon: FileText, tone: "text-blue-600", value: summary.autoFilled, label: "Fields Auto-filled" },
+              { icon: TriangleAlert, tone: "text-amber-500", value: summary.review, label: "Fields Need Review" },
+              { icon: CircleAlert, tone: "text-red-600", value: summary.missing, label: "Required Fields Missing" },
             ].map((fact) => {
               const Icon = fact.icon;
               return (
@@ -433,7 +444,7 @@ export default function DocumentIntake({ documents, onDocuments, employee, onFil
                 </div>
               );
             })}
-            <Button type="button" variant="outline" className="ms-auto" onClick={reprocess} disabled={busy}>
+            <Button type="button" variant="outline" className="ms-auto" onClick={intake.reprocess} disabled={busy}>
               <RefreshCw className={cn("me-2 h-4 w-4", busy && "animate-spin")} aria-hidden="true" />
               Reprocess Documents
             </Button>
@@ -444,17 +455,66 @@ export default function DocumentIntake({ documents, onDocuments, employee, onFil
           <Button type="button" variant="outline" className="min-w-28" onClick={onCancel}>
             Cancel
           </Button>
-          <Button
-            type="button"
-            className="bg-blue-700 text-white hover:bg-blue-800"
-            disabled={busy}
-            onClick={onContinue}
-          >
+          {/* The same as every step's Save. */}
+          <Button type="button" disabled={busy} onClick={onContinue}>
             Continue to Personal Information
             <ArrowRight className="ms-2 h-4 w-4" aria-hidden="true" />
           </Button>
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * What still waits on a person on the step open: values two papers disagree
+ * on, each with the paper it came from, and readings too unsure to take as
+ * read. Choosing or confirming one settles it - the papers will not change it
+ * again.
+ */
+export function IntakeReview({ items, onConfirm }) {
+  if (!items.length) return null;
+  return (
+    <section className="space-y-3 rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+      <h3 className="flex items-center gap-2 font-bold text-amber-800">
+        <TriangleAlert className="size-5" aria-hidden="true" />
+        Review required ({items.length})
+      </h3>
+      <ul className="space-y-3">
+        {items.map(({ key, label, entry }) => (
+          <li key={key} className="rounded-lg border border-amber-200 bg-white px-4 py-3">
+            <p className="text-sm font-semibold text-primary">
+              {label}
+              <span className="ms-2 font-normal text-amber-700">
+                {entry.status === "Conflict"
+                  ? "Documents disagree - choose the correct value"
+                  : "Uncertain reading - confirm or correct it in the field"}
+              </span>
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {(entry.status === "Conflict"
+                ? entry.candidates.filter(
+                    (c, i, all) => all.findIndex((o) => String(o.value) === String(c.value)) === i
+                  )
+                : [entry]
+              ).map((candidate) => (
+                <button
+                  key={candidate.source + candidate.value}
+                  type="button"
+                  onClick={() => onConfirm(key, candidate.value, candidate.source)}
+                  className="rounded-md border px-3 py-1.5 text-start text-sm transition-colors hover:border-blue-600 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <span className="block font-semibold text-primary">{String(candidate.value)}</span>
+                  <span className="block text-xs text-primary/75">
+                    {candidate.source} · {candidate.confidence}%
+                    {entry.status === "Conflict" ? " · Use this" : " · Confirm"}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
