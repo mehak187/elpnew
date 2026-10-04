@@ -284,7 +284,7 @@ function SummaryCard({ icon, value, label, change, goodWhenUp, tone, active, onC
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "flex w-full items-start gap-4 rounded-container border border-t-4 border-container-border bg-card p-4 text-start transition-colors hover:bg-table-head focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "flex w-full min-w-0 items-start gap-3 rounded-container border border-t-4 border-container-border bg-card p-4 text-start transition-colors hover:bg-table-head focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         colours.rule,
         active && "ring-2 ring-primary/40"
       )}
@@ -623,14 +623,16 @@ export default function EmployeesList() {
         addLabel="Add Employee"
       />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {summary.map(({ key, ...card }) => (
-          <SummaryCard key={key} {...card} />
-        ))}
-      </div>
-
       <Card>
-        <CardContent className="p-4 sm:p-6">
+        <CardContent className="space-y-4 p-4 sm:space-y-6 sm:p-6">
+          {/* Inside the same box as the table, so the row of cards starts and
+              ends where the table does. Five equal columns on a wide screen;
+              fewer, still equal, as it narrows. */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            {summary.map(({ key, ...card }) => (
+              <SummaryCard key={key} {...card} />
+            ))}
+          </div>
           <DataTable
             columns={columns}
             itemLabel="employees"
