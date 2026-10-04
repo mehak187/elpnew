@@ -2575,81 +2575,6 @@ export default function EmployeeForm({ self }) {
                       required={isTabbed}
                     />
 
-                    {/* The employee's standing, on a row of its own. Inactive
-                        asks for the last day, who decided it, and - unless it
-                        was the employee's own decision - the firm's decision.
-                        Each answer is dropped when the one above it changes,
-                        so a record cannot keep a reason for an ending that is
-                        no longer there. */}
-                    {isTabbed && (
-                      <div className="form-grid gap-y-6" style={{ gridColumn: "1 / -1" }}>
-                        <ChoiceField
-                          id="status"
-                          label="Employee Status"
-                          value={formData.status}
-                          onChange={(value) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              status: value,
-                              lastWorkingDate:
-                                value === "Inactive" ? prev.lastWorkingDate : "",
-                              decisionMaker:
-                                value === "Inactive" ? prev.decisionMaker : "",
-                              managementReason:
-                                value === "Inactive" ? prev.managementReason : "",
-                            }))
-                          }
-                          options={["Active", "Inactive"]}
-                          required
-                        />
-                        {formData.status === "Inactive" && (
-                          <>
-                            <div className="form-field space-y-2">
-                              <Label htmlFor="lastWorkingDate">
-                                Last Working Day
-                                <Required show />
-                              </Label>
-                              <DateField
-                                id="lastWorkingDate"
-                                name="lastWorkingDate"
-                                value={formData.lastWorkingDate}
-                                onChange={onChange}
-                                required
-                              />
-                            </div>
-                            <ChoiceField
-                              id="decisionMaker"
-                              label="Decision Maker"
-                              placeholder="Select decision maker"
-                              value={formData.decisionMaker}
-                              onChange={(value) =>
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  decisionMaker: value,
-                                  managementReason:
-                                    value === "Employee Decision"
-                                      ? ""
-                                      : prev.managementReason,
-                                }))
-                              }
-                              options={DECISION_MAKERS}
-                              required
-                            />
-                            {formData.decisionMaker !== "Employee Decision" && (
-                              <ChoiceField
-                                id="managementReason"
-                                label="Management Decision"
-                                placeholder="Select management decision"
-                                value={formData.managementReason}
-                                onChange={(value) => set("managementReason", value)}
-                                options={MANAGEMENT_DECISION_REASONS}
-                                required
-                              />
-                            )}
-                          </>
-                        )}
-                      </div>
-                    )}
                   </div>
                 </SectionCard>
                 )}
@@ -2998,6 +2923,32 @@ export default function EmployeeForm({ self }) {
                           </h3>
                         )}
                         <div className="form-grid gap-y-6">
+                          {/* Inactive asks for the last day, who decided it,
+                              and - unless it was the employee's own decision -
+                              the firm's decision, on the row under this one.
+                              Each answer is dropped when the one above it
+                              changes, so a record cannot keep a reason for an
+                              ending that is no longer there. */}
+                          <ChoiceField
+                            id="status"
+                            label="Employee Status"
+                            icon={User}
+                            value={formData.status}
+                            onChange={(value) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                status: value,
+                                lastWorkingDate:
+                                  value === "Inactive" ? prev.lastWorkingDate : "",
+                                decisionMaker:
+                                  value === "Inactive" ? prev.decisionMaker : "",
+                                managementReason:
+                                  value === "Inactive" ? prev.managementReason : "",
+                              }))
+                            }
+                            options={["Active", "Inactive"]}
+                            required
+                          />
                           <ChoiceField
                             id="branch"
                             label="Branch / Work Location"
@@ -3029,6 +2980,53 @@ export default function EmployeeForm({ self }) {
                             required
                           />
                         </div>
+
+                        {formData.status === "Inactive" && (
+                          <div className="form-grid mt-6 gap-y-6 border-t pt-6">
+                            <div className="form-field space-y-2">
+                              <Label htmlFor="lastWorkingDate">
+                                Last Working Day
+                                <Required show />
+                              </Label>
+                              <DateField
+                                id="lastWorkingDate"
+                                name="lastWorkingDate"
+                                value={formData.lastWorkingDate}
+                                onChange={onChange}
+                                required
+                              />
+                            </div>
+                            <ChoiceField
+                              id="decisionMaker"
+                              label="Decision Maker"
+                              placeholder="Select decision maker"
+                              value={formData.decisionMaker}
+                              onChange={(value) =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  decisionMaker: value,
+                                  managementReason:
+                                    value === "Employee Decision"
+                                      ? ""
+                                      : prev.managementReason,
+                                }))
+                              }
+                              options={DECISION_MAKERS}
+                              required
+                            />
+                            {formData.decisionMaker !== "Employee Decision" && (
+                              <ChoiceField
+                                id="managementReason"
+                                label="Management Decision"
+                                placeholder="Select management decision"
+                                value={formData.managementReason}
+                                onChange={(value) => set("managementReason", value)}
+                                options={MANAGEMENT_DECISION_REASONS}
+                                required
+                              />
+                            )}
+                          </div>
+                        )}
 
                         {/* The grade, on a row of its own. A lawyer's grade is
                             their practice level, so it is asked once: choosing
