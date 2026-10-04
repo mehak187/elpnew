@@ -175,9 +175,9 @@ function AdvanceSteps({ steps, active, onChange }) {
                       ? "bg-primary text-white"
                       : "bg-primary text-primary-foreground"
                     : done
-                      ? step.doneTone === "green"
-                        ? "bg-green-700 text-white"
-                        : "bg-primary text-white"
+                      ? // A finished stage is ticked in green, as on every
+                        // stepper in the system.
+                        "bg-green-600 text-white"
                       : "bg-slate-200 text-primary"
                 )}
               >
