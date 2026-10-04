@@ -137,6 +137,8 @@ import ViolationsSection from "./sections/ViolationsSection";
 import EmployeeCircularsSection from "./sections/CircularsSection";
 import LeavesSection from "./sections/LeavesSection";
 import GeneralRequestSection from "./sections/GeneralRequestSection";
+import DocumentIntake from "./sections/DocumentIntake";
+import { intakeType } from "./documentIntake";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 import {
   RecordTable,
@@ -483,6 +485,9 @@ const REQUEST_ITEMS = REQUEST_CATEGORIES.flatMap((category) =>
  * begins; the ones not reached yet are shown but cannot be opened.
  */
 const ADD_STEPS = [
+  // First the papers: what is read from them fills in the steps after, which
+  // are then mostly checking. They are filed with the record when it is made.
+  { key: "intake", label: "Document Intake" },
   { key: "personal", label: "Personal Information" },
   // The job, then the terms it is held on, each saved before the next.
   { key: "employment", label: "Employment Information" },
@@ -501,9 +506,8 @@ const ADD_STEPS = [
     label: "Social Protection Information",
     when: (values) => values.socialProtection === "Yes",
   },
-  // Last: the papers, filed against the employee the steps above built.
-  // Finishing here creates the record and opens it.
-  { key: "documents", label: "Documents" },
+  // Saving the last of these creates the record, with the papers from
+  // Document Intake filed on it, and opens it.
 ];
 
 /**
@@ -1261,6 +1265,8 @@ export default function EmployeeForm({ self }) {
   // This person's papers, not every paper in the firm.
   const [documents, setDocuments] = useState(() => documentsFor(record?.id));
   const [docDraft, setDocDraft] = useState(emptyDocument);
+  // The papers uploaded on Document Intake while a new employee is added.
+  const [intakeDocs, setIntakeDocs] = useState([]);
   const [docFile, setDocFile] = useState(null);
   // The page is the list of documents until someone asks to add to it.
   const [addingDoc, setAddingDoc] = useState(false);
@@ -1309,6 +1315,7 @@ export default function EmployeeForm({ self }) {
     setStep(ADD_STEPS[0].key);
     setSavedSteps([]);
     setSaved({});
+    setIntakeDocs([]);
     closeDocForm();
   }
 
@@ -1573,6 +1580,21 @@ export default function EmployeeForm({ self }) {
       docId += 1;
       employeeDocuments.push({ ...document, id: docId, employeeId: newId });
     });
+    // The papers from Document Intake, filed under what each kind is kept as.
+    intakeDocs.forEach((doc) => {
+      docId += 1;
+      employeeDocuments.push({
+        id: docId,
+        employeeId: newId,
+        uploadedAt: todayIso() + "T00:00",
+        type: intakeType(doc.typeKey)?.fileAs || "Other",
+        number: doc.number,
+        expiry: doc.expiry,
+        fileName: doc.fileName,
+        fileUrl: doc.fileUrl,
+        notes: "",
+      });
+    });
     // Opened on Documents: the details are in, and the papers are next.
     navigate("/employees/" + newId, { state: { section: "profile", tab: "documents" } });
   };
@@ -1616,9 +1638,20 @@ export default function EmployeeForm({ self }) {
 
     const flow = flowFor(formData);
     const next = flow[flow.findIndex((s) => s.key === step) + 1];
-    // Past the last section asked for, the papers are what is left. The record
-    // itself is made from Documents, so a draft is never created half-filed.
-    setStep(next ? next.key : "documents");
+    // The last section asked for is the end: the record is made, with its
+    // papers, and opened.
+    if (!next) {
+      finishEmployee();
+      return;
+    }
+    setStep(next.key);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  /** Document Intake asks nothing that must be filled: it moves straight on. */
+  const continueFromIntake = () => {
+    setSavedSteps((prev) => (prev.includes("intake") ? prev : [...prev, "intake"]));
+    setStep("personal");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -1632,11 +1665,8 @@ export default function EmployeeForm({ self }) {
   // The section before this one, to go back to without losing anything.
   const previousStep = savedFlow[savedFlow.findIndex((s) => s.key === step) - 1];
   // A tab opens once it has been saved or is the one being filled in; the
-  // papers open as soon as there is an employee to file them against.
-  const canOpen = (key) =>
-    savedSteps.includes(key) ||
-    key === step ||
-    (key === "documents" && savedSteps.includes("personal"));
+  // papers can be gone back to at any time.
+  const canOpen = (key) => savedSteps.includes(key) || key === step || key === "intake";
 
   // The month's pay, worked out from its parts rather than typed, so the
   // totals can never disagree with the lines they add up.
@@ -1780,19 +1810,10 @@ export default function EmployeeForm({ self }) {
         <Button type="button" variant="ghost" onClick={() => navigate("/employees")}>
           Cancel
         </Button>
-        {step === "documents" ? (
-          // Papers are filed one at a time above; this is what says the draft
-          // is done with and makes the employee.
-          <Button type="button" onClick={finishEmployee}>
-            <Save className="me-2 h-4 w-4" />
-            Finish
-          </Button>
-        ) : (
-          <Button type="submit">
-            <Save className="me-2 h-4 w-4" />
-            Save
-          </Button>
-        )}
+        <Button type="submit">
+          <Save className="me-2 h-4 w-4" />
+          Save
+        </Button>
       </div>
     </div>
   );
@@ -1805,8 +1826,8 @@ export default function EmployeeForm({ self }) {
     // a correction is sent with its own button.
     if (isDocuments || isProfile || isRequests) return;
     if (isAdding) {
-      // Enter in the documents search must search, not save a section.
-      if (step !== "documents") saveStep();
+      // Document Intake moves on with its own button; Enter there saves nothing.
+      if (step !== "intake") saveStep();
       return;
     }
     console.log(isEditMode ? "Updating employee:" : "Creating employee:", {
@@ -2239,6 +2260,26 @@ export default function EmployeeForm({ self }) {
                     there is nothing to be Active. */}
                 {/* No standing beside the heading: it is already on the row
                     this record was opened from, and it is a field below. */}
+                {/* Step one of adding: the papers, read into the profile. */}
+                {shows("intake") && (
+                  <DocumentIntake
+                    documents={intakeDocs}
+                    onDocuments={setIntakeDocs}
+                    employee={formData}
+                    // Only into fields still empty: what was typed stays.
+                    onFill={(values) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        ...Object.fromEntries(
+                          Object.entries(values).filter(([key]) => !prev[key])
+                        ),
+                      }))
+                    }
+                    onContinue={continueFromIntake}
+                    onCancel={() => navigate("/employees")}
+                  />
+                )}
+
                 {onStep("personal") && (
                 <SectionCard
                   title={isAdding ? "Personal Information" : "Personal Details"}
