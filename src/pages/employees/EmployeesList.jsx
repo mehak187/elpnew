@@ -11,6 +11,10 @@ import FilterPanel from "@/components/shared/FilterPanel";
 import { filterChips, withoutChip } from "@/lib/filterChips";
 import {
   Users,
+  User,
+  UserX,
+  FileWarning,
+  ArrowUp,
   Eye,
   AlertCircle,
   AlertTriangle,
@@ -31,6 +35,7 @@ import {
   amount,
   documentsFor,
   documentStatus,
+  employeeDocuments,
   accessHold,
 } from "./employeeData";
 import { readDocumentControl } from "@/lib/settings/documentControl";
@@ -253,6 +258,70 @@ const matches = (row, filters, leaves) =>
   });
 
 
+/**
+ * One figure across the top of the list.
+ *
+ * The coloured rule along the top says which figure it is before the label
+ * is read. The chip under it is this month's movement: green where more is
+ * good, red where more is a problem. A figure with no movement to report
+ * shows no chip rather than a zero. Pressing a card narrows the list to the
+ * employees it counts.
+ */
+const SUMMARY_TONE = {
+  blue: { rule: "border-t-blue-600", tile: "bg-blue-50 text-blue-600" },
+  green: { rule: "border-t-emerald-600", tile: "bg-emerald-50 text-emerald-600" },
+  orange: { rule: "border-t-orange-500", tile: "bg-orange-50 text-orange-500" },
+  slate: { rule: "border-t-slate-500", tile: "bg-slate-100 text-slate-600" },
+  red: { rule: "border-t-red-600", tile: "bg-red-50 text-red-600" },
+};
+
+function SummaryCard({ icon, value, label, change, goodWhenUp, tone, active, onClick }) {
+  const Icon = icon;
+  const colours = SUMMARY_TONE[tone];
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "flex w-full items-start gap-4 rounded-container border border-t-4 border-container-border bg-card p-4 text-start transition-colors hover:bg-table-head focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        colours.rule,
+        active && "ring-2 ring-primary/40"
+      )}
+    >
+      <span
+        className={cn(
+          "flex size-12 shrink-0 items-center justify-center rounded-xl",
+          colours.tile
+        )}
+      >
+        <Icon className="size-6" aria-hidden="true" />
+      </span>
+      <span className="min-w-0 space-y-1">
+        <span className="block text-2xl font-bold leading-none text-primary">
+          {value.toLocaleString("en-US")}
+        </span>
+        <span className="block text-sm text-muted-foreground">{label}</span>
+        {change > 0 && (
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold",
+              goodWhenUp ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
+            )}
+          >
+            <ArrowUp className="size-3" aria-hidden="true" />
+            {change} this month
+          </span>
+        )}
+      </span>
+    </button>
+  );
+}
+
+/** Whether an ISO date falls in the current calendar month. */
+const inThisMonth = (iso) =>
+  Boolean(iso) && String(iso).slice(0, 7) === new Date().toISOString().slice(0, 7);
+
 export default function EmployeesList() {
   const navigate = useNavigate();
   const { leaves } = useLeaves();
@@ -281,6 +350,92 @@ export default function EmployeesList() {
   const shown = employees
     .filter((row) => matches(row, filters, leaves))
     .sort(byUrgency);
+
+  // The figures across the top, counted off the same records the table
+  // shows, so the two can never disagree.
+  const today = new Date().toISOString().slice(0, 10);
+  const active = employees.filter((row) => !isEndedStatus(row.status));
+  const onLeave = employees.filter((row) => onLeaveToday(leaves, row.name));
+  const leaveStartedThisMonth = new Set(
+    leaves
+      .filter((leave) => leave.status === "Approved" && inThisMonth(leave.from))
+      .map((leave) => leave.employee)
+  );
+  const expiredDocuments = employeeDocuments.filter(
+    (doc) => documentStatus(doc) === "Expired"
+  );
+
+  /** A card toggles its own filter on and off, and leaves the rest alone. */
+  const toggle = (key, value) =>
+    narrow(
+      filters[key] === value || (Array.isArray(filters[key]) && filters[key].includes(value))
+        ? { ...filters, [key]: undefined }
+        : { ...filters, [key]: key === "documentStatus" ? [value] : value }
+    );
+
+  const summary = [
+    {
+      key: "total",
+      icon: Users,
+      tone: "blue",
+      value: employees.length,
+      label: "Total Employees",
+      change: employees.filter((row) => inThisMonth(row.dateOfJoining)).length,
+      goodWhenUp: true,
+      active: !Object.values(filters).some((v) => v && v !== "all" && !(Array.isArray(v) && !v.length)),
+      onClick: () => narrow({}),
+    },
+    {
+      key: "active",
+      icon: User,
+      tone: "green",
+      value: active.length,
+      label: "Active Employees",
+      change: active.filter((row) => inThisMonth(row.dateOfJoining)).length,
+      goodWhenUp: true,
+      active: filters.status === "Active",
+      onClick: () => toggle("status", "Active"),
+    },
+    {
+      key: "leave",
+      icon: Briefcase,
+      tone: "orange",
+      value: onLeave.length,
+      label: "On Leave",
+      change: leaveStartedThisMonth.size,
+      goodWhenUp: false,
+      active: filters.leave === "on",
+      onClick: () => toggle("leave", "on"),
+    },
+    {
+      key: "inactive",
+      icon: UserX,
+      tone: "slate",
+      value: employees.length - active.length,
+      label: "Inactive Employees",
+      // The record does not say when somebody left, so there is no month to
+      // count them in - and no chip rather than a guessed one.
+      change: 0,
+      goodWhenUp: false,
+      active: filters.status === "Inactive",
+      onClick: () => toggle("status", "Inactive"),
+    },
+    {
+      key: "expired",
+      icon: FileWarning,
+      tone: "red",
+      value: expiredDocuments.length,
+      label: "Expired Documents",
+      change: expiredDocuments.filter(
+        (doc) => inThisMonth(doc.expiry) && doc.expiry < today
+      ).length,
+      goodWhenUp: false,
+      active: Array.isArray(filters.documentStatus) && filters.documentStatus.includes("Expired"),
+      // The document filter is the general manager's; for anybody else the
+      // card reports the figure and goes nowhere.
+      onClick: canSeeRestricted ? () => toggle("documentStatus", "Expired") : undefined,
+    },
+  ];
   const columns = [
     {
       key: "empNo",
@@ -467,6 +622,12 @@ export default function EmployeesList() {
         onAdd={() => navigate("/employees/create")}
         addLabel="Add Employee"
       />
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        {summary.map(({ key, ...card }) => (
+          <SummaryCard key={key} {...card} />
+        ))}
+      </div>
 
       <Card>
         <CardContent className="p-4 sm:p-6">
