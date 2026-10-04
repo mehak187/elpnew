@@ -386,6 +386,8 @@ const REQUEST_CATEGORIES = [
   {
     key: "financing",
     label: "Financial Financing",
+    // What the strip of kinds calls it, short enough for one line.
+    short: "Financing",
     icon: Wallet,
     items: [
       { key: "salaryAdvance", label: "Salary Advance", icon: Banknote, section: "benefits", tab: "salaries" },
@@ -396,6 +398,7 @@ const REQUEST_CATEGORIES = [
   {
     key: "entitlements",
     label: "Financial Entitlements",
+    short: "Entitlements",
     icon: ChartNoAxesColumnIncreasing,
     items: [
       { key: "bonus", label: "Bonus", icon: Gift, section: "benefits", tab: "bonus" },
@@ -418,6 +421,7 @@ const REQUEST_CATEGORIES = [
   {
     key: "endOfService",
     label: "End-of-Service Entitlements",
+    short: "End of Service",
     icon: FileUser,
     items: [
       { key: "notice", label: "Notice Pay", icon: FileClock, section: "entitlements", tab: "notice" },
@@ -428,6 +432,7 @@ const REQUEST_CATEGORIES = [
     // Grievance and Complaint have no page of their own yet.
     key: "administrative",
     label: "Administrative Requests",
+    short: "Administrative",
     icon: FilePenLine,
     items: [
       // Leave is counted in days left rather than requests made: what a
@@ -446,12 +451,41 @@ const REQUEST_CATEGORIES = [
  * orange, then rose for a fourth. Written out whole so the stylesheet keeps
  * every class.
  */
+// Each card is white with a grey border and only its mark in colour. Hovered,
+// it takes a very light tint and a stronger border, its name in colour.
+// Chosen, a soft tint and a 2px border, name and figure in colour - no
+// shadow, no scaling. A figure above nought is in colour on any card.
 const TONES = {
-  violet: { card: "border-violet-200 bg-violet-50", mark: "bg-violet-100 text-violet-700", ink: "text-violet-800" },
-  green: { card: "border-emerald-200 bg-emerald-50", mark: "bg-emerald-100 text-emerald-700", ink: "text-emerald-800" },
-  orange: { card: "border-orange-200 bg-orange-50", mark: "bg-orange-100 text-orange-600", ink: "text-orange-700" },
-  rose: { card: "border-rose-200 bg-rose-50", mark: "bg-rose-100 text-rose-600", ink: "text-rose-700" },
-  blue: { card: "border-blue-200 bg-blue-50", mark: "bg-blue-100 text-blue-700", ink: "text-blue-700" },
+  violet: {
+    mark: "bg-violet-100 text-violet-700",
+    ink: "text-violet-700",
+    hover: "hover:border-violet-200 hover:bg-violet-50/40 [&:hover_.card-title]:text-violet-700",
+    chosen: "border-violet-400 bg-violet-50 ring-1 ring-violet-400",
+  },
+  green: {
+    mark: "bg-emerald-100 text-emerald-700",
+    ink: "text-emerald-700",
+    hover: "hover:border-emerald-200 hover:bg-emerald-50/40 [&:hover_.card-title]:text-emerald-700",
+    chosen: "border-emerald-400 bg-emerald-50 ring-1 ring-emerald-400",
+  },
+  orange: {
+    mark: "bg-orange-100 text-orange-600",
+    ink: "text-orange-600",
+    hover: "hover:border-orange-200 hover:bg-orange-50/40 [&:hover_.card-title]:text-orange-600",
+    chosen: "border-orange-400 bg-orange-50 ring-1 ring-orange-400",
+  },
+  rose: {
+    mark: "bg-rose-100 text-rose-600",
+    ink: "text-rose-600",
+    hover: "hover:border-rose-200 hover:bg-rose-50/40 [&:hover_.card-title]:text-rose-600",
+    chosen: "border-rose-400 bg-rose-50 ring-1 ring-rose-400",
+  },
+  blue: {
+    mark: "bg-blue-100 text-blue-700",
+    ink: "text-blue-700",
+    hover: "hover:border-blue-200 hover:bg-blue-50/40 [&:hover_.card-title]:text-blue-700",
+    chosen: "border-blue-400 bg-blue-50 ring-1 ring-blue-400",
+  },
 };
 
 /** The tints in turn; a request whose design names its own (`tone`) wears that. */
@@ -1763,6 +1797,8 @@ export default function EmployeeForm({ self }) {
   const cancelProfileEdit = () => {
     setFormData(toFormData(record));
     setProfileSaved(false);
+    // Papers uploaded but not saved go too.
+    intake.reset();
     clearRequiredCheck();
   };
 
@@ -1779,6 +1815,26 @@ export default function EmployeeForm({ self }) {
       designation: formData.occupation || record.designation,
       role: formData.occupation || record.role,
     });
+    // Papers uploaded on Document Intake are filed on the record.
+    let docId = employeeDocuments.reduce((max, d) => Math.max(max, d.id), 0);
+    intake.docs
+      .filter((doc) => doc.status !== "failed" && doc.status !== "processing")
+      .forEach((doc) => {
+        docId += 1;
+        employeeDocuments.push({
+          id: docId,
+          employeeId: record.id,
+          uploadedAt: todayIso() + "T00:00",
+          type: intakeType(doc.typeKey)?.fileAs || "Other",
+          number: doc.number,
+          expiry: doc.expiry,
+          fileName: doc.fileName,
+          fileUrl: doc.fileUrl,
+          notes: "",
+        });
+      });
+    setDocuments(documentsFor(record.id));
+    intake.reset();
     setProfileSaved(true);
   };
 
@@ -1803,17 +1859,25 @@ export default function EmployeeForm({ self }) {
     if (found.section === "benefits") setBenefitsTab(found.tab);
   };
 
-  /** Shows one kind's cards, with nothing opened under them yet. */
+  /** Shows one kind's cards, its first request chosen and open below. */
   const openRequestCategory = (key) => {
-    setRequestCategory(key);
-    setRequestsTab(null);
+    const first = REQUEST_CATEGORIES.find((category) => category.key === key)?.items[0];
+    if (first) chooseRequest(first);
+    else {
+      setRequestCategory(key);
+      setRequestsTab(null);
+    }
   };
 
   /** Moving to another side of the file. */
   const selectSection = (key) => {
     setProfileSaved(false);
-    // Requests opens on the request last chosen there, at its own tab.
-    if (key === "requests" && requestItem) chooseRequest(requestItem);
+    // Requests opens on the request last chosen there, at its own tab - or,
+    // the first time, on the first request of the kind showing.
+    if (key === "requests") {
+      if (requestItem) chooseRequest(requestItem);
+      else openRequestCategory(requestCategory);
+    }
     setActiveSection(key);
   };
 
@@ -2051,31 +2115,43 @@ export default function EmployeeForm({ self }) {
           {isRequests && (
             <nav
               aria-label="Request types"
-              className="flex items-stretch overflow-x-auto border-b border-container-border pb-4"
+              className="overflow-x-auto rounded-xl border border-container-border bg-card px-4 py-4"
             >
-              {REQUEST_CATEGORIES.map((category, index) => {
-                const Icon = category.icon;
-                const lit = requestCategory === category.key;
-                return (
-                  <div key={category.key} className="flex min-w-0 flex-1 items-stretch">
-                    {index > 0 && (
-                      <span aria-hidden="true" className="mx-2 w-px self-stretch bg-container-border" />
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => openRequestCategory(category.key)}
-                      aria-current={lit ? "true" : undefined}
-                      className={cn(
-                        "flex flex-1 flex-col items-center justify-center gap-2 rounded-lg px-4 py-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                        lit ? "bg-blue-50 text-blue-700" : "text-primary hover:bg-menu-hover"
+              {/* The kinds on one line, joined like steps: each its mark and
+                  short name, the chosen one in blue with its line half lit. */}
+              <ol className="flex min-w-max">
+                {REQUEST_CATEGORIES.map((category, index) => {
+                  const Icon = category.icon;
+                  const lit = requestCategory === category.key;
+                  const last = index === REQUEST_CATEGORIES.length - 1;
+                  return (
+                    <li key={category.key} className="relative flex min-w-36 flex-1 flex-col items-center">
+                      {!last && (
+                        <span
+                          aria-hidden="true"
+                          className="absolute start-[calc(50%+32px)] end-[calc(-50%+32px)] top-5 h-0.5 overflow-hidden rounded-full bg-slate-200"
+                        >
+                          {lit && <span className="block h-full w-1/2 bg-blue-700" />}
+                        </span>
                       )}
-                    >
-                      <Icon strokeWidth={1.25} aria-hidden="true" className="size-12" />
-                      <span className="whitespace-nowrap text-sm font-semibold">{category.label}</span>
-                    </button>
-                  </div>
-                );
-              })}
+                      <button
+                        type="button"
+                        onClick={() => openRequestCategory(category.key)}
+                        aria-current={lit ? "true" : undefined}
+                        className={cn(
+                          "flex flex-col items-center gap-2 rounded-md px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          lit ? "text-blue-700" : "text-primary hover:text-blue-700"
+                        )}
+                      >
+                        <Icon strokeWidth={1.5} aria-hidden="true" className="size-10" />
+                        <span className="whitespace-nowrap text-sm font-semibold">
+                          {category.short || category.label}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
             </nav>
           )}
 
@@ -2086,7 +2162,10 @@ export default function EmployeeForm({ self }) {
             const category = REQUEST_CATEGORIES.find((c) => c.key === requestCategory);
             return (
               <section className="space-y-4">
-                <h2 className="text-xl font-bold text-primary">{category.label}</h2>
+                <h2 className="flex items-center gap-2 text-xl font-bold text-primary">
+                  <category.icon strokeWidth={1.75} aria-hidden="true" className="size-7 text-blue-700" />
+                  {category.label}
+                </h2>
                 <div className={cn("grid gap-4", REQUEST_CARD_COLUMNS[category.items.length])}>
                   {category.items.map((item, index) => {
                     const tone =
@@ -2094,6 +2173,11 @@ export default function EmployeeForm({ self }) {
                     const { total, pending } = requestCountFor(item.key, record.name);
                     const Icon = item.icon;
                     const opened = item.key === requestsTab;
+                    const figure =
+                      item.stat === "leaveDays" ? annualLeaveLeft(leaves, record.name) ?? 0 : total;
+                    // The figure is in colour when it counts something, or
+                    // when the card is the one chosen.
+                    const figureInk = opened || figure > 0 ? tone.ink : "text-primary";
                     return (
                       <button
                         key={item.key}
@@ -2101,27 +2185,28 @@ export default function EmployeeForm({ self }) {
                         onClick={() => chooseRequest({ ...item, category: category.key })}
                         aria-pressed={opened}
                         className={cn(
-                          // Narrow enough for a whole kind to share one row:
-                          // the mark, the name and the figure across the top,
-                          // and the description under them the card's full
-                          // width, so it never breaks a word to a line.
-                          "flex h-full flex-col gap-3 rounded-xl border p-4 text-start transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                          tone.card,
-                          opened && "ring-2 ring-primary"
+                          // The mark, the name and the figure on one line.
+                          "flex h-full flex-col gap-3 rounded-xl border p-4 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          opened ? tone.chosen : cn("border-container-border bg-card", tone.hover)
                         )}
                       >
-                        <span className="flex w-full items-start gap-3">
-                          <span className={cn("flex size-11 shrink-0 items-center justify-center rounded-lg", tone.mark)}>
+                        <span className="flex w-full items-center gap-3">
+                          <span className={cn("flex size-12 shrink-0 items-center justify-center rounded-lg", tone.mark)}>
                             <Icon strokeWidth={1.5} aria-hidden="true" className="size-6" />
                           </span>
-                          <span className={cn("min-w-0 flex-1 pt-2 text-base font-bold leading-tight", tone.ink)}>
+                          <span
+                            className={cn(
+                              "card-title min-w-0 flex-1 text-base font-bold leading-tight transition-colors",
+                              opened ? tone.ink : "text-primary"
+                            )}
+                          >
                             {item.label}
                           </span>
                           <span className="shrink-0 text-end">
                             {item.stat === "leaveDays" ? (
                               <>
-                                <span className={cn("block text-2xl font-bold leading-none", tone.ink)}>
-                                  {annualLeaveLeft(leaves, record.name) ?? 0}
+                                <span className={cn("block text-2xl font-bold leading-none", figureInk)}>
+                                  {figure}
                                 </span>
                                 <span className="mt-1 block max-w-24 text-[11px] leading-tight text-primary/75">
                                   Remaining Annual Leave Days
@@ -2129,7 +2214,7 @@ export default function EmployeeForm({ self }) {
                               </>
                             ) : (
                               <>
-                                <span className={cn("block text-2xl font-bold leading-none", tone.ink)}>{total}</span>
+                                <span className={cn("block text-2xl font-bold leading-none", figureInk)}>{total}</span>
                                 <span className="mt-1 block text-[11px] leading-tight text-primary/75">
                                   Total Requests
                                 </span>
@@ -3542,7 +3627,26 @@ export default function EmployeeForm({ self }) {
                 {/* The employee's papers, in a section of their own. Only once
                     the employee exists - there is nobody to file a paper
                     against before, which is why adding reaches them last. */}
-                {isDocuments && (isEditMode || isAdding) && (
+                {/* On a record's Employee Information, the papers are Document
+                    Intake as when the employee was added: what is filed is
+                    listed, and new papers are read into the record and filed
+                    on Save. */}
+                {isProfile && tab === "documents" && (
+                  <DocumentIntake
+                    intake={intake}
+                    filed={documents.map((paper) => ({
+                      id: "filed-" + paper.id,
+                      fileName: paper.fileName || paper.type,
+                      typeLabel: paper.type,
+                      number: paper.number,
+                      expiry: paper.expiry,
+                      fileUrl: paper.fileUrl,
+                    }))}
+                    footer={profileActions}
+                  />
+                )}
+
+                {isDocuments && !isProfile && (isEditMode || isAdding) && (
                   <Card>
                   <CardContent className="p-4 sm:p-6">
                   <div className="space-y-6">

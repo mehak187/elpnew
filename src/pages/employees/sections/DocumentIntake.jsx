@@ -103,8 +103,17 @@ function RowAction({ label, onClick, danger, children }) {
  * to be of that kind. A kind guessed wrong is put right in the table, and the
  * paper is read again as that kind.
  */
-export default function DocumentIntake({ intake, onContinue, onCancel }) {
+export default function DocumentIntake({
+  intake,
+  onContinue,
+  onCancel,
+  // On a record: the papers already filed, listed first and only viewed.
+  filed = [],
+  // On a record: its own Cancel and Save in place of Continue.
+  footer = null,
+}) {
   const { docs, busy, summary } = intake;
+  const rows = [...filed.map((paper) => ({ ...paper, filed: true })), ...docs];
   // The upload panel: closed, open for any paper (""), or for one kind.
   const [uploading, setUploading] = useState(null);
   const [problem, setProblem] = useState("");
@@ -322,9 +331,9 @@ export default function DocumentIntake({ intake, onContinue, onCancel }) {
         {/* What has been uploaded, and what was read from each. */}
         <section className="mt-6 overflow-hidden rounded-xl border">
           <h3 className="px-4 py-3 font-bold text-primary">
-            Uploaded Documents ({docs.length})
+            Uploaded Documents ({rows.length})
           </h3>
-          {docs.length === 0 ? (
+          {rows.length === 0 ? (
             <p className="border-t px-4 py-8 text-center text-sm text-muted-foreground">
               No documents uploaded yet. Upload them all at once, or choose a
               document type above.
@@ -345,12 +354,18 @@ export default function DocumentIntake({ intake, onContinue, onCancel }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {docs.map((doc) => (
+                  {rows.map((doc) => (
                     <tr key={doc.id} className="border-t">
                       <td className="px-4 py-2.5 text-primary">{doc.fileName}</td>
                       <td className="px-4 py-2.5">
-                        {/* The kind as classified, open to be put right. */}
-                        {doc.typeKey ? (
+                        {/* A paper already on the record keeps the kind it was
+                            filed as; a new one's kind, as classified, is open
+                            to be put right. */}
+                        {doc.filed ? (
+                          <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
+                            {doc.typeLabel}
+                          </span>
+                        ) : doc.typeKey ? (
                           <span className="relative inline-flex items-center">
                             <select
                               aria-label={"Document type of " + doc.fileName}
@@ -387,16 +402,20 @@ export default function DocumentIntake({ intake, onContinue, onCancel }) {
                         {doc.expiry ? formatDate(doc.expiry) : "-"}
                       </td>
                       <td className="px-4 py-2.5">
-                        <DocumentStatus status={doc.status} />
+                        <DocumentStatus status={doc.filed ? "processed" : doc.status} />
                       </td>
                       <td className="px-4 py-2.5">
                         <div className="flex justify-end gap-1">
-                          <RowAction
-                            label={"View " + doc.fileName}
-                            onClick={() => window.open(doc.fileUrl, "_blank", "noopener,noreferrer")}
-                          >
-                            <Eye className="size-4" aria-hidden="true" />
-                          </RowAction>
+                          {doc.fileUrl && (
+                            <RowAction
+                              label={"View " + doc.fileName}
+                              onClick={() => window.open(doc.fileUrl, "_blank", "noopener,noreferrer")}
+                            >
+                              <Eye className="size-4" aria-hidden="true" />
+                            </RowAction>
+                          )}
+                          {!doc.filed && (
+                          <>
                           <RowAction
                             label={"Replace " + doc.fileName}
                             onClick={() => {
@@ -409,6 +428,8 @@ export default function DocumentIntake({ intake, onContinue, onCancel }) {
                           <RowAction label={"Delete " + doc.fileName} onClick={() => intake.remove(doc.id)} danger>
                             <Trash2 className="size-4" aria-hidden="true" />
                           </RowAction>
+                          </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -451,16 +472,20 @@ export default function DocumentIntake({ intake, onContinue, onCancel }) {
           </div>
         )}
 
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
-          <Button type="button" variant="outline" className="min-w-28" onClick={onCancel}>
-            Cancel
-          </Button>
-          {/* The same as every step's Save. */}
-          <Button type="button" disabled={busy} onClick={onContinue}>
-            Continue to Personal Information
-            <ArrowRight className="ms-2 h-4 w-4" aria-hidden="true" />
-          </Button>
-        </div>
+        {footer ? (
+          <div className="mt-6 border-t pt-4">{footer}</div>
+        ) : (
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+            <Button type="button" variant="outline" className="min-w-28" onClick={onCancel}>
+              Cancel
+            </Button>
+            {/* The same as every step's Save. */}
+            <Button type="button" disabled={busy} onClick={onContinue}>
+              Continue to Personal Information
+              <ArrowRight className="ms-2 h-4 w-4" aria-hidden="true" />
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
