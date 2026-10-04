@@ -1,4 +1,5 @@
 import { useState } from "react";
+import RequestTable from "@/components/shared/RequestTable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -239,17 +240,6 @@ export default function LeavesSection({ employee, canReview = true }) {
           </SelectContent>
         </Select>
 
-        {!adding && !open && (
-          <Button
-            variant="outline"
-            type="button"
-            className="ms-auto"
-            onClick={() => setAdding(true)}
-          >
-            <Plus className="me-1.5 h-4 w-4" />
-            Add New Leave
-          </Button>
-        )}
       </div>
 
       {/* Opened over the page, so the list it is filed into stays behind it. */}
@@ -287,114 +277,122 @@ export default function LeavesSection({ employee, canReview = true }) {
       )}
 
       <Card>
-        <CardContent className="overflow-x-auto p-0">
-          {rows.length === 0 ? (
-            <div className="p-6">
-              <EmptyState>
-                {filteredBy
-                  ? "No " + filteredBy + " has been requested in " + year + "."
-                  : "No leave has been requested for " + year + "."}
-              </EmptyState>
-            </div>
-          ) : (
-            <RecordTable minWidth={1040}>
-              <HeadRow>
-                <Th width="10%">Leave No.</Th>
-                <Th width="18%">Leave Details</Th>
-                <Th width="22%">Leave Period</Th>
-                <Th width="20%">Approval Workflow</Th>
-                <Th width="15%">Balance</Th>
-                <Th width="15%">Status</Th>
-              </HeadRow>
-              <tbody>
-                {rows.map((leave) => {
-                  const Icon = STATUS_ICON[leave.status];
-                  const days = leaveDays(leave.from, leave.to);
-                  // What was left before this request, and what it leaves
-                  // behind - both counted off the record, never stored.
-                  const balance = remainingBalance(
-                    leaves,
-                    employee.name,
-                    leave.type,
-                    chargedYear(leave)
-                  );
-
+        <CardContent className="p-4 sm:p-6">
+          <RequestTable
+            rows={rows.map((leave) => {
+              const days = leaveDays(leave.from, leave.to);
+              // What was left before this request, and what it leaves behind -
+              // both counted off the record, never stored.
+              const balance = remainingBalance(leaves, employee.name, leave.type, chargedYear(leave));
+              return {
+                ...leave,
+                days,
+                typeText: leaveTypeLabel(leave),
+                period: formatDate(leave.from) + " – " + formatDate(leave.to),
+                workflow: workflowLabel(leave),
+                balanceText:
+                  balance && !balance.expired
+                    ? balance.allowance -
+                      (balance.allowance - balance.remaining) +
+                      " Days / " +
+                      Math.max(balance.remaining - days, 0) +
+                      " Days"
+                    : "-",
+              };
+            })}
+            columns={[
+              {
+                // The number opens the request at the stage it is waiting at,
+                // for whoever has to decide it.
+                key: "leaveNo",
+                header: "Leave No.",
+                width: "10%",
+                render: (value, leave) =>
+                  canReview ? (
+                    <button
+                      type="button"
+                      onClick={() => openReview(leave)}
+                      className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      {value || "-"}
+                    </button>
+                  ) : (
+                    <span className="font-bold text-primary">{value || "-"}</span>
+                  ),
+              },
+              {
+                key: "category",
+                header: "Leave Details",
+                width: "18%",
+                render: (value, leave) => (
+                  <>
+                    <span className="block font-semibold text-primary">{value}</span>
+                    <span className="block text-xs text-muted-foreground">{leave.typeText}</span>
+                  </>
+                ),
+              },
+              {
+                key: "period",
+                header: "Leave Period",
+                width: "22%",
+                render: (value, leave) => (
+                  <span className="whitespace-nowrap">
+                    {value}
+                    <span className="px-1.5 text-muted-foreground">/</span>
+                    {leave.days} {leave.days === 1 ? "Day" : "Days"}
+                  </span>
+                ),
+              },
+              {
+                // Management's note sits with the decision it explains.
+                key: "workflow",
+                header: "Approval Workflow",
+                width: "20%",
+                render: (value, leave) => (
+                  <>
+                    {value}
+                    {leave.comments && (
+                      <span className="mt-1 block text-xs text-muted-foreground">{leave.comments}</span>
+                    )}
+                  </>
+                ),
+              },
+              {
+                key: "balanceText",
+                header: "Balance",
+                width: "15%",
+                render: (value) => <span className="whitespace-nowrap">{value}</span>,
+              },
+              {
+                key: "status",
+                header: "Status",
+                width: "15%",
+                render: (value) => {
+                  const Icon = STATUS_ICON[value];
                   return (
-                    <Row key={leave.id}>
-                      {/* The number opens the request at the stage it is
-                          waiting at, for whoever has to decide it. */}
-                      <Td className="whitespace-nowrap">
-                        {canReview ? (
-                          <button
-                            type="button"
-                            onClick={() => openReview(leave)}
-                            className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
-                          >
-                            {leave.leaveNo || "-"}
-                          </button>
-                        ) : (
-                          <span className="font-bold text-primary">
-                            {leave.leaveNo || "-"}
-                          </span>
-                        )}
-                      </Td>
-
-                      {/* An advance is annual leave charged to another year,
-                          so the row says which year it came out of. */}
-                      <Td>
-                        <span className="block font-semibold text-primary">
-                          {leave.category}
-                        </span>
-                        <span className="block text-xs text-muted-foreground">
-                          {leaveTypeLabel(leave)}
-                        </span>
-                      </Td>
-
-                      {/* The two dates and what they come to, as one period. */}
-                      <Td className="whitespace-nowrap">
-                        {formatDate(leave.from)} – {formatDate(leave.to)}
-                        <span className="px-1.5 text-muted-foreground">/</span>
-                        {days} {days === 1 ? "Day" : "Days"}
-                      </Td>
-
-                      <Td>
-                        {workflowLabel(leave)}
-                        {/* Management's note sits with the decision it
-                            explains, rather than in a column of its own. */}
-                        {leave.comments && (
-                          <span className="mt-1 block text-xs text-muted-foreground">
-                            {leave.comments}
-                          </span>
-                        )}
-                      </Td>
-
-                      <Td className="whitespace-nowrap">
-                        {balance && !balance.expired
-                          ? balance.allowance -
-                            (balance.allowance - balance.remaining) +
-                            " Days / " +
-                            Math.max(balance.remaining - days, 0) +
-                            " Days"
-                          : "-"}
-                      </Td>
-
-                      <Td className="text-center">
-                        <span
-                          className={cn(
-                            "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
-                            LEAVE_STATUS_TONE[leave.status]
-                          )}
-                        >
-                          <Icon className="h-3.5 w-3.5 shrink-0" />
-                          {leave.status}
-                        </span>
-                      </Td>
-                    </Row>
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
+                        LEAVE_STATUS_TONE[value]
+                      )}
+                    >
+                      {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
+                      {value}
+                    </span>
                   );
-                })}
-              </tbody>
-            </RecordTable>
-          )}
+                },
+              },
+            ]}
+            searchPlaceholder="Search by leave no., type or period..."
+            itemLabel="leave requests"
+            exportFileName={"leaves-" + year + ".csv"}
+            filterBy={[
+              { key: "status", label: "Status" },
+              { key: "category", label: "Leave Category" },
+            ]}
+            onAdd={!adding && !open ? () => setAdding(true) : null}
+            addLabel="Add New Leave"
+          />
         </CardContent>
       </Card>
     </div>

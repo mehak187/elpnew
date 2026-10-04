@@ -3924,6 +3924,8 @@ export default function EmployeeForm({ self }) {
                     onSaveSalary={(payslip) =>
                       setFormData((prev) => ({ ...prev, ...payslip }))
                     }
+                    // From Requests: the chosen request's list alone.
+                    listOnly={isRequests}
                   />
                 )}
 
@@ -3932,6 +3934,7 @@ export default function EmployeeForm({ self }) {
                     // From Requests it opens on the entitlement chosen there,
                     // and opens afresh when another is chosen.
                     key={isRequests ? requestItem.key : "entitlements"}
+                    listOnly={isRequests}
                     tab={isRequests ? requestItem.tab : undefined}
                     employee={formData}
                     canEdit={!readOnly}

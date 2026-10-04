@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import AiSearch from "@/components/shared/AiSearch";
+import RequestTable from "@/components/shared/RequestTable";
 import { Card, CardContent } from "@/components/ui/card";
 import { Bordered, EmptyState } from "@/components/shared/panels";
 import DateField from "@/components/shared/DateField";
@@ -29,7 +29,6 @@ import { Rial } from "@/components/shared/Rial";
 import { cn } from "@/lib/utils";
 import { amountValue } from "@/lib/money";
 import { firmToday } from "@/lib/expiry";
-import { smartSearch } from "@/lib/search/smartSearch";
 import {
   CalendarDays,
   Check,
@@ -1340,90 +1339,82 @@ export function AdvanceRequests({
   onOpenRequest = null,
 }) {
   const { advances } = useAdvances();
-  const [query, setQuery] = useState("");
-  const mine = advancesFor(advances, employee?.name);
-  const shown = smartSearch(mine, query);
+  const rows = advancesFor(advances, employee?.name).map((advance) => ({
+    ...advance,
+    deductFrom: deductedFrom(advance),
+  }));
+
+  const columns = [
+    {
+      key: "requestNo",
+      header: "Request No.",
+      width: "14%",
+      render: (value, advance) =>
+        onOpenRequest ? (
+          <RecordLink onClick={() => onOpenRequest(advance)}>{value}</RecordLink>
+        ) : (
+          <span className="font-medium text-primary">{value}</span>
+        ),
+    },
+    {
+      key: "requestedOn",
+      header: "Request Date",
+      width: "13%",
+      render: (value) => <span className="whitespace-nowrap text-primary">{formatDate(value)}</span>,
+    },
+    {
+      // No unit in the heading: every figure below carries it.
+      key: "amount",
+      header: "Requested Amount",
+      width: "15%",
+      render: (value) => <span className="whitespace-nowrap font-bold text-green-700">{amount(value)}</span>,
+      exportValue: (row) => row.amount,
+    },
+    { key: "deductFrom", header: "Deducted From", width: "14%" },
+    {
+      key: "purpose",
+      header: "Request Details",
+      width: "30%",
+      render: (value, advance) => (
+        <span className="text-muted-foreground">
+          {value && <span className="block font-medium text-primary">{value}</span>}
+          {advance.reason}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      width: "14%",
+      render: (value) => (
+        <span
+          className={cn(
+            "flex w-fit rounded-full px-2 py-0.5 text-xs font-semibold",
+            ADVANCE_STATUS_CHIP[value] || ADVANCE_STATUS_TONE[value]
+          )}
+        >
+          {value}
+        </span>
+      ),
+    },
+  ];
 
   return (
     <Card>
-      <CardContent className="space-y-4 p-4 sm:p-6">
-        {/* The search on the left, where every list in the system has it, and
-            the way to add on the right. */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <AiSearch
-            value={query}
-            onChange={setQuery}
-            placeholder="Ask about salary advances..."
-          />
-          {onAdd && (
-            <Button variant="outline" type="button" className="ms-auto" onClick={onAdd}>
-              <Plus className="me-2 h-4 w-4" />
-              {addLabel}
-            </Button>
-          )}
-        </div>
-
-        {shown.length === 0 ? (
-          <EmptyState>
-            {mine.length === 0
-              ? "No salary advance has been requested yet."
-              : "No salary advance matches that search."}
-          </EmptyState>
-        ) : (
-          <RecordTable minWidth={860}>
-            <HeadRow>
-              <Th width="14%">Request No.</Th>
-              <Th width="14%">Request Date</Th>
-              {/* No unit in the heading: every figure below carries it. */}
-              <Th width="16%" className="text-end">
-                Requested Amount
-              </Th>
-              <Th width="16%">Deducted From</Th>
-              <Th width="40%">Request Details</Th>
-            </HeadRow>
-            <tbody>
-              {shown.map((advance) => (
-                <Row key={advance.id}>
-                  {/* Where the request stands is said under its own number
-                      rather than in a column of its own. */}
-                  <Td className="whitespace-nowrap font-medium text-primary">
-                    {onOpenRequest ? (
-                      <RecordLink onClick={() => onOpenRequest(advance)}>
-                        {advance.requestNo}
-                        </RecordLink>
-                    ) : (
-                      advance.requestNo
-                    )}
-                    <span
-                      className={cn(
-                        "mt-1 flex w-fit rounded-full px-2 py-0.5 text-xs font-semibold",
-                        ADVANCE_STATUS_CHIP[advance.status] ||
-                          ADVANCE_STATUS_TONE[advance.status]
-                      )}
-                    >
-                      {advance.status}
-                    </span>
-                  </Td>
-                  <Td className="whitespace-nowrap text-primary">
-                    {formatDate(advance.requestedOn)}
-                  </Td>
-                  <Td className="whitespace-nowrap text-end font-bold text-green-700">
-                    {amount(advance.amount)}
-                  </Td>
-                  <Td className="whitespace-nowrap text-primary">
-                    {deductedFrom(advance)}
-                  </Td>
-                  <Td className="text-start text-muted-foreground">
-                    {advance.purpose && (
-                      <span className="block font-medium text-primary">{advance.purpose}</span>
-                    )}
-                    {advance.reason}
-                  </Td>
-                </Row>
-              ))}
-            </tbody>
-          </RecordTable>
-        )}
+      <CardContent className="p-4 sm:p-6">
+        <RequestTable
+          rows={rows}
+          columns={columns}
+          searchPlaceholder="Search by request no., month or purpose..."
+          itemLabel="salary advances"
+          exportFileName="salary-advances.csv"
+          filterBy={[
+            { key: "status", label: "Status" },
+            { key: "purpose", label: "Purpose" },
+          ]}
+          onAdd={onAdd}
+          addLabel={addLabel}
+        />
       </CardContent>
     </Card>
   );

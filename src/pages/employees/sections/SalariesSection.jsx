@@ -370,6 +370,8 @@ export default function SalariesSection({
   // My Profile, where the employee cannot record a payment to themselves but
   // can ask for part of their salary in advance.
   advance = false,
+  // Opened from Requests: the salary advances alone.
+  advanceOnly = false,
 }) {
   // Opened on what the employee is already paid, so the page shows the salary
   // in force rather than a blank form somebody has to fill in from memory.
@@ -1067,6 +1069,9 @@ export default function SalariesSection({
       {/* What the employee is paid: opening the tab is what shows it, with
           the history of payments under it. Shown, not asked for - a salary is
           changed by recording one, which is what Add Salary is for. */}
+      {/* From Requests, only the advances: the salary itself and its history
+          are on Financial Benefits. */}
+      {!advanceOnly && (
       <div id="salary-details" className="space-y-6 rounded-lg border p-4 sm:p-6">
         {/* The firm sets what somebody is paid, so on their own page the
             figures are read and not typed. Left open they were editable by
@@ -1209,6 +1214,7 @@ export default function SalariesSection({
           </div>
         )}
       </div>
+      )}
 
       {/* What has been asked for out of the salary above. The firm sees its
           own record of an advance in the payments; this is the employee's. */}
@@ -1218,7 +1224,13 @@ export default function SalariesSection({
         employee={employee}
         // The one thing the employee may do with their own salary, on the row
         // above the list it is added to.
-        onAdd={advance && addLabel && !adding ? () => onOpenAdd?.() : null}
+        // From Requests, where the salary's own list is not shown, the firm's
+        // Add Salary sits here instead.
+        onAdd={
+          (advance || (advanceOnly && canEdit)) && addLabel && !adding
+            ? () => onOpenAdd?.()
+            : null
+        }
         addLabel={addLabel}
         onOpenRequest={
           adding
@@ -1232,14 +1244,16 @@ export default function SalariesSection({
 
 
       {/* What has been paid, month by month */}
-      <SalaryHistory
-        history={history}
-        // A request that has not been approved opens back into the form, to
-        // be followed, corrected or decided.
-        onOpenRequest={canEdit ? trackRequest : null}
-        onAdd={canEdit && !adding ? () => onOpenAdd?.() : null}
-        addLabel={addLabel}
-      />
+      {!advanceOnly && (
+        <SalaryHistory
+          history={history}
+          // A request that has not been approved opens back into the form, to
+          // be followed, corrected or decided.
+          onOpenRequest={canEdit ? trackRequest : null}
+          onAdd={canEdit && !adding ? () => onOpenAdd?.() : null}
+          addLabel={addLabel}
+        />
+      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import AiSearch from "@/components/shared/AiSearch";
+import RequestTable from "@/components/shared/RequestTable";
 import { RequestSteps } from "@/components/shared/RequestSteps";
 import { Card, CardContent } from "@/components/ui/card";
 import { Bordered, EmptyState } from "@/components/shared/panels";
@@ -26,7 +26,6 @@ import { Rial } from "@/components/shared/Rial";
 import { FileText, History, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { amountValue } from "@/lib/money";
-import { smartSearch } from "@/lib/search/smartSearch";
 import {
   Dialog,
   DialogContent,
@@ -97,7 +96,6 @@ export default function BonusSection({
 }) {
   const { bonuses, addBonus, updateBonus } = useBonuses();
   const [draft, setDraft] = useState(emptyDraft);
-  const [query, setQuery] = useState("");
   // Which half of the bonus is open - what is being asked for, and then how
   // it was paid out - and the request the form is open on.
   const [stage, setStage] = useState("request");
@@ -110,7 +108,11 @@ export default function BonusSection({
   const settled = open?.status === BONUS_DISBURSED;
   const refused = open?.status === REQUEST_REJECTED;
 
-  const mine = smartSearch(bonusesFor(bonuses, employee?.name), query);
+  const mine = bonusesFor(bonuses, employee?.name).map((bonus) => ({
+    ...bonus,
+    bonusOn: bonusDate(bonus),
+    reasonText: bonusReason(bonus),
+  }));
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
   const setPay = (name, value) =>
     setPayment((prev) => ({ ...prev, [name]: value }));
@@ -553,79 +555,69 @@ export default function BonusSection({
           </DialogContent>
         </Dialog>
 
-        {/* The search on the left, where every list in the system has it,
-            and the way to add on the right. */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <AiSearch
-            value={query}
-            onChange={setQuery}
-            placeholder="Ask about bonuses..."
-          />
-          {addLabel && !adding && (
-            <Button variant="outline" type="button" className="ms-auto" onClick={onOpenAdd}>
-              <Plus className="me-2 h-4 w-4" />
-              {addLabel}
-            </Button>
-          )}
-        </div>
-
-        {mine.length === 0 ? (
-          <EmptyState>No bonus has been asked for yet.</EmptyState>
-        ) : (
-          <RecordTable minWidth={900}>
-            <HeadRow>
-              <Th width="12%">Request No.</Th>
-              <Th width="14%">Bonus Date</Th>
-              <Th width="28%">Bonus Details</Th>
-              {/* The unit is said once, in the heading, so the figures under
-                  it can be read against each other. */}
-              <Th width="18%" className="text-end">
-                Bonus Amount (OMR)
-              </Th>
-              <Th width="28%">Employee Comment</Th>
-            </HeadRow>
-            <tbody>
-              {mine.map((bonus) => (
-                <Row key={bonus.id}>
-                  {/* Clicking the number opens the request back up. Where it
-                      stands is said under the number rather than in a column
-                      of its own. */}
-                  <Td className="whitespace-nowrap font-medium text-primary">
-                    <RecordLink onClick={() => track(bonus)}>
-                      {bonus.requestNo}
-                      </RecordLink>
-                    <span
-                      className={cn(
-                        "mt-1 block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold",
-                        BONUS_STATUS_CHIP[bonus.status] ||
-                          REQUEST_STATUS_CHIP[bonus.status]
-                      )}
-                    >
-                      {bonus.status}
-                    </span>
-                  </Td>
-                  <Td className="whitespace-nowrap text-primary">
-                    {formatDate(bonusDate(bonus))}
-                  </Td>
-                  <Td className="text-start">
-                    <span className="block font-semibold text-primary">
-                      {bonusReason(bonus)}
-                    </span>
-                    <span className="block text-xs text-muted-foreground">
-                      {bonus.expenseType} &rarr; {bonus.category}
-                    </span>
-                  </Td>
-                  <Td className="whitespace-nowrap text-end font-bold text-green-700">
-                    {amountValue(bonus.amount)}
-                  </Td>
-                  <Td className="text-start text-muted-foreground">
-                    {bonus.notes || "-"}
-                  </Td>
-                </Row>
-              ))}
-            </tbody>
-          </RecordTable>
-        )}
+        <RequestTable
+          rows={mine}
+          columns={[
+            {
+              // Clicking the number opens the request back up.
+              key: "requestNo",
+              header: "Request No.",
+              width: "12%",
+              render: (value, bonus) => <RecordLink onClick={() => track(bonus)}>{value}</RecordLink>,
+            },
+            {
+              key: "bonusOn",
+              header: "Bonus Date",
+              width: "13%",
+              render: (value) => <span className="whitespace-nowrap text-primary">{formatDate(value)}</span>,
+            },
+            {
+              key: "reasonText",
+              header: "Bonus Details",
+              width: "24%",
+              render: (value, bonus) => (
+                <>
+                  <span className="block font-semibold text-primary">{value}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {bonus.expenseType} &rarr; {bonus.category}
+                  </span>
+                </>
+              ),
+            },
+            {
+              key: "amount",
+              header: "Bonus Amount (OMR)",
+              width: "15%",
+              render: (value) => <span className="whitespace-nowrap font-bold text-green-700">{amountValue(value)}</span>,
+            },
+            {
+              key: "notes",
+              header: "Employee Comment",
+              width: "22%",
+              render: (value) => <span className="text-muted-foreground">{value || "-"}</span>,
+            },
+            {
+              key: "status",
+              header: "Status",
+              width: "14%",
+              render: (value) => (
+                <span
+                  className={cn(
+                    "block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold",
+                    BONUS_STATUS_CHIP[value] || REQUEST_STATUS_CHIP[value]
+                  )}
+                >
+                  {value}
+                </span>
+              ),
+            },
+          ]}
+          searchPlaceholder="Search by request no., reason or comment..."
+          itemLabel="bonuses"
+          exportFileName="bonuses.csv"
+          onAdd={addLabel && !adding ? onOpenAdd : null}
+          addLabel={addLabel}
+        />
       </CardContent>
     </Card>
   );
