@@ -304,7 +304,7 @@
   /* Striped row, and the row under the cursor: one step and two steps
      down from white, with the heading a step below them again. */
   --table-zebra: #f7f9fb;
-  --table-row-hover: #edf5fc;
+  --table-row-hover: #eef6ff;
   --table-row-selected: #dceaf7;
   /* A paper on file, and the dash where there is none. */
   --doc-present: #64748b;
@@ -814,18 +814,19 @@
   }
 }
 /*
- * Where the pointer is, said with a tint and nothing else.
- *
- * The rule under each row is there whether or not the pointer is on it, so
- * hover adds no second line - one arriving and leaving under the pointer only
- * flickers. The tint takes the whole row: a record is one thing, and picking
- * out the cell the pointer happens to be over would break it into pieces.
+ * Every table row, on hover: the whole row turns light blue, and nothing else
+ * changes - no shadow, no border, no change of size, text as it was. Set on
+ * the row and on its cells, so a cell with a background of its own (a zebra
+ * stripe, a sticky column) lights up with the rest of the row. Unlayered, so
+ * it outranks any per-table hover colour written as a utility class.
  */
-.table-hover-lines tbody td {
-  transition: background-color 120ms;
+tbody tr,
+tbody tr > td {
+  transition: background-color 150ms ease;
 }
-.table-hover-lines tbody tr:hover > td {
-  background-color: var(--secondary);
+tbody tr:hover,
+tbody tr:hover > td {
+  background-color: var(--table-row-hover);
 }
 
 /*

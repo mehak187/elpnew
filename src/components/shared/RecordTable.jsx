@@ -73,7 +73,7 @@ export function Th({ width, className, children }) {
  * draws a grid the data never asked for. The padding does the separating.
  *
  * Where the pointer is, is said with a tint over the whole row and nothing
- * else - see `.table-hover-lines` in the stylesheet. Nothing is drawn around
+ * else - see the table row hover rule in the stylesheet. Nothing is drawn around
  * the row or the cell on top of that: the rule under the row is there either
  * way, and a second line arriving under the pointer only flickers.
  */
