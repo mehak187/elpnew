@@ -267,4 +267,25 @@ export const initialAdvances = [
     decidedBy: "Khalid Al Hinai",
     decidedByTitle: "Partner",
   },
+  {
+    // Handed back to be corrected, on the same record as the two above, so
+    // all three stages can be seen on one employee.
+    id: 11,
+    requestNo: "SA-2026-00011",
+    employee: "Ahmed Al Balushi",
+    requestedOn: "2026-10-03",
+    amount: 400,
+    deductMonth: "October",
+    deductYear: "2026",
+    purpose: "Emergency Case",
+    reason:
+      "Requesting a salary advance due to urgent family medical expenses. My father is scheduled for a medical procedure and I need to cover the treatment costs and related expenses.",
+    status: "Pending",
+    decision: "completion",
+    managementComment:
+      "The requested amount is higher than the permitted limit. Please adjust the amount and resubmit the request.",
+    decidedOn: "2026-10-03",
+    decidedBy: "Khalid Al Hinai",
+    decidedByTitle: "Partner",
+  },
 ];
