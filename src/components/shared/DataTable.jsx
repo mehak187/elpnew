@@ -86,6 +86,10 @@ export default function DataTable({
   exportFileName = "export.csv",
   onAdd,
   addLabel = "Add",
+  // Further ways to add, as [{ label, onClick }], before the main one.
+  moreAdds = [],
+  // The search box's width, where a list needs room for more on its row.
+  searchClassName,
   /**
    * Standard 08: a short Add or Edit form, opened inside this container
    * rather than in a card above it or a window over it.
@@ -330,6 +334,7 @@ export default function DataTable({
           value={searchValue}
           onChange={handleSearch}
           placeholder={searchPlaceholder}
+          className={searchClassName}
         />
 
         {/* Custom Filters */}
@@ -388,19 +393,25 @@ export default function DataTable({
               Standard 06: an outline, not a filled button - white, a 1px navy
               edge and navy text. Adding is one thing a list offers, not the
               thing the list is for. */}
-          {onAdd && !addPanel && (
-            <Button
-              type="button"
-              variant="add"
-              // Pushed to the far end: this is the one control that acts on a
-              // record rather than on the view of the list, and a list inside
-              // a record has no page title for it to sit beside.
-              className="ms-auto shrink-0"
-              onClick={onAdd}
-            >
-              <Plus className="me-2 h-4 w-4" />
-              {addLabel}
-            </Button>
+          {/* Pushed to the far end: these are the controls that act on a
+              record rather than on the view of the list, and a list inside a
+              record has no page title for them to sit beside. A list that can
+              be added to in more than one way shows each, side by side. */}
+          {(onAdd || moreAdds.length > 0) && !addPanel && (
+            <div className="ms-auto flex shrink-0 items-center gap-2">
+              {moreAdds.map((action) => (
+                <Button key={action.label} type="button" variant="add" onClick={action.onClick}>
+                  <Plus className="me-2 h-4 w-4" />
+                  {action.label}
+                </Button>
+              ))}
+              {onAdd && (
+                <Button type="button" variant="add" onClick={onAdd}>
+                  <Plus className="me-2 h-4 w-4" />
+                  {addLabel}
+                </Button>
+              )}
+            </div>
           )}
         </div>
       </div>

@@ -393,6 +393,8 @@ export default function SalariesSection({
   const [reason, setReason] = useState("");
   // The advance request opened off its own list, if one is.
   const [openAdvanceId, setOpenAdvanceId] = useState(null);
+  // A new advance asked for from the employee's record rather than My Profile.
+  const [newAdvance, setNewAdvance] = useState(false);
 
   const openRequest = history.find((row) => row.id === openId) || null;
   const settled = Boolean(openRequest?.salaryNo);
@@ -502,6 +504,7 @@ export default function SalariesSection({
     setRejecting(false);
     setReason("");
     setOpenAdvanceId(null);
+    setNewAdvance(false);
     onCloseAdd();
   };
 
@@ -624,7 +627,7 @@ export default function SalariesSection({
   // An advance is what the employee asks for out of their own salary: on My
   // Profile it is the only thing that opens here, and on the firm's side it
   // opens whenever one of those requests is picked off the list to decide.
-  const addingAdvance = Boolean(adding && (advance || openAdvanceId));
+  const addingAdvance = Boolean(adding && (advance || openAdvanceId || newAdvance));
 
   // The form opens over the page rather than pushing it down: the list it is
   // filed into stays where it was, behind it.
@@ -1232,6 +1235,21 @@ export default function SalariesSection({
             : null
         }
         addLabel={addLabel}
+        // On the employee's record, an advance can be asked for on their
+        // behalf too, beside Add Salary.
+        moreAdds={
+          !advance && canEdit && !adding
+            ? [
+                {
+                  label: "Salary Advance Request",
+                  onClick: () => {
+                    setNewAdvance(true);
+                    onOpenAdd?.();
+                  },
+                },
+              ]
+            : []
+        }
         onOpenRequest={
           adding
             ? null

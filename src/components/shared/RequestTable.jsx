@@ -24,6 +24,8 @@ export default function RequestTable({
   filterBy = [{ key: "status", label: "Status" }],
   onAdd,
   addLabel,
+  // Further ways to add, as [{ label, onClick }], beside the main one.
+  moreAdds = [],
   endedRow,
 }) {
   const [filters, setFilters] = useState({});
@@ -79,6 +81,9 @@ export default function RequestTable({
       onClearFilters={() => narrow({})}
       onAdd={onAdd || undefined}
       addLabel={addLabel}
+      moreAdds={moreAdds}
+      // Narrower than a page's own list, so the Add buttons keep one row.
+      searchClassName="sm:w-72 lg:w-88"
       endedRow={endedRow}
     />
   );

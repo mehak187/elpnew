@@ -1,5 +1,4 @@
 import { useState } from "react";
-import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -116,10 +115,10 @@ const longDate = (iso) => {
   return `${day} ${SHORT_MONTHS[Number(month) - 1]} ${year}`;
 };
 
-/** "SA-2026-00012" as the review reads it: "SA ( 12/2026 )". */
+/** "SA-2026-00012" as the head of the request reads it: "SA 12/2026". */
 const shortRequestNo = (requestNo) => {
   const [prefix, year, count] = String(requestNo).split("-");
-  return count ? `${prefix} ( ${Number(count)}/${year} )` : requestNo;
+  return count ? `${prefix} ${Number(count)}/${year}` : requestNo;
 };
 
 /** The red mark of a field that must be answered. */
@@ -153,7 +152,7 @@ function AdvanceSteps({ steps, active, onChange }) {
               >
                 <span
                   className={cn(
-                    "block h-full bg-blue-600",
+                    "block h-full bg-primary",
                     index < at ? "w-full" : open ? "w-1/2" : "w-0"
                   )}
                 />
@@ -172,7 +171,7 @@ function AdvanceSteps({ steps, active, onChange }) {
                   open
                     ? step.activeTone === "navy"
                       ? "bg-primary text-white"
-                      : "bg-blue-600 text-white"
+                      : "bg-primary text-primary-foreground"
                     : done
                       ? step.doneTone === "green"
                         ? "bg-green-700 text-white"
@@ -190,7 +189,7 @@ function AdvanceSteps({ steps, active, onChange }) {
                   open
                     ? step.activeTone === "navy"
                       ? "font-bold text-primary"
-                      : "font-bold text-blue-700"
+                      : "font-bold text-primary"
                     : "text-primary"
                 )}
               >
@@ -321,7 +320,6 @@ export function AdvanceSalaryForm({
 
   // What is already owed on earlier advances, and so what is left to ask for:
   // an advance cannot be taken twice out of the same salary.
-  const basic = Number(employee?.salary) || 0;
   const outstanding = outstandingAdvance(advances, employee?.name);
   const limit = Math.max(0, Number((net - outstanding).toFixed(3)));
   const requested = Number(draft.amount) || 0;
@@ -488,49 +486,6 @@ export function AdvanceSalaryForm({
             <DialogTitle className="text-2xl font-bold text-primary">
               {correcting ? "Salary Advance Request Correction" : "Salary Advance Request"}
             </DialogTitle>
-            {/* While it is being written the number sits by the title, with
-                the limit a click away; once sent, it moves to the right. */}
-            {writing && (
-              <span className="rounded-md bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
-                {requestNo}
-              </span>
-            )}
-            {/* What may be asked for, kept a click away: the figures behind
-                the limit the amount is checked against. */}
-            {writing && (
-            <PopoverPrimitive.Root>
-              <PopoverPrimitive.Trigger asChild>
-                <button
-                  type="button"
-                  className="rounded-full text-primary/70 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <Info className="size-6" aria-hidden="true" />
-                  <span className="sr-only">Advance limit details</span>
-                </button>
-              </PopoverPrimitive.Trigger>
-              <PopoverPrimitive.Portal>
-                <PopoverPrimitive.Content
-                  align="start"
-                  sideOffset={8}
-                  className="z-50 w-72 space-y-2 rounded-lg border bg-popover p-4 text-sm shadow-md"
-                >
-                  {[
-                    ["Current Basic Salary", basic],
-                    ["Current Net Salary", net],
-                    ["Outstanding Salary Advance", outstanding],
-                    ["Eligible Advance Limit", limit],
-                  ].map(([label, value]) => (
-                    <p key={label} className="flex justify-between gap-4">
-                      <span className="text-primary/75">{label}</span>
-                      <span className="font-semibold text-primary">
-                        {amountValue(value)} <Rial />
-                      </span>
-                    </p>
-                  ))}
-                </PopoverPrimitive.Content>
-              </PopoverPrimitive.Portal>
-            </PopoverPrimitive.Root>
-            )}
           </div>
           <DialogDescription className="text-sm text-primary/75">
             {writing
@@ -543,24 +498,17 @@ export function AdvanceSalaryForm({
           </DialogDescription>
         </div>
         <div className="ms-auto flex flex-wrap items-center gap-3 pt-2 text-sm text-primary">
-          {writing ? (
-            <span>
-              {employee?.empNo || ""} <span className="px-1">|</span> {employee?.name || ""}
-            </span>
-          ) : (
-            <>
-              <span>{employee?.empNo || ""}</span>
-              <span aria-hidden="true" className="h-5 w-px bg-container-border" />
-              <span>{employee?.name || ""}</span>
-            </>
-          )}
+          {/* Whose it is, when it was asked, and its number - the same on
+              every stage of the request. */}
+          <span>{employee?.empNo || ""}</span>
+          <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+          <span>{employee?.name || ""}</span>
           <span aria-hidden="true" className="h-5 w-px bg-container-border" />
           <span>{longDate(requestedOn)}</span>
-          {!writing && (
-            <span className="rounded-md bg-blue-50 px-3 py-1.5 font-semibold text-blue-700">
-              {shortRequestNo(requestNo)}
-            </span>
-          )}
+          <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+          <span className="rounded-md bg-primary/10 px-3 py-1.5 text-base font-bold text-primary">
+            {shortRequestNo(requestNo)}
+          </span>
         </div>
         {/* The window's own close, at the size the design draws it. */}
         <DialogClose className="absolute end-5 top-5 rounded-md p-1 text-primary transition-colors hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
@@ -821,7 +769,7 @@ export function AdvanceSalaryForm({
                       }
                       className={cn(
                         "whitespace-nowrap border-s px-1 text-xs tracking-tight transition-colors first:border-s-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                        chosen ? "bg-blue-600 text-white" : "text-primary hover:bg-menu-hover"
+                        chosen ? "bg-primary text-primary-foreground" : "text-primary hover:bg-menu-hover"
                       )}
                     >
                       {option.month} {option.year}
@@ -971,7 +919,7 @@ export function AdvanceSalaryForm({
                         type="button"
                         onClick={() => setShowAllRemarks((open) => !open)}
                         aria-expanded={showAllRemarks}
-                        className="flex shrink-0 items-center gap-1 font-medium text-blue-700 hover:text-blue-800"
+                        className="flex shrink-0 items-center gap-1 font-medium text-primary hover:text-primary/80"
                       >
                         {showAllRemarks ? "Show less" : "Show more"}
                         <ChevronDown
@@ -1032,17 +980,17 @@ export function AdvanceSalaryForm({
                     onClick={() => setDecision(option.key)}
                     className={cn(
                       "flex items-center gap-4 rounded-lg border px-5 py-3 text-start font-semibold text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default",
-                      chosen ? "border-blue-600 bg-blue-50" : "bg-blue-50/40 hover:bg-blue-50"
+                      chosen ? "border-primary bg-primary/5" : "bg-blue-50/40 hover:bg-blue-50"
                     )}
                   >
                     <span
                       aria-hidden="true"
                       className={cn(
                         "flex size-6 shrink-0 items-center justify-center rounded-full border-2",
-                        chosen ? "border-blue-600" : "border-primary"
+                        chosen ? "border-primary" : "border-primary"
                       )}
                     >
-                      {chosen && <span className="size-3 rounded-full bg-blue-600" />}
+                      {chosen && <span className="size-3 rounded-full bg-primary" />}
                     </span>
                     {option.label}
                   </button>
@@ -1281,7 +1229,7 @@ export function AdvanceSalaryForm({
             !openRequest && (
               <Button
                 type="button"
-                className="min-w-48 bg-blue-600 text-white hover:bg-blue-700"
+                className="min-w-48"
                 onClick={submit}
               >
                 Submit Request
@@ -1298,7 +1246,7 @@ export function AdvanceSalaryForm({
           {stage === "decision" && canDecide && (
             <Button
               type="button"
-              className="min-w-48 bg-blue-600 text-white hover:bg-blue-700"
+              className="min-w-48"
               disabled={!canConfirm}
               onClick={confirmDecision}
             >
@@ -1337,9 +1285,11 @@ export function AdvanceRequests({
   addLabel = "",
   // Clicking a request's number opens it back up, to be followed or decided.
   onOpenRequest = null,
+  // Further ways to add, beside the main one: [{ label, onClick }].
+  moreAdds = [],
 }) {
   const { advances } = useAdvances();
-  const rows = advancesFor(advances, employee?.name).map((advance) => ({
+  const rows =advancesFor(advances, employee?.name).map((advance) => ({
     ...advance,
     deductFrom: deductedFrom(advance),
   }));
@@ -1414,6 +1364,7 @@ export function AdvanceRequests({
           ]}
           onAdd={onAdd}
           addLabel={addLabel}
+          moreAdds={moreAdds}
         />
       </CardContent>
     </Card>
