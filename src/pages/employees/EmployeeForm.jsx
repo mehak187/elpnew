@@ -3391,10 +3391,13 @@ export default function EmployeeForm({ self }) {
                         this, the last of them. */}
                     {shows("banking") && (
                     <SectionCard
-                      title={isAdding ? "Banking Information" : "Bank Information"}
+                      title="Bank Information"
+                      icon={Landmark}
                       footer={isAdding ? stepActions : correctionActions}
                       locked={profileLocked}
                     >
+                      {/* Four to a row, all asked for. No account holder's
+                          name: the account is the employee's own. */}
                       <div className="form-grid gap-y-6">
                         <ChoiceField
                           id="bankName"
@@ -3406,7 +3409,10 @@ export default function EmployeeForm({ self }) {
                           required
                         />
                         <div className="form-field space-y-2">
-                          <Label htmlFor="accountNumber">Account Number</Label>
+                          <Label htmlFor="accountNumber">
+                            Account Number
+                            <Required show={asksFor} />
+                          </Label>
                           <Input
                             id="accountNumber"
                             name="accountNumber"
@@ -3420,19 +3426,10 @@ export default function EmployeeForm({ self }) {
                           <RuleNote name="accountNumber" value={formData.accountNumber} />
                         </div>
                         <div className="form-field space-y-2">
-                          <Label htmlFor="accountHolder">Account Holder Name</Label>
-                          <Input
-                            id="accountHolder"
-                            name="accountHolder"
-                            value={formData.accountHolder}
-                            onChange={onChange}
-                            placeholder="Enter account holder name"
-                            required
-                          />
-                        </div>
-
-                        <div className="form-field space-y-2">
-                          <Label htmlFor="iban">IBAN</Label>
+                          <Label htmlFor="iban">
+                            IBAN
+                            <Required show={asksFor} />
+                          </Label>
                           <Input
                             id="iban"
                             name="iban"
