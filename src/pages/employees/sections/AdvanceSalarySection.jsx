@@ -71,8 +71,9 @@ import {
 
 const REASON_LIMIT = 500;
 const COMMENT_LIMIT = 300;
-// Remarks longer than this are cut to two lines until "Show more".
-const REMARKS_PREVIEW = 180;
+// Remarks longer than this carry "Show more", and are cut to two lines until
+// it is pressed - a sentence or two of remarks has it, as the design shows.
+const REMARKS_PREVIEW = 80;
 
 /** What management can answer an advance with, as the review names it. */
 const ADVANCE_DECISIONS = [
@@ -913,7 +914,7 @@ export function AdvanceSalaryForm({
                     <p className={cn("flex-1 text-primary/85", !showAllRemarks && "line-clamp-2")}>
                       {draft.reason}
                     </p>
-                    {/* Offered only where the remarks run past two lines. */}
+                    {/* Offered wherever the remarks are more than a line. */}
                     {draft.reason.length > REMARKS_PREVIEW && (
                       <button
                         type="button"
