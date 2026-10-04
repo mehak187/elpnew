@@ -1,0 +1,40 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # The site is built ON THE SERVER, from its own clone of the repo, and
+      # nginx serves /var/www/elpnew/dist - so this is a single SSH step.
+      - name: Deploy on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          command_timeout: 15m
+          script: |
+            set -e
+            cd /var/www/elpnew
+
+            echo "==> Pull latest code"
+            git fetch origin
+            git reset --hard origin/main
+
+            echo "==> Build"
+            # npm install (not ci): rolldown-vite pulls platform-specific native
+            # deps, so the macOS-generated lock file doesn't satisfy npm ci here.
+            npm install --no-audit --no-fund
+            npm run build
+
+            echo "==> Deploy complete"
