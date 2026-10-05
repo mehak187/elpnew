@@ -484,7 +484,9 @@ export default function GeneralRequestSection({
                         value={shortDate(todayIso())}
                       />
 
-                      <div className="sm:col-span-1 lg:col-span-2">
+                      {/* The rest of the row: this grid has twelve columns,
+                          so the date's four leave eight. */}
+                      <div className="col-span-12 lg:col-span-8">
                         <Field
                           id="grRemarks"
                           label={
