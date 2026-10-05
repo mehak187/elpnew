@@ -433,7 +433,6 @@ const REQUEST_CATEGORIES = [
     ],
   },
   {
-    // Grievance and Complaint have no page of their own yet.
     key: "administrative",
     label: "Administrative Requests",
     short: "Administrative",
@@ -444,8 +443,8 @@ const REQUEST_CATEGORIES = [
       // No description under these four: the name says what each is.
       { key: "leave", label: "Leave", icon: CalendarDays, tone: "blue", stat: "leaveDays", section: "leaves" },
       { key: "general", label: "General", icon: FilePenLine, section: "generalRequest" },
-      { key: "grievance", label: "Grievance", icon: MessageCircleWarning },
-      { key: "complaint", label: "Complaint", icon: TriangleAlert },
+      { key: "grievance", label: "Grievance", icon: MessageCircleWarning, section: "generalRequest", kind: "grievance" },
+      { key: "complaint", label: "Complaint", icon: TriangleAlert, section: "generalRequest", kind: "complaint" },
     ],
   },
 ];
@@ -4069,7 +4068,14 @@ export default function EmployeeForm({ self }) {
                 )}
 
                 {shownSection === "generalRequest" && (
-                  <GeneralRequestSection employee={formData} canDecide={!readOnly} />
+                  <GeneralRequestSection
+                    // From Requests it opens on the kind chosen there - a
+                    // general request, a grievance or a complaint.
+                    key={isRequests ? requestItem.key : "general"}
+                    kind={(isRequests && requestItem.kind) || "general"}
+                    employee={formData}
+                    canDecide={!readOnly}
+                  />
                 )}
 
                 {/* Not yet specified, so nothing is invented for it */}

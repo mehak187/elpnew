@@ -3,7 +3,7 @@ import { loanRecords } from "./loanData";
 import { assistanceRecords, statusOf } from "./assistanceData";
 import { initialBonuses } from "./bonusData";
 import { initialEntitlements } from "./entitlementData";
-import { initialGeneralRequests } from "./generalRequestData";
+import { initialGeneralRequests, kindOf } from "./generalRequestData";
 
 /**
  * How many of each kind of request one employee has made, and where they
@@ -41,6 +41,13 @@ const entitlement = (kind) => (name) =>
     plain
   );
 
+/** A general request, grievance or complaint, as its page keeps it. */
+const administrative = (kind) => (name) =>
+  tally(
+    mine(initialGeneralRequests, name).filter((row) => kindOf(row) === kind),
+    plain
+  );
+
 const COUNTERS = {
   salaryAdvance: (name) => tally(mine(initialAdvances, name), advanceStatusOf),
   loan: (name) => tally(mine(loanRecords, name), plain),
@@ -54,7 +61,9 @@ const COUNTERS = {
   airTicket: entitlement("airTicket"),
   notice: entitlement("notice"),
   gratuity: entitlement("endOfService"),
-  general: (name) => tally(mine(initialGeneralRequests, name), plain),
+  general: administrative("general"),
+  grievance: administrative("grievance"),
+  complaint: administrative("complaint"),
 };
 
 const NONE = { total: 0, approved: 0, pending: 0, returned: 0, rejected: 0 };

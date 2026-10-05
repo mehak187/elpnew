@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/shared/panels";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -80,6 +81,8 @@ export default function LeavesSection({ employee, canReview = true }) {
   // A request opened from the list to be reviewed, and the stage of it shown.
   const [openId, setOpenId] = useState(null);
   const [stage, setStage] = useState("department");
+  // What this employee has asked for before, open over the request.
+  const [showHistory, setShowHistory] = useState(false);
   const [review, setReview] = useState({ reviewDate: "", decision: "", comments: "" });
 
   const open = leaves.find((leave) => leave.id === openId) || null;
@@ -215,10 +218,117 @@ export default function LeavesSection({ employee, canReview = true }) {
   const save = () => {
     // A new request has not been decided on: the store says so, and nothing
     // here suggests otherwise.
-    addLeave({ ...draft, employee: employee.name });
+    addLeave({ ...draft, employee: employee.name, requestedOn: thisDay() });
     setYear(draft.year);
     close();
   };
+
+  // One leave as the list and the history both show it.
+  const asRow = (leave) => {
+    const days = leaveDays(leave.from, leave.to);
+    // What was left before this request, and what it leaves behind -
+    // both counted off the record, never stored.
+    const balance = remainingBalance(leaves, employee.name, leave.type, chargedYear(leave));
+    return {
+      ...leave,
+      days,
+      typeText: leaveTypeLabel(leave),
+      period: formatDate(leave.from) + " – " + formatDate(leave.to),
+      workflow: workflowLabel(leave),
+      balanceText:
+        balance && !balance.expired
+          ? balance.allowance -
+            (balance.allowance - balance.remaining) +
+            " Days / " +
+            Math.max(balance.remaining - days, 0) +
+            " Days"
+          : "-",
+    };
+  };
+
+  const columns = [
+    {
+      // The number opens the request at the stage it is waiting at,
+      // for whoever has to decide it.
+      key: "leaveNo",
+      header: "Leave No.",
+      width: "10%",
+      render: (value, leave) =>
+        canReview ? (
+          <button
+            type="button"
+            onClick={() => openReview(leave)}
+            className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            {value || "-"}
+          </button>
+        ) : (
+          <span className="font-bold text-primary">{value || "-"}</span>
+        ),
+    },
+    {
+      key: "category",
+      header: "Leave Details",
+      width: "18%",
+      render: (value, leave) => (
+        <>
+          <span className="block font-semibold text-primary">{value}</span>
+          <span className="block text-xs text-muted-foreground">{leave.typeText}</span>
+        </>
+      ),
+    },
+    {
+      key: "period",
+      header: "Leave Period",
+      width: "22%",
+      render: (value, leave) => (
+        <span className="whitespace-nowrap">
+          {value}
+          <span className="px-1.5 text-muted-foreground">/</span>
+          {leave.days} {leave.days === 1 ? "Day" : "Days"}
+        </span>
+      ),
+    },
+    {
+      // Management's note sits with the decision it explains.
+      key: "workflow",
+      header: "Approval Workflow",
+      width: "20%",
+      render: (value, leave) => (
+        <>
+          {value}
+          {leave.comments && (
+            <span className="mt-1 block text-xs text-muted-foreground">{leave.comments}</span>
+          )}
+        </>
+      ),
+    },
+    {
+      key: "balanceText",
+      header: "Balance",
+      width: "15%",
+      render: (value) => <span className="whitespace-nowrap">{value}</span>,
+    },
+    {
+      key: "status",
+      header: "Status",
+      width: "15%",
+      render: (value) => {
+        const Icon = STATUS_ICON[value];
+        return (
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
+              LEAVE_STATUS_TONE[value]
+            )}
+          >
+            {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
+            {value}
+          </span>
+        );
+      },
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -244,13 +354,9 @@ export default function LeavesSection({ employee, canReview = true }) {
 
       {/* Opened over the page, so the list it is filed into stays behind it. */}
       <Dialog open={adding || Boolean(open)} onOpenChange={(o) => !o && close()}>
-        <DialogContent className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {open ? "Leave Request " + (open.leaveNo || "") : "Add New Leave"}
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent hideClose className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
           <LeaveForm
+            onHistory={() => setShowHistory(true)}
             employee={employee}
             leaves={leaves}
             draft={open ? review : draft}
@@ -266,6 +372,22 @@ export default function LeavesSection({ employee, canReview = true }) {
             onStage={setStage}
             onDecide={decide}
           />
+          {/* Every leave this employee has asked for, over the request. */}
+          <Dialog open={showHistory} onOpenChange={setShowHistory}>
+            <DialogContent className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Leave History · {employee.name}</DialogTitle>
+                <DialogDescription>Every leave request this employee has made.</DialogDescription>
+              </DialogHeader>
+              <RequestTable
+                rows={[...mine].sort((a, b) => b.id - a.id).map(asRow)}
+                columns={columns}
+                searchPlaceholder="Search by leave no., type or period..."
+                itemLabel="leave requests"
+                exportFileName="leaves.csv"
+              />
+            </DialogContent>
+          </Dialog>
         </DialogContent>
       </Dialog>
 
@@ -279,110 +401,8 @@ export default function LeavesSection({ employee, canReview = true }) {
       <Card>
         <CardContent className="p-4 sm:p-6">
           <RequestTable
-            rows={rows.map((leave) => {
-              const days = leaveDays(leave.from, leave.to);
-              // What was left before this request, and what it leaves behind -
-              // both counted off the record, never stored.
-              const balance = remainingBalance(leaves, employee.name, leave.type, chargedYear(leave));
-              return {
-                ...leave,
-                days,
-                typeText: leaveTypeLabel(leave),
-                period: formatDate(leave.from) + " – " + formatDate(leave.to),
-                workflow: workflowLabel(leave),
-                balanceText:
-                  balance && !balance.expired
-                    ? balance.allowance -
-                      (balance.allowance - balance.remaining) +
-                      " Days / " +
-                      Math.max(balance.remaining - days, 0) +
-                      " Days"
-                    : "-",
-              };
-            })}
-            columns={[
-              {
-                // The number opens the request at the stage it is waiting at,
-                // for whoever has to decide it.
-                key: "leaveNo",
-                header: "Leave No.",
-                width: "10%",
-                render: (value, leave) =>
-                  canReview ? (
-                    <button
-                      type="button"
-                      onClick={() => openReview(leave)}
-                      className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
-                    >
-                      {value || "-"}
-                    </button>
-                  ) : (
-                    <span className="font-bold text-primary">{value || "-"}</span>
-                  ),
-              },
-              {
-                key: "category",
-                header: "Leave Details",
-                width: "18%",
-                render: (value, leave) => (
-                  <>
-                    <span className="block font-semibold text-primary">{value}</span>
-                    <span className="block text-xs text-muted-foreground">{leave.typeText}</span>
-                  </>
-                ),
-              },
-              {
-                key: "period",
-                header: "Leave Period",
-                width: "22%",
-                render: (value, leave) => (
-                  <span className="whitespace-nowrap">
-                    {value}
-                    <span className="px-1.5 text-muted-foreground">/</span>
-                    {leave.days} {leave.days === 1 ? "Day" : "Days"}
-                  </span>
-                ),
-              },
-              {
-                // Management's note sits with the decision it explains.
-                key: "workflow",
-                header: "Approval Workflow",
-                width: "20%",
-                render: (value, leave) => (
-                  <>
-                    {value}
-                    {leave.comments && (
-                      <span className="mt-1 block text-xs text-muted-foreground">{leave.comments}</span>
-                    )}
-                  </>
-                ),
-              },
-              {
-                key: "balanceText",
-                header: "Balance",
-                width: "15%",
-                render: (value) => <span className="whitespace-nowrap">{value}</span>,
-              },
-              {
-                key: "status",
-                header: "Status",
-                width: "15%",
-                render: (value) => {
-                  const Icon = STATUS_ICON[value];
-                  return (
-                    <span
-                      className={cn(
-                        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
-                        LEAVE_STATUS_TONE[value]
-                      )}
-                    >
-                      {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
-                      {value}
-                    </span>
-                  );
-                },
-              },
-            ]}
+            rows={rows.map(asRow)}
+            columns={columns}
             searchPlaceholder="Search by leave no., type or period..."
             itemLabel="leave requests"
             exportFileName={"leaves-" + year + ".csv"}

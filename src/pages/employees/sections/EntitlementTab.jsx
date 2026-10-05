@@ -38,6 +38,7 @@ import {
 import { RequestSteps, DecisionChoice } from "@/components/shared/RequestSteps";
 import { AdvanceSteps, longDate } from "./AdvanceSalarySection";
 import MonthPicker from "@/components/shared/MonthPicker";
+import { SheetCard, HistoryCard, UploadButton } from "@/components/shared/RequestSheet";
 import {
   Lock,
   Save,
@@ -51,6 +52,12 @@ import {
   History,
   UploadCloud,
   X,
+  Stethoscope,
+  Bus,
+  Plane,
+  Ticket,
+  FileClock,
+  HandCoins,
 } from "lucide-react";
 import UploadIcon from "@/components/shared/UploadIcon";
 import { cn } from "@/lib/utils";
@@ -124,6 +131,66 @@ const SHEETS = {
     note: "Enter leave details",
     decisionTitle: "Management Decision",
     decisionNote: "Review, approve and disburse",
+  },
+  medical: {
+    icon: Stethoscope,
+    title: "Medical Allowance Request",
+    intro: "Submit a new medical allowance request with the required details and supporting documents.",
+    note: "Enter medical allowance details",
+    decisionTitle: "Management Decision",
+    decisionNote: "Review, approve and disburse",
+    // Fields laid out by the shared sheet, with the history at its foot.
+    shared: true,
+  },
+  transport: {
+    icon: Bus,
+    title: "Transportation Allowance Request",
+    intro: "Submit a new transportation allowance request with the required details and supporting documents.",
+    note: "Enter transportation allowance details",
+    decisionTitle: "Management Decision",
+    decisionNote: "Review, approve and disburse",
+    // Fields laid out by the shared sheet, with the history at its foot.
+    shared: true,
+  },
+  travel: {
+    icon: Plane,
+    title: "Travel Allowance Request",
+    intro: "Submit a new travel allowance request with the required details and supporting documents.",
+    note: "Enter travel allowance details",
+    decisionTitle: "Management Decision",
+    decisionNote: "Review, approve and disburse",
+    // Fields laid out by the shared sheet, with the history at its foot.
+    shared: true,
+  },
+  airTicket: {
+    icon: Ticket,
+    title: "Air Ticket Request",
+    intro: "Submit a new air ticket request with the required details and supporting documents.",
+    note: "Enter air ticket details",
+    decisionTitle: "Management Decision",
+    decisionNote: "Review, approve and disburse",
+    // Fields laid out by the shared sheet, with the history at its foot.
+    shared: true,
+  },
+  notice: {
+    icon: FileClock,
+    title: "Notice Pay Request",
+    intro: "Submit a new notice pay request with the required details and supporting documents.",
+    note: "Enter notice pay details",
+    decisionTitle: "Management Decision",
+    decisionNote: "Review, approve and disburse",
+    // Fields laid out by the shared sheet, with the history at its foot.
+    shared: true,
+  },
+  endOfService: {
+    icon: HandCoins,
+    title: "End-of-Service Gratuity Request",
+    intro: "Submit a new end-of-service gratuity request with the required details and supporting documents.",
+    note: "Enter end-of-service gratuity details",
+    decisionTitle: "Management Decision",
+    decisionNote: "Review, approve and disburse",
+    // Fields laid out by the shared sheet, with the history at its foot.
+    shared: true,
   },
 };
 
@@ -364,7 +431,7 @@ export default function EntitlementTab({
   // Transport asks for a comment but does not insist on one; every other
   // request has to say why it is being made.
   // Overtime's sheet asks for no comment at all.
-  const reasonRequired = kind !== "transport" && !sheet;
+  const reasonRequired = kind !== "transport" && (!sheet || sheet.shared);
 
   const canSubmit =
     draft.requestDate &&
@@ -617,6 +684,75 @@ export default function EntitlementTab({
       : modeOf(record.kind) === "hours"
         ? record.hours + " Hours"
         : "-";
+
+  // The list's columns, on the page and in the History window alike.
+  const columns = [
+    {
+      // A request waiting on a decision carries its temporary number
+      // and opens back into the form.
+      key: "no",
+      header: "No.",
+      width: "12%",
+      render: (value, record) =>
+        record.entitlementNo ? (
+          <span className="font-medium text-primary">{value}</span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => track(record)}
+            className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            {value}
+          </button>
+        ),
+    },
+    {
+      key: "requestDate",
+      header: "Request Date",
+      width: "14%",
+      render: (value) => <span className="whitespace-nowrap">{formatDate(value)}</span>,
+    },
+    {
+      key: "detail",
+      header: "Request Details",
+      width: "28%",
+      render: (value, record) => (
+        <>
+          <span className="block font-semibold text-primary">{value}</span>
+          <span className="block text-xs text-muted-foreground">{record.reason}</span>
+        </>
+      ),
+    },
+    {
+      key: "quantity",
+      header: "Quantity",
+      width: "12%",
+      render: (_, record) => <span className="whitespace-nowrap">{measure(record)}</span>,
+      exportValue: (record) => measure(record),
+    },
+    {
+      key: "amount",
+      header: "Amount (OMR)",
+      width: "16%",
+      render: (value) => <span className="whitespace-nowrap font-bold text-green-700">{amountValue(value)}</span>,
+    },
+    {
+      key: "status",
+      header: "Status",
+      width: "12%",
+      render: (value) => (
+        <span
+          className={cn(
+            "block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold",
+            ENTITLEMENT_STATUS_CHIP[value]
+          )}
+        >
+          {value}
+        </span>
+      ),
+    },
+  ];
+
 
   /**
    * The decision itself: when it was given, what it grants, and why.
@@ -1563,6 +1699,142 @@ export default function EntitlementTab({
             </div>
           </div>
         </section>
+      ) : sheet?.shared ? (
+        <SheetCard title={label + " Request Details"}>
+          {/* General or for a case. The choice decides what else is asked,
+              so it comes first and the fields follow it. */}
+          {kind === "transport" && (
+            <div
+              role="radiogroup"
+              aria-label="Kind of transport"
+              className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+            >
+              {[
+                { value: TRANSPORT_GENERAL, title: "General" },
+                { value: TRANSPORT_COURT, title: "Court-Linked" },
+              ].map((option) => {
+                const picked = draft.transportType === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={picked}
+                    onClick={() => set("transportType", option.value)}
+                    className={cn(
+                      "flex items-center gap-3 rounded-field border px-4 py-3 text-start font-medium transition-colors",
+                      picked
+                        ? "border-primary bg-secondary text-primary"
+                        : "border-field-border hover:bg-muted/50"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2",
+                        picked ? "border-primary" : "border-muted-foreground/50"
+                      )}
+                    >
+                      {picked && <span className="h-2.5 w-2.5 rounded-full bg-primary" />}
+                    </span>
+                    {option.title}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Each field sits in a cell of its own - the form's fields bring
+              their twelve-column spans, which mean nothing outside that grid. */}
+          <div className="grid items-start gap-4 md:grid-cols-3">
+            {ownDate && (
+              <div>
+                <Field id="ent-request-date" label="Request Date" required>
+                  <Input
+                    required
+                    id="ent-request-date"
+                    type="date"
+                    value={draft.requestDate}
+                    max={todayIso()}
+                    onChange={(e) => set("requestDate", e.target.value)}
+                  />
+                </Field>
+              </div>
+            )}
+            {courtLinked && (
+              <>
+                <div>
+                  <Field id="ent-file-no" label="File No." required>
+                    <Input
+                      required
+                      id="ent-file-no"
+                      value={draft.fileNo}
+                      onChange={(e) => set("fileNo", e.target.value)}
+                      placeholder="Enter the case file number"
+                    />
+                  </Field>
+                </div>
+                <div>
+                  <Field id="ent-travel-date" label="Travel Date" required>
+                    <Input
+                      required
+                      id="ent-travel-date"
+                      type="date"
+                      value={draft.travelDate}
+                      max={todayIso()}
+                      onChange={(e) => set("travelDate", e.target.value)}
+                    />
+                  </Field>
+                </div>
+              </>
+            )}
+            <div>
+              <Field id="ent-amount" label="Requested Amount (OMR)" required>
+                <div className="flex items-end gap-3">
+                  <div className="relative min-w-0 flex-1">
+                    <Input
+                      required
+                      id="ent-amount"
+                      inputMode="decimal"
+                      className="pe-14"
+                      value={draft.amount}
+                      onChange={(e) => set("amount", e.target.value.replace(/[^\d.]/g, ""))}
+                      placeholder="0.000"
+                    />
+                    <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                      OMR
+                    </span>
+                  </div>
+                  {/* The paper behind the claim, beside the sum it backs. */}
+                  <UploadButton file={receipt} onPick={setReceipt} />
+                </div>
+              </Field>
+            </div>
+          </div>
+          {(receipt || attachedName) && (
+            <p className="flex items-center gap-1.5 text-sm text-primary">
+              <FileText className="h-4 w-4 shrink-0" aria-hidden="true" />
+              {receipt?.name || attachedName}
+            </p>
+          )}
+
+          <Field
+            id="ent-reason-notes"
+            label={reasonRequired ? "Employee Comment" : "Employee Comment (Optional)"}
+            required={reasonRequired}
+          >
+            <Textarea
+              id="ent-reason-notes"
+              maxLength={notesLimit}
+              value={draft.reason}
+              onChange={(e) => set("reason", e.target.value)}
+              required={reasonRequired}
+              placeholder={"Enter the reason for this " + label.toLowerCase() + " request..."}
+            />
+            <p className="-mt-1 text-end text-xs text-muted-foreground">
+              {draft.reason.length}/{notesLimit}
+            </p>
+          </Field>
+        </SheetCard>
       ) : (
         <>
           {/* Who is asking, and under what number. None of it is asked for:
@@ -1952,13 +2224,16 @@ export default function EntitlementTab({
       {/* Assistance keeps its history at the foot of both stages, beside a
           plain Cancel and Save. */}
       {sheet && stage !== "decision" ? (
-        <div className="flex flex-wrap justify-end gap-3 pt-6">
-          <Button type="button" variant="outline" className="min-w-36" onClick={close}>
-            Cancel
-          </Button>
-          <Button type="button" className="min-w-48" onClick={submit}>
-            Submit Request
-          </Button>
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-6">
+          {sheet.shared && <HistoryCard onClick={() => setShowHistory(true)} />}
+          <div className="ms-auto flex flex-wrap gap-3">
+            <Button type="button" variant="outline" className="min-w-36" onClick={close}>
+              Cancel
+            </Button>
+            <Button type="button" className="min-w-48" onClick={submit}>
+              Submit Request
+            </Button>
+          </div>
         </div>
       ) : assisting ? (
         <div className="flex flex-wrap items-center justify-between gap-2 pt-6">
@@ -2067,11 +2342,13 @@ export default function EntitlementTab({
         <DialogContent className="max-h-[85vh] w-[92vw] max-w-6xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {"History - " + (open?.entitlementNo || open?.requestNo || label)}
+              {sheet?.shared && !open
+                ? label + " History · " + (employee?.name || "")
+                : "History - " + (open?.entitlementNo || open?.requestNo || label)}
             </DialogTitle>
           </DialogHeader>
 
-          {entitlementHistory(open).length === 0 ? (
+          {sheet?.shared && !open ? null : entitlementHistory(open).length === 0 ? (
             <EmptyState>Nothing has happened to this request yet.</EmptyState>
           ) : (
             <RecordTable minWidth={980}>
@@ -2109,77 +2386,23 @@ export default function EntitlementTab({
               </tbody>
             </RecordTable>
           )}
+
+          {/* What this employee has asked for of this kind before. */}
+          {sheet?.shared && (
+            <RequestTable
+              rows={mine}
+              columns={columns}
+              searchPlaceholder={"Search " + label.toLowerCase() + " requests..."}
+              itemLabel={label.toLowerCase() + " requests"}
+              exportFileName={kind + ".csv"}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
       <RequestTable
         rows={mine}
-        columns={[
-          {
-            // A request waiting on a decision carries its temporary number
-            // and opens back into the form.
-            key: "no",
-            header: "No.",
-            width: "12%",
-            render: (value, record) =>
-              record.entitlementNo ? (
-                <span className="font-medium text-primary">{value}</span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => track(record)}
-                  className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  {value}
-                </button>
-              ),
-          },
-          {
-            key: "requestDate",
-            header: "Request Date",
-            width: "14%",
-            render: (value) => <span className="whitespace-nowrap">{formatDate(value)}</span>,
-          },
-          {
-            key: "detail",
-            header: "Request Details",
-            width: "28%",
-            render: (value, record) => (
-              <>
-                <span className="block font-semibold text-primary">{value}</span>
-                <span className="block text-xs text-muted-foreground">{record.reason}</span>
-              </>
-            ),
-          },
-          {
-            key: "quantity",
-            header: "Quantity",
-            width: "12%",
-            render: (_, record) => <span className="whitespace-nowrap">{measure(record)}</span>,
-            exportValue: (record) => measure(record),
-          },
-          {
-            key: "amount",
-            header: "Amount (OMR)",
-            width: "16%",
-            render: (value) => <span className="whitespace-nowrap font-bold text-green-700">{amountValue(value)}</span>,
-          },
-          {
-            key: "status",
-            header: "Status",
-            width: "12%",
-            render: (value) => (
-              <span
-                className={cn(
-                  "block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold",
-                  ENTITLEMENT_STATUS_CHIP[value]
-                )}
-              >
-                {value}
-              </span>
-            ),
-          },
-        ]}
+        columns={columns}
         searchPlaceholder={"Search " + label.toLowerCase() + " requests..."}
         itemLabel={label.toLowerCase() + " requests"}
         exportFileName={kind + ".csv"}
