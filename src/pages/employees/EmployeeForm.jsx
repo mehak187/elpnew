@@ -503,10 +503,38 @@ const TONES = {
 };
 
 /** The AI's reading under each card, in turn along the row. */
+//
+// DEMO: each reading is worked out from the card's own counts, with a fixed
+// confidence, so the cards can be seen as the design draws them. Swap `read`
+// for the AI service's answer when there is one.
 const REQUEST_AI = [
-  { label: "AI Insight", icon: Sparkles },
-  { label: "AI Prediction", icon: ChartNoAxesColumnIncreasing },
-  { label: "AI Risk", icon: TriangleAlert, iconTone: "fill-orange-500 text-white" },
+  {
+    label: "AI Insight",
+    icon: Sparkles,
+    read: (c) =>
+      c.pending
+        ? { text: `${c.pending} pending request${c.pending === 1 ? " is" : "s are"} likely to be approved`, confidence: 92 }
+        : { text: "No pending requests to assess", confidence: null },
+  },
+  {
+    label: "AI Prediction",
+    icon: ChartNoAxesColumnIncreasing,
+    read: (c) =>
+      c.pending
+        ? { text: "The pending request is likely to be approved", confidence: 87 }
+        : { text: "No pending requests to predict", confidence: null },
+  },
+  {
+    label: "AI Risk",
+    icon: TriangleAlert,
+    iconTone: "fill-orange-500 text-white",
+    read: (c) =>
+      c.returned
+        ? { text: "The returned request may need additional justification", confidence: 78 }
+        : c.rejected
+          ? { text: "A rejected request may be resubmitted with more detail", confidence: 71 }
+          : { text: "No risk signals found", confidence: null },
+  },
 ];
 
 /** The tints in turn; a request whose design names its own (`tone`) wears that. */
@@ -2266,19 +2294,41 @@ export default function EmployeeForm({ self }) {
                             })}
                           </div>
 
-                          {/* The AI's reading of this kind of request. */}
+                          {/* The AI's reading of this kind of request: what it
+                              sees, and how sure it is. */}
                           <button
                             type="button"
                             onClick={() => setAiNote(aiNote === item.key ? null : item.key)}
                             aria-expanded={aiNote === item.key}
                             className={cn(
-                              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-start font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                              "flex items-start gap-3 rounded-lg px-3 py-2.5 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                               tone.aiRow
                             )}
                           >
-                            <AiIcon className={cn("size-6 shrink-0", ai.iconTone || tone.ink)} aria-hidden="true" />
-                            <span className={cn("flex-1", tone.ink)}>{ai.label}</span>
-                            <ChevronRight className={cn("size-5", tone.ink)} aria-hidden="true" />
+                            <AiIcon className={cn("mt-0.5 size-6 shrink-0", ai.iconTone || tone.ink)} aria-hidden="true" />
+                            <span className="min-w-0 flex-1">
+                              <span className={cn("block font-bold", tone.ink)}>{ai.label}</span>
+                              {(() => {
+                                const reading = ai.read(counts);
+                                return (
+                                  <span className="mt-0.5 block text-sm text-primary/80">
+                                    {reading.text}
+                                    {reading.confidence ? (
+                                      <>
+                                        {" ("}
+                                        <span className={cn("font-bold", tone.ink)}>
+                                          {reading.confidence}% confidence
+                                        </span>
+                                        {")."}
+                                      </>
+                                    ) : (
+                                      "."
+                                    )}
+                                  </span>
+                                );
+                              })()}
+                            </span>
+                            <ChevronRight className={cn("mt-0.5 size-5 shrink-0", tone.ink)} aria-hidden="true" />
                           </button>
                           {aiNote === item.key && (
                             <p className="rounded-lg bg-white/70 px-3 py-2 text-xs text-primary/75">

@@ -1,6 +1,7 @@
 import {
   Fragment,
   useState } from "react";
+import LoanLedger from "./LoanLedger";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,8 +35,6 @@ import {
 } from "@/components/shared/RecordTable";
 import { cn } from "@/lib/utils";
 import { Rial } from "@/components/shared/Rial";
-import { amountValue } from "@/lib/money";
-import { smartSearch } from "@/lib/search/smartSearch";
 import {
   Dialog,
   DialogContent,
@@ -67,10 +66,7 @@ import {
   pendingRequest,
   loanRecords,
   loansFor,
-  loanTotal,
-  loanYear,
   schedule,
-  scheduleRows,
   dueDate,
   INSTALLMENT_STATUS_TONE,
   amount,
@@ -175,12 +171,7 @@ export default function LoansSection({
   });
   const [receipt, setReceipt] = useState(null);
 
-  // Which loans have been folded away. Absent means open: a loan says very
-  // little without the schedule that repays it.
   const [attachment, setAttachment] = useState(null);
-  const [collapsed, setCollapsed] = useState({});
-  const [year, setYear] = useState("");
-  const [query, setQuery] = useState("");
 
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
 
@@ -374,20 +365,6 @@ export default function LoansSection({
     });
     onOpenAdd?.();
   };
-
-  const toggle = (id) =>
-    setCollapsed((prev) => ({ ...prev, [id]: !prev[id] }));
-
-  // The years that have loans in them, newest first, read off the loans
-  // themselves - a year with nothing in it is not worth offering.
-  const years = [...new Set(records.map(loanYear))]
-    .filter(Boolean)
-    .sort((a, b) => b.localeCompare(a));
-  const shownYear = year || years[0];
-  const shown = smartSearch(
-    records.filter((record) => loanYear(record) === shownYear),
-    query
-  );
 
   /* ------------------------------------------------- the request being made */
 
@@ -857,214 +834,14 @@ export default function LoansSection({
         </DialogContent>
       </Dialog>
 
-      {/* ----------------------------------------- the loans already running */}
-
-      <Card>
-        <CardContent className="space-y-4 p-4 sm:p-6">
-          {/* The search on the left, where every list in the system has it,
-              with the year beside it, and the name of the list on the right. */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <AiSearch
-                value={query}
-                onChange={setQuery}
-                placeholder="Ask about loans..."
-              />
-              <div className="flex items-center gap-2">
-                <Label htmlFor="loan-year" className="whitespace-nowrap">
-                  Loan Year
-                </Label>
-                <Select value={shownYear} onValueChange={(v) => v && setYear(v)}>
-                  <SelectTrigger id="loan-year" className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {years.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {addLabel && !adding && (
-              <Button variant="outline" type="button" className="ms-auto" onClick={onOpenAdd}>
-                <Plus className="me-2 h-4 w-4" />
-                {addLabel}
-              </Button>
-            )}
-          </div>
-
-          {shown.length === 0 ? (
-            <EmptyState>No loans were drawn in {shownYear}.</EmptyState>
-          ) : (
-            <RecordTable minWidth={1140}>
-              <HeadRow>
-                <Th width="5%">No.</Th>
-                <Th width="27%" className="text-start">
-                  Loan / Installment Details
-                </Th>
-                <Th width="11%">Due Date</Th>
-                {/* The unit is said once, in the heading, so the figures under
-                    it can be read against each other. */}
-                <Th width="13%" className="text-end">
-                  Installment Amount (OMR)
-                </Th>
-                <Th width="12%" className="text-end">
-                  Paid Amount (OMR)
-                </Th>
-                <Th width="14%">Installment Status</Th>
-                <Th width="13%" className="text-end">
-                  Remaining Balance (OMR)
-                </Th>
-                <Th width="5%">
-                  <span className="sr-only">Show instalments</span>
-                </Th>
-              </HeadRow>
-              <tbody>
-                {shown.map((record, index) => {
-                  const total = loanTotal(record);
-                  const rows = scheduleRows(
-                    total,
-                    record.monthly,
-                    record.firstDue,
-                    record.payments
-                  );
-                  const open = !collapsed[record.id];
-
-                  return (
-                    <Fragment key={record.id}>
-                      {/* The loan itself. Nothing in the instalment columns
-                          belongs to it, so nothing is put there. */}
-                      <Row className="bg-green-50/70">
-                        {/* A request waiting on a decision carries its
-                            temporary number and opens back into the form. */}
-                        <Td className="whitespace-nowrap font-bold text-primary">
-                          {record.status === LOAN_PENDING ||
-                          record.status === LOAN_REJECTED ? (
-                            <button
-                              type="button"
-                              onClick={() => track(record)}
-                              className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
-                            >
-                              {record.requestNo || index + 1}
-                            </button>
-                          ) : (
-                            index + 1
-                          )}
-
-                          {/* Where it stands, under the number it belongs
-                              to - the Installment Status column is the
-                              instalments', not the loan's. */}
-                          <span
-                            className={cn(
-                              "mt-1 block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold",
-                              LOAN_STATUS_CHIP[record.status]
-                            )}
-                          >
-                            {record.status}
-                          </span>
-                        </Td>
-                        <Td className="text-start">
-                          <span className="block font-bold text-primary">
-                            {record.kind}
-                            {record.merged > 0 && (
-                              <span className="text-destructive">
-                                {" "}
-                                (Merged with Previous Loan)
-                              </span>
-                            )}
-                          </span>
-                          <Detail label="Loan Amount">
-                            {amountValue(record.loanAmount)}
-                          </Detail>
-                          <Detail label="Disbursement Date">
-                            {record.disbursementDate
-                              ? formatDate(record.disbursementDate)
-                              : "Not paid out yet"}
-                          </Detail>
-                          <Detail label="Bank / Account">
-                            {record.bankName
-                              ? record.bankName + " - " + record.accountNumber + " (IBAN)"
-                              : "-"}
-                          </Detail>
-                          {record.merged > 0 && (
-                            <Detail label="Note">
-                              Previous loan of {amountValue(record.merged)}{" "}
-                              merged into this loan.
-                            </Detail>
-                          )}
-                        </Td>
-                        <Td className="text-center text-muted-foreground">-</Td>
-                        <Td className="text-end text-muted-foreground">-</Td>
-                        <Td className="text-end text-muted-foreground">-</Td>
-                        {/* The instalment columns say nothing about the loan
-                            itself, so nothing is put in them. */}
-                        <Td className="text-center text-muted-foreground">-</Td>
-                        <Td className="text-end text-muted-foreground">-</Td>
-                        <Td className="text-center">
-                          <button
-                            type="button"
-                            onClick={() => toggle(record.id)}
-                            aria-expanded={open}
-                            className="rounded p-1 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-ring"
-                          >
-                            {open ? (
-                              <ChevronUp className="h-5 w-5" />
-                            ) : (
-                              <ChevronDown className="h-5 w-5" />
-                            )}
-                            <span className="sr-only">
-                              {open ? "Hide instalments" : "Show instalments"}
-                            </span>
-                          </button>
-                        </Td>
-                      </Row>
-
-                      {open &&
-                        rows.map((row) => (
-                          <Row key={record.id + "-" + row.no}>
-                            <Td className="text-muted-foreground">
-                              {index + 1}.{row.no}
-                            </Td>
-                            <Td className="text-start font-medium text-primary">
-                              Installment {row.no} of {row.of}
-                            </Td>
-                            <Td className="whitespace-nowrap">
-                              {formatDate(row.due)}
-                            </Td>
-                            <Td className="text-end">
-                              {amountValue(row.installment)}
-                            </Td>
-                            <Td className="text-end">
-                              {amountValue(row.paid)}
-                            </Td>
-                            <Td className="text-center">
-                              <span
-                                className={cn(
-                                  "inline-block rounded-md px-3 py-1 text-xs font-semibold",
-                                  INSTALLMENT_STATUS_TONE[row.status]
-                                )}
-                              >
-                                {row.status}
-                              </span>
-                            </Td>
-                            <Td className="text-end font-medium">
-                              {amountValue(row.remaining)}
-                            </Td>
-                            <Td />
-                          </Row>
-                        ))}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </RecordTable>
-          )}
-        </CardContent>
-      </Card>
+      {/* The loans already running, with what they come to and their
+          installments folded under each. */}
+      <LoanLedger
+        records={records}
+        onOpen={track}
+        onAdd={addLabel && !adding ? onOpenAdd : null}
+        addLabel="Request New Loan"
+      />
     </div>
   );
 }
