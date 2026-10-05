@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowRight, FileCheck } from "lucide-react";
+import { Coins, FileCheck } from "lucide-react";
 import UploadIcon from "@/components/shared/UploadIcon";
 import SearchableSelect from "@/components/shared/SearchableSelect";
 import {
@@ -25,7 +25,8 @@ import {
   useRequiredFields,
   checkRequired,
 } from "@/components/shared/formFields";
-import { RequestSteps } from "@/components/shared/RequestSteps";
+import { AdvanceSteps } from "@/pages/employees/sections/AdvanceSalarySection";
+import { SheetHead, SheetCard, HistoryCard } from "@/components/shared/RequestSheet";
 import { REQUEST_REJECTED } from "@/pages/employees/requestFlow";
 import { cn } from "@/lib/utils";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
@@ -479,6 +480,8 @@ export default function CommissionForm({
   // firm settles a commission, so on the payee's own page the decision is
   // read once it has been given, and never written.
   canAnswer = true,
+  // Opens what this employee has been paid in commission before.
+  onHistory,
 }) {
   const { clients } = useClients();
   const { bankAccounts } = useFirm();
@@ -742,9 +745,22 @@ export default function CommissionForm({
 
   return (
     <div className="space-y-6">
+        <SheetHead
+          icon={Coins}
+          title="Commission Request"
+          intro={
+            stage === "payment"
+              ? "Review the commission and record the management decision."
+              : "Submit a new commission request with the calculation and eligibility details."
+          }
+          employee={employee}
+          date={requestDate}
+          requestNo={commissionNo}
+        />
+
         {/* The two halves of a commission: what is being asked for, and then
-            what the office answers. Either header opens its own half. */}
-        <RequestSteps
+            what the office answers. Either step opens its own half. */}
+        <AdvanceSteps
           active={stage}
           onChange={setStage}
           steps={[
@@ -804,14 +820,8 @@ export default function CommissionForm({
         ) : (
         <>
         {/* What is being asked for, before anything about the money. */}
-        <Group title="Request Information">
-          <div className="form-grid">
-            <Locked id="commissionNo" label="Request No." value={commissionNo} />
-            <Locked
-              id="commissionRequestDate"
-              label="Request Date"
-              value={formatDate(requestDate)}
-            />
+        <SheetCard title="Commission Request Details">
+          <Row cols={2}>
 
             {/* Opened from an employee's record, that employee is filled in to
                 start with - but only to start with. Commission is earned by
@@ -859,12 +869,12 @@ export default function CommissionForm({
                 </SelectContent>
               </Select>
             </Field>
-          </div>
-        </Group>
+          </Row>
+        </SheetCard>
 
         {draft.subcategory && (
         <>
-        <Group
+        <SheetCard
           title={
             isInvoiceLinked
               ? "Invoice-Linked Commission Details"
@@ -1075,19 +1085,17 @@ export default function CommissionForm({
               note="Calculated automatically."
             />
           </Row>
-        </Group>
+        </SheetCard>
 
-
-        <Group title="Employee Comment">
+        <SheetCard title="Employee Comment">
           <Counted
             id="commissionNotes"
-            rows={3}
             limit={500}
             value={draft.notes}
             onChange={(value) => setField("notes", value)}
             placeholder="Say what this commission is for (optional)"
           />
-        </Group>
+        </SheetCard>
         </>
         )}
         </>
@@ -1110,8 +1118,10 @@ export default function CommissionForm({
           </div>
         )}
 
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onCancel}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {onHistory && <HistoryCard onClick={onHistory} />}
+          <div className="ms-auto flex flex-wrap gap-3">
+          <Button type="button" variant="outline" className="min-w-36" onClick={onCancel}>
             Cancel
           </Button>
 
@@ -1123,6 +1133,7 @@ export default function CommissionForm({
             canAnswer && (
               <Button
                 type="button"
+                className="min-w-48"
                 variant={refusing ? "destructive" : "default"}
                 onClick={save}
               >
@@ -1134,11 +1145,11 @@ export default function CommissionForm({
               </Button>
             )
           ) : (
-            <Button type="button" onClick={saveAndContinue}>
-              Save and Continue
-              <ArrowRight className="ms-2 h-4 w-4" />
+            <Button type="button" className="min-w-48" onClick={saveAndContinue}>
+              Submit Request
             </Button>
           )}
+          </div>
         </div>
     </div>
   );
