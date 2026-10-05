@@ -257,6 +257,9 @@ export function AdvanceSalaryForm({
   // A request opened back off the list, to be followed or decided. A new
   // request has none, and opens on the first stage instead.
   requestId = null,
+  // Sent from an employee's record, the window stays open on the request
+  // just sent; sent from My Profile, it closes.
+  stayOpen = false,
   // Whoever is deciding, decides here - the same as every other request in
   // the system, which is where this stage is answered from.
   canDecide = true,
@@ -264,7 +267,10 @@ export function AdvanceSalaryForm({
   const { advances, addAdvance, decideAdvance } = useAdvances();
   // The form is mounted afresh each time it opens, so what it opens on is
   // settled once here rather than kept in step with a prop.
-  const openRequest = advances.find((a) => a.id === requestId) || null;
+  // The request the form is on: the one it was opened on, or - once a new one
+  // is sent from an employee's record - the one just sent.
+  const [currentId, setCurrentId] = useState(requestId);
+  const openRequest = advances.find((a) => a.id === currentId) || null;
 
   const [draft, setDraft] = useState(() =>
     openRequest
@@ -383,6 +389,14 @@ export function AdvanceSalaryForm({
       purpose: draft.purpose,
       reason: draft.reason.trim(),
     });
+    if (stayOpen) {
+      // From the employee's record the transaction goes on: the request just
+      // sent, under its number, open at Management Comment. The store gives
+      // it the next id, worked out the same way.
+      setCurrentId(advances.reduce((max, advance) => Math.max(max, advance.id), 0) + 1);
+      setStage("decision");
+      return;
+    }
     setDraft(emptyDraft());
     onClose();
   };
