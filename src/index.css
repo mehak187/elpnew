@@ -755,11 +755,50 @@
   }
 
   .form-field::after,
-  .form-field > .field-error {
+  .form-field > .field-error,
+  .form-field > [role="alert"],
+  .form-field > p.text-destructive {
     position: absolute;
     top: 100%;
     inset-inline-start: 0;
     max-width: 100%;
+  }
+
+  /*
+   * The messages a page writes for itself - "More days than the balance
+   * holds", "Between 1 and 5 days" - hang in the same place and keep the same
+   * gap from the box as the ones the stylesheet writes.
+   */
+  .form-field > [role="alert"],
+  .form-field > p.text-destructive {
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  /*
+   * Hung below its field, a message needs room there - and where rows sit
+   * close together it would otherwise land on the labels of the row beneath.
+   * So a row holding a field that is saying something makes room under
+   * itself: the row grows at its foot, every box in it stays where it was,
+   * and only what comes after moves down. A field sits in its row directly,
+   * or in one wrapper of its own.
+   */
+  [data-checked="true"] :is(.form-grid, .grid):has(
+      > .form-field input:required:invalid,
+      > .form-field textarea:required:invalid,
+      > .form-field select:required:invalid,
+      > .form-field[data-required="true"] button[role="combobox"][data-placeholder],
+      > * > .form-field input:required:invalid,
+      > * > .form-field textarea:required:invalid,
+      > * > .form-field select:required:invalid,
+      > * > .form-field[data-required="true"] button[role="combobox"][data-placeholder]
+    ),
+  :is(.form-grid, .grid):has(
+      > .form-field > :is(.field-error, [role="alert"], p.text-destructive),
+      > * > .form-field > :is(.field-error, [role="alert"], p.text-destructive)
+    ) {
+    padding-bottom: 22px;
   }
 
   /* A locked field is not an active one, so it takes no focus ring. */

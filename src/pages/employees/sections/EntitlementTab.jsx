@@ -1579,10 +1579,11 @@ export default function EntitlementTab({
               <Field id="ent-year" label="Year" required>
                 <Select value={draft.year} onValueChange={(value) => value && set("year", value)}>
                   <SelectTrigger id="ent-year">
-                    <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
-                      <SelectValue placeholder="Select year" />
-                      <CalendarDays className="size-4 shrink-0 text-primary" aria-hidden="true" />
-                    </span>
+                    {/* Beside the chevron rather than wrapped with the value:
+                        the trigger clamps its first span to one line, which
+                        would cut the year short to make room for the icon. */}
+                    <SelectValue placeholder="Select year" />
+                    <CalendarDays className="ms-auto me-2 size-4 shrink-0 text-primary" aria-hidden="true" />
                   </SelectTrigger>
                   <SelectContent>
                     {/* A balance is drawn on this year or the next, never a

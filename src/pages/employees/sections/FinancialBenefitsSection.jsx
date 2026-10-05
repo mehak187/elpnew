@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -84,6 +85,8 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd, canDecide = tr
   // written for a client, the list shows only what is already agreed with that
   // client - which is what the new one has to be judged against.
   const [clientFilter, setClientFilter] = useState("");
+  // What this employee has been paid before, open over the request.
+  const [showHistory, setShowHistory] = useState(false);
 
   const filtering = adding && Boolean(clientFilter);
   const clientName =
@@ -93,12 +96,13 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd, canDecide = tr
     ? records.filter((record) => record.clientNo === clientFilter)
     : records;
   // What the table shows: the number it goes by, and where it stands.
-  const rows = shown.map((record) => ({
+  const asRow = (record) => ({
     ...record,
     no: record.commissionNo || record.requestNo,
     status: record.status || COMMISSION_PAID,
     dateText: commissionDate(record),
-  }));
+  });
+  const rows = shown.map(asRow);
 
   /** Closing the form, by either button, puts the whole list back. */
   const close = () => {
@@ -172,19 +176,87 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd, canDecide = tr
     onOpenAdd?.();
   };
 
+  // The list's columns, on the page and in the History window alike.
+  const columns = [
+    {
+      // A commission waiting on payment carries its temporary
+      // number and opens back into the form.
+      key: "no",
+      header: "Commission No.",
+      width: "13%",
+      render: (value, record) =>
+        record.commissionNo ? (
+          <span className="font-medium text-primary">{value}</span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => track(record)}
+            className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            {value}
+          </button>
+        ),
+    },
+    {
+      key: "dateText",
+      header: "Commission Date",
+      width: "12%",
+      render: (value) => <span className="whitespace-nowrap text-primary">{value}</span>,
+    },
+    { key: "clientName", header: "Client Name", width: "15%" },
+    { key: "paidTo", header: "Payee", width: "14%" },
+    {
+      // What it was worked out from, then what it came to.
+      key: "rate",
+      header: "Legal Fees & Commission",
+      width: "20%",
+      render: (value, record) => (
+        <>
+          <span className="block">
+            <span className="text-muted-foreground">Before VAT: </span>
+            {money(feesFor(record))}
+          </span>
+          <span className="block">
+            <span className="text-muted-foreground">Commission: </span>
+            {value}%
+          </span>
+          <span className="block font-bold text-green-700">
+            <span className="font-normal text-muted-foreground">Paid Commission: </span>
+            {money(commissionOn(record))}
+          </span>
+        </>
+      ),
+    },
+    {
+      key: "notes",
+      header: "Notes",
+      width: "14%",
+      render: (value) => <span className="text-muted-foreground">{value || "-"}</span>,
+    },
+    {
+      key: "status",
+      header: "Status",
+      width: "12%",
+      render: (value) => (
+        <span
+          className={cn(
+            "block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold",
+            COMMISSION_STATUS_CHIP[value]
+          )}
+        >
+          {value}
+        </span>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Opened over the page, so the list it is filed into stays behind. */}
       <Dialog open={Boolean(adding)} onOpenChange={(o) => !o && close()}>
-        <DialogContent className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {open
-                ? "Commission " + (open.commissionNo || open.requestNo || "")
-                : "Add Commission"}
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent hideClose className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
           <CommissionForm
+            onHistory={() => setShowHistory(true)}
             canAnswer={canDecide}
             key={openId || "new"}
             employee={employee}
@@ -199,6 +271,22 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd, canDecide = tr
             onReject={reject}
             onClientChange={setClientFilter}
           />
+          {/* Every commission this employee has, over the request. */}
+          <Dialog open={showHistory} onOpenChange={setShowHistory}>
+            <DialogContent className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Commission History · {employee.name}</DialogTitle>
+                <DialogDescription>Every commission recorded for this employee.</DialogDescription>
+              </DialogHeader>
+              <RequestTable
+                rows={records.map(asRow)}
+                columns={columns}
+                searchPlaceholder="Search by commission no., client or payee..."
+                itemLabel="commissions"
+                exportFileName="commissions.csv"
+              />
+            </DialogContent>
+          </Dialog>
         </DialogContent>
       </Dialog>
 
@@ -214,78 +302,7 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd, canDecide = tr
         <CardContent className="space-y-4 p-4 sm:p-6">
           <RequestTable
             rows={rows}
-            columns={[
-              {
-                // A commission waiting on payment carries its temporary
-                // number and opens back into the form.
-                key: "no",
-                header: "Commission No.",
-                width: "13%",
-                render: (value, record) =>
-                  record.commissionNo ? (
-                    <span className="font-medium text-primary">{value}</span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => track(record)}
-                      className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
-                    >
-                      {value}
-                    </button>
-                  ),
-              },
-              {
-                key: "dateText",
-                header: "Commission Date",
-                width: "12%",
-                render: (value) => <span className="whitespace-nowrap text-primary">{value}</span>,
-              },
-              { key: "clientName", header: "Client Name", width: "15%" },
-              { key: "paidTo", header: "Payee", width: "14%" },
-              {
-                // What it was worked out from, then what it came to.
-                key: "rate",
-                header: "Legal Fees & Commission",
-                width: "20%",
-                render: (value, record) => (
-                  <>
-                    <span className="block">
-                      <span className="text-muted-foreground">Before VAT: </span>
-                      {money(feesFor(record))}
-                    </span>
-                    <span className="block">
-                      <span className="text-muted-foreground">Commission: </span>
-                      {value}%
-                    </span>
-                    <span className="block font-bold text-green-700">
-                      <span className="font-normal text-muted-foreground">Paid Commission: </span>
-                      {money(commissionOn(record))}
-                    </span>
-                  </>
-                ),
-              },
-              {
-                key: "notes",
-                header: "Notes",
-                width: "14%",
-                render: (value) => <span className="text-muted-foreground">{value || "-"}</span>,
-              },
-              {
-                key: "status",
-                header: "Status",
-                width: "12%",
-                render: (value) => (
-                  <span
-                    className={cn(
-                      "block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold",
-                      COMMISSION_STATUS_CHIP[value]
-                    )}
-                  >
-                    {value}
-                  </span>
-                ),
-              },
-            ]}
+            columns={columns}
             searchPlaceholder="Search by commission no., client or payee..."
             itemLabel="commissions"
             exportFileName="commissions.csv"

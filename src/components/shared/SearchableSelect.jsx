@@ -69,7 +69,9 @@ export default function SearchableSelect({
         type="button"
         disabled={disabled}
         onClick={() => setOpen((v) => !v)}
-        className="flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+        // Dressed exactly as the plain select beside it, so a row mixing the
+        // two keeps one height, one border and one focus ring.
+        className="flex h-[42px] w-full items-center justify-between whitespace-nowrap rounded-field border border-field-border bg-field px-3 py-2 text-sm transition-colors focus:border-[var(--focus-navy)] focus:shadow-[var(--focus-ring)] focus:outline-none disabled:cursor-not-allowed disabled:border-disabled-border disabled:bg-disabled disabled:text-disabled-text"
       >
         <span className={cn("truncate", !selected && "text-muted-foreground")}>
           {selected ? selected.label : placeholder}

@@ -2230,7 +2230,9 @@ export default function EmployeeForm({ self }) {
           {isRequests && (() => {
             const category = REQUEST_CATEGORIES.find((c) => c.key === requestCategory);
             return (
-              <section className={cn("grid items-start gap-4", REQUEST_CARD_COLUMNS[category.items.length])}>
+              // Every card in the row as tall as the tallest, so a longer
+              // reading in one does not leave the rest short of it.
+              <section className={cn("grid items-stretch gap-4", REQUEST_CARD_COLUMNS[category.items.length])}>
                 {category.items.map((item, index) => {
                   const tone =
                     TONES[item.tone] || REQUEST_CARD_TONES[index % REQUEST_CARD_TONES.length];
@@ -2300,7 +2302,9 @@ export default function EmployeeForm({ self }) {
                             onClick={() => setAiNote(aiNote === item.key ? null : item.key)}
                             aria-expanded={aiNote === item.key}
                             className={cn(
-                              "flex items-start gap-3 rounded-lg px-3 py-2.5 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                              // Fills what is left of the card, so the AI boxes
+                              // end level across the row.
+                              "flex flex-1 items-start gap-3 rounded-lg px-3 py-2.5 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                               tone.aiRow
                             )}
                           >
