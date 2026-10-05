@@ -13,6 +13,8 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogClose,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -34,6 +36,8 @@ import {
   RecordLink,
 } from "@/components/shared/RecordTable";
 import { RequestSteps, DecisionChoice } from "@/components/shared/RequestSteps";
+import { AdvanceSteps, longDate } from "./AdvanceSalarySection";
+import MonthPicker from "@/components/shared/MonthPicker";
 import {
   Lock,
   Save,
@@ -46,6 +50,7 @@ import {
   FileCheck,
   History,
   UploadCloud,
+  X,
 } from "lucide-react";
 import UploadIcon from "@/components/shared/UploadIcon";
 import { cn } from "@/lib/utils";
@@ -89,13 +94,50 @@ const NOTES_LIMIT = 500;
  */
 const HEADING = "border-s-4 border-primary ps-3 text-base font-bold text-primary";
 
+/** "OTR-008" asked in 2026, as the head of the request reads it: "OTR 08/2026". */
+const shortRequestNo = (requestNo, on) => {
+  const [prefix, count] = String(requestNo).split("-");
+  return /^\d+$/.test(count || "")
+    ? prefix + " " + String(Number(count)).padStart(2, "0") + "/" + String(on).slice(0, 4)
+    : requestNo;
+};
+
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
-const emptyDraft = () => ({
+/**
+ * The tabs whose request has a sheet of its own: a head with the employee and
+ * the number, a two-step bar, and only the fields the request is made of.
+ */
+const SHEETS = {
+  overtime: {
+    icon: Clock,
+    title: "Overtime Request",
+    intro: "Submit a new overtime request with the required details.",
+    note: "Enter overtime details",
+    decisionTitle: "Management Comment",
+    decisionNote: "Review and approve",
+  },
+  leaveEncashment: {
+    icon: CalendarDays,
+    title: "Leave Request",
+    intro: "Submit a new leave request with the required details.",
+    note: "Enter leave details",
+    decisionTitle: "Management Decision",
+    decisionNote: "Review, approve and disburse",
+  },
+};
+
+/** Only annual leave is encashable: sick leave is there to be taken and
+ * unpaid leave is worth nothing. */
+const ENCASHABLE_LEAVE = ["Annual Leave"];
+
+// A leave request starts with its year and type unpicked, as its sheet asks
+// for both; every other tab keeps the current year and annual leave.
+const emptyDraft = (kind) => ({
   requestDate: todayIso(),
-  year: String(new Date().getFullYear()),
+  year: kind === "leaveEncashment" ? "" : String(new Date().getFullYear()),
   month: "",
-  leaveType: "Annual Leave",
+  leaveType: kind === "leaveEncashment" ? "" : "Annual Leave",
   days: "",
   amount: "",
   reason: "",
@@ -221,7 +263,7 @@ export default function EntitlementTab({
   canDecide = true,
 }) {
   const { leaves } = useLeaves();
-  const [draft, setDraft] = useState(emptyDraft);
+  const [draft, setDraft] = useState(() => emptyDraft(kind));
   const [payment, setPayment] = useState(emptyPayment);
   const [stage, setStage] = useState("request");
   const [decision, setDecision] = useState("");
@@ -252,6 +294,9 @@ export default function EntitlementTab({
   const ownDate = medicalLayout || kind === "notice";
   // Assistance has a sheet of its own for the decision, and a shorter note.
   const assisting = kind === "assistance";
+  // Overtime has a sheet of its own: a head, the period and the hours.
+  const overtiming = kind === "overtime";
+  const sheet = SHEETS[kind];
   const notesLimit = assisting || kind === "notice" ? 300 : NOTES_LIMIT;
   const open = records.find((row) => row.id === openId) || null;
   const settled = open?.status === ENTITLEMENT_APPROVED;
@@ -318,12 +363,14 @@ export default function EntitlementTab({
 
   // Transport asks for a comment but does not insist on one; every other
   // request has to say why it is being made.
-  const reasonRequired = kind !== "transport";
+  // Overtime's sheet asks for no comment at all.
+  const reasonRequired = kind !== "transport" && !sheet;
 
   const canSubmit =
     draft.requestDate &&
     counted &&
     !exceeded &&
+    (mode !== "leaveDays" || (draft.year && draft.leaveType)) &&
     (mode !== "hours" ||
       (draft.year && draft.month && workedHours > 0)) &&
     (!courtLinked || (draft.fileNo.trim() && draft.travelDate)) &&
@@ -418,7 +465,7 @@ export default function EntitlementTab({
     (!courtLinked || (payment.updateDate && payment.updateText.trim()));
 
   const close = () => {
-    setDraft(emptyDraft());
+    setDraft(emptyDraft(kind));
     setPayment(emptyPayment());
     setReceipt(null);
     setShowHistory(false);
@@ -538,7 +585,7 @@ export default function EntitlementTab({
     setDecision(record.status === ENTITLEMENT_REJECTED ? "rejected" : "");
     setReason("");
     setDraft({
-      ...emptyDraft(),
+      ...emptyDraft(kind),
       requestDate: record.requestDate,
       year: record.year || "",
       month: record.month || "",
@@ -941,7 +988,63 @@ export default function EntitlementTab({
 
   const form = (
     <div className="space-y-6">
-      {/* The two stages of the request. Either header opens its stage. */}
+      {sheet ? (
+        <>
+          {/* The request's head: what it is, then whose it is, when it was
+              asked and its number - the close button beyond them. */}
+          <div className="flex flex-wrap items-start gap-4 pe-16">
+            <span
+              aria-hidden="true"
+              className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-primary"
+            >
+              <sheet.icon className="size-7" strokeWidth={1.5} />
+            </span>
+            <div className="min-w-0">
+              <DialogTitle className="text-2xl font-bold text-primary">{sheet.title}</DialogTitle>
+              <DialogDescription className="text-sm text-primary/75">
+                {stage === "decision"
+                  ? "Review the request and record your decision."
+                  : sheet.intro}
+              </DialogDescription>
+            </div>
+            <div className="ms-auto flex flex-wrap items-center gap-3 pt-2 text-sm text-primary">
+              <span>{employee?.empNo || ""}</span>
+              <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+              <span>{employee?.name || ""}</span>
+              <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+              <span>{longDate(draft.requestDate)}</span>
+              <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+              <span className="rounded-md bg-primary/10 px-3 py-1.5 text-base font-bold text-primary">
+                {shortRequestNo(requestNo, draft.requestDate)}
+              </span>
+            </div>
+            <DialogClose className="absolute end-5 top-5 rounded-md p-1 text-primary transition-colors hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <X className="size-7" aria-hidden="true" />
+              <span className="sr-only">Close</span>
+            </DialogClose>
+          </div>
+
+          <AdvanceSteps
+            active={stage}
+            onChange={setStage}
+            steps={[
+              {
+                key: "request",
+                title: sheet.title,
+                note: sheet.note,
+                done: Boolean(open),
+              },
+              {
+                key: "decision",
+                title: sheet.decisionTitle,
+                note: sheet.decisionNote,
+                done: settled || refused,
+                disabled: !canSubmit,
+              },
+            ]}
+          />
+        </>
+      ) : (
       <RequestSteps
         active={stage}
         onChange={setStage}
@@ -967,6 +1070,7 @@ export default function EntitlementTab({
           },
         ]}
       />
+      )}
 
       {stage === "decision" && assisting ? (
         assistanceDecision
@@ -1331,6 +1435,134 @@ export default function EntitlementTab({
             )}
           </div>
         </>
+      ) : kind === "leaveEncashment" ? (
+        <section className="space-y-4 rounded-xl border p-4 sm:p-5">
+          <h3 className={HEADING}>Leave Request Details</h3>
+          <div className="grid items-start gap-4 md:grid-cols-2">
+            <div>
+              <Field id="ent-year" label="Year" required>
+                <Select value={draft.year} onValueChange={(value) => value && set("year", value)}>
+                  <SelectTrigger id="ent-year">
+                    <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                      <SelectValue placeholder="Select year" />
+                      <CalendarDays className="size-4 shrink-0 text-primary" aria-hidden="true" />
+                    </span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {/* A balance is drawn on this year or the next, never a
+                        year already closed. */}
+                    {PAYMENT_YEARS.filter((year) => Number(year) >= new Date().getFullYear()).map(
+                      (year) => (
+                        <SelectItem key={year} value={year}>
+                          {year}
+                        </SelectItem>
+                      )
+                    )}
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+            <div>
+              <Field id="ent-leave-type" label="Leave Type" required>
+                <Select
+                  value={draft.leaveType}
+                  onValueChange={(value) => value && set("leaveType", value)}
+                >
+                  <SelectTrigger id="ent-leave-type">
+                    <SelectValue placeholder="Select leave type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ENCASHABLE_LEAVE.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+          </div>
+
+          {/* How many days are cashed in, against what the balance holds -
+              asked once the year and the type say which balance it is. */}
+          {draft.year && draft.leaveType && (
+            <div className="form-grid">
+              <Booked
+                id="ent-available"
+                label="Available Leave Balance"
+                value={balance ? available + " Days" : "-"}
+              />
+              <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
+                <FieldLabel htmlFor="ent-days" required>
+                  Days Requested for Encashment
+                </FieldLabel>
+                <Input
+                  required
+                  id="ent-days"
+                  inputMode="numeric"
+                  value={draft.days}
+                  onChange={(e) => set("days", e.target.value.replace(/\D/g, ""))}
+                  placeholder="0"
+                  className={cn(exceeded && "border-destructive text-destructive")}
+                />
+                {exceeded && (
+                  <p role="alert" className="text-xs font-semibold text-destructive">
+                    More days than the balance holds
+                  </p>
+                )}
+              </div>
+              <Booked
+                id="ent-after"
+                label="Balance After Request"
+                value={balance ? after + " Days" : "-"}
+              />
+              <Worked
+                id="ent-estimated"
+                label="Estimated Amount (OMR)"
+                value={amountValue(amount)}
+              />
+            </div>
+          )}
+        </section>
+      ) : overtiming ? (
+        <section className="space-y-4 rounded-xl border p-4 sm:p-5">
+          <h3 className={HEADING}>Overtime Details</h3>
+          <div className="grid items-start gap-4 md:grid-cols-2">
+            <div>
+              <Field id="ent-month" label="Period" required>
+                <MonthPicker
+                  id="ent-month"
+                  month={draft.month}
+                  year={draft.year}
+                  months={SALARY_MONTHS}
+                  onChange={({ month, year }) =>
+                    setDraft((prev) => ({ ...prev, month, year }))
+                  }
+                />
+              </Field>
+            </div>
+            <div>
+              <Field id="ent-hours" label="Overtime Hours" required>
+                <div className="relative">
+                  <Input
+                    required
+                    id="ent-hours"
+                    inputMode="decimal"
+                    className="pe-16"
+                    value={draft.hours}
+                    onChange={(e) =>
+                      set("hours", e.target.value.replace(/[^\d.]/g, ""))
+                    }
+                    placeholder="Enter total overtime hours"
+                  />
+                  <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                    Hours
+                  </span>
+                </div>
+              </Field>
+            </div>
+          </div>
+        </section>
       ) : (
         <>
           {/* Who is asking, and under what number. None of it is asked for:
@@ -1719,7 +1951,16 @@ export default function EntitlementTab({
 
       {/* Assistance keeps its history at the foot of both stages, beside a
           plain Cancel and Save. */}
-      {assisting ? (
+      {sheet && stage !== "decision" ? (
+        <div className="flex flex-wrap justify-end gap-3 pt-6">
+          <Button type="button" variant="outline" className="min-w-36" onClick={close}>
+            Cancel
+          </Button>
+          <Button type="button" className="min-w-48" onClick={submit}>
+            Submit Request
+          </Button>
+        </div>
+      ) : assisting ? (
         <div className="flex flex-wrap items-center justify-between gap-2 pt-6">
           <button
             type="button"
@@ -1803,14 +2044,19 @@ export default function EntitlementTab({
     <>
       {/* Opened over the page, so the list it is filed into stays behind. */}
       <Dialog open={Boolean(adding)} onOpenChange={(o) => !o && close()}>
-        <DialogContent className="max-h-[90vh] w-[95vw] max-w-[1700px] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {(assisting || kind === "notice") && stage === "decision"
-                ? label + " Management Decision"
-                : label + " Request"}
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent
+          hideClose={Boolean(sheet)}
+          className="max-h-[90vh] w-[95vw] max-w-[1700px] overflow-y-auto"
+        >
+          {!sheet && (
+            <DialogHeader>
+              <DialogTitle>
+                {(assisting || kind === "notice") && stage === "decision"
+                  ? label + " Management Decision"
+                  : label + " Request"}
+              </DialogTitle>
+            </DialogHeader>
+          )}
           {form}
         </DialogContent>
       </Dialog>
