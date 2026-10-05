@@ -407,6 +407,11 @@ export default function LoansSection({
 
   const form = blocked ? (
       <div className="space-y-6">
+        {/* The window still says what it is, as every sheet's head does. */}
+        <DialogTitle className="text-2xl font-bold text-primary">Loan Request</DialogTitle>
+        <DialogDescription className="sr-only">
+          A new loan cannot be requested while another is awaiting approval.
+        </DialogDescription>
         <div
           role="alert"
           className="flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive"
