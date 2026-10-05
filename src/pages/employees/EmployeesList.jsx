@@ -252,6 +252,8 @@ const matches = (row, filters, leaves) =>
       // Either mark, or both; a paper only has to be in one of them.
       case "documentStatus":
         return documentsFor(row.id).some((doc) => value.includes(documentStatus(doc)));
+      case "practiceLevel":
+        return levelOf(row) === value;
       default:
         return row[key] === value;
     }
@@ -259,62 +261,114 @@ const matches = (row, filters, leaves) =>
 
 
 /**
- * One figure across the top of the list.
- *
- * The coloured rule along the top says which figure it is before the label
- * is read. The chip under it is this month's movement: green where more is
- * good, red where more is a problem. A figure with no movement to report
- * shows no chip rather than a zero. Pressing a card narrows the list to the
- * employees it counts.
+ * The court a lawyer is admitted to, read off whichever way the record says
+ * it - the old practice levels or the newer grades.
  */
-const SUMMARY_TONE = {
-  blue: { rule: "border-t-blue-600", tile: "bg-blue-50 text-blue-600" },
-  green: { rule: "border-t-emerald-600", tile: "bg-emerald-50 text-emerald-600" },
-  orange: { rule: "border-t-orange-500", tile: "bg-orange-50 text-orange-500" },
-  slate: { rule: "border-t-slate-500", tile: "bg-slate-100 text-slate-600" },
-  red: { rule: "border-t-red-600", tile: "bg-red-50 text-red-600" },
+const levelOf = (row) => {
+  const said = String(row.practiceLevel || row.grade || "");
+  if (/trainee/i.test(said)) return "Trainee";
+  if (/primary/i.test(said)) return "Primary";
+  if (/appeal/i.test(said)) return "Appeal";
+  if (/supreme/i.test(said)) return "Supreme";
+  return "";
 };
 
-function SummaryCard({ icon, value, label, change, goodWhenUp, tone, active, onClick }) {
+/** How somebody no longer here left, where the record says. */
+const leftAs = (row) => {
+  const why = [row.managementReason, row.reasonForLeaving].join(" ");
+  if (/termination|dismiss/i.test(why)) return "Termination";
+  if (row.decisionMaker === "Employee Decision" || /resign/i.test(why)) return "Resignation";
+  if (/contract|retire|end of/i.test(why)) return "End of Service";
+  return "";
+};
+
+/** The tint of a chip under a figure. */
+const CHIP_TONE = {
+  blue: "bg-blue-50 text-blue-700",
+  orange: "bg-orange-50 text-orange-600",
+  red: "bg-red-50 text-red-700",
+};
+
+/** The tint of a breakdown tile under a figure. */
+const TILE_TONE = {
+  green: "bg-emerald-50",
+  blue: "bg-blue-50",
+  plain: "bg-slate-50",
+};
+
+/**
+ * One figure across the top of the list, in the one style every card wears:
+ * a navy rule along the top, the mark, the figure and what it counts. Under
+ * it, either a chip - this month's movement, or what needs doing - or a row
+ * of tiles that break the figure down. Pressing the card, or a tile that can
+ * narrow the list, narrows it.
+ */
+function SummaryCard({ icon, value, label, chip, tiles, active, onClick }) {
   const Icon = icon;
-  const colours = SUMMARY_TONE[tone];
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
+    <div
       className={cn(
-        "flex w-full min-w-0 items-start gap-3 rounded-container border border-t-4 border-container-border bg-card p-4 text-start transition-colors hover:bg-table-head focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        colours.rule,
+        "flex w-full min-w-0 flex-col gap-3 rounded-container border border-t-4 border-container-border border-t-primary bg-card p-4",
         active && "ring-2 ring-primary/40"
       )}
     >
-      <span
-        className={cn(
-          "flex size-12 shrink-0 items-center justify-center rounded-xl",
-          colours.tile
-        )}
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={!onClick}
+        aria-pressed={active}
+        className="flex items-center gap-3 rounded-lg text-start transition-colors enabled:hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default"
       >
-        <Icon className="size-6" aria-hidden="true" />
-      </span>
-      <span className="min-w-0 space-y-1">
-        <span className="block text-2xl font-bold leading-none text-primary">
-          {value.toLocaleString("en-US")}
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-primary">
+          <Icon className="size-6" strokeWidth={1.5} aria-hidden="true" />
         </span>
-        <span className="block text-sm text-muted-foreground">{label}</span>
-        {change > 0 && (
-          <span
-            className={cn(
-              "inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold",
-              goodWhenUp ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
-            )}
-          >
-            <ArrowUp className="size-3" aria-hidden="true" />
-            {change} this month
+        <span className="min-w-0">
+          <span className="block text-3xl font-bold leading-none text-primary">
+            {value.toLocaleString("en-US")}
           </span>
-        )}
-      </span>
-    </button>
+          <span className="mt-1.5 block whitespace-nowrap text-sm text-primary/80">{label}</span>
+        </span>
+      </button>
+
+      {chip && (
+        <span
+          className={cn(
+            "mx-auto inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold",
+            CHIP_TONE[chip.tone]
+          )}
+        >
+          {chip.icon === "alert" ? (
+            <AlertCircle className="size-4 fill-red-600 text-white" aria-hidden="true" />
+          ) : (
+            <ArrowUp className="size-4" aria-hidden="true" />
+          )}
+          {chip.text}
+        </span>
+      )}
+
+      {tiles && (
+        <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${tiles.length}, minmax(0, 1fr))` }}>
+          {tiles.map((tile) => (
+            <button
+              key={tile.label}
+              type="button"
+              onClick={tile.onClick}
+              disabled={!tile.onClick}
+              aria-pressed={tile.active}
+              className={cn(
+                "min-w-0 rounded-lg px-0.5 py-1.5 text-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default",
+                TILE_TONE[tile.tone || "plain"],
+                tile.onClick && "hover:brightness-95",
+                tile.active && "ring-2 ring-primary/40"
+              )}
+            >
+              <span className="block text-sm font-bold text-primary">{tile.value}</span>
+              <span className="block whitespace-nowrap text-[10px] leading-tight tracking-tight text-primary/75">{tile.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -353,8 +407,7 @@ export default function EmployeesList() {
 
   // The figures across the top, counted off the same records the table
   // shows, so the two can never disagree.
-  const today = new Date().toISOString().slice(0, 10);
-  const active = employees.filter((row) => !isEndedStatus(row.status));
+  const active =employees.filter((row) => !isEndedStatus(row.status));
   const onLeave = employees.filter((row) => onLeaveToday(leaves, row.name));
   const leaveStartedThisMonth = new Set(
     leaves
@@ -373,67 +426,105 @@ export default function EmployeesList() {
         : { ...filters, [key]: key === "documentStatus" ? [value] : value }
     );
 
+  // The breakdowns under the figures, counted off the same records.
+  const omani = active.filter((row) => row.nationality === "Omani").length;
+  const share = (n) => (active.length ? Math.round((n / active.length) * 100) : 0);
+  const lawyers = employees.filter((row) => levelOf(row) || row.role === "Lawyer");
+  const atLevel = (level) => lawyers.filter((row) => levelOf(row) === level).length;
+  const inactive = employees.filter((row) => isEndedStatus(row.status));
+  const leftBy = (how) => inactive.filter((row) => leftAs(row) === how).length;
+  const joinedThisMonth = employees.filter((row) => inThisMonth(row.dateOfJoining)).length;
+  const levelTile = (label, level) => ({
+    label,
+    value: atLevel(level),
+    active: filters.practiceLevel === level,
+    onClick: () => toggle("practiceLevel", level),
+  });
+
   const summary = [
     {
       key: "total",
       icon: Users,
-      tone: "blue",
       value: employees.length,
       label: "Total Employees",
-      change: employees.filter((row) => inThisMonth(row.dateOfJoining)).length,
-      goodWhenUp: true,
-      active: !Object.values(filters).some((v) => v && v !== "all" && !(Array.isArray(v) && !v.length)),
+      chip: { tone: "blue", text: "+" + joinedThisMonth + " this month" },
+      // Nothing is marked chosen while the whole list shows: the cards are
+      // alike until one narrows it.
       onClick: () => narrow({}),
     },
     {
       key: "active",
       icon: User,
-      tone: "green",
       value: active.length,
       label: "Active Employees",
-      change: active.filter((row) => inThisMonth(row.dateOfJoining)).length,
-      goodWhenUp: true,
+      tiles: [
+        {
+          label: "Omani",
+          tone: "green",
+          value: omani + " (" + share(omani) + "%)",
+          active: filters.nationality === "Omani",
+          onClick: () => toggle("nationality", "Omani"),
+        },
+        {
+          label: "Non-Omani",
+          tone: "blue",
+          value: active.length - omani + " (" + share(active.length - omani) + "%)",
+          active: filters.nationality === "Non-Omani",
+          onClick: () => toggle("nationality", "Non-Omani"),
+        },
+      ],
       active: filters.status === "Active",
       onClick: () => toggle("status", "Active"),
     },
     {
+      // A lawyer's court: Trial is the courts of first instance, Initial the
+      // trainee's register.
+      key: "lawyers",
+      icon: Scale,
+      value: lawyers.length,
+      label: "Lawyers",
+      tiles: [
+        levelTile("Trial", "Primary"),
+        levelTile("Appellate", "Appeal"),
+        levelTile("Supreme", "Supreme"),
+        levelTile("Initial", "Trainee"),
+      ],
+    },
+    {
       key: "leave",
       icon: Briefcase,
-      tone: "orange",
       value: onLeave.length,
       label: "On Leave",
-      change: leaveStartedThisMonth.size,
-      goodWhenUp: false,
+      chip: {
+        tone: "orange",
+        text: leaveStartedThisMonth.size + " this month",
+      },
       active: filters.leave === "on",
       onClick: () => toggle("leave", "on"),
     },
     {
-      key: "inactive",
-      icon: UserX,
-      tone: "slate",
-      value: employees.length - active.length,
-      label: "Inactive Employees",
-      // The record does not say when somebody left, so there is no month to
-      // count them in - and no chip rather than a guessed one.
-      change: 0,
-      goodWhenUp: false,
-      active: filters.status === "Inactive",
-      onClick: () => toggle("status", "Inactive"),
-    },
-    {
       key: "expired",
       icon: FileWarning,
-      tone: "red",
       value: expiredDocuments.length,
       label: "Expired Documents",
-      change: expiredDocuments.filter(
-        (doc) => inThisMonth(doc.expiry) && doc.expiry < today
-      ).length,
-      goodWhenUp: false,
+      chip: expiredDocuments.length > 0 && { tone: "red", icon: "alert", text: "Requires Action" },
       active: Array.isArray(filters.documentStatus) && filters.documentStatus.includes("Expired"),
       // The document filter is the general manager's; for anybody else the
       // card reports the figure and goes nowhere.
       onClick: canSeeRestricted ? () => toggle("documentStatus", "Expired") : undefined,
+    },
+    {
+      key: "inactive",
+      icon: UserX,
+      value: inactive.length,
+      label: "Inactive Employees",
+      tiles: [
+        { label: "Termination", value: leftBy("Termination") },
+        { label: "Resignation", value: leftBy("Resignation") },
+        { label: "End of Service", value: leftBy("End of Service") },
+      ],
+      active: filters.status === "Inactive",
+      onClick: () => toggle("status", "Inactive"),
     },
   ];
   const columns = [
@@ -628,7 +719,7 @@ export default function EmployeesList() {
           {/* Inside the same box as the table, so the row of cards starts and
               ends where the table does. Five equal columns on a wide screen;
               fewer, still equal, as it narrows. */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {summary.map(({ key, ...card }) => (
               <SummaryCard key={key} {...card} />
             ))}
