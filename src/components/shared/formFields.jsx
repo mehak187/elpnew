@@ -2,9 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
-  useLayoutEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import { Button } from "@/components/ui/button";
@@ -461,40 +459,21 @@ export function Note({ className, children }) {
  * The count is shown rather than the typing simply stopping: a box that
  * refuses a keystroke without saying why reads as broken.
  */
-export function Counted({ id, value, onChange, limit, rows, placeholder, grow }) {
+export function Counted({ id, value, onChange, limit, placeholder }) {
   // A record written before this field existed has nothing under that name,
   // and an empty box is what that should read as - not a crash.
   const text = value || "";
-  const box = useRef(null);
 
-  /**
-   * `grow` starts the box the height of an ordinary field and lets it get
-   * taller as it fills.
-   *
-   * For a comment standing beside other fields rather than alone: a box three
-   * rows deep from the start drags its whole row down to make space for
-   * writing nobody has done yet. Measured after layout and before paint, so
-   * the box never appears at one height and then jumps to another.
-   */
-  useLayoutEffect(() => {
-    if (!grow || !box.current) return;
-    box.current.style.height = "auto";
-    box.current.style.height = box.current.scrollHeight + "px";
-  }, [text, grow]);
-
+  // The height of an ordinary field, as every comment box is: it does not
+  // grow as it fills, so the row it stands in keeps its height.
   return (
     <div className="space-y-1">
       <Textarea
-        ref={box}
         id={id}
-        rows={grow ? 1 : rows}
         maxLength={limit}
         value={text}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        // The handle would fight the growing, and a scrollbar would hide the
-        // very thing the growing exists to show.
-        className={grow ? "min-h-9 resize-none overflow-hidden" : undefined}
       />
       <p className="text-end text-xs text-muted-foreground">
         {text.length} / {limit}
