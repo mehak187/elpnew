@@ -809,9 +809,9 @@ export default function LoansSection({
           <div className="flex flex-wrap items-center justify-between gap-3">
             {stage === "request" ? (
               <div className="flex items-start gap-3 rounded-xl border bg-blue-50/50 px-4 py-3">
-                <Info className="mt-0.5 size-6 shrink-0 fill-blue-600 text-white" aria-hidden="true" />
+                <Info className="mt-0.5 size-6 shrink-0 fill-primary text-white" aria-hidden="true" />
                 <div className="text-sm">
-                  <p className="font-semibold text-blue-700">Note</p>
+                  <p className="font-semibold text-primary">Note</p>
                   <p className="text-primary/80">
                     The loan period and end date are automatically calculated based on the
                     requested amount and monthly installment.
