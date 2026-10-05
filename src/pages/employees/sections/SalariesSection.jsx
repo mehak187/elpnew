@@ -1,5 +1,6 @@
 import {
   useState } from "react";
+import SalaryLedger from "./SalaryLedger";
 import UploadIcon from "@/components/shared/UploadIcon";
 import { Button } from "@/components/ui/button";
 import { RequestSteps } from "@/components/shared/RequestSteps";
@@ -1064,6 +1065,10 @@ export default function SalariesSection({
             // The employee asks for the advance; only the firm's side
             // answers it.
             canDecide={canEdit}
+            // On the employee's record the window stays open after a request
+            // is sent, on to the decision; on My Profile it closes.
+            stayOpen={!advance}
+            salaryHistory={history}
             onClose={closeAdd}
           />
         </DialogContent>
@@ -1223,6 +1228,39 @@ export default function SalariesSection({
           own record of an advance in the payments; this is the employee's. */}
       {/* What has been asked for out of the salary above. The employee asks
           here, on their own page; the office decides it on theirs. */}
+      {/* From Requests: the salary and its advances in one table - an
+          advance under its request number while it waits, under the month's
+          salary payment number once approved. Elsewhere, the advances alone. */}
+      {advanceOnly ? (
+        <SalaryLedger
+          employee={employee}
+          history={history}
+          onOpenAdvance={
+            adding
+              ? null
+              : (request) => {
+                  setOpenAdvanceId(request.id);
+                  onOpenAdd?.();
+                }
+          }
+          onOpenSalary={canEdit ? trackRequest : null}
+          onAdd={canEdit && addLabel && !adding ? () => onOpenAdd?.() : null}
+          addLabel={addLabel}
+          moreAdds={
+            canEdit && !adding
+              ? [
+                  {
+                    label: "Salary Advance Request",
+                    onClick: () => {
+                      setNewAdvance(true);
+                      onOpenAdd?.();
+                    },
+                  },
+                ]
+              : []
+          }
+        />
+      ) : (
       <AdvanceRequests
         employee={employee}
         // The one thing the employee may do with their own salary, on the row
@@ -1259,6 +1297,7 @@ export default function SalariesSection({
               }
         }
       />
+      )}
 
 
       {/* What has been paid, month by month */}

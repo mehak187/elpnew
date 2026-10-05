@@ -1,6 +1,10 @@
 import {
   Fragment,
   useState } from "react";
+import LoanLedger, { ExistingLoans } from "./LoanLedger";
+import { AdvanceSteps, longDate } from "./AdvanceSalarySection";
+import DateField from "@/components/shared/DateField";
+import { amountValue } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,12 +38,11 @@ import {
 } from "@/components/shared/RecordTable";
 import { cn } from "@/lib/utils";
 import { Rial } from "@/components/shared/Rial";
-import { amountValue } from "@/lib/money";
-import { smartSearch } from "@/lib/search/smartSearch";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
-  DialogHeader,
+  DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { RequestSteps, DecisionChoice } from "@/components/shared/RequestSteps";
@@ -50,6 +53,11 @@ import {
   FileText,
   ChevronDown,
   ChevronUp,
+  CalendarDays,
+  Coins,
+  FilePenLine,
+  Info,
+  X,
 } from "lucide-react";
 import {
   LOAN_EXPENSE_TYPE,
@@ -67,10 +75,7 @@ import {
   pendingRequest,
   loanRecords,
   loansFor,
-  loanTotal,
-  loanYear,
   schedule,
-  scheduleRows,
   dueDate,
   INSTALLMENT_STATUS_TONE,
   amount,
@@ -137,6 +142,30 @@ function AmountField({ id, label, required, value, onChange, readOnly }) {
  * everything borrowed before, so a new loan cannot be entered against a figure
  * that disagrees with the loans already on the list.
  */
+/** "LNR-006" asked in 2026, as the head of the request reads it: "LNR 6/2026". */
+const shortLoanNo = (requestNo, on) => {
+  const [prefix, count] = String(requestNo).split("-");
+  return count ? prefix + " " + Number(count) + "/" + String(on).slice(0, 4) : requestNo;
+};
+
+const MONTH_LABELS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+/** "November 2026" as a date field holds it: its first day. */
+const firstOfMonth = (label) => {
+  const [name, year] = String(label || "").split(" ");
+  const month = MONTH_LABELS.indexOf(name);
+  return month < 0 || !year ? "" : year + "-" + String(month + 1).padStart(2, "0") + "-01";
+};
+
+/** The month a date falls in, as the loan keeps it: "November 2026". */
+const monthLabel = (iso) => {
+  const [year, month] = String(iso || "").split("-");
+  return year && month ? MONTH_LABELS[Number(month) - 1] + " " + year : "";
+};
+
 export default function LoansSection({
   employee,
   adding,
@@ -175,12 +204,7 @@ export default function LoansSection({
   });
   const [receipt, setReceipt] = useState(null);
 
-  // Which loans have been folded away. Absent means open: a loan says very
-  // little without the schedule that repays it.
   const [attachment, setAttachment] = useState(null);
-  const [collapsed, setCollapsed] = useState({});
-  const [year, setYear] = useState("");
-  const [query, setQuery] = useState("");
 
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
 
@@ -375,20 +399,6 @@ export default function LoansSection({
     onOpenAdd?.();
   };
 
-  const toggle = (id) =>
-    setCollapsed((prev) => ({ ...prev, [id]: !prev[id] }));
-
-  // The years that have loans in them, newest first, read off the loans
-  // themselves - a year with nothing in it is not worth offering.
-  const years = [...new Set(records.map(loanYear))]
-    .filter(Boolean)
-    .sort((a, b) => b.localeCompare(a));
-  const shownYear = year || years[0];
-  const shown = smartSearch(
-    records.filter((record) => loanYear(record) === shownYear),
-    query
-  );
-
   /* ------------------------------------------------- the request being made */
 
   // Nothing can be asked for while a request is still being decided: a second
@@ -424,24 +434,60 @@ export default function LoansSection({
       </div>
   ) : (
         <div className="space-y-6">
-          {/* The two stages of the request. Either header opens its stage. */}
-          <RequestSteps
+          {/* The request's head: what it is, then whose it is, when it was
+              asked and its number - the close button beyond them. */}
+          <div className="flex flex-wrap items-start gap-4 pe-16">
+            <span
+              aria-hidden="true"
+              className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-primary"
+            >
+              <Coins className="size-7" strokeWidth={1.5} />
+            </span>
+            <div className="min-w-0">
+              <DialogTitle className="text-2xl font-bold text-primary">Loan Request</DialogTitle>
+              <DialogDescription className="text-sm text-primary/75">
+                {stage === "request"
+                  ? "Request a new loan based on your eligibility and existing loans."
+                  : "Review the request and record your decision."}
+              </DialogDescription>
+            </div>
+            <div className="ms-auto flex flex-wrap items-center gap-3 pt-2 text-sm text-primary">
+              <span>{employee?.empNo || ""}</span>
+              <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+              <span>{borrower}</span>
+              <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+              <span>{longDate(requestedOn)}</span>
+              <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+              <span className="rounded-md bg-primary/10 px-3 py-1.5 text-base font-bold text-primary">
+                {shortLoanNo(requestNo, requestedOn)}
+              </span>
+            </div>
+            <DialogClose className="absolute end-5 top-5 rounded-md p-1 text-primary transition-colors hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <X className="size-7" aria-hidden="true" />
+              <span className="sr-only">Close</span>
+            </DialogClose>
+          </div>
+
+          {/* The three stages of the request. The financial department's
+              payment is asked for with the decision until its own stage is
+              designed, so the third opens the second. */}
+          <AdvanceSteps
             active={stage}
-            onChange={setStage}
+            onChange={(key) => setStage(key === "finance" ? "decision" : key)}
             steps={[
-              {
-                key: "request",
-                title: "Loan Request",
-                note: canSave
-                  ? "Loan details and repayment schedule completed"
-                  : "Loan details and repayment schedule",
-                done: Boolean(canSave),
-              },
+              { key: "request", title: "Submit Request", done: Boolean(openId) },
               {
                 key: "decision",
-                title: "Management Decision",
-                note: "Review, approve and disburse",
+                title: "Management Comment",
                 done: Boolean(decision),
+                // Nothing can be decided until there is a request to decide.
+                disabled: !openId,
+              },
+              {
+                key: "finance",
+                title: "Financial Department Actions",
+                done: Boolean(payout.reference),
+                disabled: !openId || !decision || refusing,
               },
             ]}
           />
@@ -675,68 +721,29 @@ export default function LoansSection({
             </>
           ) : (
             <>
-              {/* Who is asking, under what number, and what they already owe
-                  - which is what decides whether this is a new loan or an
-                  addition to the one running. */}
-              <Bordered title="Request Information">
-                {/* The bottom padding is the room the status hint hangs in. */}
-                <div className="form-grid pb-8">
-                  <div className="flex h-full flex-col justify-end gap-2">
-                    <FieldLabel htmlFor="loan-no">Request No.</FieldLabel>
-                    <div className="flex w-full min-w-0 items-center gap-2">
-                      <Input
-                        id="loan-no"
-                        readOnly
-                        tabIndex={-1}
-                        value={requestNo}
-                        className="min-w-0 flex-1 cursor-default bg-locked text-muted-foreground"
-                      />
-                      <Attach
-                        file={attachment}
-                        onPick={setAttachment}
-                        label="supporting document"
-                      />
-                    </div>
+              {/* What the employee already owes, read before asking for more. */}
+              <ExistingLoans records={records} />
+
+              {/* How much, how fast, and from when. The period, the end and
+                  the last installment are counted from these three. */}
+              <section className="space-y-4 rounded-xl border p-4 sm:p-5">
+                <div className="flex items-center gap-3">
+                  <span aria-hidden="true" className="flex size-11 items-center justify-center rounded-lg bg-blue-50 text-primary">
+                    <FilePenLine className="size-6" strokeWidth={1.5} />
+                  </span>
+                  <div>
+                    <h3 className="text-lg font-bold text-primary">New Loan Request</h3>
+                    <p className="text-sm text-primary/75">Enter the details for your new loan request.</p>
                   </div>
-
-                  <Settled
-                    id="loan-request-date"
-                    label="Request Date"
-                    value={formatDate(requestedOn)}
-                  />
-                  <Settled id="loan-employee" label="Employee Name" value={borrower} />
-
-                  <Settled
-                    id="loan-active"
-                    label="Active Loan Status"
-                    value={
-                      isIncrease
-                        ? "Active Loan - " + amount(outstanding)
-                        : "No Active Loan"
-                    }
-                    hint={
-                      isIncrease
-                        ? "An active loan is running - this request will be added to it."
-                        : "No active loan found - this request will create a new loan."
-                    }
-                  />
                 </div>
-              </Bordered>
-
-              {/* How much, how fast, and from when. Everything else about the
-                  schedule is counted from these three. */}
-              <Bordered title="Repayment Schedule">
-                <div className="form-grid form-grid-3">
+                <div className="grid gap-x-6 gap-y-4 md:grid-cols-3">
                   <AmountField
                     id="loan-requested"
                     label="Requested Loan Amount"
                     required
                     value={isIncrease ? draft.extraRequested : draft.requested}
-                    onChange={(e) =>
-                      set(isIncrease ? "extraRequested" : "requested", e.target.value)
-                    }
+                    onChange={(e) => set(isIncrease ? "extraRequested" : "requested", e.target.value)}
                   />
-
                   <AmountField
                     id="loan-monthly"
                     label="Monthly Installment"
@@ -744,82 +751,83 @@ export default function LoansSection({
                     value={draft.monthly}
                     onChange={(e) => set("monthly", e.target.value)}
                   />
+                  {/* Worked out, not asked: how many months the loan runs. */}
+                  <div className="space-y-1.5 md:row-span-1">
+                    <div className="flex items-center gap-3 rounded-lg bg-blue-50/70 px-4 py-2.5">
+                      <CalendarDays className="size-6 shrink-0 text-primary" aria-hidden="true" />
+                      <div>
+                        <p className="text-xs text-primary/75">Loan Period (Auto-calculated)</p>
+                        <p className="text-xl font-bold text-primary">
+                          {plan.months || 0} <span className="text-sm font-normal text-primary/70">Months</span>
+                        </p>
+                      </div>
+                    </div>
+                    <p className="flex items-center gap-1.5 text-xs text-primary/75">
+                      <Info className="size-3.5 shrink-0" aria-hidden="true" />
+                      Calculated based on loan amount and monthly installment.
+                    </p>
+                  </div>
 
-                  {/* An installment comes off the pay at the end of a month,
-                      so a month is asked for rather than a day. */}
-                  <Choice
-                    id="loan-start-month"
-                    label="Start Month"
-                    value={draft.startMonth}
-                    onChange={(value) => value && set("startMonth", value)}
-                    placeholder="Select start month"
-                    options={months}
+                  {/* An installment comes off the pay at the end of a month:
+                      the day chosen says which month the deductions start. */}
+                  <div className="space-y-2">
+                    <FieldLabel htmlFor="loan-start">
+                      Start Deduction From<span aria-hidden="true" className="ms-1 text-destructive">*</span>
+                    </FieldLabel>
+                    <DateField
+                      id="loan-start"
+                      name="loanStart"
+                      value={firstOfMonth(draft.startMonth)}
+                      onChange={(e) => set("startMonth", monthLabel(e.target.value))}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <FieldLabel htmlFor="loan-end">Calculated End Date</FieldLabel>
+                    <Input
+                      id="loan-end"
+                      readOnly
+                      tabIndex={-1}
+                      value={lastDue ? formatDate(lastDue) : ""}
+                      placeholder="DD/MM/YYYY"
+                      className="cursor-default bg-locked text-muted-foreground"
+                    />
+                  </div>
+                  <AmountField
+                    id="loan-last"
+                    label="Last Installment Amount"
+                    readOnly
+                    value={plan.months ? amountValue(plan.last) : ""}
                   />
                 </div>
-              </Bordered>
-
-              <Bordered title="Employee Comment">
-                <div className="space-y-2">
-                  <Textarea
-                    id="loan-comment"
-                    rows={3}
-                    maxLength={COMMENT_LIMIT}
-                    value={draft.comment}
-                    onChange={(e) => set("comment", e.target.value)}
-                    placeholder="Add a comment supporting this loan request (optional)"
-                  />
-                  <p className="text-end text-xs text-muted-foreground">
-                    {draft.comment.length} / {COMMENT_LIMIT}
-                  </p>
-                </div>
-              </Bordered>
-
-              {/* What the three figures above come to, read back as one line
-                  before the request is sent. */}
-              <div className="rounded-lg border border-green-600/40 bg-green-50/50 p-4">
-                <p className="mb-3 flex items-center gap-2 font-semibold text-green-700">
-                  <span
-                    aria-hidden="true"
-                    className="h-5 w-1 shrink-0 rounded-full bg-green-600"
-                  />
-                  Loan &amp; Repayment Summary
-                </p>
-                <div className="form-grid lg:[&>*+*]:border-s">
-                  <Said label="Loan Amount" value={amount(totalLoan)} settled />
-                  <Said
-                    label="Monthly Installment"
-                    value={amount(num(draft.monthly))}
-                    settled
-                  />
-                  <Said
-                    label="Number of Installments"
-                    value={plan.months ? String(plan.months) : ""}
-                  />
-                  <Said
-                    label="Final Installment"
-                    value={
-                      lastDue
-                        ? formatDate(lastDue) + " - " + amount(plan.last)
-                        : ""
-                    }
-                    settled
-                  />
-                </div>
-              </div>
+              </section>
             </>
           )}
 
           {/* Plain buttons: this form sits inside the employee form, which a
               submit button here would send instead. */}
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-4">
-            {/* What has been borrowed before is the list behind this form. */}
-            <Button type="button" variant="ghost" onClick={closeAdd}>
-              <History className="me-2 h-4 w-4" />
-              History
-            </Button>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {stage === "request" ? (
+              <div className="flex items-start gap-3 rounded-xl border bg-blue-50/50 px-4 py-3">
+                <Info className="mt-0.5 size-6 shrink-0 fill-primary text-white" aria-hidden="true" />
+                <div className="text-sm">
+                  <p className="font-semibold text-primary">Note</p>
+                  <p className="text-primary/80">
+                    The loan period and end date are automatically calculated based on the
+                    requested amount and monthly installment.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              // What has been borrowed before is the list behind this form.
+              <Button type="button" variant="ghost" onClick={closeAdd}>
+                <History className="me-2 h-4 w-4" />
+                History
+              </Button>
+            )}
 
             <div className="ms-auto flex flex-wrap items-center gap-2">
-              <Button type="button" variant="outline" onClick={closeAdd}>
+              <Button type="button" variant="outline" className="min-w-36" onClick={closeAdd}>
                 Cancel
               </Button>
               {stage === "decision" ? (
@@ -834,8 +842,8 @@ export default function LoansSection({
                   Save
                 </Button>
               ) : (
-                <Button type="button" onClick={save}>
-                  Save
+                <Button type="button" className="min-w-48" onClick={save}>
+                  Submit Request
                 </Button>
               )}
             </div>
@@ -847,224 +855,19 @@ export default function LoansSection({
     <div className="space-y-6">
       {/* Opened over the page, so the list it is filed into stays behind. */}
       <Dialog open={Boolean(adding)} onOpenChange={(o) => !o && closeAdd()}>
-        <DialogContent className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {stage === "decision" ? "Loan Management Decision" : "Loan Request"}
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent hideClose className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
           {form}
         </DialogContent>
       </Dialog>
 
-      {/* ----------------------------------------- the loans already running */}
-
-      <Card>
-        <CardContent className="space-y-4 p-4 sm:p-6">
-          {/* The search on the left, where every list in the system has it,
-              with the year beside it, and the name of the list on the right. */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <AiSearch
-                value={query}
-                onChange={setQuery}
-                placeholder="Ask about loans..."
-              />
-              <div className="flex items-center gap-2">
-                <Label htmlFor="loan-year" className="whitespace-nowrap">
-                  Loan Year
-                </Label>
-                <Select value={shownYear} onValueChange={(v) => v && setYear(v)}>
-                  <SelectTrigger id="loan-year" className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {years.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {addLabel && !adding && (
-              <Button variant="outline" type="button" className="ms-auto" onClick={onOpenAdd}>
-                <Plus className="me-2 h-4 w-4" />
-                {addLabel}
-              </Button>
-            )}
-          </div>
-
-          {shown.length === 0 ? (
-            <EmptyState>No loans were drawn in {shownYear}.</EmptyState>
-          ) : (
-            <RecordTable minWidth={1140}>
-              <HeadRow>
-                <Th width="5%">No.</Th>
-                <Th width="27%" className="text-start">
-                  Loan / Installment Details
-                </Th>
-                <Th width="11%">Due Date</Th>
-                {/* The unit is said once, in the heading, so the figures under
-                    it can be read against each other. */}
-                <Th width="13%" className="text-end">
-                  Installment Amount (OMR)
-                </Th>
-                <Th width="12%" className="text-end">
-                  Paid Amount (OMR)
-                </Th>
-                <Th width="14%">Installment Status</Th>
-                <Th width="13%" className="text-end">
-                  Remaining Balance (OMR)
-                </Th>
-                <Th width="5%">
-                  <span className="sr-only">Show instalments</span>
-                </Th>
-              </HeadRow>
-              <tbody>
-                {shown.map((record, index) => {
-                  const total = loanTotal(record);
-                  const rows = scheduleRows(
-                    total,
-                    record.monthly,
-                    record.firstDue,
-                    record.payments
-                  );
-                  const open = !collapsed[record.id];
-
-                  return (
-                    <Fragment key={record.id}>
-                      {/* The loan itself. Nothing in the instalment columns
-                          belongs to it, so nothing is put there. */}
-                      <Row className="bg-green-50/70">
-                        {/* A request waiting on a decision carries its
-                            temporary number and opens back into the form. */}
-                        <Td className="whitespace-nowrap font-bold text-primary">
-                          {record.status === LOAN_PENDING ||
-                          record.status === LOAN_REJECTED ? (
-                            <button
-                              type="button"
-                              onClick={() => track(record)}
-                              className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
-                            >
-                              {record.requestNo || index + 1}
-                            </button>
-                          ) : (
-                            index + 1
-                          )}
-
-                          {/* Where it stands, under the number it belongs
-                              to - the Installment Status column is the
-                              instalments', not the loan's. */}
-                          <span
-                            className={cn(
-                              "mt-1 block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold",
-                              LOAN_STATUS_CHIP[record.status]
-                            )}
-                          >
-                            {record.status}
-                          </span>
-                        </Td>
-                        <Td className="text-start">
-                          <span className="block font-bold text-primary">
-                            {record.kind}
-                            {record.merged > 0 && (
-                              <span className="text-destructive">
-                                {" "}
-                                (Merged with Previous Loan)
-                              </span>
-                            )}
-                          </span>
-                          <Detail label="Loan Amount">
-                            {amountValue(record.loanAmount)}
-                          </Detail>
-                          <Detail label="Disbursement Date">
-                            {record.disbursementDate
-                              ? formatDate(record.disbursementDate)
-                              : "Not paid out yet"}
-                          </Detail>
-                          <Detail label="Bank / Account">
-                            {record.bankName
-                              ? record.bankName + " - " + record.accountNumber + " (IBAN)"
-                              : "-"}
-                          </Detail>
-                          {record.merged > 0 && (
-                            <Detail label="Note">
-                              Previous loan of {amountValue(record.merged)}{" "}
-                              merged into this loan.
-                            </Detail>
-                          )}
-                        </Td>
-                        <Td className="text-center text-muted-foreground">-</Td>
-                        <Td className="text-end text-muted-foreground">-</Td>
-                        <Td className="text-end text-muted-foreground">-</Td>
-                        {/* The instalment columns say nothing about the loan
-                            itself, so nothing is put in them. */}
-                        <Td className="text-center text-muted-foreground">-</Td>
-                        <Td className="text-end text-muted-foreground">-</Td>
-                        <Td className="text-center">
-                          <button
-                            type="button"
-                            onClick={() => toggle(record.id)}
-                            aria-expanded={open}
-                            className="rounded p-1 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-ring"
-                          >
-                            {open ? (
-                              <ChevronUp className="h-5 w-5" />
-                            ) : (
-                              <ChevronDown className="h-5 w-5" />
-                            )}
-                            <span className="sr-only">
-                              {open ? "Hide instalments" : "Show instalments"}
-                            </span>
-                          </button>
-                        </Td>
-                      </Row>
-
-                      {open &&
-                        rows.map((row) => (
-                          <Row key={record.id + "-" + row.no}>
-                            <Td className="text-muted-foreground">
-                              {index + 1}.{row.no}
-                            </Td>
-                            <Td className="text-start font-medium text-primary">
-                              Installment {row.no} of {row.of}
-                            </Td>
-                            <Td className="whitespace-nowrap">
-                              {formatDate(row.due)}
-                            </Td>
-                            <Td className="text-end">
-                              {amountValue(row.installment)}
-                            </Td>
-                            <Td className="text-end">
-                              {amountValue(row.paid)}
-                            </Td>
-                            <Td className="text-center">
-                              <span
-                                className={cn(
-                                  "inline-block rounded-md px-3 py-1 text-xs font-semibold",
-                                  INSTALLMENT_STATUS_TONE[row.status]
-                                )}
-                              >
-                                {row.status}
-                              </span>
-                            </Td>
-                            <Td className="text-end font-medium">
-                              {amountValue(row.remaining)}
-                            </Td>
-                            <Td />
-                          </Row>
-                        ))}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </RecordTable>
-          )}
-        </CardContent>
-      </Card>
+      {/* The loans already running, with what they come to and their
+          installments folded under each. */}
+      <LoanLedger
+        records={records}
+        onOpen={track}
+        onAdd={addLabel && !adding ? onOpenAdd : null}
+        addLabel="Request New Loan"
+      />
     </div>
   );
 }

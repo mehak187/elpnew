@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -9,38 +9,40 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { EmptyState } from "@/components/shared/panels";
 import RequestTable from "@/components/shared/RequestTable";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { RequestSteps } from "@/components/shared/RequestSteps";
+import { AdvanceSteps } from "./AdvanceSalarySection";
 import {
-  Group,
+  SheetHead,
+  SheetCard,
+  HistoryCard,
+  UploadButton,
+} from "@/components/shared/RequestSheet";
+import {
   Row,
   Field,
   Locked,
   Counted,
   Decision,
-  Attach,
   FieldError,
   useRequiredFields,
 } from "@/components/shared/formFields";
+import { RecordLink } from "@/components/shared/RecordTable";
 import {
-  RecordTable,
-  HeadRow,
-  Th,
-  Row as TableRow,
-  Td,
-  RecordLink,
-} from "@/components/shared/RecordTable";
-import { Paperclip, Plus } from "lucide-react";
+  FilePenLine,
+  MessageCircleWarning,
+  Paperclip,
+  TriangleAlert,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  REQUEST_TYPES,
+  REQUEST_KINDS,
   COMMENT_LIMIT,
   DECISION_COMMENT_LIMIT,
   APPROVED,
@@ -56,23 +58,36 @@ import {
 const emptyDraft = { requestType: "", comment: "" };
 const emptyDecision = { answer: "", comment: "" };
 
-/** Who answers a general request, written on it so the trail says who did. */
+/** Who answers an administrative request, written on it so the trail says who did. */
 const DECIDED_BY = "Admin Department";
 
+/** The mark at the head of each kind's sheet - the one its card carries. */
+const KIND_ICON = {
+  general: FilePenLine,
+  grievance: MessageCircleWarning,
+  complaint: TriangleAlert,
+};
+
 /**
- * Anything an employee asks the administration for that has no form of its
- * own, and what became of it.
+ * An administrative request - a general one, a grievance or a complaint - and
+ * what became of it.
  *
  * Two halves, like every other request in the system: the employee writes it,
  * and the administration answers. The second half cannot be opened until
  * there is a request to answer, and once answered the first half is only read
  * back - a decision taken on one request must not be able to end up filed
- * against a different one.
+ * against a different one. The three kinds differ only in their name, their
+ * numbering and what they can be about.
  *
  * Every button here says type="button": the section sits inside the employee
  * record's own form, and a plain button would submit the whole record.
  */
-export default function GeneralRequestSection({ employee, canDecide = true }) {
+export default function GeneralRequestSection({
+  employee,
+  kind = "general",
+  canDecide = true,
+}) {
+  const sort = REQUEST_KINDS[kind] || REQUEST_KINDS.general;
   const [requests, setRequests] = useState(initialGeneralRequests);
   const [draft, setDraft] = useState(emptyDraft);
   const [decision, setDecision] = useState(emptyDecision);
@@ -83,8 +98,10 @@ export default function GeneralRequestSection({ employee, canDecide = true }) {
   // The form is a window over the list rather than the page itself: the list
   // is what this section is, and stays where it was behind the window.
   const [adding, setAdding] = useState(false);
+  // What this employee has raised before, open over the request.
+  const [showHistory, setShowHistory] = useState(false);
 
-  const mine = requestsFor(requests, employee.name).map((request, index) => ({
+  const mine = requestsFor(requests, employee.name, kind).map((request, index) => ({
     ...request,
     no: index + 1,
     dateText: shortDate(request.date),
@@ -96,7 +113,7 @@ export default function GeneralRequestSection({ employee, canDecide = true }) {
   const setAnswer = (name, value) =>
     setDecision((prev) => ({ ...prev, [name]: value }));
 
-  const requestNo = open?.requestNo || nextRequestNo(requests, todayIso());
+  const requestNo = open?.requestNo || nextRequestNo(requests, todayIso(), sort.prefix);
   const requestDate = open?.date || todayIso();
   const attachment = open ? open.document : document?.name || "";
 
@@ -127,6 +144,7 @@ export default function GeneralRequestSection({ employee, canDecide = true }) {
     setDocument(null);
     setOpenId(null);
     setStage("request");
+    setShowHistory(false);
     setAdding(false);
   };
 
@@ -142,8 +160,9 @@ export default function GeneralRequestSection({ employee, canDecide = true }) {
       ...prev,
       {
         id,
+        kind,
         employee: employee.name,
-        requestNo: nextRequestNo(prev, date),
+        requestNo: nextRequestNo(prev, date, sort.prefix),
         requestType: draft.requestType,
         comment: draft.comment.trim(),
         document: document?.name || "",
@@ -190,26 +209,106 @@ export default function GeneralRequestSection({ employee, canDecide = true }) {
     });
     setDocument(null);
     setStage("decision");
+    setShowHistory(false);
     setAdding(true);
   };
 
   const refusing = decision.answer === REJECTED;
 
+  const columns = [
+    { key: "no", header: "#", width: "5%", render: (value) => <span className="font-medium text-primary">{value}</span> },
+    {
+      // The number is the way back into the request.
+      key: "requestNo",
+      header: "Request No.",
+      width: "13%",
+      render: (value, request) => <RecordLink onClick={() => track(request)}>{value}</RecordLink>,
+    },
+    { key: "requestType", header: sort.typeLabel, width: "15%" },
+    {
+      key: "comment",
+      header: "Employee Comment",
+      width: "21%",
+      render: (value, request) => (
+        <span className="inline-flex items-start gap-1.5">
+          {request.document && (
+            <Paperclip
+              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground"
+              aria-label="Has a supporting document"
+            />
+          )}
+          {value}
+        </span>
+      ),
+    },
+    {
+      key: "dateText",
+      header: "Request Date",
+      width: "10%",
+      render: (value) => <span className="whitespace-nowrap">{value}</span>,
+    },
+    {
+      key: "status",
+      header: "Status",
+      width: "10%",
+      render: (value) => (
+        <span
+          className={cn(
+            "inline-block whitespace-nowrap rounded-md px-3 py-1 text-xs font-semibold",
+            REQUEST_STATUS_TONE[value]
+          )}
+        >
+          {value}
+        </span>
+      ),
+    },
+    {
+      // Blank until someone has decided.
+      key: "remarks",
+      header: "Management Comment",
+      width: "14%",
+      render: (value) => <span className="text-muted-foreground">{value || "-"}</span>,
+    },
+    {
+      key: "reviewedBy",
+      header: "Reviewed By",
+      width: "12%",
+      render: (value) => <span className="text-muted-foreground">{value || "-"}</span>,
+    },
+  ];
+
+  const tableProps = {
+    searchPlaceholder: "Search by request no., type or comment...",
+    itemLabel: sort.noun + "s",
+    exportFileName: sort.noun.replace(/ /g, "-") + "s.csv",
+    filterBy: [
+      { key: "status", label: "Status" },
+      { key: "requestType", label: sort.typeLabel },
+    ],
+  };
+
   return (
     <div className="space-y-6">
       {/* Opened over the page, so the list it is filed into stays behind it. */}
       <Dialog open={adding} onOpenChange={(o) => !o && clear()}>
-        <DialogContent className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {open ? "Request " + open.requestNo : "General Request"}
-            </DialogTitle>
-          </DialogHeader>
-
+        <DialogContent hideClose className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
         <div className="space-y-6">
+          <SheetHead
+            icon={KIND_ICON[kind] || FilePenLine}
+            title={sort.title}
+            intro={
+              stage === "request"
+                ? "Submit a new " + sort.noun + " with the required details and supporting documents."
+                : "Review the " + sort.noun + " and record the management decision."
+            }
+            employee={employee}
+            date={requestDate}
+            requestNo={requestNo}
+          />
+
           {/* The employee writes it; the administration answers. Either
-              header opens its own half. */}
-          <RequestSteps
+              step opens its own half. */}
+          <AdvanceSteps
             active={stage}
             onChange={setStage}
             steps={[
@@ -231,110 +330,96 @@ export default function GeneralRequestSection({ employee, canDecide = true }) {
             ]}
           />
 
-          <Group title="Request Information">
-            <Row cols={4}>
-              {/* The supporting document hangs off the number rather than
-                  standing on its own: it is this request's paper, and a row
-                  of its own would leave it belonging to nothing in
-                  particular. Once the request is made the paper is read, not
-                  replaced. */}
-              <Field id="grNo" label="Request No.">
-                <div className="flex w-full min-w-0 items-center gap-2">
-                  <Input
-                    id="grNo"
-                    readOnly
-                    tabIndex={-1}
-                    value={requestNo}
-                    className="min-w-0 flex-1 cursor-default bg-locked text-muted-foreground"
-                  />
-                  {!open && (
-                    <Attach
-                      file={document}
-                      onPick={setDocument}
-                      label="supporting document"
-                    />
-                  )}
-                </div>
-                {attachment && (
-                  <p className="flex items-center gap-1.5 text-xs font-medium text-primary">
-                    <Paperclip className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                    <span className="truncate">{attachment}</span>
-                  </p>
-                )}
-              </Field>
-              <Locked
-                id="grDate"
-                label="Request Date"
-                value={shortDate(requestDate)}
-              />
-              <Locked id="grEmployee" label="Employee Name" value={employee.name} />
-
-              {/* Fixed once the request exists: the kind of thing being asked
-                  is what it was answered as, so it cannot be rewritten after
-                  the fact. */}
-              {open ? (
-                <Locked
-                  id="grType"
-                  label="Request Type"
-                  value={open.requestType}
-                />
-              ) : (
-                <Field
-                  id="grType"
-                  label="Request Type"
-                  required
-                  error={asked.errorFor("grType")}
-                >
-                  <Select
-                    value={draft.requestType}
-                    onValueChange={(value) => value && set("requestType", value)}
+          {stage === "request" && !open ? (
+            <SheetCard title={sort.title + " Details"}>
+              <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+                {/* What it is about, with the paper that backs it beside it.
+                    Each sits in a cell of its own - the form's fields bring
+                    their twelve-column spans, which mean nothing here. */}
+                <div>
+                  <Field
+                    id="grType"
+                    label={sort.typeLabel}
+                    required
+                    error={asked.errorFor("grType")}
                   >
-                    <SelectTrigger id="grType">
-                      <SelectValue placeholder="Select Request Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {REQUEST_TYPES.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
+                    <div className="flex items-end gap-3">
+                      <div className="min-w-0 flex-1">
+                        <Select
+                          value={draft.requestType}
+                          onValueChange={(value) => value && set("requestType", value)}
+                        >
+                          <SelectTrigger id="grType">
+                            <SelectValue placeholder={"Select " + sort.typeLabel.toLowerCase()} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {sort.types.map((type) => (
+                              <SelectItem key={type} value={type}>
+                                {type}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <UploadButton file={document} onPick={setDocument} />
+                    </div>
+                  </Field>
+                </div>
+                <div>
+                  <Field
+                    id="grComment"
+                    label="Employee Comment"
+                    required
+                    error={asked.errorFor("grComment")}
+                  >
+                    <Textarea
+                      id="grComment"
+                      maxLength={COMMENT_LIMIT}
+                      value={draft.comment}
+                      onChange={(e) => set("comment", e.target.value)}
+                      placeholder={"Describe the " + sort.noun + "..."}
+                    />
+                    <p className="-mt-1 text-end text-xs text-muted-foreground">
+                      {draft.comment.length}/{COMMENT_LIMIT}
+                    </p>
+                  </Field>
+                </div>
+              </div>
+              {attachment && (
+                <p className="flex items-center gap-1.5 text-sm text-primary">
+                  <Paperclip className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  {attachment}
+                </p>
               )}
-            </Row>
-          </Group>
-
-          {stage === "request" ? (
-            <Group title="Request Details">
-              <Field
-                id="grComment"
-                label="Employee Comment"
-                required
-                error={asked.errorFor("grComment")}
-              >
-                <Counted
-                  id="grComment"
-                  rows={5}
-                  limit={COMMENT_LIMIT}
-                  value={draft.comment}
-                  onChange={(value) => set("comment", value)}
-                  placeholder="Write your request here..."
-                />
-              </Field>
-            </Group>
+            </SheetCard>
           ) : (
             <>
-              <Group title="Employee Comment">
-                <p className="rounded-md bg-locked px-3 py-2 text-sm text-muted-foreground">
-                  {open?.comment}
-                </p>
-              </Group>
+              {/* What was raised, read back rather than asked for again. */}
+              <SheetCard title={sort.title + " Details"}>
+                <Row cols={3}>
+                  <Locked
+                    id="grType"
+                    label={sort.typeLabel}
+                    value={open?.requestType || draft.requestType}
+                  />
+                  <Field id="grCommentSaid" label="Employee Comment" span={6}>
+                    <p className="rounded-md bg-locked px-3 py-2 text-sm text-muted-foreground">
+                      {open?.comment || draft.comment || "-"}
+                    </p>
+                  </Field>
+                </Row>
+                {attachment && (
+                  <p className="flex items-center gap-1.5 text-sm text-primary">
+                    <Paperclip className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    {attachment}
+                  </p>
+                )}
+              </SheetCard>
 
               {/* A request already answered is read, not answered again: an
                   editable box that quietly refuses what is typed into it
                   reads as broken, so once decided it stops being a box. */}
-              <Group title="Management Decision">
+              <SheetCard title="Management Decision">
                 {settled ? (
                   <Row cols={3}>
                     <Locked
@@ -412,7 +497,6 @@ export default function GeneralRequestSection({ employee, canDecide = true }) {
                         >
                           <Counted
                             id="grRemarks"
-                            grow
                             limit={DECISION_COMMENT_LIMIT}
                             value={decision.comment}
                             onChange={(value) => setAnswer("comment", value)}
@@ -427,40 +511,54 @@ export default function GeneralRequestSection({ employee, canDecide = true }) {
                     </Row>
                   </>
                 )}
-              </Group>
+              </SheetCard>
             </>
           )}
 
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={clear}
-              disabled={!open && !draft.requestType && !draft.comment}
-            >
-              Cancel
-            </Button>
-
-            {stage === "request" ? (
-              <Button type="button" onClick={submit} disabled={Boolean(open)}>
-                Save
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <HistoryCard onClick={() => setShowHistory(true)} />
+            <div className="ms-auto flex flex-wrap gap-3">
+              <Button type="button" variant="outline" className="min-w-36" onClick={clear}>
+                Cancel
               </Button>
-            ) : (
-              /* The answer is given by the office, never by the person who
-                 asked: on their own page there is nothing to press. */
-              canDecide &&
-              !settled && (
-                <Button
-                  type="button"
-                  variant={refusing ? "destructive" : "default"}
-                  onClick={decide}
-                >
-                  {refusing ? "Confirm Rejection" : "Save"}
+
+              {stage === "request" && !open ? (
+                <Button type="button" className="min-w-48" onClick={submit}>
+                  Submit Request
                 </Button>
-              )
-            )}
+              ) : (
+                /* The answer is given by the office, never by the person who
+                   asked: on their own page there is nothing to press. */
+                canDecide &&
+                !settled && (
+                  <Button
+                    type="button"
+                    className="min-w-48"
+                    variant={refusing ? "destructive" : "default"}
+                    onClick={decide}
+                  >
+                    {refusing ? "Confirm Rejection" : "Save"}
+                  </Button>
+                )
+              )}
+            </div>
           </div>
         </div>
+
+          {/* Everything this employee has raised of this kind, over the sheet. */}
+          <Dialog open={showHistory} onOpenChange={setShowHistory}>
+            <DialogContent className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {sort.title} History · {employee.name}
+                </DialogTitle>
+                <DialogDescription>
+                  {"Every " + sort.noun + " this employee has raised."}
+                </DialogDescription>
+              </DialogHeader>
+              <RequestTable rows={mine} columns={columns} {...tableProps} />
+            </DialogContent>
+          </Dialog>
         </DialogContent>
       </Dialog>
 
@@ -468,74 +566,8 @@ export default function GeneralRequestSection({ employee, canDecide = true }) {
         <CardContent className="p-4 sm:p-6">
           <RequestTable
             rows={mine}
-            columns={[
-              { key: "no", header: "#", width: "5%", render: (value) => <span className="font-medium text-primary">{value}</span> },
-              {
-                // The number is the way back into the request.
-                key: "requestNo",
-                header: "Request No.",
-                width: "13%",
-                render: (value, request) => <RecordLink onClick={() => track(request)}>{value}</RecordLink>,
-              },
-              { key: "requestType", header: "Request Type", width: "15%" },
-              {
-                key: "comment",
-                header: "Employee Comment",
-                width: "21%",
-                render: (value, request) => (
-                  <span className="inline-flex items-start gap-1.5">
-                    {request.document && (
-                      <Paperclip
-                        className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground"
-                        aria-label="Has a supporting document"
-                      />
-                    )}
-                    {value}
-                  </span>
-                ),
-              },
-              {
-                key: "dateText",
-                header: "Request Date",
-                width: "10%",
-                render: (value) => <span className="whitespace-nowrap">{value}</span>,
-              },
-              {
-                key: "status",
-                header: "Status",
-                width: "10%",
-                render: (value) => (
-                  <span
-                    className={cn(
-                      "inline-block whitespace-nowrap rounded-md px-3 py-1 text-xs font-semibold",
-                      REQUEST_STATUS_TONE[value]
-                    )}
-                  >
-                    {value}
-                  </span>
-                ),
-              },
-              {
-                // Blank until someone has decided.
-                key: "remarks",
-                header: "Management Comment",
-                width: "14%",
-                render: (value) => <span className="text-muted-foreground">{value || "-"}</span>,
-              },
-              {
-                key: "reviewedBy",
-                header: "Reviewed By",
-                width: "12%",
-                render: (value) => <span className="text-muted-foreground">{value || "-"}</span>,
-              },
-            ]}
-            searchPlaceholder="Search by request no., type or comment..."
-            itemLabel="general requests"
-            exportFileName="general-requests.csv"
-            filterBy={[
-              { key: "status", label: "Status" },
-              { key: "requestType", label: "Request Type" },
-            ]}
+            columns={columns}
+            {...tableProps}
             onAdd={
               !adding
                 ? () => {
@@ -544,7 +576,7 @@ export default function GeneralRequestSection({ employee, canDecide = true }) {
                   }
                 : null
             }
-            addLabel="Add Request"
+            addLabel={kind === "general" ? "Add Request" : "Add " + sort.title}
           />
         </CardContent>
       </Card>

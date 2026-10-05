@@ -1,6 +1,5 @@
-import { Info } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,7 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RequestSteps } from "@/components/shared/RequestSteps";
+import { AdvanceSteps } from "./AdvanceSalarySection";
+import { SheetHead, SheetCard, HistoryCard } from "@/components/shared/RequestSheet";
 import { cn } from "@/lib/utils";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 import { formatDate as shortDate } from "@/pages/firm/firmData";
@@ -24,8 +24,12 @@ import {
   typesIn,
   leaveDays,
   remainingBalance,
+  nextLeaveNo,
 } from "../leaveData";
 import { checkRequired } from "@/components/shared/formFields";
+
+/** Today, as the head of a new request is dated. */
+const todayIso = () => new Date().toISOString().slice(0, 10);
 
 /** A reason has to fit on the request, so the form says how much room. */
 const NOTES_LIMIT = 500;
@@ -87,6 +91,8 @@ export default function LeaveForm({
   // Whoever is looking at somebody else's request answers it; on their own
   // page the answer is only read, so there is nothing here to press.
   canReview = true,
+  // Opens what this employee has asked for before.
+  onHistory = () => {},
 }) {
   // Days taken now against next year: the kind of leave is settled by that
   // choice, so neither the category nor the type is asked for again.
@@ -133,11 +139,23 @@ export default function LeaveForm({
       : "";
 
   return (
-    <Card>
-      <CardContent className="space-y-6 p-4 sm:p-6">
+    <div className="space-y-6">
+      <SheetHead
+        icon={CalendarDays}
+        title="Leave Request"
+        intro={
+          stage === "submit"
+            ? "Submit a new leave request with the required details."
+            : "Review the leave request and record the decision."
+        }
+        employee={employee}
+        date={record?.requestedOn || todayIso()}
+        requestNo={record?.leaveNo || nextLeaveNo(leaves)}
+      />
+
         {/* Where the request stands. The first stage is the employee's; the
             two approvals are filled in by whoever gives them. */}
-        <RequestSteps
+        <AdvanceSteps
           active={stage}
           onChange={onStage}
           steps={LEAVE_STAGES.map((step) => ({
@@ -152,7 +170,7 @@ export default function LeaveForm({
           <>
             {/* The stage being filled in, named above the fields that belong
                 to it. */}
-            <h3 className="text-base font-semibold text-primary">{stageTitle}</h3>
+            <SheetCard title={stageTitle}>
 
             {/* What is being decided, read off the request rather than asked
                 for again. */}
@@ -286,14 +304,18 @@ export default function LeaveForm({
                 />
               </div>
             </div>
+            </SheetCard>
 
-            <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-4">
-              <Button type="button" variant="outline" onClick={onCancel}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <HistoryCard onClick={onHistory} />
+              <div className="ms-auto flex flex-wrap gap-3">
+              <Button type="button" variant="outline" className="min-w-36" onClick={onCancel}>
                 Cancel
               </Button>
               {canReview && (
                 <Button
                   type="button"
+                  className="min-w-48"
                   onClick={onDecide}
                   disabled={!draft.decision || !draft.reviewDate}
                 >
@@ -302,10 +324,12 @@ export default function LeaveForm({
                     : "Save & Submit Decision"}
                 </Button>
               )}
+              </div>
             </div>
           </>
         ) : (
         <>
+        <SheetCard title="Leave Request Details">
         <div className="form-grid">
           {/* The year first: a balance belongs to a year, and asking for next
               year's days is what makes a request an advance. */}
@@ -489,10 +513,13 @@ export default function LeaveForm({
             />
           </div>
         </div>
+        </SheetCard>
 
-        <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <HistoryCard onClick={onHistory} />
+          <div className="ms-auto flex flex-wrap gap-3">
           {/* Plain buttons: this form sits inside the employee form. */}
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" className="min-w-36" onClick={onCancel}>
             Cancel
           </Button>
           {/* Submitting is what checks the form: the button is never
@@ -500,17 +527,18 @@ export default function LeaveForm({
               fields say which ones are missing. */}
           <Button
             type="button"
+            className="min-w-48"
             onClick={() => {
               if (!checkRequired() || !canSave) return;
               onSubmit();
             }}
           >
-            Submit Leave Request
+            Submit Request
           </Button>
+          </div>
         </div>
         </>
         )}
-      </CardContent>
-    </Card>
+    </div>
   );
 }
