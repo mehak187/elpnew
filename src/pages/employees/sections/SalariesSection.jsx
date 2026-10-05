@@ -1068,6 +1068,7 @@ export default function SalariesSection({
             // On the employee's record the window stays open after a request
             // is sent, on to the decision; on My Profile it closes.
             stayOpen={!advance}
+            salaryHistory={history}
             onClose={closeAdd}
           />
         </DialogContent>

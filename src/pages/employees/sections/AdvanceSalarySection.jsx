@@ -3,7 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { DialogClose, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import SalaryLedger from "./SalaryLedger";
+import { salaryHistory as defaultSalaryHistory } from "../payrollData";
 import {
   Select,
   SelectContent,
@@ -260,6 +269,8 @@ export function AdvanceSalaryForm({
   // Sent from an employee's record, the window stays open on the request
   // just sent; sent from My Profile, it closes.
   stayOpen = false,
+  // The employee's salary payments, for History to show beside the advances.
+  salaryHistory = defaultSalaryHistory,
   // Whoever is deciding, decides here - the same as every other request in
   // the system, which is where this stage is answered from.
   canDecide = true,
@@ -316,6 +327,8 @@ export function AdvanceSalaryForm({
     financeComment: openRequest?.financeComment || "",
   });
   const [showAllRemarks, setShowAllRemarks] = useState(false);
+  // History, open over the form.
+  const [showHistory, setShowHistory] = useState(false);
   // The transaction summary, once the payment is processed: shown in place
   // of the form, to be printed and filed.
   const [pdfUrl, setPdfUrl] = useState("");
@@ -1013,45 +1026,54 @@ export function AdvanceSalaryForm({
                 );
               })}
             </div>
-            {amending && (
-              <div className="form-field max-w-xs space-y-2">
-                <label htmlFor="advance-approved" className="block text-sm font-semibold text-primary">
-                  Approved Amount (<Rial />)
-                  <Star />
+            {/* A partial approval says how much beside its comment, on one
+                row: the amount narrow, the comment the rest. */}
+            <div
+              className={cn(
+                "grid gap-4",
+                amending &&
+                  "md:grid-cols-[1fr_3fr] md:gap-x-0 md:divide-x md:divide-container-border md:*:min-w-0 md:[&>*:first-child]:pe-6 md:[&>*:last-child]:ps-6"
+              )}
+            >
+              {amending && (
+                <div className="form-field space-y-2">
+                  <label htmlFor="advance-approved" className="block text-sm font-semibold text-primary">
+                    Approved Amount (<Rial />)
+                    <Star />
+                  </label>
+                  <Input
+                    id="advance-approved"
+                    inputMode="decimal"
+                    value={approved}
+                    onChange={(e) => setApproved(e.target.value.replace(/[^\d.]/g, ""))}
+                    placeholder="0.000"
+                    disabled={!canDecide}
+                    aria-invalid={approvedAmount >= requested || undefined}
+                    className={cn(approvedAmount >= requested && "border-destructive")}
+                  />
+                  {approvedAmount >= requested && (
+                    <p className="text-xs text-destructive">
+                      A partial approval is less than the {amount(requested)} requested.
+                    </p>
+                  )}
+                </div>
+              )}
+              <div className="space-y-2">
+                <label htmlFor="advance-comment" className="block text-sm font-semibold text-primary">
+                  Management Comment
                 </label>
-                <Input
-                  id="advance-approved"
-                  inputMode="decimal"
-                  value={approved}
-                  onChange={(e) => setApproved(e.target.value.replace(/[^\d.]/g, ""))}
-                  placeholder="0.000"
+                <Textarea
+                  id="advance-comment"
+                  maxLength={COMMENT_LIMIT}
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
                   disabled={!canDecide}
-                  aria-invalid={approvedAmount >= requested || undefined}
-                  className={cn(approvedAmount >= requested && "border-destructive")}
+                  placeholder="Enter your comment here..."
                 />
-                {approvedAmount >= requested && (
-                  <p className="text-xs text-destructive">
-                    A partial approval is less than the {amount(requested)} requested.
-                  </p>
-                )}
+                <p className="text-end text-xs text-muted-foreground">
+                  {comment.length}/{COMMENT_LIMIT}
+                </p>
               </div>
-            )}
-            <div className="space-y-2">
-              <label htmlFor="advance-comment" className="block text-sm font-semibold text-primary">
-                Management Comment
-              </label>
-              <Textarea
-                id="advance-comment"
-                rows={3}
-                maxLength={COMMENT_LIMIT}
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                disabled={!canDecide}
-                placeholder="Enter your comment here..."
-              />
-              <p className="text-end text-xs text-muted-foreground">
-                {comment.length}/{COMMENT_LIMIT}
-              </p>
             </div>
           </section>
           )}
@@ -1217,7 +1239,7 @@ export function AdvanceSalaryForm({
         {!writing && (
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => setShowHistory(true)}
             className="flex w-full items-center gap-4 rounded-xl border bg-blue-50/40 px-4 py-3 text-start transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-auto sm:min-w-md"
           >
             <span
@@ -1235,6 +1257,18 @@ export function AdvanceSalaryForm({
             <ChevronRight className="size-5 shrink-0 text-primary" aria-hidden="true" />
           </button>
         )}
+
+        {/* Every transaction of this kind for the employee - the same table
+            the Requests page shows under Salary Advance - over this window,
+            to read before deciding. */}
+        <Dialog open={showHistory} onOpenChange={setShowHistory}>
+          <DialogContent className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Salary Advance History · {employee?.name}</DialogTitle>
+            </DialogHeader>
+            <SalaryLedger employee={employee} history={salaryHistory} />
+          </DialogContent>
+        </Dialog>
 
         <div className="ms-auto flex flex-wrap items-center gap-3">
           <Button type="button" variant="outline" className="min-w-36" onClick={onClose}>
