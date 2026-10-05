@@ -206,6 +206,10 @@ export function AdvanceSteps({ steps, active, onChange }) {
               >
                 {step.title}
               </span>
+              {/* What the stage is for, where a request says it. */}
+              {step.note && (
+                <span className="-mt-1.5 text-center text-xs text-primary/70">{step.note}</span>
+              )}
             </button>
           </li>
         );

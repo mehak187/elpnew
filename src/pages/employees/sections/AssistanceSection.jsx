@@ -9,6 +9,7 @@ import {
   Settled,
   Said,
   Choice,
+  Field,
   Attach,
   checkRequired,
 } from "@/components/shared/formFields";
@@ -16,11 +17,14 @@ import { amountValue, money } from "@/lib/money";
 import {
   Dialog,
   DialogContent,
+  DialogClose,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { nextAssistanceNo } from "../assistanceData";
-import { RequestSteps, DecisionChoice } from "@/components/shared/RequestSteps";
+import { DecisionChoice } from "@/components/shared/RequestSteps";
+import { AdvanceSteps, longDate } from "./AdvanceSalarySection";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   RecordTable,
@@ -32,7 +36,17 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { Rial } from "@/components/shared/Rial";
-import { FileText, FileImage, History, Plus } from "lucide-react";
+import {
+  FileText,
+  FileImage,
+  Plus,
+  HandHeart,
+  X,
+  FilePenLine,
+  CloudUpload,
+  Clock,
+  ChevronRight,
+} from "lucide-react";
 import { formatDate } from "../loanData";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
 import { PAYING_ACCOUNTS } from "@/pages/firm/firmData";
@@ -45,6 +59,8 @@ import {
 } from "../assistanceData";
 
 const NOTES_LIMIT = 300;
+// The employee says why at more length than the decision answers.
+const COMMENT_LIMIT = 500;
 
 const emptyDraft = {
   ...DEFAULT_ASSISTANCE_BOOKING,
@@ -77,6 +93,14 @@ const isImage = (name) =>
  * Cash has no account to choose, so choosing it settles the account field
  * rather than leaving a bank picker open over a payment that never touched one.
  */
+/** "ASR-008" asked in 2026, as the head of the request reads it: "AS 08/2026". */
+const shortAssistanceNo = (requestNo, on) => {
+  const count = String(requestNo).split("-").pop();
+  return /^\d+$/.test(count)
+    ? "AS " + String(Number(count)).padStart(2, "0") + "/" + String(on).slice(0, 4)
+    : requestNo;
+};
+
 export default function AssistanceSection({
   employee,
   adding,
@@ -100,6 +124,8 @@ export default function AssistanceSection({
   const [openId, setOpenId] = useState(null);
   const [review, setReview] = useState(emptyReview);
   const [receipt, setReceipt] = useState(null);
+  // History, open over the form.
+  const [showHistory, setShowHistory] = useState(false);
 
   const open = records.find((record) => record.id === openId) || null;
 
@@ -378,24 +404,65 @@ export default function AssistanceSection({
   // filed into stays where it was, behind it.
   const form = (
       <div className="space-y-6">
-        {/* The two stages of the request. Either header opens its stage. */}
-        <RequestSteps
+        {/* The request's head: what it is, then whose it is, when it was
+            asked and its number - the close button beyond them. */}
+        <div className="flex flex-wrap items-start gap-4 pe-16">
+          <span
+            aria-hidden="true"
+            className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-primary"
+          >
+            <HandHeart className="size-7" strokeWidth={1.5} />
+          </span>
+          <div className="min-w-0">
+            <DialogTitle className="text-2xl font-bold text-primary">Assistance Request</DialogTitle>
+            <DialogDescription className="text-sm text-primary/75">
+              {stage === "request"
+                ? "Submit a new assistance request with the required details and supporting documents."
+                : "Review the request and record your decision."}
+            </DialogDescription>
+          </div>
+          <div className="ms-auto flex flex-wrap items-center gap-3 pt-2 text-sm text-primary">
+            <span>{employee?.empNo || ""}</span>
+            <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+            <span>{employee?.name || ""}</span>
+            <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+            <span>{longDate(requestedOn)}</span>
+            <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+            <span className="rounded-md bg-primary/10 px-3 py-1.5 text-base font-bold text-primary">
+              {shortAssistanceNo(requestNo, requestedOn)}
+            </span>
+          </div>
+          <DialogClose className="absolute end-5 top-5 rounded-md p-1 text-primary transition-colors hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <X className="size-7" aria-hidden="true" />
+            <span className="sr-only">Close</span>
+          </DialogClose>
+        </div>
+
+        {/* The three stages. Disbursement is asked for with the decision
+            until its own stage is designed, so the third opens the second. */}
+        <AdvanceSteps
           active={stage}
-          onChange={setStage}
+          onChange={(key) => setStage(key === "finance" ? "decision" : key)}
           steps={[
             {
               key: "request",
               title: "Assistance Request",
-              note: canSave
-                ? "Assistance details and supporting document completed"
-                : "Enter assistance details and supporting document",
-              done: Boolean(canSave),
+              note: "Enter assistance details and upload documents",
+              done: Boolean(openId),
             },
             {
               key: "decision",
-              title: "Management Decision",
-              note: "Review, approve and disburse",
+              title: "Management Comment",
+              note: "Review and approve",
               done: Boolean(decision),
+              disabled: !openId,
+            },
+            {
+              key: "finance",
+              title: "Disbursement Actions",
+              note: "Financial department processing",
+              done: Boolean(review.reference),
+              disabled: !openId || !granting,
             },
           ]}
         />
@@ -646,113 +713,119 @@ export default function AssistanceSection({
           </>
         ) : (
         <>
-          {/* Who is asking, under what number, for what and how much. The
-              paper that backs the request hangs under the number, so it
-              costs no field of its own. */}
-          <Bordered title="Request Information">
-            <div className="form-grid">
-              <div className="flex h-full flex-col justify-end gap-2">
-                <FieldLabel htmlFor="assistance-no">Request No.</FieldLabel>
-                <div className="flex w-full min-w-0 items-center gap-2">
-                  <Input
-                    id="assistance-no"
-                    readOnly
-                    tabIndex={-1}
-                    value={requestNo}
-                    className="min-w-0 flex-1 cursor-default bg-locked text-muted-foreground"
-                  />
-                  <Attach
-                    file={proof}
-                    onPick={setProof}
-                    label="supporting document"
+          {/* What it is for, the paper that backs it, how much, and why. */}
+          <section className="space-y-4 rounded-xl border p-4 sm:p-5">
+            <h3 className="flex items-center gap-3 text-lg font-bold text-primary">
+              <span aria-hidden="true" className="flex size-11 items-center justify-center rounded-lg bg-blue-50">
+                <FilePenLine className="size-6" strokeWidth={1.5} />
+              </span>
+              Request Details
+            </h3>
+            {/* One row: the type with its paper beside it, the amount, and why.
+                Each sits in a cell of its own - the form's fields bring their
+                twelve-column spans, which mean nothing outside that grid. */}
+            <div className="grid items-start gap-4 md:grid-cols-3">
+              <div className="flex items-end gap-2">
+                <div className="min-w-0 flex-1">
+                  <Choice
+                    id="assistance-subcategory"
+                    label="Assistance Type"
+                    value={draft.subcategory}
+                    onChange={(value) => value && set("subcategory", value)}
+                    placeholder="Select assistance type"
+                    options={subcategoriesOf(draft.expenseType, draft.category)}
                   />
                 </div>
-                {attachedName && (
-                  <button
-                    type="button"
-                    className="flex items-center gap-1.5 text-sm text-primary no-underline hover:text-primary/70"
-                    title={"Open " + attachedName}
-                  >
-                    {isImage(attachedName) ? (
-                      <FileImage className="h-4 w-4 shrink-0 text-blue-600" />
-                    ) : (
-                      <FileText className="h-4 w-4 shrink-0 text-blue-600" />
-                    )}
-                    {attachedName}
-                  </button>
+                {/* The supporting document, beside what it supports. */}
+                <label
+                  className="flex size-[42px] shrink-0 cursor-pointer items-center justify-center rounded-lg border bg-blue-50/60 text-primary transition-colors hover:bg-blue-50 focus-within:ring-2 focus-within:ring-ring"
+                  title={proof ? proof.name : "Upload supporting document"}
+                >
+                  <CloudUpload className="size-6" aria-hidden="true" />
+                  <span className="sr-only">Upload supporting document</span>
+                  <input
+                    type="file"
+                    className="sr-only"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = "";
+                      if (file) setProof(file);
+                    }}
+                  />
+                </label>
+              </div>
+
+              <div>
+                <Field id="assistance-amount" label="Requested Amount (OMR)" required>
+                  <div className="relative">
+                    <Input
+                      id="assistance-amount"
+                      inputMode="decimal"
+                      className="pe-14"
+                      value={draft.amount}
+                      onChange={(e) => set("amount", e.target.value.replace(/[^\d.]/g, ""))}
+                      placeholder="0.000"
+                    />
+                    <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      <Rial />
+                    </span>
+                  </div>
+                </Field>
+              </div>
+
+              <div>
+                <Field id="assistance-notes" label="Employee Comment" required>
+                  <Textarea
+                    id="assistance-notes"
+                    maxLength={COMMENT_LIMIT}
+                    value={draft.notes}
+                    onChange={(e) => set("notes", e.target.value)}
+                    placeholder="Enter the reason for this assistance request..."
+                  />
+                  <p className="-mt-1 text-end text-xs text-muted-foreground">
+                    {draft.notes.length}/{COMMENT_LIMIT}
+                  </p>
+                </Field>
+              </div>
+            </div>
+            {attachedName && (
+              <p className="flex items-center gap-1.5 text-sm text-primary">
+                {isImage(attachedName) ? (
+                  <FileImage className="h-4 w-4 shrink-0 text-primary" />
+                ) : (
+                  <FileText className="h-4 w-4 shrink-0 text-primary" />
                 )}
-              </div>
-
-              <Settled
-                id="assistance-date"
-                label="Request Date"
-                value={formatDate(requestedOn)}
-              />
-
-              <Choice
-                id="assistance-subcategory"
-                label="Assistance Type"
-                value={draft.subcategory}
-                onChange={(value) => value && set("subcategory", value)}
-                placeholder="Select Assistance Type"
-                options={subcategoriesOf(draft.expenseType, draft.category)}
-              />
-
-              <div className="flex h-full flex-col justify-end gap-2">
-                <FieldLabel htmlFor="assistance-amount" required>
-                  Requested Amount
-                </FieldLabel>
-                <div className="relative">
-                  <Input
-                    id="assistance-amount"
-                    inputMode="decimal"
-                    className="pe-12"
-                    value={draft.amount}
-                    onChange={(e) =>
-                      set("amount", e.target.value.replace(/[^\d.]/g, ""))
-                    }
-                    placeholder="0.000"
-                  />
-                  <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                    <Rial />
-                  </span>
-                </div>
-              </div>
-            </div>
-          </Bordered>
-
-          <Bordered title="Request Details">
-            <div className="space-y-2">
-              <FieldLabel htmlFor="assistance-notes" required>
-                Employee Comment
-              </FieldLabel>
-              <Textarea
-                id="assistance-notes"
-                rows={4}
-                maxLength={NOTES_LIMIT}
-                value={draft.notes}
-                onChange={(e) => set("notes", e.target.value)}
-                placeholder="Explain the reason for this assistance request"
-              />
-              <p className="text-end text-xs text-muted-foreground">
-                {draft.notes.length} / {NOTES_LIMIT}
+                {attachedName}
               </p>
-            </div>
-          </Bordered>
+            )}
+          </section>
         </>
         )}
 
         {/* Plain buttons: this form sits inside the employee form, which a
             submit button here would send instead. */}
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-4">
-          {/* What has been given before is the list behind this form. */}
-          <Button type="button" variant="ghost" onClick={closeForm}>
-            <History className="me-2 h-4 w-4" />
-            History
-          </Button>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Everything asked for before, over this window. */}
+          <button
+            type="button"
+            onClick={() => setShowHistory(true)}
+            className="flex w-full items-center gap-4 rounded-xl border bg-blue-50/40 px-4 py-3 text-start transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-auto sm:min-w-md"
+          >
+            <span aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary text-white">
+              <Clock className="size-6" strokeWidth={1.75} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-lg font-bold text-primary">History</span>
+              <span className="block text-sm text-primary/75">
+                View this request timeline and employee&apos;s previous requests
+              </span>
+            </span>
+            <ChevronRight className="size-5 shrink-0 text-primary" aria-hidden="true" />
+          </button>
 
           <div className="ms-auto flex flex-wrap items-center gap-2">
-            <Button type="button" variant="outline" onClick={closeForm}>
+            <Button type="button" variant="outline" className="min-w-36" onClick={closeForm}>
               Cancel
             </Button>
             {stage === "decision" ? (
@@ -763,8 +836,8 @@ export default function AssistanceSection({
                 Save
               </Button>
             ) : (
-              <Button type="button" onClick={saveRecord}>
-                Save
+              <Button type="button" className="min-w-48" onClick={saveRecord}>
+                Submit Request
               </Button>
             )}
           </div>
@@ -777,15 +850,27 @@ export default function AssistanceSection({
       <CardContent className="space-y-4 p-4 sm:p-6">
       {/* Opened over the page, so the list it is filed into stays behind. */}
       <Dialog open={Boolean(adding)} onOpenChange={(o) => !o && closeForm()}>
-        <DialogContent className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {stage === "decision"
-                ? "Assistance Management Decision"
-                : "Add Assistance Request"}
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent hideClose className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
           {form}
+          <Dialog open={showHistory} onOpenChange={setShowHistory}>
+            <DialogContent className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Assistance History · {employee?.name}</DialogTitle>
+                <DialogDescription>Every assistance request this employee has made.</DialogDescription>
+              </DialogHeader>
+              <RequestTable
+                rows={rows}
+                columns={columns}
+                searchPlaceholder="Search by request no., type or purpose..."
+                itemLabel="assistance requests"
+                exportFileName="assistance.csv"
+                filterBy={[
+                  { key: "status", label: "Status" },
+                  { key: "subcategory", label: "Assistance Type" },
+                ]}
+              />
+            </DialogContent>
+          </Dialog>
         </DialogContent>
       </Dialog>
 

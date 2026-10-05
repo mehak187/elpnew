@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import RequestTable from "@/components/shared/RequestTable";
-import { RequestSteps } from "@/components/shared/RequestSteps";
+import { AdvanceSteps, longDate } from "./AdvanceSalarySection";
 import { Card, CardContent } from "@/components/ui/card";
 import { Bordered, EmptyState } from "@/components/shared/panels";
 import {
@@ -11,6 +11,7 @@ import {
   Settled,
   Said,
   Choice,
+  Field,
   Attach,
   checkRequired,
 } from "@/components/shared/formFields";
@@ -23,12 +24,23 @@ import {
   RecordLink,
 } from "@/components/shared/RecordTable";
 import { Rial } from "@/components/shared/Rial";
-import { FileText, History, Plus } from "lucide-react";
+import {
+  FileText,
+  History,
+  Plus,
+  Gift,
+  X,
+  FilePenLine,
+  CloudUpload,
+  ChevronRight,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { amountValue } from "@/lib/money";
 import {
   Dialog,
   DialogContent,
+  DialogClose,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -52,6 +64,14 @@ import {
 } from "../bonusData";
 
 const COMMENT_LIMIT = 500;
+
+/** "BON-008" asked in 2026, as the head of the request reads it: "BON 08/2026". */
+const shortBonusNo = (requestNo, on) => {
+  const [prefix, count] = String(requestNo).split("-");
+  return /^\d+$/.test(count || "")
+    ? prefix + " " + String(Number(count)).padStart(2, "0") + "/" + String(on).slice(0, 4)
+    : requestNo;
+};
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
@@ -103,6 +123,8 @@ export default function BonusSection({
   const [attachment, setAttachment] = useState(null);
   const [payment, setPayment] = useState(emptyPayment);
   const [receipt, setReceipt] = useState(null);
+  // History, open over the form.
+  const [showHistory, setShowHistory] = useState(false);
 
   const open = bonuses.find((bonus) => bonus.id === openId) || null;
   const settled = open?.status === BONUS_DISBURSED;
@@ -214,87 +236,125 @@ export default function BonusSection({
     onOpenAdd?.();
   };
 
-  // Who is asking, and under what number. None of it is typed: it is the
-  // employee's own record and the register's next number.
-  const requestInformation = (
-    <Bordered title="Request Information">
-      <div className="form-grid">
-        <div className="flex h-full flex-col justify-end gap-2">
-          <FieldLabel htmlFor="bonus-no">Request No.</FieldLabel>
-          <div className="flex w-full min-w-0 items-center gap-2">
-            <Input
-              id="bonus-no"
-              readOnly
-              tabIndex={-1}
-              value={requestNo}
-              className="min-w-0 flex-1 cursor-default bg-locked text-muted-foreground"
-            />
-            <Attach
-              file={attachment}
-              onPick={setAttachment}
-              label="supporting document"
-            />
-          </div>
-          {/* Whatever was attached hangs under the number it belongs to
-              rather than taking a field of its own. */}
-          {!attachment && attachedName && (
-            <button
-              type="button"
-              className="flex items-center gap-1.5 text-sm text-primary no-underline hover:text-primary/70"
-              title={"Open " + attachedName}
-            >
-              <FileText className="h-4 w-4 shrink-0 text-blue-600" />
-              {attachedName}
-            </button>
+  // The list's columns, on the page and in the History window alike.
+  const columns = [
+    {
+      // Clicking the number opens the request back up.
+      key: "requestNo",
+      header: "Request No.",
+      width: "12%",
+      render: (value, bonus) => <RecordLink onClick={() => track(bonus)}>{value}</RecordLink>,
+    },
+    {
+      key: "bonusOn",
+      header: "Bonus Date",
+      width: "13%",
+      render: (value) => <span className="whitespace-nowrap text-primary">{formatDate(value)}</span>,
+    },
+    {
+      key: "reasonText",
+      header: "Bonus Details",
+      width: "24%",
+      render: (value, bonus) => (
+        <>
+          <span className="block font-semibold text-primary">{value}</span>
+          <span className="block text-xs text-muted-foreground">
+            {bonus.expenseType} &rarr; {bonus.category}
+          </span>
+        </>
+      ),
+    },
+    {
+      key: "amount",
+      header: "Bonus Amount (OMR)",
+      width: "15%",
+      render: (value) => <span className="whitespace-nowrap font-bold text-green-700">{amountValue(value)}</span>,
+    },
+    {
+      key: "notes",
+      header: "Employee Comment",
+      width: "22%",
+      render: (value) => <span className="text-muted-foreground">{value || "-"}</span>,
+    },
+    {
+      key: "status",
+      header: "Status",
+      width: "14%",
+      render: (value) => (
+        <span
+          className={cn(
+            "block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold",
+            BONUS_STATUS_CHIP[value] || REQUEST_STATUS_CHIP[value]
           )}
-        </div>
-
-        <Settled
-          id="bonus-request-date"
-          label="Request Date"
-          value={formatDate(requestedOn)}
-        />
-        <Settled
-          id="bonus-employee"
-          label="Employee Name"
-          value={employee?.name || ""}
-        />
-        <Settled
-          id="bonus-emp-no"
-          label="Employee No."
-          value={employee?.empNo || ""}
-        />
-      </div>
-    </Bordered>
-  );
+        >
+          {value}
+        </span>
+      ),
+    },
+  ];
 
   // The form opens over the page rather than pushing it down: the list it is
   // filed into stays where it was, behind it.
   const form = (
     <div className="space-y-6">
-      {/* The two halves of a bonus: what is being asked for, and then how
-          it was paid out. Either header opens its own half. */}
-      <RequestSteps
-        active={stage}
-        onChange={setStage}
+      {/* The request's head: what it is, then whose it is, when it was
+          asked and its number - the close button beyond them. */}
+      <div className="flex flex-wrap items-start gap-4 pe-16">
+        <span
+          aria-hidden="true"
+          className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-primary"
+        >
+          <Gift className="size-7" strokeWidth={1.5} />
+        </span>
+        <div className="min-w-0">
+          <DialogTitle className="text-2xl font-bold text-primary">Bonus Request</DialogTitle>
+          <DialogDescription className="text-sm text-primary/75">
+            {stage === "request"
+              ? "Submit a new bonus request with the required details and supporting documents."
+              : "Record how the bonus was paid out."}
+          </DialogDescription>
+        </div>
+        <div className="ms-auto flex flex-wrap items-center gap-3 pt-2 text-sm text-primary">
+          <span>{employee?.empNo || ""}</span>
+          <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+          <span>{employee?.name || ""}</span>
+          <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+          <span>{longDate(requestedOn)}</span>
+          <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+          <span className="rounded-md bg-primary/10 px-3 py-1.5 text-base font-bold text-primary">
+            {shortBonusNo(requestNo, requestedOn)}
+          </span>
+        </div>
+        <DialogClose className="absolute end-5 top-5 rounded-md p-1 text-primary transition-colors hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <X className="size-7" aria-hidden="true" />
+          <span className="sr-only">Close</span>
+        </DialogClose>
+      </div>
+
+      {/* The three stages. Management's say has no screen of its own yet, so
+          both later steps open the payment, which is where it is recorded. */}
+      <AdvanceSteps
+        active={stage === "request" ? "request" : "finance"}
+        onChange={(key) => setStage(key === "request" ? "request" : "disbursement")}
         steps={[
           {
             key: "request",
             title: "Bonus Request",
-            // The note says where the half stands, so a finished one does
-            // not still read as an instruction.
-            note: canSubmit
-              ? "Bonus details completed"
-              : "Enter bonus request details",
-            done: Boolean(canSubmit),
+            note: "Enter bonus details and upload supporting documents",
+            done: Boolean(open),
           },
           {
-            key: "disbursement",
-            title: "Bonus Disbursement",
-            note: "Payment and transfer details",
-            done: Boolean(open?.paidOn),
-            // Nothing can be paid out until there is a bonus to pay: a new
-            // request is saved first, and opened back off the list.
+            key: "decision",
+            title: "Management Comment",
+            note: "Review and approve",
+            done: settled || refused,
+            disabled: !open,
+          },
+          {
+            key: "finance",
+            title: "Disbursement Actions",
+            note: "Financial department processing",
+            done: settled,
             disabled: !open,
           },
         ]}
@@ -433,93 +493,129 @@ export default function BonusSection({
         </>
       ) : (
         <>
-          {requestInformation}
-
-          <Bordered title="Bonus Details">
-            <div className="form-grid">
-              <Choice
-                id="bonus-subcategory-pick"
-                label="Bonus Type"
-                value={draft.subcategory}
-                onChange={(value) => value && set("subcategory", value)}
-                placeholder="Select Bonus Type"
-                options={BONUS_SUBCATEGORIES}
-              />
-
-              {/* Only where the list does not already say what the bonus is
-                  for, and next to the choice that asked the question. */}
-              {isOther && (
-                <div className="flex h-full flex-col justify-end gap-2">
-                  <FieldLabel htmlFor="bonus-other-type" required>
-                    Say What For
-                  </FieldLabel>
-                  <Input
-                    id="bonus-other-type"
-                    value={draft.bonusType}
-                    onChange={(e) => set("bonusType", e.target.value)}
-                    placeholder="Say what the bonus is for"
-                    autoComplete="off"
-                  />
+          {/* What it is for, the paper that backs it, how much, and why. */}
+          <section className="space-y-4 rounded-xl border p-4 sm:p-5">
+            <h3 className="flex items-center gap-3 text-lg font-bold text-primary">
+              <span aria-hidden="true" className="flex size-11 items-center justify-center rounded-lg bg-blue-50">
+                <FilePenLine className="size-6" strokeWidth={1.5} />
+              </span>
+              Request Details
+            </h3>
+            {/* Each field sits in a cell of its own - the form's fields bring
+                their twelve-column spans, which mean nothing outside that grid. */}
+            <div className="grid items-start gap-4 md:grid-cols-[minmax(0,5fr)_minmax(0,4fr)_minmax(0,7fr)]">
+              <div className="space-y-4">
+                <div className="flex items-end gap-3">
+                  <div className="min-w-0 flex-1">
+                    <Choice
+                      id="bonus-subcategory-pick"
+                      label="Bonus Type"
+                      value={draft.subcategory}
+                      onChange={(value) => value && set("subcategory", value)}
+                      placeholder="Select bonus type"
+                      options={BONUS_SUBCATEGORIES}
+                    />
+                  </div>
+                  {/* The supporting document, beside what it supports. */}
+                  <label
+                    className="flex h-[42px] w-14 shrink-0 cursor-pointer items-center justify-center rounded-lg border bg-blue-50/60 text-primary transition-colors hover:bg-blue-50 focus-within:ring-2 focus-within:ring-ring"
+                    title={attachedName || "Upload supporting document"}
+                  >
+                    <CloudUpload className="size-6" aria-hidden="true" />
+                    <span className="sr-only">Upload supporting document</span>
+                    <input
+                      type="file"
+                      className="sr-only"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = "";
+                        if (file) setAttachment(file);
+                      }}
+                    />
+                  </label>
                 </div>
-              )}
-
-              <div className="flex h-full flex-col justify-end gap-2">
-                <FieldLabel htmlFor="bonus-date">Bonus Date</FieldLabel>
-                <Input
-                  id="bonus-date"
-                  type="date"
-                  value={draft.bonusDate}
-                  onChange={(e) => set("bonusDate", e.target.value)}
-                />
+                {attachedName && (
+                  <p className="flex items-center gap-1.5 text-sm text-primary">
+                    <FileText className="h-4 w-4 shrink-0" />
+                    {attachedName}
+                  </p>
+                )}
+                {/* Only where the list does not already say what the bonus is
+                    for, under the choice that asked the question. */}
+                {isOther && (
+                  <Field id="bonus-other-type" label="Say What For" required>
+                    <Input
+                      id="bonus-other-type"
+                      value={draft.bonusType}
+                      onChange={(e) => set("bonusType", e.target.value)}
+                      placeholder="Say what the bonus is for"
+                      autoComplete="off"
+                    />
+                  </Field>
+                )}
               </div>
 
-              <div className="flex h-full flex-col justify-end gap-2">
-                <FieldLabel htmlFor="bonus-amount" required>
-                  Requested Bonus Amount (<Rial />)
-                </FieldLabel>
-                <Input
-                  id="bonus-amount"
-                  inputMode="decimal"
-                  value={draft.amount}
-                  onChange={(e) => set("amount", e.target.value.replace(/[^\d.]/g, ""))}
-                  placeholder="0.000"
-                />
+              <div>
+                <Field id="bonus-amount" label="Requested Amount (OMR)" required>
+                  <div className="relative">
+                    <Input
+                      id="bonus-amount"
+                      inputMode="decimal"
+                      className="pe-14"
+                      value={draft.amount}
+                      onChange={(e) => set("amount", e.target.value.replace(/[^\d.]/g, ""))}
+                      placeholder="0.000"
+                    />
+                    <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      <Rial />
+                    </span>
+                  </div>
+                </Field>
+              </div>
+
+              <div>
+                <Field id="bonus-comment" label="Employee Comment" required>
+                  <Textarea
+                    id="bonus-comment"
+                    maxLength={COMMENT_LIMIT}
+                    value={draft.comment}
+                    onChange={(e) => set("comment", e.target.value)}
+                    placeholder="Enter the reason for this bonus request..."
+                  />
+                  <p className="-mt-1 text-end text-xs text-muted-foreground">
+                    {draft.comment.length}/{COMMENT_LIMIT}
+                  </p>
+                </Field>
               </div>
             </div>
-          </Bordered>
-
-          <Bordered title="Employee Comment">
-            <div className="space-y-2">
-              <Textarea
-                id="bonus-comment"
-                rows={4}
-                maxLength={COMMENT_LIMIT}
-                value={draft.comment}
-                onChange={(e) => set("comment", e.target.value)}
-                placeholder="Explain the reason and basis for requesting this bonus"
-              />
-              <p className="text-end text-xs text-muted-foreground">
-                {draft.comment.length} / {COMMENT_LIMIT}
-              </p>
-            </div>
-          </Bordered>
+          </section>
         </>
       )}
 
       {/* Plain buttons: this form sits inside the employee form, which either
           would otherwise submit. */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-4">
-        {/* What has been paid before is the list behind this form - offered
-            where a payment is being made, not where one is being asked for. */}
-        {stage === "disbursement" && (
-          <Button type="button" variant="ghost" onClick={close}>
-            <History className="me-2 h-4 w-4" />
-            History
-          </Button>
-        )}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Everything asked for before, over this window. */}
+        <button
+          type="button"
+          onClick={() => setShowHistory(true)}
+          className="flex w-full items-center gap-4 rounded-xl border bg-blue-50/40 px-4 py-3 text-start transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-auto sm:min-w-md"
+        >
+          <span aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary text-white">
+            <History className="size-6" strokeWidth={1.75} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-lg font-bold text-primary">History</span>
+            <span className="block text-sm text-primary/75">
+              View this request timeline and employee&apos;s previous requests
+            </span>
+          </span>
+          <ChevronRight className="size-5 shrink-0 text-primary" aria-hidden="true" />
+        </button>
 
         <div className="ms-auto flex flex-wrap items-center gap-2">
-          <Button type="button" variant="outline" onClick={close}>
+          <Button type="button" variant="outline" className="min-w-36" onClick={close}>
             Cancel
           </Button>
           {stage === "disbursement" ? (
@@ -531,8 +627,8 @@ export default function BonusSection({
               Save
             </Button>
           ) : (
-            <Button type="button" onClick={submit}>
-              Save
+            <Button type="button" className="min-w-48" onClick={submit}>
+              Submit Request
             </Button>
           )}
         </div>
@@ -545,73 +641,29 @@ export default function BonusSection({
       <CardContent className="space-y-4 p-4 sm:p-6">
         {/* Opened over the page, so the list it is filed into stays behind. */}
         <Dialog open={Boolean(adding)} onOpenChange={(o) => !o && close()}>
-          <DialogContent className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {stage === "disbursement" ? "Bonus Disbursement" : "Bonus Request"}
-              </DialogTitle>
-            </DialogHeader>
+          <DialogContent hideClose className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
             {form}
+            <Dialog open={showHistory} onOpenChange={setShowHistory}>
+              <DialogContent className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Bonus History · {employee?.name}</DialogTitle>
+                  <DialogDescription>Every bonus this employee has asked for.</DialogDescription>
+                </DialogHeader>
+                <RequestTable
+                  rows={mine}
+                  columns={columns}
+                  searchPlaceholder="Search by request no., reason or comment..."
+                  itemLabel="bonuses"
+                  exportFileName="bonuses.csv"
+                />
+              </DialogContent>
+            </Dialog>
           </DialogContent>
         </Dialog>
 
         <RequestTable
           rows={mine}
-          columns={[
-            {
-              // Clicking the number opens the request back up.
-              key: "requestNo",
-              header: "Request No.",
-              width: "12%",
-              render: (value, bonus) => <RecordLink onClick={() => track(bonus)}>{value}</RecordLink>,
-            },
-            {
-              key: "bonusOn",
-              header: "Bonus Date",
-              width: "13%",
-              render: (value) => <span className="whitespace-nowrap text-primary">{formatDate(value)}</span>,
-            },
-            {
-              key: "reasonText",
-              header: "Bonus Details",
-              width: "24%",
-              render: (value, bonus) => (
-                <>
-                  <span className="block font-semibold text-primary">{value}</span>
-                  <span className="block text-xs text-muted-foreground">
-                    {bonus.expenseType} &rarr; {bonus.category}
-                  </span>
-                </>
-              ),
-            },
-            {
-              key: "amount",
-              header: "Bonus Amount (OMR)",
-              width: "15%",
-              render: (value) => <span className="whitespace-nowrap font-bold text-green-700">{amountValue(value)}</span>,
-            },
-            {
-              key: "notes",
-              header: "Employee Comment",
-              width: "22%",
-              render: (value) => <span className="text-muted-foreground">{value || "-"}</span>,
-            },
-            {
-              key: "status",
-              header: "Status",
-              width: "14%",
-              render: (value) => (
-                <span
-                  className={cn(
-                    "block w-fit rounded-md px-2.5 py-0.5 text-xs font-semibold",
-                    BONUS_STATUS_CHIP[value] || REQUEST_STATUS_CHIP[value]
-                  )}
-                >
-                  {value}
-                </span>
-              ),
-            },
-          ]}
+          columns={columns}
           searchPlaceholder="Search by request no., reason or comment..."
           itemLabel="bonuses"
           exportFileName="bonuses.csv"
