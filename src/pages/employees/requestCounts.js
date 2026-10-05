@@ -1,4 +1,4 @@
-import { initialAdvances } from "./advanceSalaryData";
+import { advanceStatusOf, initialAdvances } from "./advanceSalaryData";
 import { loanRecords } from "./loanData";
 import { assistanceRecords, statusOf } from "./assistanceData";
 import { initialBonuses } from "./bonusData";
@@ -6,20 +6,31 @@ import { initialEntitlements } from "./entitlementData";
 import { initialGeneralRequests } from "./generalRequestData";
 
 /**
- * How many of each kind of request one employee has made, and how many are
- * still waiting on a decision - the two figures on the Requests page's cards.
+ * How many of each kind of request one employee has made, and where they
+ * stand - the figures on the Requests page's cards.
  *
  * Read from the same records the request pages list, so a card cannot claim a
  * number its own page does not show. A kind with no page of its own yet has
  * nothing to count.
  */
 
-const tally = (rows, isPending) => ({
-  total: rows.length,
-  pending: rows.filter(isPending).length,
-});
+/** Where a request stands, in the four words the cards count by. */
+const bucket = (status) => {
+  if (status === "Returned") return "returned";
+  if (status === "Rejected" || status === "Cancelled") return "rejected";
+  if (status === "Pending") return "pending";
+  return "approved";
+};
 
-const waiting = (row) => row.status === "Pending";
+const tally = (rows, statusOf) => {
+  const counts = { total: rows.length, approved: 0, pending: 0, returned: 0, rejected: 0 };
+  rows.forEach((row) => {
+    counts[bucket(statusOf(row))] += 1;
+  });
+  return counts;
+};
+
+const plain = (row) => row.status;
 
 const mine = (rows, name) => rows.filter((row) => row.employee === name);
 
@@ -27,15 +38,14 @@ const mine = (rows, name) => rows.filter((row) => row.employee === name);
 const entitlement = (kind) => (name) =>
   tally(
     mine(initialEntitlements, name).filter((row) => row.kind === kind),
-    waiting
+    plain
   );
 
 const COUNTERS = {
-  salaryAdvance: (name) => tally(mine(initialAdvances, name), waiting),
-  loan: (name) => tally(mine(loanRecords, name), waiting),
-  assistance: (name) =>
-    tally(mine(assistanceRecords, name), (row) => statusOf(row) === "Pending"),
-  bonus: (name) => tally(mine(initialBonuses, name), waiting),
+  salaryAdvance: (name) => tally(mine(initialAdvances, name), advanceStatusOf),
+  loan: (name) => tally(mine(loanRecords, name), plain),
+  assistance: (name) => tally(mine(assistanceRecords, name), statusOf),
+  bonus: (name) => tally(mine(initialBonuses, name), plain),
   overtime: entitlement("overtime"),
   leavePay: entitlement("leaveEncashment"),
   medical: entitlement("medical"),
@@ -44,9 +54,10 @@ const COUNTERS = {
   airTicket: entitlement("airTicket"),
   notice: entitlement("notice"),
   gratuity: entitlement("endOfService"),
-  general: (name) => tally(mine(initialGeneralRequests, name), waiting),
+  general: (name) => tally(mine(initialGeneralRequests, name), plain),
 };
 
-/** { total, pending } for one kind of request made by one employee. */
-export const requestCountFor = (key, name) =>
-  COUNTERS[key]?.(name) ?? { total: 0, pending: 0 };
+const NONE = { total: 0, approved: 0, pending: 0, returned: 0, rejected: 0 };
+
+/** { total, approved, pending, returned, rejected } for one kind of request. */
+export const requestCountFor = (key, name) => COUNTERS[key]?.(name) ?? NONE;

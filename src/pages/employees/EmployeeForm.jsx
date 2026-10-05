@@ -78,6 +78,10 @@ import {
   Network,
   Scale,
   Calculator,
+  Sparkles,
+  ChevronRight,
+  CircleX,
+  CircleMinus,
   Landmark,
   Users,
   FileWarning,
@@ -457,36 +461,53 @@ const REQUEST_CATEGORIES = [
 // shadow, no scaling. A figure above nought is in colour on any card.
 const TONES = {
   violet: {
+    card: "border-violet-200 bg-violet-50/60",
+    aiRow: "bg-violet-100/70 hover:bg-violet-100",
     mark: "bg-violet-100 text-violet-700",
     ink: "text-violet-700",
     hover: "hover:border-violet-200 hover:bg-violet-50/40 [&:hover_.card-title]:text-violet-700",
     chosen: "border-violet-400 bg-violet-50 ring-1 ring-violet-400",
   },
   green: {
+    card: "border-emerald-200 bg-emerald-50/60",
+    aiRow: "bg-emerald-100/70 hover:bg-emerald-100",
     mark: "bg-emerald-100 text-emerald-700",
     ink: "text-emerald-700",
     hover: "hover:border-emerald-200 hover:bg-emerald-50/40 [&:hover_.card-title]:text-emerald-700",
     chosen: "border-emerald-400 bg-emerald-50 ring-1 ring-emerald-400",
   },
   orange: {
+    card: "border-orange-200 bg-orange-50/60",
+    aiRow: "bg-orange-100/70 hover:bg-orange-100",
     mark: "bg-orange-100 text-orange-600",
     ink: "text-orange-600",
     hover: "hover:border-orange-200 hover:bg-orange-50/40 [&:hover_.card-title]:text-orange-600",
     chosen: "border-orange-400 bg-orange-50 ring-1 ring-orange-400",
   },
   rose: {
+    card: "border-rose-200 bg-rose-50/60",
+    aiRow: "bg-rose-100/70 hover:bg-rose-100",
     mark: "bg-rose-100 text-rose-600",
     ink: "text-rose-600",
     hover: "hover:border-rose-200 hover:bg-rose-50/40 [&:hover_.card-title]:text-rose-600",
     chosen: "border-rose-400 bg-rose-50 ring-1 ring-rose-400",
   },
   blue: {
+    card: "border-blue-200 bg-blue-50/60",
+    aiRow: "bg-blue-100/70 hover:bg-blue-100",
     mark: "bg-blue-100 text-blue-700",
     ink: "text-blue-700",
     hover: "hover:border-blue-200 hover:bg-blue-50/40 [&:hover_.card-title]:text-blue-700",
     chosen: "border-blue-400 bg-blue-50 ring-1 ring-blue-400",
   },
 };
+
+/** The AI's reading under each card, in turn along the row. */
+const REQUEST_AI = [
+  { label: "AI Insight", icon: Sparkles },
+  { label: "AI Prediction", icon: ChartNoAxesColumnIncreasing },
+  { label: "AI Risk", icon: TriangleAlert, iconTone: "fill-orange-500 text-white" },
+];
 
 /** The tints in turn; a request whose design names its own (`tone`) wears that. */
 const REQUEST_CARD_TONES = [TONES.violet, TONES.green, TONES.orange, TONES.rose];
@@ -1288,6 +1309,10 @@ export default function EmployeeForm({ self }) {
   // opened below them, if one has been.
   const [requestCategory, setRequestCategory] = useState(REQUEST_CATEGORIES[0].key);
   const [requestsTab, setRequestsTab] = useState(null);
+  // The request cards open closed, and open once one is clicked.
+  const [requestCardsOpen, setRequestCardsOpen] = useState(false);
+  // The card whose AI note is open, if any.
+  const [aiNote, setAiNote] = useState(null);
   // What is open under Employee Management: nothing until a card is chosen.
   const [managementTab, setManagementTab] = useState(null);
   // Said once Employee Information has been saved, until the person moves on.
@@ -1861,6 +1886,8 @@ export default function EmployeeForm({ self }) {
 
   /** Shows one kind's cards, its first request chosen and open below. */
   const openRequestCategory = (key) => {
+    setRequestCardsOpen(false);
+    setAiNote(null);
     const first = REQUEST_CATEGORIES.find((category) => category.key === key)?.items[0];
     if (first) chooseRequest(first);
     else {
@@ -2110,41 +2137,54 @@ export default function EmployeeForm({ self }) {
             </div>
           )}
 
-          {/* Every kind of request in one row, each its mark and its name.
-              The chosen kind is lit; its requests are the cards below. */}
-          {isRequests && (
+          {/* Every kind of request in one row, each its mark in a box and its
+              name under it, joined like steps. The chosen kind's box is lit
+              and the line either side of it is drawn in navy. */}
+          {isRequests && (() => {
+            const chosenIndex = REQUEST_CATEGORIES.findIndex((c) => c.key === requestCategory);
+            return (
             <nav
               aria-label="Request types"
               className="overflow-x-auto rounded-xl border border-container-border bg-card px-4 py-4"
             >
-              {/* The kinds on one line, joined like steps: each its mark and
-                  short name, the chosen one in blue with its line half lit. */}
               <ol className="flex min-w-max">
                 {REQUEST_CATEGORIES.map((category, index) => {
                   const Icon = category.icon;
-                  const lit = requestCategory === category.key;
+                  const lit = index === chosenIndex;
                   const last = index === REQUEST_CATEGORIES.length - 1;
                   return (
                     <li key={category.key} className="relative flex min-w-36 flex-1 flex-col items-center">
                       {!last && (
                         <span
                           aria-hidden="true"
-                          className="absolute start-[calc(50%+32px)] end-[calc(-50%+32px)] top-5 h-0.5 overflow-hidden rounded-full bg-slate-200"
+                          className="absolute start-[calc(50%+40px)] end-[calc(-50%+40px)] top-7 flex h-0.5 overflow-hidden rounded-full bg-slate-200"
                         >
-                          {lit && <span className="block h-full w-1/2 bg-primary" />}
+                          <span className={cn("h-full w-1/2", lit && "bg-primary")} />
+                          <span className={cn("h-full w-1/2", index + 1 === chosenIndex && "bg-primary")} />
                         </span>
                       )}
                       <button
                         type="button"
                         onClick={() => openRequestCategory(category.key)}
                         aria-current={lit ? "true" : undefined}
-                        className={cn(
-                          "flex flex-col items-center gap-2 rounded-md px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                          lit ? "text-primary" : "text-primary/70 hover:text-primary"
-                        )}
+                        className="group flex flex-col items-center gap-2 rounded-md px-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
-                        <Icon strokeWidth={1.5} aria-hidden="true" className="size-10" />
-                        <span className="whitespace-nowrap text-sm font-semibold">
+                        <span
+                          className={cn(
+                            "flex size-14 items-center justify-center rounded-xl border transition-colors",
+                            lit
+                              ? "border-blue-200 bg-blue-50 text-primary"
+                              : "border-container-border bg-card text-primary/60 group-hover:text-primary"
+                          )}
+                        >
+                          <Icon strokeWidth={1.5} aria-hidden="true" className="size-7" />
+                        </span>
+                        <span
+                          className={cn(
+                            "whitespace-nowrap text-sm",
+                            lit ? "font-bold text-primary" : "font-medium text-primary/60 group-hover:text-primary"
+                          )}
+                        >
                           {category.short || category.label}
                         </span>
                       </button>
@@ -2153,91 +2193,104 @@ export default function EmployeeForm({ self }) {
                 })}
               </ol>
             </nav>
-          )}
+            );
+          })()}
 
-          {/* The chosen kind's requests as cards: what each is, how many this
-              employee has made, and how many are still waiting on a decision.
-              A card opens its request below. */}
+          {/* The chosen kind's requests as cards: each its figure and name.
+              They open closed; clicking one opens the row - where each
+              request stands, and the AI's reading of them - and shows its
+              requests below. */}
           {isRequests && (() => {
             const category = REQUEST_CATEGORIES.find((c) => c.key === requestCategory);
             return (
-              <section className="space-y-4">
-                <h2 className="flex items-center gap-2 text-xl font-bold text-primary">
-                  <category.icon strokeWidth={1.75} aria-hidden="true" className="size-7 text-primary" />
-                  {category.label}
-                </h2>
-                <div className={cn("grid gap-4", REQUEST_CARD_COLUMNS[category.items.length])}>
-                  {category.items.map((item, index) => {
-                    const tone =
-                      TONES[item.tone] || REQUEST_CARD_TONES[index % REQUEST_CARD_TONES.length];
-                    const { total, pending } = requestCountFor(item.key, record.name);
-                    const Icon = item.icon;
-                    const opened = item.key === requestsTab;
-                    const figure =
-                      item.stat === "leaveDays" ? annualLeaveLeft(leaves, record.name) ?? 0 : total;
-                    // The figure is in colour when it counts something, or
-                    // when the card is the one chosen.
-                    const figureInk = opened || figure > 0 ? tone.ink : "text-primary";
-                    return (
+              <section className={cn("grid items-start gap-4", REQUEST_CARD_COLUMNS[category.items.length])}>
+                {category.items.map((item, index) => {
+                  const tone =
+                    TONES[item.tone] || REQUEST_CARD_TONES[index % REQUEST_CARD_TONES.length];
+                  const counts = requestCountFor(item.key, record.name);
+                  const opened = item.key === requestsTab;
+                  const figure =
+                    item.stat === "leaveDays" ? annualLeaveLeft(leaves, record.name) ?? 0 : counts.total;
+                  const ai = REQUEST_AI[index % REQUEST_AI.length];
+                  const AiIcon = ai.icon;
+                  return (
+                    <div
+                      key={item.key}
+                      className={cn(
+                        "flex flex-col gap-4 rounded-xl border p-4 transition-colors",
+                        tone.card,
+                        opened && tone.chosen
+                      )}
+                    >
                       <button
-                        key={item.key}
                         type="button"
-                        onClick={() => chooseRequest({ ...item, category: category.key })}
+                        onClick={() => {
+                          chooseRequest({ ...item, category: category.key });
+                          setRequestCardsOpen(true);
+                        }}
                         aria-pressed={opened}
-                        className={cn(
-                          // The mark, the name and the figure on one line.
-                          "flex h-full flex-col gap-3 rounded-xl border p-4 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                          opened ? tone.chosen : cn("border-container-border bg-card", tone.hover)
-                        )}
+                        aria-expanded={requestCardsOpen}
+                        className="flex items-center gap-4 rounded-lg text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
-                        <span className="flex w-full items-center gap-3">
-                          <span className={cn("flex size-12 shrink-0 items-center justify-center rounded-lg", tone.mark)}>
-                            <Icon strokeWidth={1.5} aria-hidden="true" className="size-6" />
-                          </span>
-                          <span
+                        <span className={cn("flex size-16 shrink-0 items-center justify-center rounded-xl text-4xl font-bold", tone.mark)}>
+                          {figure}
+                        </span>
+                        <span className="min-w-0">
+                          <span className={cn("block text-xl font-bold leading-tight", tone.ink)}>{item.label}</span>
+                          {item.stat === "leaveDays" && (
+                            <span className="block text-xs text-primary/75">Remaining Annual Leave Days</span>
+                          )}
+                        </span>
+                      </button>
+
+                      {requestCardsOpen && (
+                        <>
+                          {/* Where this kind's requests stand. */}
+                          <div className="grid grid-cols-4 divide-x divide-container-border rounded-lg bg-white/70 py-2">
+                            {[
+                              { label: "Approved", value: counts.approved, icon: CircleCheck, tone: "fill-green-600 text-white" },
+                              { label: "Pending", value: counts.pending, icon: Clock, tone: "fill-amber-400 text-white" },
+                              { label: "Returned", value: counts.returned, icon: CircleX, tone: "fill-red-600 text-white" },
+                              { label: "Rejected", value: counts.rejected, icon: CircleMinus, tone: "fill-slate-600 text-white" },
+                            ].map((stat) => {
+                              const StatIcon = stat.icon;
+                              return (
+                                <div key={stat.label} className="flex flex-col items-center gap-0.5 px-1">
+                                  <span className="flex items-center gap-1.5 text-xl font-semibold text-primary">
+                                    <StatIcon className={cn("size-6", stat.tone)} aria-hidden="true" />
+                                    {stat.value}
+                                  </span>
+                                  <span className="text-xs text-primary/75">{stat.label}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* The AI's reading of this kind of request. */}
+                          <button
+                            type="button"
+                            onClick={() => setAiNote(aiNote === item.key ? null : item.key)}
+                            aria-expanded={aiNote === item.key}
                             className={cn(
-                              "card-title min-w-0 flex-1 text-base font-bold leading-tight transition-colors",
-                              opened ? tone.ink : "text-primary"
+                              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-start font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                              tone.aiRow
                             )}
                           >
-                            {item.label}
-                          </span>
-                          <span className="shrink-0 text-end">
-                            {item.stat === "leaveDays" ? (
-                              <>
-                                <span className={cn("block text-2xl font-bold leading-none", figureInk)}>
-                                  {figure}
-                                </span>
-                                <span className="mt-1 block max-w-24 text-[11px] leading-tight text-primary/75">
-                                  Remaining Annual Leave Days
-                                </span>
-                              </>
-                            ) : (
-                              <>
-                                <span className={cn("block text-2xl font-bold leading-none", figureInk)}>{total}</span>
-                                <span className="mt-1 block text-[11px] leading-tight text-primary/75">
-                                  Total Requests
-                                </span>
-                              </>
-                            )}
-                          </span>
-                        </span>
-                        {/* Only where the card carries one: the administrative
-                            cards are their name and figure alone. */}
-                        {item.note && (
-                          <span className="block text-sm leading-snug text-primary/75">{item.note}</span>
-                        )}
-                        {/* Only said when something is still waiting. */}
-                        {pending > 0 && (
-                          <span className="mt-auto inline-flex w-fit items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
-                            <Clock aria-hidden="true" className="size-3.5" />
-                            {pending} Remaining
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                            <AiIcon className={cn("size-6 shrink-0", ai.iconTone || tone.ink)} aria-hidden="true" />
+                            <span className={cn("flex-1", tone.ink)}>{ai.label}</span>
+                            <ChevronRight className={cn("size-5", tone.ink)} aria-hidden="true" />
+                          </button>
+                          {aiNote === item.key && (
+                            <p className="rounded-lg bg-white/70 px-3 py-2 text-xs text-primary/75">
+                              {ai.label} is not connected yet: it needs the AI service this
+                              system will read requests through.
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
               </section>
             );
           })()}
