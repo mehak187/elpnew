@@ -121,7 +121,7 @@ const emptyDraft = () => {
 /** "03 Oct 2026", as the head of the request gives its date. */
 const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 // Spelled out here: the browser's own short month is "Sept" in some places.
-const longDate = (iso) => {
+export const longDate = (iso) => {
   const [year, month, day] = String(iso).split("-");
   return `${day} ${SHORT_MONTHS[Number(month) - 1]} ${year}`;
 };
@@ -146,7 +146,7 @@ function Star() {
  * one filled, a finished one ticked, and the line between them filling as
  * the request moves along. A stage that cannot be opened yet is greyed.
  */
-function AdvanceSteps({ steps, active, onChange }) {
+export function AdvanceSteps({ steps, active, onChange }) {
   const at = steps.findIndex((step) => step.key === active);
   return (
     <ol className="flex items-start rounded-xl border bg-blue-50/40 px-4 py-3 sm:px-6">

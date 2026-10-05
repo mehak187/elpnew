@@ -61,23 +61,15 @@ const LOAN_DOT = {
 };
 
 /**
- * One employee's loans as the design lays them out: what they come to across
- * the top, then every loan with its installments folded under it.
- *
- * A granted loan is Active while anything is still owed on it and Completed
- * once nothing is; a request keeps the standing it was given. Every figure is
- * read off the schedule, so the tiles and the rows cannot disagree.
+ * Each loan as the lists show it: its name in the run (Loan 1 is the first
+ * taken), its number, what it comes to, what has been paid and is left, when
+ * it runs, and how it stands - Active while anything is owed on a granted
+ * loan, Completed once nothing is. Read off the schedule, so no two lists
+ * can disagree about the same loan.
  */
-export default function LoanLedger({ records, onOpen, onAdd, addLabel = "Request New Loan" }) {
-  const [chosen, setChosen] = useState("all");
-  const [query, setQuery] = useState("");
-  const [filters, setFilters] = useState({});
-  const [pageSize, setPageSize] = useState(10);
-  // Which loans are unfolded: the first, to begin with.
-  const [open, setOpen] = useState({});
-
-  // Oldest first is how they are numbered: Loan 1 is the first one taken.
-  const loans = [...records]
+export function describeLoans(records) {
+  // Oldest first is how they are numbered.
+  return [...records]
     .sort((a, b) =>
       String(a.disbursementDate || a.firstDue).localeCompare(String(b.disbursementDate || b.firstDue)) ||
       a.id - b.id
@@ -104,6 +96,25 @@ export default function LoanLedger({ records, onOpen, onAdd, addLabel = "Request
         granted,
       };
     });
+}
+
+/**
+ * One employee's loans as the design lays them out: what they come to across
+ * the top, then every loan with its installments folded under it.
+ *
+ * A granted loan is Active while anything is still owed on it and Completed
+ * once nothing is; a request keeps the standing it was given. Every figure is
+ * read off the schedule, so the tiles and the rows cannot disagree.
+ */
+export default function LoanLedger({ records, onOpen, onAdd, addLabel = "Request New Loan" }) {
+  const [chosen, setChosen] = useState("all");
+  const [query, setQuery] = useState("");
+  const [filters, setFilters] = useState({});
+  const [pageSize, setPageSize] = useState(10);
+  // Which loans are unfolded: the first, to begin with.
+  const [open, setOpen] = useState({});
+
+  const loans = describeLoans(records);
 
   // The figures across the top, over the loans actually granted.
   const granted = loans.filter((loan) => loan.granted);
@@ -401,5 +412,120 @@ export default function LoanLedger({ records, onOpen, onAdd, addLabel = "Request
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * The loans already granted, as the loan request shows them before a new one
+ * is asked for: what each was, what is left on it and when it ends, with its
+ * installments a click away - and what is owed across all of them.
+ */
+export function ExistingLoans({ records }) {
+  const [open, setOpen] = useState({});
+  const loans = describeLoans(records).filter((loan) => loan.granted);
+  const active = loans.filter((loan) => loan.status === "Active");
+  const outstanding = loans.reduce((total, loan) => total + loan.remaining, 0);
+
+  return (
+    <section className="space-y-4 rounded-xl border p-4 sm:p-5">
+      <div className="flex flex-wrap items-center gap-3">
+        <span aria-hidden="true" className="flex size-11 items-center justify-center rounded-lg bg-blue-50 text-primary">
+          <FileText className="size-6" strokeWidth={1.5} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-lg font-bold text-primary">Your Existing Loans ({loans.length})</h3>
+          <p className="text-sm text-primary/75">
+            You currently have {active.length} active loan{active.length === 1 ? "" : "s"}.
+          </p>
+        </div>
+        <div className="flex items-center gap-3 rounded-lg bg-blue-50/60 px-4 py-2">
+          <Database className="size-6 text-primary" aria-hidden="true" />
+          <div>
+            <p className="text-xs text-primary/75">Total Outstanding Loans</p>
+            <p className="text-xl font-bold text-primary">
+              {amountValue(outstanding)} <span className="text-sm font-normal text-primary/70">OMR</span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {loans.length === 0 ? (
+        <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
+          No loans have been granted yet.
+        </p>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full min-w-[820px] text-sm">
+            <thead className="bg-table-head text-xs font-semibold text-primary">
+              <tr>
+                <th className="w-8 px-3 py-2.5" />
+                <th className="px-3 py-2.5 text-start">Loan No.</th>
+                <th className="px-3 py-2.5 text-start">Original Amount (OMR)</th>
+                <th className="px-3 py-2.5 text-start">Remaining Balance (OMR)</th>
+                <th className="px-3 py-2.5 text-start">Monthly Installment (OMR)</th>
+                <th className="px-3 py-2.5 text-start">Start Date</th>
+                <th className="px-3 py-2.5 text-start">End Date</th>
+                <th className="px-3 py-2.5 text-start">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loans.map((loan) => (
+                <Fragment key={loan.id}>
+                  <tr className="border-t">
+                    <td className="px-3 py-2.5">
+                      <button
+                        type="button"
+                        onClick={() => setOpen((prev) => ({ ...prev, [loan.id]: !prev[loan.id] }))}
+                        aria-expanded={Boolean(open[loan.id])}
+                        className="rounded p-0.5 text-primary hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <ChevronRight
+                          className={cn("size-4 transition-transform", open[loan.id] && "rotate-90")}
+                          aria-hidden="true"
+                        />
+                        <span className="sr-only">Installments of {loan.name}</span>
+                      </button>
+                    </td>
+                    <td className="px-3 py-2.5 font-semibold text-primary">
+                      {loan.name}
+                      <span className="px-2 font-normal text-primary/40">|</span>
+                      <span className="font-normal">{loan.number}</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-primary">{amountValue(loan.total)}</td>
+                    <td className="px-3 py-2.5 text-primary">{amountValue(loan.remaining)}</td>
+                    <td className="px-3 py-2.5 text-primary">{amountValue(loan.monthly)}</td>
+                    <td className="px-3 py-2.5 text-primary">{loan.start ? formatDate(loan.start) : "-"}</td>
+                    <td className="px-3 py-2.5 text-primary">{loan.end ? formatDate(loan.end) : "-"}</td>
+                    <td className="px-3 py-2.5">
+                      <span className={cn("rounded-md px-2.5 py-0.5 text-xs font-semibold", LOAN_CHIP[loan.status])}>
+                        {loan.status}
+                      </span>
+                    </td>
+                  </tr>
+                  {open[loan.id] &&
+                    loan.installments.map((row) => (
+                      <tr key={row.no} className="border-t border-dashed bg-table-head/30 text-xs">
+                        <td />
+                        <td className="px-3 py-1.5 text-primary/70">
+                          {loan.name.replace("Loan ", "")}.{row.no} · {formatDate(row.due)}
+                        </td>
+                        <td className="px-3 py-1.5 text-primary">{amountValue(row.installment)}</td>
+                        <td className="px-3 py-1.5 text-primary">{amountValue(row.remaining)}</td>
+                        <td className="px-3 py-1.5 text-primary">Paid {amountValue(row.paid)}</td>
+                        <td colSpan={2} />
+                        <td className="px-3 py-1.5">
+                          <span className={cn("rounded px-2 py-0.5 font-semibold", INSTALLMENT_STATUS_TONE[row.status])}>
+                            {row.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }
