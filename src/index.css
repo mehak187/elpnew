@@ -743,6 +743,25 @@
     text-align: start;
   }
 
+  /*
+   * What a field says is wrong hangs below it rather than taking room inside
+   * it. A field's control sits at the foot of its cell so a row's boxes line
+   * up; a message added in the flow would push this one box up out of line
+   * with the rest of its row the moment it appeared. The row gap below is
+   * where it is read.
+   */
+  .form-field {
+    position: relative;
+  }
+
+  .form-field::after,
+  .form-field > .field-error {
+    position: absolute;
+    top: 100%;
+    inset-inline-start: 0;
+    max-width: 100%;
+  }
+
   /* A locked field is not an active one, so it takes no focus ring. */
   input[readonly]:focus,
   input[readonly]:focus-visible,
