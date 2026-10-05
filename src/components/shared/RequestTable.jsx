@@ -17,6 +17,8 @@ import { filterChips, withoutChip } from "@/lib/filterChips";
 export default function RequestTable({
   rows,
   columns,
+  // Still passed by the pages, but every list now reads "Smart Search".
+  // eslint-disable-next-line no-unused-vars
   searchPlaceholder,
   itemLabel = "requests",
   exportFileName = "requests.csv",
@@ -64,7 +66,9 @@ export default function RequestTable({
       columns={columns}
       data={shown}
       itemLabel={itemLabel}
-      searchPlaceholder={searchPlaceholder}
+      // Every list of requests searches the same way and says so the same
+      // way: one smart search across the row, as the Requests page draws it.
+      searchPlaceholder="Smart Search"
       exportFileName={exportFileName}
       enableColumnSearch={false}
       keepOrder

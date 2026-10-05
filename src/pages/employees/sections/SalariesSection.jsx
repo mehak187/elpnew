@@ -1244,7 +1244,9 @@ export default function SalariesSection({
                 }
           }
           onOpenSalary={canEdit ? trackRequest : null}
-          onAdd={canEdit && addLabel && !adding ? () => onOpenAdd?.() : null}
+          // Add Salary is off the Requests page for now: only the advance is
+          // asked for here.
+          onAdd={null}
           addLabel={addLabel}
           moreAdds={
             canEdit && !adding
