@@ -1,6 +1,7 @@
 import {
   useState } from "react";
 import SalaryLedger from "./SalaryLedger";
+import AdvanceOverview from "./AdvanceOverview";
 import UploadIcon from "@/components/shared/UploadIcon";
 import { Button } from "@/components/ui/button";
 import { RequestSteps } from "@/components/shared/RequestSteps";
@@ -1232,36 +1233,49 @@ export default function SalariesSection({
           advance under its request number while it waits, under the month's
           salary payment number once approved. Elsewhere, the advances alone. */}
       {advanceOnly ? (
-        <SalaryLedger
-          employee={employee}
-          history={history}
-          onOpenAdvance={
-            adding
-              ? null
-              : (request) => {
-                  setOpenAdvanceId(request.id);
-                  onOpenAdd?.();
-                }
-          }
-          onOpenSalary={canEdit ? trackRequest : null}
-          // Add Salary is off the Requests page for now: only the advance is
-          // asked for here.
-          onAdd={null}
-          addLabel={addLabel}
-          moreAdds={
-            canEdit && !adding
-              ? [
-                  {
-                    label: "Salary Advance Request",
-                    onClick: () => {
-                      setNewAdvance(true);
-                      onOpenAdd?.();
-                    },
-                  },
-                ]
-              : []
-          }
-        />
+        <div className="space-y-5">
+          {/* Who may ask for how much, a reading of the past requests, and
+              the way to ask - over the list itself. */}
+          <AdvanceOverview
+            employee={employee}
+            advances={advances}
+            net={net}
+            history={history}
+            onNew={
+              canEdit && !adding
+                ? () => {
+                    setNewAdvance(true);
+                    onOpenAdd?.();
+                  }
+                : null
+            }
+            onOpen={
+              adding
+                ? null
+                : (request) => {
+                    setOpenAdvanceId(request.id);
+                    onOpenAdd?.();
+                  }
+            }
+          />
+          <SalaryLedger
+            employee={employee}
+            history={history}
+            onOpenAdvance={
+              adding
+                ? null
+                : (request) => {
+                    setOpenAdvanceId(request.id);
+                    onOpenAdd?.();
+                  }
+            }
+            onOpenSalary={canEdit ? trackRequest : null}
+            // Add Salary is off the Requests page for now, and the advance is
+            // asked for from the button at the head of the view above.
+            onAdd={null}
+            addLabel={addLabel}
+          />
+        </div>
       ) : (
       <AdvanceRequests
         employee={employee}

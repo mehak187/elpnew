@@ -79,7 +79,7 @@ export const nextAdvanceNo = (advances, year = new Date().getFullYear()) =>
   ).padStart(5, "0");
 
 /** The months, as an advance names the one it comes out of. */
-const MONTHS = [
+export const MONTHS = [
   "January",
   "February",
   "March",
