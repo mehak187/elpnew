@@ -63,6 +63,7 @@ import UploadIcon from "@/components/shared/UploadIcon";
 import { cn } from "@/lib/utils";
 import { amountValue } from "@/lib/money";
 import RequestTable from "@/components/shared/RequestTable";
+import RequestOverview from "@/components/shared/RequestOverview";
 import { useLeaves } from "@/lib/leaves/context";
 import { formatDate } from "@/pages/firm/firmData";
 import { remainingBalance } from "../leaveData";
@@ -2401,14 +2402,54 @@ export default function EntitlementTab({
         </DialogContent>
       </Dialog>
 
+      {/* What has been asked for, a reading of it, and the way to ask -
+          over the list itself. */}
+      <RequestOverview
+        icon={sheet?.icon || FileText}
+        title={label}
+        subtitle={"Request " + label.toLowerCase() + " and track your requests."}
+        noun={label.toLowerCase() + " request"}
+        newLabel={"New " + label + " Request"}
+        onNew={addLabel && !adding ? onOpenAdd : null}
+        money
+        typeLabel="Request Type"
+        rows={mine.map((record) => ({
+          id: record.id,
+          no: record.no,
+          date: record.requestDate,
+          amount: record.amount,
+          status: record.status,
+          type: record.detail,
+          record,
+        }))}
+        onOpen={adding ? null : track}
+        // Only a request asked for as a sum can be started at the suggested
+        // one: days and hours are what overtime and encashment are asked in.
+        onApply={
+          mode === "amount" && addLabel && !adding
+            ? (suggested) => {
+                setDraft({ ...emptyDraft(kind), amount: String(suggested) });
+                onOpenAdd?.();
+              }
+            : null
+        }
+        renderAll={() => (
+          <RequestTable
+            rows={mine}
+            columns={columns}
+            searchPlaceholder={"Search " + label.toLowerCase() + " requests..."}
+            itemLabel={label.toLowerCase() + " requests"}
+            exportFileName={kind + ".csv"}
+          />
+        )}
+      />
+
       <RequestTable
         rows={mine}
         columns={columns}
         searchPlaceholder={"Search " + label.toLowerCase() + " requests..."}
         itemLabel={label.toLowerCase() + " requests"}
         exportFileName={kind + ".csv"}
-        onAdd={!adding ? onOpenAdd : null}
-        addLabel={addLabel}
       />
     </>
   );

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import RequestTable from "@/components/shared/RequestTable";
+import RequestOverview from "@/components/shared/RequestOverview";
 import { AdvanceSteps, longDate } from "./AdvanceSalarySection";
 import { Card, CardContent } from "@/components/ui/card";
 import { Bordered, EmptyState } from "@/components/shared/panels";
@@ -661,14 +662,53 @@ export default function BonusSection({
           </DialogContent>
         </Dialog>
 
+        {/* What has been asked for, a reading of it, and the way to ask -
+            over the list itself. */}
+        <RequestOverview
+          icon={Gift}
+          title="Bonus"
+          subtitle="Request a bonus and track your requests."
+          noun="bonus request"
+          newLabel="New Bonus Request"
+          onNew={addLabel && !adding ? onOpenAdd : null}
+          money
+          typeLabel="Bonus Type"
+          rows={mine.map((bonus) => ({
+            id: bonus.id,
+            no: bonus.requestNo,
+            date: bonus.bonusOn,
+            amount: bonus.amount,
+            status: bonus.status,
+            type: bonus.reasonText,
+            record: bonus,
+          }))}
+          onOpen={adding ? null : track}
+          // The suggested sum, written into a new request to confirm or change.
+          onApply={
+            addLabel && !adding
+              ? (suggested) => {
+                  setDraft({ ...emptyDraft(), amount: String(suggested) });
+                  onOpenAdd?.();
+                }
+              : null
+          }
+          renderAll={() => (
+            <RequestTable
+              rows={mine}
+              columns={columns}
+              searchPlaceholder="Search by request no., reason or comment..."
+              itemLabel="bonuses"
+              exportFileName="bonuses.csv"
+            />
+          )}
+        />
+
         <RequestTable
           rows={mine}
           columns={columns}
           searchPlaceholder="Search by request no., reason or comment..."
           itemLabel="bonuses"
           exportFileName="bonuses.csv"
-          onAdd={addLabel && !adding ? onOpenAdd : null}
-          addLabel={addLabel}
         />
       </CardContent>
     </Card>

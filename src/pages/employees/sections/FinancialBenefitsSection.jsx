@@ -11,8 +11,9 @@ import {
 } from "@/components/shared/RecordTable";
 import FormHeading from "@/components/shared/FormHeading";
 import RequestTable from "@/components/shared/RequestTable";
+import RequestOverview from "@/components/shared/RequestOverview";
 import TabBar from "@/components/shared/TabBar";
-import { Plus, Eye, EyeOff } from "lucide-react";
+import { Plus, Eye, EyeOff, Coins } from "lucide-react";
 import { withRial } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import {
@@ -300,6 +301,38 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd, canDecide = tr
 
       <Card>
         <CardContent className="space-y-4 p-4 sm:p-6">
+          {/* What has been earned, a reading of it, and the way to record
+              another - over the list itself. The amount is worked out from
+              the fees, never typed, so nothing is offered to apply. */}
+          <RequestOverview
+            icon={Coins}
+            title="Commission"
+            subtitle="Record commission and track its payment."
+            noun="commission request"
+            newLabel="New Commission Request"
+            onNew={!adding ? onOpenAdd : null}
+            money
+            typeLabel="Commission Type"
+            rows={records.map((record) => ({
+              id: record.id,
+              no: record.commissionNo || record.requestNo,
+              date: record.date || record.periodFrom,
+              amount: commissionOn(record),
+              status: record.status || COMMISSION_PAID,
+              type: record.type,
+              record,
+            }))}
+            onOpen={adding ? null : track}
+            renderAll={() => (
+              <RequestTable
+                rows={records.map(asRow)}
+                columns={columns}
+                searchPlaceholder="Search by commission no., client or payee..."
+                itemLabel="commissions"
+                exportFileName="commissions.csv"
+              />
+            )}
+          />
           <RequestTable
             rows={rows}
             columns={columns}
@@ -310,8 +343,6 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd, canDecide = tr
               { key: "status", label: "Status" },
               { key: "clientName", label: "Client" },
             ]}
-            onAdd={!adding ? onOpenAdd : null}
-            addLabel="Add Commission"
           />
         </CardContent>
       </Card>

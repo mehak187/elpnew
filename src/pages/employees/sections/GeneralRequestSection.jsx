@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import RequestTable from "@/components/shared/RequestTable";
+import RequestOverview from "@/components/shared/RequestOverview";
 import {
   Dialog,
   DialogContent,
@@ -565,12 +566,16 @@ export default function GeneralRequestSection({
       </Dialog>
 
       <Card>
-        <CardContent className="p-4 sm:p-6">
-          <RequestTable
-            rows={mine}
-            columns={columns}
-            {...tableProps}
-            onAdd={
+        <CardContent className="space-y-4 p-4 sm:p-6">
+          {/* What has been raised, a reading of it, and the way to raise
+              another - over the list itself. */}
+          <RequestOverview
+            icon={KIND_ICON[kind] || FilePenLine}
+            title={sort.title}
+            subtitle={"Raise a " + sort.noun + " and track its decision."}
+            noun={sort.noun}
+            newLabel={"New " + sort.title + (kind === "general" ? "" : " Request")}
+            onNew={
               !adding
                 ? () => {
                     clear();
@@ -578,8 +583,19 @@ export default function GeneralRequestSection({
                   }
                 : null
             }
-            addLabel={kind === "general" ? "Add Request" : "Add " + sort.title}
+            typeLabel={sort.typeLabel}
+            rows={mine.map((request) => ({
+              id: request.id,
+              no: request.requestNo,
+              date: request.date,
+              status: request.status,
+              type: request.requestType,
+              record: request,
+            }))}
+            onOpen={adding ? null : track}
+            renderAll={() => <RequestTable rows={mine} columns={columns} {...tableProps} />}
           />
+          <RequestTable rows={mine} columns={columns} {...tableProps} />
         </CardContent>
       </Card>
     </div>

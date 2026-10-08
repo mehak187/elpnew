@@ -78,17 +78,11 @@ import {
   Network,
   Scale,
   Calculator,
-  Sparkles,
   ChevronRight,
-  CircleX,
-  CircleMinus,
   Landmark,
   Users,
   FileWarning,
 } from "lucide-react";
-import { useLeaves } from "@/lib/leaves/context";
-import { annualLeaveLeft } from "./leaveData";
-import { requestCountFor } from "./requestCounts";
 import {
   Dialog,
   DialogContent,
@@ -408,7 +402,7 @@ const REQUEST_CATEGORIES = [
       { key: "bonus", label: "Bonus", icon: Gift, section: "benefits", tab: "bonus" },
       { key: "commission", label: "Commission", icon: Coins, section: "benefits", tab: "commission" },
       { key: "overtime", label: "Overtime", icon: Clock, section: "entitlements", tab: "overtime" },
-      { key: "leavePay", label: "Leave", icon: CalendarDays, section: "entitlements", tab: "leaveEncashment" },
+      { key: "leavePay", label: "Leave", tabLabel: "Leave Encashment", icon: CalendarDays, section: "entitlements", tab: "leaveEncashment" },
     ],
   },
   {
@@ -448,107 +442,6 @@ const REQUEST_CATEGORIES = [
     ],
   },
 ];
-
-/**
- * The tint of each request's card, in turn along the row: violet, green,
- * orange, then rose for a fourth. Written out whole so the stylesheet keeps
- * every class.
- */
-// Each card is white with a grey border and only its mark in colour. Hovered,
-// it takes a very light tint and a stronger border, its name in colour.
-// Chosen, a soft tint and a 2px border, name and figure in colour - no
-// shadow, no scaling. A figure above nought is in colour on any card.
-const TONES = {
-  violet: {
-    card: "border-violet-200 bg-violet-50/60",
-    aiRow: "bg-violet-100/70 hover:bg-violet-100",
-    mark: "bg-violet-100 text-violet-700",
-    ink: "text-violet-700",
-    hover: "hover:border-violet-200 hover:bg-violet-50/40 [&:hover_.card-title]:text-violet-700",
-    chosen: "border-violet-400 bg-violet-50 ring-1 ring-violet-400",
-  },
-  green: {
-    card: "border-emerald-200 bg-emerald-50/60",
-    aiRow: "bg-emerald-100/70 hover:bg-emerald-100",
-    mark: "bg-emerald-100 text-emerald-700",
-    ink: "text-emerald-700",
-    hover: "hover:border-emerald-200 hover:bg-emerald-50/40 [&:hover_.card-title]:text-emerald-700",
-    chosen: "border-emerald-400 bg-emerald-50 ring-1 ring-emerald-400",
-  },
-  orange: {
-    card: "border-orange-200 bg-orange-50/60",
-    aiRow: "bg-orange-100/70 hover:bg-orange-100",
-    mark: "bg-orange-100 text-orange-600",
-    ink: "text-orange-600",
-    hover: "hover:border-orange-200 hover:bg-orange-50/40 [&:hover_.card-title]:text-orange-600",
-    chosen: "border-orange-400 bg-orange-50 ring-1 ring-orange-400",
-  },
-  rose: {
-    card: "border-rose-200 bg-rose-50/60",
-    aiRow: "bg-rose-100/70 hover:bg-rose-100",
-    mark: "bg-rose-100 text-rose-600",
-    ink: "text-rose-600",
-    hover: "hover:border-rose-200 hover:bg-rose-50/40 [&:hover_.card-title]:text-rose-600",
-    chosen: "border-rose-400 bg-rose-50 ring-1 ring-rose-400",
-  },
-  blue: {
-    card: "border-blue-200 bg-blue-50/60",
-    aiRow: "bg-blue-100/70 hover:bg-blue-100",
-    mark: "bg-blue-100 text-blue-700",
-    ink: "text-blue-700",
-    hover: "hover:border-blue-200 hover:bg-blue-50/40 [&:hover_.card-title]:text-blue-700",
-    chosen: "border-blue-400 bg-blue-50 ring-1 ring-blue-400",
-  },
-};
-
-/** The AI's reading under each card, in turn along the row. */
-//
-// DEMO: each reading is worked out from the card's own counts, with a fixed
-// confidence, so the cards can be seen as the design draws them. Swap `read`
-// for the AI service's answer when there is one.
-const REQUEST_AI = [
-  {
-    label: "AI Insight",
-    icon: Sparkles,
-    read: (c) =>
-      c.pending
-        ? { text: `${c.pending} pending request${c.pending === 1 ? " is" : "s are"} likely to be approved`, confidence: 92 }
-        : { text: "No pending requests to assess", confidence: null },
-  },
-  {
-    label: "AI Prediction",
-    icon: ChartNoAxesColumnIncreasing,
-    read: (c) =>
-      c.pending
-        ? { text: "The pending request is likely to be approved", confidence: 87 }
-        : { text: "No pending requests to predict", confidence: null },
-  },
-  {
-    label: "AI Risk",
-    icon: TriangleAlert,
-    iconTone: "fill-orange-500 text-white",
-    read: (c) =>
-      c.returned
-        ? { text: "The returned request may need additional justification", confidence: 78 }
-        : c.rejected
-          ? { text: "A rejected request may be resubmitted with more detail", confidence: 71 }
-          : { text: "No risk signals found", confidence: null },
-  },
-];
-
-/** The tints in turn; a request whose design names its own (`tone`) wears that. */
-const REQUEST_CARD_TONES = [TONES.violet, TONES.green, TONES.orange, TONES.rose];
-
-/**
- * A kind's cards always share one row on a desktop: as many columns as it has
- * requests. Two keep the width of three rather than stretching across the
- * page, as the design draws them. A narrow screen stacks them.
- */
-const REQUEST_CARD_COLUMNS = {
-  2: "sm:grid-cols-2 lg:grid-cols-3",
-  3: "sm:grid-cols-2 lg:grid-cols-3",
-  4: "sm:grid-cols-2 lg:grid-cols-4",
-};
 
 const REQUEST_ITEMS = REQUEST_CATEGORIES.flatMap((category) =>
   category.items.map((item) => ({ ...item, category: category.key }))
@@ -1324,8 +1217,6 @@ export default function EmployeeForm({ self }) {
   // A page that sends somebody here can say which section to open - a newly
   // added employee opens on Documents, the next thing they need.
   const location = useLocation();
-  // Leave as it stands, for the days left on the Requests page's Leave card.
-  const { leaves } = useLeaves();
   // A record opens on Employee Information; My Profile on its own first page.
   const opensOn = (state) =>
     state?.section || (record && !self ? "profile" : "information");
@@ -1336,10 +1227,6 @@ export default function EmployeeForm({ self }) {
   // opened below them, if one has been.
   const [requestCategory, setRequestCategory] = useState(REQUEST_CATEGORIES[0].key);
   const [requestsTab, setRequestsTab] = useState(null);
-  // The request cards open closed, and open once one is clicked.
-  const [requestCardsOpen, setRequestCardsOpen] = useState(false);
-  // The card whose AI note is open, if any.
-  const [aiNote, setAiNote] = useState(null);
   // What is open under Employee Management: nothing until a card is chosen.
   const [managementTab, setManagementTab] = useState(null);
   // Said once Employee Information has been saved, until the person moves on.
@@ -1913,8 +1800,6 @@ export default function EmployeeForm({ self }) {
 
   /** Shows one kind's cards, its first request chosen and open below. */
   const openRequestCategory = (key) => {
-    setRequestCardsOpen(false);
-    setAiNote(null);
     const first = REQUEST_CATEGORIES.find((category) => category.key === key)?.items[0];
     if (first) chooseRequest(first);
     else {
@@ -2223,157 +2108,34 @@ export default function EmployeeForm({ self }) {
             );
           })()}
 
-          {/* The chosen kind's requests as cards: each its figure and name.
-              They open closed; clicking one opens the row - where each
-              request stands, and the AI's reading of them - and shows its
-              requests below. */}
+          {/* The chosen category's kinds, as tabs. Each kind opens on an
+              overview of its own - its counts and the AI's reading are in
+              it - so nothing here says them a second time. */}
           {isRequests && (() => {
             const category = REQUEST_CATEGORIES.find((c) => c.key === requestCategory);
-            // Financing's kinds each open on an overview of their own - the
-            // counts and the AI's reading are in it - so the kinds are picked
-            // from plain tabs here rather than cards that would say it twice.
-            if (category.key === "financing") {
-              return (
-                <div role="tablist" aria-label={category.label} className="flex flex-wrap gap-2">
-                  {category.items.map((item) => {
-                    const opened = item.key === requestsTab;
-                    return (
-                      <button
-                        key={item.key}
-                        type="button"
-                        role="tab"
-                        aria-selected={opened}
-                        onClick={() => chooseRequest({ ...item, category: category.key })}
-                        className={cn(
-                          "min-w-36 rounded-lg border px-5 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                          opened
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "bg-white text-primary hover:bg-menu-hover"
-                        )}
-                      >
-                        {item.tabLabel || item.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              );
-            }
             return (
-              // Every card in the row as tall as the tallest, so a longer
-              // reading in one does not leave the rest short of it.
-              <section className={cn("grid items-stretch gap-4", REQUEST_CARD_COLUMNS[category.items.length])}>
-                {category.items.map((item, index) => {
-                  const tone =
-                    TONES[item.tone] || REQUEST_CARD_TONES[index % REQUEST_CARD_TONES.length];
-                  const counts = requestCountFor(item.key, record.name);
+              <div role="tablist" aria-label={category.label} className="flex flex-wrap gap-2">
+                {category.items.map((item) => {
                   const opened = item.key === requestsTab;
-                  const figure =
-                    item.stat === "leaveDays" ? annualLeaveLeft(leaves, record.name) ?? 0 : counts.total;
-                  const ai = REQUEST_AI[index % REQUEST_AI.length];
-                  const AiIcon = ai.icon;
                   return (
-                    <div
+                    <button
                       key={item.key}
+                      type="button"
+                      role="tab"
+                      aria-selected={opened}
+                      onClick={() => chooseRequest({ ...item, category: category.key })}
                       className={cn(
-                        "flex flex-col gap-4 rounded-xl border p-4 transition-colors",
-                        tone.card,
-                        opened && tone.chosen
+                        "min-w-36 rounded-lg border px-5 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        opened
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "bg-white text-primary hover:bg-menu-hover"
                       )}
                     >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          chooseRequest({ ...item, category: category.key });
-                          setRequestCardsOpen(true);
-                        }}
-                        aria-pressed={opened}
-                        aria-expanded={requestCardsOpen}
-                        className="flex items-center gap-4 rounded-lg text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <span className={cn("flex size-16 shrink-0 items-center justify-center rounded-xl text-4xl font-bold", tone.mark)}>
-                          {figure}
-                        </span>
-                        <span className="min-w-0">
-                          <span className={cn("block text-xl font-bold leading-tight", tone.ink)}>{item.label}</span>
-                          {item.stat === "leaveDays" && (
-                            <span className="block text-xs text-primary/75">Remaining Annual Leave Days</span>
-                          )}
-                        </span>
-                      </button>
-
-                      {requestCardsOpen && (
-                        <>
-                          {/* Where this kind's requests stand. */}
-                          <div className="grid grid-cols-4 divide-x divide-container-border rounded-lg bg-white/70 py-2">
-                            {[
-                              { label: "Approved", value: counts.approved, icon: CircleCheck, tone: "fill-green-600 text-white" },
-                              { label: "Pending", value: counts.pending, icon: Clock, tone: "fill-amber-400 text-white" },
-                              { label: "Returned", value: counts.returned, icon: CircleX, tone: "fill-red-600 text-white" },
-                              { label: "Rejected", value: counts.rejected, icon: CircleMinus, tone: "fill-slate-600 text-white" },
-                            ].map((stat) => {
-                              const StatIcon = stat.icon;
-                              return (
-                                <div key={stat.label} className="flex flex-col items-center gap-0.5 px-1">
-                                  <span className="flex items-center gap-1.5 text-xl font-semibold text-primary">
-                                    <StatIcon className={cn("size-6", stat.tone)} aria-hidden="true" />
-                                    {stat.value}
-                                  </span>
-                                  <span className="text-xs text-primary/75">{stat.label}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-
-                          {/* The AI's reading of this kind of request: what it
-                              sees, and how sure it is. */}
-                          <button
-                            type="button"
-                            onClick={() => setAiNote(aiNote === item.key ? null : item.key)}
-                            aria-expanded={aiNote === item.key}
-                            className={cn(
-                              // Fills what is left of the card, so the AI boxes
-                              // end level across the row.
-                              "flex flex-1 items-start gap-3 rounded-lg px-3 py-2.5 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                              tone.aiRow
-                            )}
-                          >
-                            <AiIcon className={cn("mt-0.5 size-6 shrink-0", ai.iconTone || tone.ink)} aria-hidden="true" />
-                            <span className="min-w-0 flex-1">
-                              <span className={cn("block font-bold", tone.ink)}>{ai.label}</span>
-                              {(() => {
-                                const reading = ai.read(counts);
-                                return (
-                                  <span className="mt-0.5 block text-sm text-primary/80">
-                                    {reading.text}
-                                    {reading.confidence ? (
-                                      <>
-                                        {" ("}
-                                        <span className={cn("font-bold", tone.ink)}>
-                                          {reading.confidence}% confidence
-                                        </span>
-                                        {")."}
-                                      </>
-                                    ) : (
-                                      "."
-                                    )}
-                                  </span>
-                                );
-                              })()}
-                            </span>
-                            <ChevronRight className={cn("mt-0.5 size-5 shrink-0", tone.ink)} aria-hidden="true" />
-                          </button>
-                          {aiNote === item.key && (
-                            <p className="rounded-lg bg-white/70 px-3 py-2 text-xs text-primary/75">
-                              {ai.label} is not connected yet: it needs the AI service this
-                              system will read requests through.
-                            </p>
-                          )}
-                        </>
-                      )}
-                    </div>
+                      {item.tabLabel || item.label}
+                    </button>
                   );
                 })}
-              </section>
+              </div>
             );
           })()}
 

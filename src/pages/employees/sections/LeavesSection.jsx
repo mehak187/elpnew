@@ -1,5 +1,6 @@
 import { useState } from "react";
 import RequestTable from "@/components/shared/RequestTable";
+import RequestOverview from "@/components/shared/RequestOverview";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -24,7 +25,7 @@ import {
   Row,
   Td,
 } from "@/components/shared/RecordTable";
-import { Plus, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { Plus, CheckCircle2, Clock, XCircle, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/pages/firm/firmData";
 import LeaveForm from "./LeaveForm";
@@ -332,6 +333,38 @@ export default function LeavesSection({ employee, canReview = true }) {
 
   return (
     <div className="space-y-6">
+      {/* What has been asked for, a reading of it, and the way to ask -
+          over the year's list. Counted in days, not money. */}
+      <RequestOverview
+        icon={CalendarDays}
+        title="Leave"
+        subtitle="Request leave and track your requests."
+        noun="leave request"
+        newLabel="New Leave Request"
+        onNew={!adding && !open ? () => setAdding(true) : null}
+        unit="Days"
+        typeLabel="Leave Type"
+        rows={mine.map((leave) => ({
+          id: leave.id,
+          no: leave.leaveNo,
+          date: leave.requestedOn || leave.from,
+          amount: leaveDays(leave.from, leave.to),
+          status: leave.status,
+          type: leaveTypeLabel(leave),
+          record: leave,
+        }))}
+        onOpen={canReview && !adding && !open ? openReview : null}
+        renderAll={() => (
+          <RequestTable
+            rows={[...mine].sort((a, b) => b.id - a.id).map(asRow)}
+            columns={columns}
+            searchPlaceholder="Search by leave no., type or period..."
+            itemLabel="leave requests"
+            exportFileName="leaves.csv"
+          />
+        )}
+      />
+
       {/* The year the list is read by, and the way to add to it. Leave is
           granted a year at a time, so the year is a choice rather than a
           column repeated down every row. Empty values are ignored: Radix
@@ -410,8 +443,6 @@ export default function LeavesSection({ employee, canReview = true }) {
               { key: "status", label: "Status" },
               { key: "category", label: "Leave Category" },
             ]}
-            onAdd={!adding && !open ? () => setAdding(true) : null}
-            addLabel="Add New Leave"
           />
         </CardContent>
       </Card>
