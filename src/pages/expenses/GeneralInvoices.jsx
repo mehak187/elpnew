@@ -78,6 +78,7 @@ import {
   money,
 } from "./expenseData";
 
+import DateField from "@/components/shared/DateField";
 /**
  * The route this invoice takes, with the step it has reached marked.
  *
@@ -473,10 +474,9 @@ function FinanceApproval({ invoice, supplierAccount, outstanding, onDecide }) {
 
           <div className="form-field space-y-2">
             <Label htmlFor={id("withdrawnAt")}>Date of Withdrawal</Label>
-            <Input
+            <DateField
               required
               id={id("withdrawnAt")}
-              type="date"
               value={transfer.date}
               onChange={(e) => setTransfer({ ...transfer, date: e.target.value })}
             />
@@ -1413,10 +1413,9 @@ export default function GeneralInvoices({ partnersOnly = false }) {
           <div className="form-grid form-grid-2">
             <div className="form-field space-y-2">
               <Label htmlFor="paymentDate">Payment Date</Label>
-              <Input
+              <DateField
                 required
                 id="paymentDate"
-                type="date"
                 value={payment.date}
                 onChange={(e) => setPayment({ ...payment, date: e.target.value })}
               />

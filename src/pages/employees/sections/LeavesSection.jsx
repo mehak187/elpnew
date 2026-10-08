@@ -35,13 +35,14 @@ import {
   canTakeAdvance,
   chargedYear,
   leaveTypeLabel,
-  leaveDays,
   leaveYear,
   leavesFor,
   leaveYearsFor,
   remainingBalance,
   stageOf,
   workflowLabel,
+  daysOf,
+  ENCASHED_PAID,
 } from "../leaveData";
 import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 
@@ -226,7 +227,8 @@ export default function LeavesSection({ employee, canReview = true }) {
 
   // One leave as the list and the history both show it.
   const asRow = (leave) => {
-    const days = leaveDays(leave.from, leave.to);
+    const days = daysOf(leave);
+    const encashed = leave.status === ENCASHED_PAID;
     // What was left before this request, and what it leaves behind -
     // both counted off the record, never stored.
     const balance = remainingBalance(leaves, employee.name, leave.type, chargedYear(leave));
@@ -234,15 +236,17 @@ export default function LeavesSection({ employee, canReview = true }) {
       ...leave,
       days,
       typeText: leaveTypeLabel(leave),
-      period: formatDate(leave.from) + " – " + formatDate(leave.to),
+      // Paid out, not taken: no dates to show.
+      period: encashed ? "Encashed" : formatDate(leave.from) + " – " + formatDate(leave.to),
       workflow: workflowLabel(leave),
+      // Before this request, and after it. An approved or encashed one is
+      // already counted in the balance, so it is added back for "before"
+      // rather than taken off a second time for "after".
       balanceText:
         balance && !balance.expired
-          ? balance.allowance -
-            (balance.allowance - balance.remaining) +
-            " Days / " +
-            Math.max(balance.remaining - days, 0) +
-            " Days"
+          ? (leave.status === "Approved" || encashed
+              ? balance.remaining + days + " Days / " + balance.remaining + " Days"
+              : balance.remaining + " Days / " + Math.max(balance.remaining - days, 0) + " Days")
           : "-",
     };
   };
@@ -348,7 +352,7 @@ export default function LeavesSection({ employee, canReview = true }) {
           id: leave.id,
           no: leave.leaveNo,
           date: leave.requestedOn || leave.from,
-          amount: leaveDays(leave.from, leave.to),
+          amount: daysOf(leave),
           status: leave.status,
           type: leaveTypeLabel(leave),
           record: leave,

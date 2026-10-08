@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -26,6 +25,7 @@ import {
   dayOffset,
 } from "../dashboardData";
 
+import DateField from "@/components/shared/DateField";
 const MONTH_LABEL = (month) => {
   const [year, m] = month.split("-");
   const names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -148,9 +148,8 @@ export function CasesReceivedByClient() {
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="space-y-1">
             <Label htmlFor="flowFrom" className="text-xs">From</Label>
-            <Input
+            <DateField
               id="flowFrom"
-              type="date"
               value={customFrom}
               max={customTo}
               onChange={(e) => setCustomFrom(e.target.value)}
@@ -159,9 +158,8 @@ export function CasesReceivedByClient() {
           </div>
           <div className="space-y-1">
             <Label htmlFor="flowTo" className="text-xs">To</Label>
-            <Input
+            <DateField
               id="flowTo"
-              type="date"
               value={customTo}
               min={customFrom}
               onChange={(e) => setCustomTo(e.target.value)}

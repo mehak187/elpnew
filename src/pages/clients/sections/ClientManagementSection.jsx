@@ -309,7 +309,7 @@ export default function ClientManagementSection() {
                         <button
                           type="button"
                           onClick={() => openBranch(String(branch.id))}
-                          className="numeric-value font-medium text-record-link underline-offset-2 hover:underline"
+                          className="numeric-value font-medium text-record-link hover:opacity-80"
                         >
                           {branch.branchNumber} - {branchName(branch)}
                         </button>

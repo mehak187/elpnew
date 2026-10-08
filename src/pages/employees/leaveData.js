@@ -101,8 +101,15 @@ export const stageOf = (leave) => {
   return leave.stage === "management" ? "management" : "department";
 };
 
+/**
+ * Days of annual leave paid out instead of taken. Recorded with the leave so
+ * they come off the balance like days taken, and say so on the list.
+ */
+export const ENCASHED_PAID = "Encashed – Paid";
+
 /** Where the request stands, as the workflow column reads it. */
 export const workflowLabel = (leave) => {
+  if (leave.status === ENCASHED_PAID) return "Leave Encashment · " + (leave.encashmentNo || "Paid");
   if (leave.status === "Approved") return "Approved by Management";
   if (leave.status === "Rejected") return "Rejected";
   return leave.stage === "management"
@@ -115,6 +122,7 @@ export const LEAVE_STATUS_TONE = {
   Pending: "bg-amber-100 text-amber-800",
   Approved: "bg-green-100 text-green-800",
   Rejected: "bg-red-100 text-red-800",
+  [ENCASHED_PAID]: "bg-blue-100 text-blue-800",
 };
 
 /**
@@ -129,6 +137,10 @@ export function leaveDays(from, to) {
   const days = Math.round((new Date(to) - new Date(from)) / DAY) + 1;
   return days > 0 ? days : 0;
 }
+
+/** The days a leave record counts for: its dates, or the days encashed. */
+export const daysOf = (leave) =>
+  leave.status === ENCASHED_PAID ? Number(leave.days || 0) : leaveDays(leave.from, leave.to);
 
 /** The year a leave falls in: the year it starts in. */
 export const leaveYear = (from) => (from ? from.slice(0, 4) : "");
@@ -145,7 +157,9 @@ export const ADVANCE_LEAVE = "Advance Annual Leave";
 
 export const chargedYear = (leave) => leave.year || leaveYear(leave.from);
 
-export const isAdvance = (leave) => chargedYear(leave) > leaveYear(leave.from);
+// Only leave taken on dates can be taken in advance; encashed days have none.
+export const isAdvance = (leave) =>
+  Boolean(leave.from) && chargedYear(leave) > leaveYear(leave.from);
 
 /** What a leave is called on a row: an advance says so. */
 export const leaveTypeLabel = (leave) =>
@@ -405,9 +419,9 @@ export function remainingBalance(leaves, name, type, year) {
         leave.employee === name &&
         leave.type === type &&
         chargedYear(leave) === String(year) &&
-        leave.status === "Approved"
+        (leave.status === "Approved" || leave.status === ENCASHED_PAID)
     )
-    .reduce((sum, leave) => sum + leaveDays(leave.from, leave.to), 0);
+    .reduce((sum, leave) => sum + daysOf(leave), 0);
 
   return { allowance, used, remaining: Math.max(allowance - used, 0), expired: false };
 }

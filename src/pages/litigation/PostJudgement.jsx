@@ -18,6 +18,7 @@ import {
 import { FileCheck, ArrowLeft, Save } from "lucide-react";
 import { Rial } from "@/components/shared/Rial";
 
+import DateField from "@/components/shared/DateField";
 export default function PostJudgement() {
   const navigate = useNavigate();
 
@@ -96,10 +97,9 @@ export default function PostJudgement() {
             <div className="form-grid">
               <div className="form-field space-y-2">
                 <Label htmlFor="judgement_date">Judgement Date</Label>
-                <Input
+                <DateField
                   id="judgement_date"
                   name="judgement_date"
-                  type="date"
                   value={formData.judgement_date}
                   onChange={handleChange}
                   required
@@ -128,10 +128,9 @@ export default function PostJudgement() {
 
               <div className="space-y-2">
                 <Label htmlFor="appeal_deadline">Appeal Deadline</Label>
-                <Input
+                <DateField
                   id="appeal_deadline"
                   name="appeal_deadline"
-                  type="date"
                   value={formData.appeal_deadline}
                   onChange={handleChange}
                 />

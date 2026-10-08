@@ -12,6 +12,7 @@ import { Paperclip, X } from "lucide-react";
 import { CLIENT_TYPES } from "@/lib/constants";
 import { MANUAL_CLIENT_STATUSES } from "@/lib/clientStatus";
 
+import DateField from "@/components/shared/DateField";
 /** A stored date as it is read on the page: 2026-09-04 becomes 04/09/2026. */
 const formatDate = (iso) => {
   if (!iso) return "";
@@ -181,10 +182,9 @@ export default function BasicSection({
       {/* Reference Expiry Date */}
       <div className="form-field space-y-2">
         <Label htmlFor="referenceExpiryDate">Reference Expiry Date</Label>
-        <Input
+        <DateField
           id="referenceExpiryDate"
           name="referenceExpiryDate"
-          type="date"
           value={formData.referenceExpiryDate}
           onChange={onChange}
           required
@@ -206,10 +206,9 @@ export default function BasicSection({
       {/* POA Expiry Date */}
       <div className="form-field space-y-2">
         <Label htmlFor="poaExpiryDate">POA Expiry Date</Label>
-        <Input
+        <DateField
           id="poaExpiryDate"
           name="poaExpiryDate"
-          type="date"
           value={formData.poaExpiryDate}
           onChange={onChange}
           required
@@ -249,10 +248,9 @@ export default function BasicSection({
         <>
           <div className="space-y-2">
             <Label htmlFor="deactivationDate">Deactivation Date</Label>
-            <Input
+            <DateField
               id="deactivationDate"
               name="deactivationDate"
-              type="date"
               value={formData.deactivationDate}
               onChange={onChange}
             />

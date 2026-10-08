@@ -114,8 +114,8 @@ export function RecordLink({ onClick, className, children, ...rest }) {
       type="button"
       onClick={onClick}
       className={cn(
-        "numeric-value rounded text-start font-medium text-record-link underline-offset-2",
-        "hover:underline focus:outline-none focus:ring-2 focus:ring-ring",
+        "numeric-value rounded text-start font-medium text-record-link",
+        "hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring",
         className
       )}
       {...rest}

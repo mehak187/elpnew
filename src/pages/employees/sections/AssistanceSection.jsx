@@ -1,5 +1,6 @@
 import {
   useState } from "react";
+import { PayeeFacts } from "@/components/shared/RequestSheet";
 import { Button } from "@/components/ui/button";
 import RequestTable from "@/components/shared/RequestTable";
 import { Input } from "@/components/ui/input";
@@ -59,6 +60,7 @@ import {
   STATUS_CHIP,
 } from "../assistanceData";
 
+import DateField from "@/components/shared/DateField";
 const NOTES_LIMIT = 300;
 // The employee says why at more length than the decision answers.
 const COMMENT_LIMIT = 500;
@@ -143,31 +145,35 @@ export default function AssistanceSection({
     setReview((prev) => ({ ...prev, [name]: value }));
 
   // What was asked for, what is being granted, and the day it is decided.
-  const requestedAmount = Number(open?.amount ?? draft.amount) || 0;
+  const requestedAmount = Number(open?.requestedAmount ?? open?.amount ?? draft.amount) || 0;
   const decidedOn = open?.decisionDate || new Date().toISOString().slice(0, 10);
 
   // Only a partial approval changes what was asked for; a rejection has
   // nothing to pay, so there is nothing to prepare.
   const amending = decision === "partial";
-  const granting = decision === "full" || decision === "partial";
   const refusing = decision === "rejected";
+  // Handed back to the employee to complete: nothing granted, nothing refused.
+  const returning = decision === "completion";
+  // Granted and waiting to be paid, or paid.
+  const openStatus = open ? statusOf(open) : "";
+  const decided = openStatus === "Approved" || openStatus === "Paid";
   const approvedAmount = amending
     ? Number(review.approved) || 0
     : requestedAmount;
 
   // A refusal is settled by its reason alone; a grant has to say how the
   // money leaves before it can be saved.
+  // Management decides; the financial department then pays. A refusal or a
+  // return is settled by its reason alone.
   const canConfirm =
+    Boolean(openId) &&
     Boolean(decision) &&
     canDecide &&
-    (refusing
+    (refusing || returning
       ? Boolean(review.notes.trim())
-      : approvedAmount > 0 &&
-        approvedAmount <= requestedAmount &&
-        review.method &&
-        review.bankAccount &&
-        review.paymentDate &&
-        review.reference.trim());
+      : approvedAmount > 0 && approvedAmount <= requestedAmount);
+  const canPay =
+    review.method && review.bankAccount && review.paymentDate && review.reference.trim();
 
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
 
@@ -220,18 +226,40 @@ export default function AssistanceSection({
    */
   const confirmDecision = () => {
     if (!checkRequired() || !canConfirm) return;
-    if (!decision || !openId || !canDecide) return;
-    const granted = decision !== "rejected";
+    const granted = !refusing && !returning;
     setRecords((prev) =>
       prev.map((record) =>
         record.id === openId
           ? {
               ...record,
-              decision: granted ? "Approved" : "Rejected",
-              rejectionReason: granted ? "" : review.notes.trim(),
-              amount: approvedAmount,
+              decision: refusing ? "Rejected" : returning ? "Returned" : "Approved",
+              decisionChoice: decision,
+              rejectionReason: refusing ? review.notes.trim() : "",
+              requestedAmount: record.requestedAmount ?? record.amount,
+              amount: granted ? approvedAmount : record.amount,
               decisionDate: decidedOn,
               managementComment: review.notes.trim(),
+            }
+          : record
+      )
+    );
+    if (granted) {
+      setStage("finance");
+      return;
+    }
+    closeForm();
+  };
+
+  /** Paid out by the financial department: the request reads Paid. */
+  const processPayment = () => {
+    if (!checkRequired() || !canPay || !openId || !canDecide) return;
+    const granted = true;
+    setRecords((prev) =>
+      prev.map((record) =>
+        record.id === openId
+          ? {
+              ...record,
+              paymentDate: review.paymentDate,
               method: granted ? review.method : "",
               bankAccount: granted ? review.bankAccount : "",
               account: granted ? review.bankAccount : "",
@@ -249,10 +277,17 @@ export default function AssistanceSection({
   /** A request opened back off the list, to be followed or decided. */
   const track = (record) => {
     setOpenId(record.id);
-    setStage("decision");
     const status = statusOf(record);
+    setStage(status === "Approved" || status === "Paid" ? "finance" : "decision");
     setDecision(
-      status === "Rejected" ? "rejected" : status === "Pending" ? "" : "full"
+      record.decisionChoice ||
+        (status === "Rejected"
+          ? "rejected"
+          : status === "Returned"
+            ? "completion"
+            : status === "Pending"
+              ? ""
+              : "full")
     );
     setDraft({
       ...emptyDraft,
@@ -298,7 +333,21 @@ export default function AssistanceSection({
         String(b.requestDate).localeCompare(String(a.requestDate)) ||
         b.id - a.id
     )
-    .map((record, index) => ({ ...record, no: index + 1, status: statusOf(record) }));
+    .map((record) => ({ ...record, status: statusOf(record) }))
+    // A granted request takes its place in the run - first granted, first
+    // numbered - and keeps it; one still waiting or refused keeps its
+    // temporary request number instead, so the run never skips.
+    .map((record, _, all) => {
+      const granted = all
+        .filter((row) => row.status === "Approved" || row.status === "Paid")
+        .sort(
+          (a, b) =>
+            String(a.decisionDate || a.requestDate).localeCompare(String(b.decisionDate || b.requestDate)) ||
+            a.id - b.id
+        );
+      const at = granted.indexOf(record);
+      return { ...record, no: at >= 0 ? at + 1 : record.requestNo };
+    });
 
   const columns = [
     {
@@ -307,18 +356,17 @@ export default function AssistanceSection({
       key: "no",
       header: "No.",
       width: "8%",
-      render: (value, record) =>
-        record.status === "Pending" || record.status === "Rejected" ? (
-          <button
-            type="button"
-            onClick={() => track(record)}
-            className="rounded font-bold text-primary focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            {record.requestNo || value}
-          </button>
-        ) : (
-          <span className="font-medium text-primary">{value}</span>
-        ),
+      // Every number opens its request at the stage it has reached - one
+      // sent back has to be answered, an approved one still has to be paid.
+      render: (value, record) => (
+        <button
+          type="button"
+          onClick={() => track(record)}
+          className="rounded font-bold text-primary hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          {typeof value === "number" ? value : record.requestNo || value}
+        </button>
+      ),
     },
     {
       key: "requestDate",
@@ -429,11 +477,20 @@ export default function AssistanceSection({
             <span aria-hidden="true" className="h-5 w-px bg-container-border" />
             <span>{employee?.name || ""}</span>
             <span aria-hidden="true" className="h-5 w-px bg-container-border" />
-            <span>{longDate(requestedOn)}</span>
-            <span aria-hidden="true" className="h-5 w-px bg-container-border" />
-            <span className="rounded-md bg-primary/10 px-3 py-1.5 text-base font-bold text-primary">
-              {shortAssistanceNo(requestNo, requestedOn)}
-            </span>
+            {/* On the step that pays, the head says where the money goes -
+                the employee's bank and account - in place of the date and
+                the number, as the finance design draws it. */}
+            {stage === "finance" ? (
+              <PayeeFacts employee={employee} />
+            ) : (
+              <>
+                <span>{longDate(requestedOn)}</span>
+                <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+                <span className="rounded-md bg-primary/10 px-3 py-1.5 text-base font-bold text-primary">
+                  {shortAssistanceNo(requestNo, requestedOn)}
+                </span>
+              </>
+            )}
           </div>
           <DialogClose className="absolute end-5 top-5 rounded-md p-1 text-primary transition-colors hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             <X className="size-7" aria-hidden="true" />
@@ -445,7 +502,7 @@ export default function AssistanceSection({
             until its own stage is designed, so the third opens the second. */}
         <AdvanceSteps
           active={stage}
-          onChange={(key) => setStage(key === "finance" ? "decision" : key)}
+          onChange={setStage}
           steps={[
             {
               key: "request",
@@ -457,20 +514,20 @@ export default function AssistanceSection({
               key: "decision",
               title: "Management Comment",
               note: "Review and approve",
-              done: Boolean(decision),
+              done: decided || openStatus === "Rejected" || openStatus === "Returned",
               disabled: !openId,
             },
             {
               key: "finance",
               title: "Disbursement Actions",
               note: "Financial department processing",
-              done: Boolean(review.reference),
-              disabled: !openId || !granting,
+              done: openStatus === "Paid",
+              disabled: !openId || !decided,
             },
           ]}
         />
 
-        {stage === "decision" ? (
+        {stage === "decision" || stage === "finance" ? (
           <>
             {/* Who asked, and for what. Read off the request rather than
                 asked for again. */}
@@ -528,19 +585,43 @@ export default function AssistanceSection({
               />
             </Bordered>
 
-            <DecisionChoice
-              value={decision}
-              onChange={setDecision}
-              notes={{
-                full: "Approve the assistance as requested",
-                rejected: "Reject the assistance request",
-              }}
-            />
+            {stage === "decision" && (
+              <>
+                <DecisionChoice
+                  value={decision}
+                  onChange={setDecision}
+                  disabled={!canDecide || decided || openStatus === "Rejected"}
+                  notes={{
+                    full: "Approve the assistance as requested",
+                    rejected: "Reject the assistance request",
+                  }}
+                />
+                {/* The one figure a partial approval changes. */}
+                {amending && (
+                  <div className="form-grid">
+                    <div className="flex h-full flex-col justify-end gap-2">
+                      <FieldLabel htmlFor="decision-approved" required>
+                        Approved Amount (<Rial />)
+                      </FieldLabel>
+                      <Input
+                        id="decision-approved"
+                        inputMode="decimal"
+                        value={review.approved}
+                        onChange={(e) => setReviewField("approved", e.target.value.replace(/[^\d.]/g, ""))}
+                        placeholder="0.000"
+                        disabled={!canDecide || decided}
+                        className={cn(Number(review.approved) > requestedAmount && "border-destructive")}
+                      />
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
 
             {/* Nothing is granted and nothing leaves the firm on a refusal,
                 so both are asked about only once something is approved. */}
-            {granting && (
-              <Bordered title="Assistance Approval & Disbursement">
+            {stage === "finance" && (
+              <Bordered title="Financial Department Actions">
                 <div className="form-grid">
                   <Settled
                     id="decision-expense-type"
@@ -563,39 +644,13 @@ export default function AssistanceSection({
                     value={money(requestedAmount)}
                   />
 
-                  {/* The one figure a partial approval changes. A full
-                      approval grants what was asked for, so there it is
-                      only shown. */}
-                  {amending ? (
-                    <div className="flex h-full flex-col justify-end gap-2">
-                      <FieldLabel htmlFor="decision-approved" required>
-                        Approved Amount (<Rial />)
-                      </FieldLabel>
-                      <Input
-                        id="decision-approved"
-                        inputMode="decimal"
-                        value={review.approved}
-                        onChange={(e) =>
-                          setReviewField(
-                            "approved",
-                            e.target.value.replace(/[^\d.]/g, "")
-                          )
-                        }
-                        placeholder="0.000"
-                        className={cn(
-                          Number(review.approved) > requestedAmount &&
-                            "border-destructive"
-                        )}
-                      />
-                    </div>
-                  ) : (
-                    <Settled
-                      id="decision-approved"
-                      label="Approved Amount"
-                      value={money(approvedAmount)}
-                      payable
-                    />
-                  )}
+                  {/* What was granted, as management decided it. */}
+                  <Settled
+                    id="finance-approved"
+                    label="Approved Amount"
+                    value={money(approvedAmount)}
+                    payable
+                  />
 
                   <Choice
                     id="decision-method"
@@ -621,9 +676,8 @@ export default function AssistanceSection({
                     <FieldLabel htmlFor="decision-pay-date" required>
                       Payment Date
                     </FieldLabel>
-                    <Input
+                    <DateField
                       id="decision-pay-date"
-                      type="date"
                       value={review.paymentDate}
                       onChange={(e) => setReviewField("paymentDate", e.target.value)}
                     />
@@ -661,10 +715,11 @@ export default function AssistanceSection({
 
             {/* A refusal is only as good as its reason, so there the comment
                 is required; on an approval it is a note. */}
+            {stage === "decision" && (
             <Bordered
               title={
                 <>
-                  Management Comment
+                  {refusing ? "Reason for Rejection" : returning ? "What is Missing" : "Management Comment"}
                 </>
               }
             >
@@ -678,18 +733,22 @@ export default function AssistanceSection({
                   placeholder={
                     refusing
                       ? "Enter the reason for rejection"
-                      : "Add management comment (optional)"
+                      : returning
+                        ? "Say what the employee still has to supply"
+                        : "Add management comment (optional)"
                   }
+                  disabled={!canDecide || decided || openStatus === "Rejected"}
                 />
                 <p className="text-end text-xs text-muted-foreground">
                   {review.notes.length} / {NOTES_LIMIT}
                 </p>
               </div>
             </Bordered>
+            )}
 
             {/* Who is being paid and where it lands, in one line to be read
                 against the transfer above before it is confirmed. */}
-            {granting && (
+            {stage === "finance" && (
               <div className="rounded-lg border border-green-600/40 bg-green-50/50 p-4">
                 <p className="mb-3 flex items-center gap-2 font-semibold text-green-700">
                   <span
@@ -832,12 +891,26 @@ export default function AssistanceSection({
               Cancel
             </Button>
             {stage === "decision" ? (
-              <Button
-                type="button"
-                onClick={confirmDecision}
-              >
-                Save
-              </Button>
+              canDecide &&
+              !decided &&
+              openStatus !== "Rejected" && (
+                <Button
+                  type="button"
+                  className="min-w-48"
+                  variant={refusing ? "destructive" : "default"}
+                  onClick={confirmDecision}
+                  disabled={!canConfirm}
+                >
+                  {refusing ? "Confirm Rejection" : returning ? "Return to Employee" : "Confirm Decision"}
+                </Button>
+              )
+            ) : stage === "finance" ? (
+              canDecide &&
+              openStatus === "Approved" && (
+                <Button type="button" className="min-w-48" onClick={processPayment} disabled={!canPay}>
+                  Process Payment
+                </Button>
+              )
             ) : (
               <Button type="button" className="min-w-48" onClick={saveRecord}>
                 Submit Request

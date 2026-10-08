@@ -97,9 +97,13 @@ export const nextAssistanceNo = (records) =>
     ) + 1
   ).padStart(3, "0");
 
-/** Pending -> Approved -> Paid, unless it was refused. */
+/**
+ * Pending -> Approved -> Paid, unless it was refused - or handed back to the
+ * employee to complete, when it waits on them as Returned.
+ */
 export const statusOf = (record) => {
   if (record.decision === "Rejected") return "Rejected";
+  if (record.decision === "Returned") return "Returned";
   if (record.decision !== "Approved") return "Pending";
   return record.paymentDate ? "Paid" : "Approved";
 };
@@ -109,6 +113,7 @@ export const STATUS_TONE = {
   Pending: "text-amber-600",
   Approved: "text-blue-600",
   Paid: "text-green-600",
+  Returned: "text-orange-600",
   Rejected: "text-destructive",
 };
 
@@ -117,6 +122,7 @@ export const STATUS_CHIP = {
   Pending: "bg-amber-100 text-amber-800",
   Approved: "bg-green-100 text-green-800",
   Paid: "bg-green-100 text-green-800",
+  Returned: "bg-orange-100 text-orange-800",
   Rejected: "bg-red-100 text-red-800",
 };
 

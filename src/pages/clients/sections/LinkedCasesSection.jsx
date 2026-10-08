@@ -103,7 +103,7 @@ export default function LinkedCasesSection() {
           <button
             type="button"
             onClick={() => navigate("/litigation")}
-            className="numeric-value font-medium text-record-link underline-offset-2 hover:underline"
+            className="numeric-value font-medium text-record-link hover:opacity-80"
           >
             {value}
           </button>

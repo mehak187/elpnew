@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Save, User, Mail, Phone, Building, Calendar, BadgeCheck } from "lucide-react";
 
+import DateField from "@/components/shared/DateField";
 export default function ProfileInfo() {
   const [saved, setSaved] = useState(false);
   const [formData, setFormData] = useState({
@@ -167,10 +168,9 @@ export default function ProfileInfo() {
               <Label htmlFor="joining_date" className="text-xs sm:text-sm font-medium flex items-center gap-1">
                 <Calendar className="h-3 w-3" /> Joining Date
               </Label>
-              <Input
+              <DateField
                 id="joining_date"
                 name="joining_date"
-                type="date"
                 value={formData.joining_date}
                 disabled
                 className="h-10 bg-locked"

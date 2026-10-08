@@ -34,6 +34,7 @@ import {
 } from "../firmData";
 import { checkRequired } from "@/components/shared/formFields";
 
+import DateField from "@/components/shared/DateField";
 /**
  * An expiry date and what it means.
  *
@@ -247,9 +248,8 @@ export default function DocumentsSection({ canEdit }) {
 
               <div className="space-y-2">
                 <Label htmlFor="documentExpiry">Document Expiry Date</Label>
-                <Input
+                <DateField
                   id="documentExpiry"
-                  type="date"
                   value={draft.expiryDate}
                   onChange={(e) => setField("expiryDate", e.target.value)}
                 />
@@ -323,7 +323,7 @@ export default function DocumentsSection({ canEdit }) {
                         <button
                           type="button"
                           onClick={() => setEditing({ ...document })}
-                          className="numeric-value font-medium text-record-link underline-offset-2 hover:underline"
+                          className="numeric-value font-medium text-record-link hover:opacity-80"
                         >
                           {document.docId}
                         </button>
@@ -421,9 +421,8 @@ export default function DocumentsSection({ canEdit }) {
 
               <div className="space-y-2">
                 <Label htmlFor="editExpiry">Document Expiry Date</Label>
-                <Input
+                <DateField
                   id="editExpiry"
-                  type="date"
                   value={editing.expiryDate}
                   onChange={(e) =>
                     setEditing({ ...editing, expiryDate: e.target.value })

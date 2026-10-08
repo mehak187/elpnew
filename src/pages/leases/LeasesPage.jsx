@@ -160,7 +160,7 @@ export default function LeasesPage() {
             type="button"
             onClick={() => navigate("/leases/" + row.id)}
             title={"Open " + (row.contractNo || "this lease")}
-            className="numeric-value font-medium text-record-link underline-offset-2 hover:underline"
+            className="numeric-value font-medium text-record-link hover:opacity-80"
           >
             {value}
           </button>

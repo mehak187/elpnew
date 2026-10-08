@@ -45,6 +45,7 @@ import {
 } from "./leaseData";
 import { RecordLink } from "@/components/shared/RecordTable";
 
+import DateField from "@/components/shared/DateField";
 /**
  * The parts of a lease, in the order it is put together: the property, the
  * contract, what is paid and how, the installments that follow from that, and
@@ -618,9 +619,8 @@ export default function LeaseDetails() {
                       <FieldLabel htmlFor="detailStart" required>
                         Contract Start Date
                       </FieldLabel>
-                      <Input
+                      <DateField
                         id="detailStart"
-                        type="date"
                         value={draft.start}
                         max={draft.end || undefined}
                         onChange={(e) => set("start", e.target.value)}
@@ -630,9 +630,8 @@ export default function LeaseDetails() {
                       <FieldLabel htmlFor="detailEnd" required>
                         Contract End Date
                       </FieldLabel>
-                      <Input
+                      <DateField
                         id="detailEnd"
-                        type="date"
                         value={draft.end}
                         min={draft.start || undefined}
                         onChange={(e) => set("end", e.target.value)}
@@ -802,9 +801,8 @@ export default function LeaseDetails() {
                   <Field>
                     <FieldLabel htmlFor="detailNonRenewalDate">Request Date</FieldLabel>
                     <div className="flex gap-2">
-                      <Input
+                      <DateField
                         id="detailNonRenewalDate"
-                        type="date"
                         value={draft.nonRenewalDate}
                         onChange={(e) => set("nonRenewalDate", e.target.value)}
                         className="min-w-0 flex-1"

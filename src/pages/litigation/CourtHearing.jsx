@@ -16,6 +16,7 @@ import {
 import DataTable from "@/components/shared/DataTable";
 import { Gavel, Plus, ArrowLeft, Calendar, Save } from "lucide-react";
 
+import DateField from "@/components/shared/DateField";
 const hearings = [
   { id: 1, date: "2024-12-15", type: "First Hearing", outcome: "Adjourned", next_date: "2025-01-10", notes: "Documents submitted" },
   { id: 2, date: "2025-01-10", type: "Evidence Submission", outcome: "Pending", next_date: "-", notes: "Awaiting expert report" },
@@ -128,10 +129,9 @@ export default function CourtHearing() {
               <div className="form-grid">
                 <div className="form-field space-y-2">
                   <Label htmlFor="date">Hearing Date</Label>
-                  <Input
+                  <DateField
                     id="date"
                     name="date"
-                    type="date"
                     value={formData.date}
                     onChange={handleChange}
                     required
@@ -180,10 +180,9 @@ export default function CourtHearing() {
 
                 <div className="space-y-2">
                   <Label htmlFor="next_date">Next Hearing Date</Label>
-                  <Input
+                  <DateField
                     id="next_date"
                     name="next_date"
-                    type="date"
                     value={formData.next_date}
                     onChange={handleChange}
                   />

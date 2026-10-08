@@ -45,6 +45,7 @@ import { useFirm } from "@/lib/firm/context";
 import { GENERAL_BRANCH } from "../firmData";
 import { checkRequired } from "@/components/shared/formFields";
 
+import DateField from "@/components/shared/DateField";
 const CONTENT_LIMIT = 1000;
 
 /** How much of a circular the list shows before it has to be opened. */
@@ -302,9 +303,8 @@ export default function CircularsSection({ canEdit }) {
 
             <div className="space-y-2">
               <FieldLabel htmlFor="circularDate">Circular Date</FieldLabel>
-              <Input
+              <DateField
                 id="circularDate"
-                type="date"
                 value={draft.date}
                 onChange={(e) => set("date", e.target.value)}
               />

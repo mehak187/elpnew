@@ -36,6 +36,7 @@ import { formatDate, dayOffset } from "@/pages/firm/firmData";
 import { clientContracts, clientLinkedCases } from "../clientMockData";
 import { checkRequired } from "@/components/shared/formFields";
 
+import DateField from "@/components/shared/DateField";
 /**
  * A contract is spent once the end date it carries has arrived. Until then it
  * is live, even if an end date is already agreed.
@@ -122,7 +123,7 @@ export default function ClientContractsSection() {
           <button
             type="button"
             onClick={() => setEditing({ ...row })}
-            className="numeric-value font-medium text-record-link underline-offset-2 hover:underline"
+            className="numeric-value font-medium text-record-link hover:opacity-80"
           >
             {value}
           </button>
@@ -306,10 +307,9 @@ export default function ClientContractsSection() {
 
             <div className="form-field space-y-2">
               <Label htmlFor="contractStart">Start Date</Label>
-              <Input
+              <DateField
                 required
                 id="contractStart"
-                type="date"
                 value={draft.startDate}
                 onChange={(e) => setField("startDate", e.target.value)}
               />
@@ -317,9 +317,8 @@ export default function ClientContractsSection() {
 
             <div className="space-y-2">
               <Label htmlFor="contractEnd">Contract End Date</Label>
-              <Input
+              <DateField
                 id="contractEnd"
-                type="date"
                 value={draft.endDate}
                 onChange={(e) => setField("endDate", e.target.value)}
               />
@@ -445,9 +444,8 @@ export default function ClientContractsSection() {
 
               <div className="space-y-2">
                 <Label htmlFor="editStart">Start Date</Label>
-                <Input
+                <DateField
                   id="editStart"
-                  type="date"
                   value={editing.startDate}
                   onChange={(e) =>
                     setEditing({ ...editing, startDate: e.target.value })
@@ -457,9 +455,8 @@ export default function ClientContractsSection() {
 
               <div className="space-y-2">
                 <Label htmlFor="editEnd">Contract End Date</Label>
-                <Input
+                <DateField
                   id="editEnd"
-                  type="date"
                   value={editing.endDate}
                   onChange={(e) =>
                     setEditing({ ...editing, endDate: e.target.value })

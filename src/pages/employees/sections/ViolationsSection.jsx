@@ -50,6 +50,7 @@ import {
 } from "../violationData";
 import { checkRequired } from "@/components/shared/formFields";
 
+import DateField from "@/components/shared/DateField";
 const DESCRIPTION_LIMIT = 1000;
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -124,16 +125,15 @@ function Settled({ id, label, value }) {
   );
 }
 
-function DateField({ id, label, required, value, onChange }) {
+function DateEntry({ id, label, required, value, onChange }) {
   return (
     <div className="space-y-2">
       <FieldLabel htmlFor={id}>
         {label}
       </FieldLabel>
-      <Input
+      <DateField
         required={required}
         id={id}
-        type="date"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
@@ -402,7 +402,7 @@ export default function ViolationsSection({ employee, canEdit = true }) {
               className="cursor-default bg-locked text-muted-foreground"
             />
           </div>
-          <DateField id="violation-date" label="Violation Date" required value={draft.date} onChange={(v) => set("date", v)} />
+          <DateEntry id="violation-date" label="Violation Date" required value={draft.date} onChange={(v) => set("date", v)} />
           <Choice
             id="violation-type"
             label="Violation Type"
@@ -422,7 +422,7 @@ export default function ViolationsSection({ employee, canEdit = true }) {
             onChange={(v) => set("description", v)}
             placeholder="Enter a detailed description of the violation"
           />
-          <DateField
+          <DateEntry
             id="violation-investigation-start"
             label="Investigation Start Date"
             required
@@ -489,7 +489,7 @@ export default function ViolationsSection({ employee, canEdit = true }) {
               />
             </div>
           )}
-          <DateField
+          <DateEntry
             id="violation-effective-date"
             label="Effective Date"
             required
@@ -528,7 +528,7 @@ export default function ViolationsSection({ employee, canEdit = true }) {
             label="Decision Date"
             value={record?.penaltyDate && formatDate(record.penaltyDate)}
           />
-          <DateField
+          <DateEntry
             id="violation-appeal-date"
             label="Appeal Date"
             required
@@ -579,7 +579,7 @@ export default function ViolationsSection({ employee, canEdit = true }) {
             placeholder="Select outcome"
             options={APPEAL_OUTCOMES}
           />
-          <DateField
+          <DateEntry
             id="violation-outcome-date"
             label="Outcome Date"
             required

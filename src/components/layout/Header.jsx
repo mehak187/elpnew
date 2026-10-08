@@ -72,7 +72,7 @@ const SIGNED_IN_USER = "Mohammed Al Yahyaei";
 
 /** First letter of the first name and of the last, for the avatar. */
 function initials(name) {
-  const words = name.trim().split(/s+/);
+  const words = name.trim().split(/\s+/);
   const first = words[0]?.[0] || "";
   const last = words.length > 1 ? words[words.length - 1][0] : "";
   return (first + last).toUpperCase();
@@ -81,7 +81,9 @@ function initials(name) {
 const ACCOUNT_LINKS = [
   { label: "My Profile", path: "/my-profile", icon: UserCircle },
   { label: "Change Password", path: "/settings/password", icon: KeyRound },
-  { label: "Activity Review", path: "/activity-review", icon: Clock },
+  // The signed-in user's own working record: My Profile, on its Daily
+  // Activities section.
+  { label: "Activity Review", path: "/my-profile", state: { section: "daily" }, icon: Clock },
   { label: "Settings", path: "/settings/firm", icon: Settings },
   { label: "System Settings", path: "/settings/system", icon: SlidersHorizontal },
 ];
@@ -364,9 +366,10 @@ export default function Header({ onNavClick, activeNav }) {
             className="w-[270px] rounded-container border border-container-border bg-card p-2 shadow-md"
           >
             {ACCOUNT_LINKS.map((item) => (
-              <DropdownMenuItem key={item.path} asChild className="p-0 focus:bg-transparent">
+              <DropdownMenuItem key={item.label} asChild className="p-0 focus:bg-transparent">
                 <Link
                   to={item.path}
+                  state={item.state}
                   className="flex h-[44px] w-full cursor-pointer items-center gap-2.5 rounded-[6px] px-2.5 text-[15px]/[20px] font-semibold text-primary transition-colors hover:bg-menu-hover focus:bg-menu-hover"
                 >
                   <item.icon strokeWidth={1.5} className="size-[18px] shrink-0 text-menu-icon" />

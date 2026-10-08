@@ -1,6 +1,7 @@
 import {
   useState } from "react";
 import SalaryLedger from "./SalaryLedger";
+import { PayeeFacts, HistoryCard } from "@/components/shared/RequestSheet";
 import AdvanceOverview from "./AdvanceOverview";
 import UploadIcon from "@/components/shared/UploadIcon";
 import { Button } from "@/components/ui/button";
@@ -82,6 +83,7 @@ import {
   amount,
 } from "../payrollData";
 
+import DateField from "@/components/shared/DateField";
 /** The allowances the salary card asks for. */
 const SHOWN_KEYS = ["special", "housing", "transport"];
 
@@ -382,6 +384,8 @@ export default function SalariesSection({
   const { violations } = useViolations();
   const { advances } = useAdvances();
   const [history, setHistory] = useState(salaryHistory);
+  // Everything paid before, open over the salary payment.
+  const [showLedger, setShowLedger] = useState(false);
   const [payslip, setPayslip] = useState(() => fromEmployee(employee));
   const [payment, setPayment] = useState(emptyPayment);
   const [receipt, setReceipt] = useState(null);
@@ -682,9 +686,8 @@ export default function SalariesSection({
 
                 <div className="space-y-2">
                   <Label htmlFor="pay-calc-date">Calculation Date</Label>
-                  <Input
+                  <DateField
                     id="pay-calc-date"
-                    type="date"
                     value={payment.calculationDate}
                     onChange={(e) => setPay("calculationDate", e.target.value)}
                   />
@@ -763,11 +766,8 @@ export default function SalariesSection({
             {/* Plain buttons: this form sits inside the employee form, which
                 either would otherwise submit. */}
             <div className="flex flex-wrap items-center justify-between gap-2">
-              {/* What has been paid before is the list behind this window. */}
-              <Button type="button" variant="ghost" onClick={closeAdd}>
-                <History className="me-2 h-4 w-4" />
-                History
-              </Button>
+              {/* Everything paid before, opened over this window. */}
+              <HistoryCard onClick={() => setShowLedger(true)} />
 
               <div className="ms-auto flex flex-wrap items-center gap-2">
                 <Button type="button" variant="outline" onClick={closeAdd}>
@@ -852,9 +852,8 @@ export default function SalariesSection({
                     Payment Date
                     
                   </Label>
-                  <Input
+                  <DateField
                     id="pay-date"
-                    type="date"
                     value={payment.paymentDate}
                     onChange={(e) => setPay("paymentDate", e.target.value)}
                   />
@@ -940,7 +939,10 @@ export default function SalariesSection({
               <div className="form-grid lg:[&>*+*]:border-s">
                 <Said label="Employee No." value={employee?.empNo || ""} />
                 <Said label="Employee Name" value={employee?.name || ""} />
-                <Said label="Bank Account" value={payment.bankAccount} />
+                {/* Where the salary lands: the employee's own account, not
+                    the firm's account it leaves from. */}
+                <Said label="Bank Name" value={employee?.bankName || "-"} />
+                <Said label="Account Number" value={employee?.accountNumber || "-"} />
                 <Said label="Transfer Amount" value={amount(payNet)} settled />
               </div>
             </div>
@@ -978,11 +980,8 @@ export default function SalariesSection({
             )}
 
             <div className="flex flex-wrap items-center justify-between gap-2">
-              {/* What has been paid before is the list behind this window. */}
-              <Button type="button" variant="ghost" onClick={closeAdd}>
-                <History className="me-2 h-4 w-4" />
-                History
-              </Button>
+              {/* Everything paid before, opened over this window. */}
+              <HistoryCard onClick={() => setShowLedger(true)} />
 
               <div className="ms-auto flex flex-wrap items-center gap-2">
                 <Button type="button" variant="outline" onClick={closeAdd}>
@@ -1046,8 +1045,27 @@ export default function SalariesSection({
                   (openRequest.salaryNo || openRequest.requestNo)
                 : "Salary Payment"}
             </DialogTitle>
+            {/* On the transfer, where the salary goes - the employee's bank
+                and account - so nobody has to look them up to pay it. */}
+            {payStage === "transfer" && (
+              <div className="flex flex-wrap items-center gap-3 pt-1 text-sm text-primary">
+                <span>{employee?.empNo || ""}</span>
+                <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+                <span>{employee?.name || ""}</span>
+                <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+                <PayeeFacts employee={employee} />
+              </div>
+            )}
           </DialogHeader>
           {form}
+          <Dialog open={showLedger} onOpenChange={setShowLedger}>
+            <DialogContent className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Salary History · {employee?.name}</DialogTitle>
+              </DialogHeader>
+              <SalaryLedger employee={employee} history={history} />
+            </DialogContent>
+          </Dialog>
         </DialogContent>
       </Dialog>
 

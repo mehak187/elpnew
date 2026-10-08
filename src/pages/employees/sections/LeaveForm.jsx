@@ -28,6 +28,7 @@ import {
 } from "../leaveData";
 import { checkRequired } from "@/components/shared/formFields";
 
+import DateField from "@/components/shared/DateField";
 /** Today, as the head of a new request is dated. */
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
@@ -249,9 +250,8 @@ export default function LeaveForm({
                 <FieldLabel htmlFor="leave-review-date" required>
                   {finalising ? "Decision Date" : "Review Date"}
                 </FieldLabel>
-                <Input
+                <DateField
                   id="leave-review-date"
-                  type="date"
                   value={draft.reviewDate}
                   onChange={(e) => onChange("reviewDate", e.target.value)}
                 />
@@ -422,9 +422,8 @@ export default function LeaveForm({
             <FieldLabel htmlFor="leave-from" required>
               From Date
             </FieldLabel>
-            <Input
+            <DateField
               id="leave-from"
-              type="date"
               value={draft.from}
               onChange={(e) => onChange("from", e.target.value)}
             />
@@ -434,9 +433,8 @@ export default function LeaveForm({
             <FieldLabel htmlFor="leave-to" required>
               To Date
             </FieldLabel>
-            <Input
+            <DateField
               id="leave-to"
-              type="date"
               min={draft.from || undefined}
               value={draft.to}
               onChange={(e) => onChange("to", e.target.value)}

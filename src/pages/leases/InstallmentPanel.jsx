@@ -19,6 +19,7 @@ import {
   todayIso,
 } from "./leaseData";
 
+import DateField from "@/components/shared/DateField";
 /** A label and its value on one line, the value pushed to the right edge. */
 export function AmountLine({ label, value, strong }) {
   return (
@@ -188,9 +189,8 @@ export default function InstallmentPanel({ id, className, row, lease, branchName
         <div className="grid grid-cols-1 gap-4 rounded-lg border border-primary/30 bg-primary/5 p-3 sm:col-span-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] sm:gap-6 lg:col-span-1 lg:-my-3 [&_label]:font-semibold [&_label]:text-primary">
           <Field>
             <FieldLabel htmlFor={fieldId("installmentPaidOn")}>Payment Date</FieldLabel>
-            <Input
+            <DateField
               id={fieldId("installmentPaidOn")}
-              type="date"
               value={entry.paidOn}
               max={todayIso()}
               onChange={(e) => set("paidOn", e.target.value)}

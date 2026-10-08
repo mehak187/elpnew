@@ -38,7 +38,10 @@ import {
 import { RequestSteps, DecisionChoice } from "@/components/shared/RequestSteps";
 import { AdvanceSteps, longDate } from "./AdvanceSalarySection";
 import MonthPicker from "@/components/shared/MonthPicker";
-import { SheetCard, HistoryCard, UploadButton } from "@/components/shared/RequestSheet";
+import { SheetCard, HistoryCard, UploadButton, PayeeFacts } from "@/components/shared/RequestSheet";
+import InvoiceIntake, { InvoiceAnalysis } from "./InvoiceIntake";
+import { needsInvoice, readInvoice, checkInvoice } from "../invoiceAI";
+import { useSuppliers } from "@/lib/suppliers/context";
 import {
   Lock,
   Save,
@@ -58,6 +61,7 @@ import {
   Ticket,
   FileClock,
   HandCoins,
+  Send,
 } from "lucide-react";
 import UploadIcon from "@/components/shared/UploadIcon";
 import { cn } from "@/lib/utils";
@@ -80,6 +84,7 @@ import {
   ENTITLEMENT_PENDING,
   ENTITLEMENT_APPROVED,
   ENTITLEMENT_REJECTED,
+  ENTITLEMENT_AWAITING,
   ENTITLEMENT_STATUS_CHIP,
   encashmentAmount,
   overtimeAmount,
@@ -92,6 +97,7 @@ import {
   entitlementHistory,
 } from "../entitlementData";
 
+import DateField from "@/components/shared/DateField";
 const NOTES_LIMIT = 500;
 
 /**
@@ -218,6 +224,8 @@ const emptyDraft = (kind) => ({
   travelDate: "",
   // What kind of help an assistance request is for.
   assistanceType: "",
+  // On a medical claim: what insurance already paid of the invoice.
+  insurance: "",
 });
 
 const emptyPayment = () => ({
@@ -330,10 +338,18 @@ export default function EntitlementTab({
   // The firm decides; on My Profile the request is asked for and only read.
   canDecide = true,
 }) {
-  const { leaves } = useLeaves();
+  const { leaves, recordEncashment } = useLeaves();
   const [draft, setDraft] = useState(() => emptyDraft(kind));
   const [payment, setPayment] = useState(emptyPayment);
-  const [stage, setStage] = useState("request");
+  // A request made on an invoice starts with the invoice itself.
+  const firstStage = needsInvoice(kind) && SHEETS[kind] ? "invoice" : "request";
+  const [stage, setStage] = useState(firstStage);
+  // What the AI read off the invoice uploaded for a new request, while it
+  // is being read, and whether the employee confirmed the reading.
+  const [invoice, setInvoice] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
+  const { suppliers, addSupplier } = useSuppliers();
   const [decision, setDecision] = useState("");
   const [openId, setOpenId] = useState(null);
   const [reason, setReason] = useState("");
@@ -369,6 +385,22 @@ export default function EntitlementTab({
   const open = records.find((row) => row.id === openId) || null;
   const settled = open?.status === ENTITLEMENT_APPROVED;
   const refused = open?.status === ENTITLEMENT_REJECTED;
+  // Decided by management, waiting on the financial department.
+  const awaiting = open?.status === ENTITLEMENT_AWAITING;
+  // Made on an invoice: the invoice is read first, and what it says is
+  // the claim. A request already made carries the reading with it.
+  const invoiceKind = needsInvoice(kind) && Boolean(sheet);
+  const shownInvoice = invoice || open?.invoice || null;
+  // The checks run against everything else on record - never against the
+  // request itself.
+  const risk = shownInvoice
+    ? checkInvoice(shownInvoice, {
+        kind,
+        records: records.filter((row) => row.id !== openId),
+        employeeName: employee?.name,
+        suppliers,
+      })
+    : null;
 
   const mine = entitlementsFor(records, employee?.name, kind).map((record, index) => ({
     ...record,
@@ -416,10 +448,14 @@ export default function EntitlementTab({
       ? encashmentAmount(employee?.salary, days)
       : mode === "hours"
         ? overtimeAmount(employee?.salary, workedHours)
-        : Number(draft.amount || 0);
+        : invoiceKind && shownInvoice
+          ? Math.max(0, Number((shownInvoice.total - Number(draft.insurance || 0)).toFixed(3)))
+          : Number(draft.amount || 0);
 
   const counted =
-    mode === "leaveDays"
+    invoiceKind && shownInvoice
+      ? amount > 0
+      : mode === "leaveDays"
       ? days > 0
       : mode === "hours"
         ? workedHours > 0
@@ -432,7 +468,8 @@ export default function EntitlementTab({
   // Transport asks for a comment but does not insist on one; every other
   // request has to say why it is being made.
   // Overtime's sheet asks for no comment at all.
-  const reasonRequired = kind !== "transport" && (!sheet || sheet.shared);
+  const reasonRequired =
+    kind !== "transport" && kind !== "medical" && (!sheet || sheet.shared);
 
   const canSubmit =
     draft.requestDate &&
@@ -443,7 +480,9 @@ export default function EntitlementTab({
       (draft.year && draft.month && workedHours > 0)) &&
     (!courtLinked || (draft.fileNo.trim() && draft.travelDate)) &&
     (!assisting || draft.assistanceType) &&
-    (!reasonRequired || draft.reason.trim());
+    (!reasonRequired || draft.reason.trim()) &&
+    // Read by the AI and confirmed by the employee before it is sent.
+    (!invoiceKind || (Boolean(shownInvoice) && (confirmed || Boolean(open))));
 
   // A full approval grants what was asked for; only a partial one names a
   // figure of its own, and a refusal grants nothing at all.
@@ -537,10 +576,13 @@ export default function EntitlementTab({
     setPayment(emptyPayment());
     setReceipt(null);
     setShowHistory(false);
-    setStage("request");
+    setStage(firstStage);
     setDecision("");
     setOpenId(null);
     setReason("");
+    setInvoice(null);
+    setAnalyzing(false);
+    setConfirmed(false);
     onCloseAdd();
   };
 
@@ -564,8 +606,34 @@ export default function EntitlementTab({
       travelDate: courtLinked ? draft.travelDate : "",
       assistanceType: assisting ? draft.assistanceType : undefined,
       // The paper the request was made on, kept by name with the request.
-      attachment: receipt?.name || open?.attachment || "",
+      attachment: shownInvoice?.fileName || receipt?.name || open?.attachment || "",
+      // The invoice as the AI read it, with what insurance paid and the
+      // risk it was given - read back to management with the request.
+      invoice: shownInvoice
+        ? {
+            ...shownInvoice,
+            insuranceCovered: Number(draft.insurance || 0),
+            risk: { level: risk.level, reasons: risk.reasons },
+          }
+        : undefined,
     };
+
+    // A supplier the firm did not know is registered from the invoice,
+    // with its VAT number, so the next invoice from it is recognised.
+    if (shownInvoice && risk && !risk.supplier) {
+      addSupplier({
+        name: shownInvoice.supplierName,
+        category: shownInvoice.supplierCategory || "Other",
+        commercialRegistration: shownInvoice.supplierCr || "",
+        taxIdentificationNumber: "",
+        vatNumber: shownInvoice.supplierVat || "",
+        bank: "",
+        accountNumber: "",
+        phone: shownInvoice.supplierPhone || "",
+        status: "Active",
+        source: "AI invoice analysis",
+      });
+    }
 
     if (open) {
       onRecords((prev) =>
@@ -597,6 +665,23 @@ export default function EntitlementTab({
   /** Approved and paid: the request takes the list's own number. */
   const disburse = () => {
     if (!openId || !canDisburse) return;
+    // Encashed days are days of leave used: they go on the Leaves list as
+    // Encashed – Paid and come off the year's balance.
+    if (mode === "leaveDays" && approvedDays > 0) {
+      recordEncashment({
+        employee: employee?.name || "",
+        category: "Regular Leave",
+        type: draft.leaveType || "Annual Leave",
+        year: draft.year,
+        from: "",
+        to: "",
+        days: approvedDays,
+        reason: "Leave encashment",
+        encashmentNo: open?.requestNo || "",
+        decidedAt: payment.paymentDate,
+        comments: "Paid out as leave encashment.",
+      });
+    }
     onRecords((prev) =>
       prev.map((row) =>
         row.id === openId
@@ -626,6 +711,58 @@ export default function EntitlementTab({
     close();
   };
 
+  /**
+   * Management's answer, saved on its own. An approval waits for the
+   * financial department to pay it; a refusal or a return ends here.
+   */
+  const confirmDecision = () => {
+    if (!openId || !decision || !canDecide) return;
+    if (refusing) {
+      reject();
+      return;
+    }
+    if (!grantIsSound || approvedAmount <= 0) return;
+    onRecords((prev) =>
+      prev.map((row) =>
+        row.id === openId
+          ? {
+              ...row,
+              status: ENTITLEMENT_AWAITING,
+              decision,
+              approvedAmount,
+              approvedDays: approvedDays ?? undefined,
+              approvedHours: approvedHours ?? undefined,
+              decisionDate: decidedOn,
+              decidedBy: CURRENT_USER.name,
+              managementComment: reason.trim(),
+            }
+          : row
+      )
+    );
+    setStage("finance");
+  };
+
+  /** The invoice in: the AI reads it, and the claim is filled in from it. */
+  const pickInvoice = (file) => {
+    setAnalyzing(true);
+    setConfirmed(false);
+    const previous = records
+      .filter((row) => row.employee === employee?.name && row.kind === kind && row.invoice)
+      .sort((a, b) => String(b.requestDate).localeCompare(String(a.requestDate)));
+    // DEMO: the reading is immediate; the pause is the AI's working time.
+    setTimeout(() => {
+      const read = readInvoice(file, kind, previous);
+      setInvoice(read);
+      setDraft((prev) => ({
+        ...prev,
+        insurance: "",
+        requestDate: read.invoiceDate || prev.requestDate,
+        amount: String(read.total),
+      }));
+      setAnalyzing(false);
+    }, 1400);
+  };
+
   /** Refused: the request keeps its temporary number and says why. */
   const reject = () => {
     if (!openId || !reason.trim()) return;
@@ -649,9 +786,19 @@ export default function EntitlementTab({
   /** A request opened back off the list, to be followed or decided. */
   const track = (record) => {
     setOpenId(record.id);
-    setStage("decision");
-    setDecision(record.status === ENTITLEMENT_REJECTED ? "rejected" : "");
-    setReason("");
+    setStage(
+      record.status === ENTITLEMENT_AWAITING || record.status === ENTITLEMENT_APPROVED
+        ? "finance"
+        : "decision"
+    );
+    setDecision(
+      record.status === ENTITLEMENT_REJECTED
+        ? "rejected"
+        : record.decision || (record.status === ENTITLEMENT_APPROVED ? "full" : "")
+    );
+    setReason(record.managementComment || "");
+    setInvoice(null);
+    setConfirmed(true);
     setDraft({
       ...emptyDraft(kind),
       requestDate: record.requestDate,
@@ -666,10 +813,13 @@ export default function EntitlementTab({
       assistanceType: record.assistanceType || "",
       amount: String(record.amount || ""),
       reason: record.reason || "",
+      insurance: String(record.invoice?.insuranceCovered || ""),
     });
     setPayment({
       ...emptyPayment(),
-      approved: String(record.amount || ""),
+      approved: String(record.approvedAmount ?? record.amount ?? ""),
+      approvedDays: String(record.approvedDays ?? ""),
+      approvedHours: String(record.approvedHours ?? ""),
       method: record.method || "",
       bankAccount: record.bankAccount || "",
       paymentDate: record.paymentDate || todayIso(),
@@ -925,7 +1075,7 @@ export default function EntitlementTab({
           <div className="relative">
             <Settled id="ent-request-no" label="Request No." value={requestNo} />
             {attachedName && (
-              <p className="absolute start-0 top-full mt-1 text-xs text-record-link underline">
+              <p className="absolute start-0 top-full mt-1 text-xs text-record-link">
                 {attachedName}
               </p>
             )}
@@ -1022,10 +1172,9 @@ export default function EntitlementTab({
             />
             <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
               <FieldLabel htmlFor="ent-payment-date">Payment Date</FieldLabel>
-              <Input
+              <DateField
                 required
                 id="ent-payment-date"
-                type="date"
                 value={payment.paymentDate}
                 onChange={(e) => setPay("paymentDate", e.target.value)}
               />
@@ -1123,6 +1272,101 @@ export default function EntitlementTab({
     </>
   );
 
+  // What a partial approval grants, in the unit the request was made in -
+  // typed on the decision, read on the payment.
+  const grantField = (
+    amending && approvedDays !== null ? (
+      <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
+        <FieldLabel htmlFor="ent-approved-days" required>
+          Approved Days
+        </FieldLabel>
+        <Input
+          id="ent-approved-days"
+          inputMode="numeric"
+          value={payment.approvedDays}
+          onChange={(e) =>
+            setPay("approvedDays", e.target.value.replace(/\D/g, ""))
+          }
+          placeholder="0"
+          className={cn(!grantIsSound && "border-destructive")}
+        />
+        {!grantIsSound && (
+          <p role="alert" className="text-xs font-semibold text-destructive">
+            {"Between 1 and " + days + " days"}
+          </p>
+        )}
+      </div>
+    ) : amending && approvedHours !== null ? (
+      <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
+        <FieldLabel htmlFor="ent-approved-hours" required>
+          Approved Overtime Hours
+        </FieldLabel>
+        <Input
+          id="ent-approved-hours"
+          inputMode="decimal"
+          value={payment.approvedHours}
+          onChange={(e) =>
+            setPay("approvedHours", e.target.value.replace(/[^\d.]/g, ""))
+          }
+          placeholder="0"
+          className={cn(!grantIsSound && "border-destructive")}
+        />
+        {!grantIsSound && (
+          <p role="alert" className="text-xs font-semibold text-destructive">
+            {"Between 0 and " + workedHours + " hours"}
+          </p>
+        )}
+      </div>
+    ) : amending ? (
+      <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
+        <FieldLabel htmlFor="ent-approved" required>
+          Approved Amount (OMR)
+        </FieldLabel>
+        <Input
+          id="ent-approved"
+          inputMode="decimal"
+          value={payment.approved}
+          onChange={(e) =>
+            setPay("approved", e.target.value.replace(/[^\d.]/g, ""))
+          }
+          placeholder="0.000"
+          className={cn(!grantIsSound && "border-destructive")}
+        />
+      </div>
+    ) : null
+  );
+
+  // The stages of a request: the invoice first where there is one, then
+  // the request, management's decision and the financial department.
+  const sheetSteps = sheet
+    ? [
+        ...(invoiceKind
+          ? [{ key: "invoice", title: "Invoice Upload", note: "AI reads and checks the invoice", done: Boolean(shownInvoice) }]
+          : []),
+        {
+          key: "request",
+          title: invoiceKind ? "Review & Submit" : sheet.title,
+          note: invoiceKind ? "Confirm the extracted details" : sheet.note,
+          done: Boolean(open),
+          disabled: invoiceKind && !shownInvoice,
+        },
+        {
+          key: "decision",
+          title: sheet.decisionTitle,
+          note: "Review and approve",
+          done: awaiting || settled || refused,
+          disabled: !open,
+        },
+        {
+          key: "finance",
+          title: "Financial Department Actions",
+          note: "Disbursement and transfer",
+          done: settled,
+          disabled: !open || !(awaiting || settled),
+        },
+      ]
+    : [];
+
   const form = (
     <div className="space-y-6">
       {sheet ? (
@@ -1139,9 +1383,13 @@ export default function EntitlementTab({
             <div className="min-w-0">
               <DialogTitle className="text-2xl font-bold text-primary">{sheet.title}</DialogTitle>
               <DialogDescription className="text-sm text-primary/75">
-                {stage === "decision"
-                  ? "Review the request and record your decision."
-                  : sheet.intro}
+                {stage === "invoice"
+                  ? "Upload the invoice - the AI reads it and fills in the request."
+                  : stage === "decision"
+                    ? "Review the request and record your decision."
+                    : stage === "finance"
+                      ? "Review the management decision and process the payment."
+                      : sheet.intro}
               </DialogDescription>
             </div>
             <div className="ms-auto flex flex-wrap items-center gap-3 pt-2 text-sm text-primary">
@@ -1149,11 +1397,20 @@ export default function EntitlementTab({
               <span aria-hidden="true" className="h-5 w-px bg-container-border" />
               <span>{employee?.name || ""}</span>
               <span aria-hidden="true" className="h-5 w-px bg-container-border" />
-              <span>{longDate(draft.requestDate)}</span>
-              <span aria-hidden="true" className="h-5 w-px bg-container-border" />
-              <span className="rounded-md bg-primary/10 px-3 py-1.5 text-base font-bold text-primary">
-                {shortRequestNo(requestNo, draft.requestDate)}
-              </span>
+              {/* On the step that pays, the head says where the money goes -
+                  the employee's bank and account - in place of the date and
+                  the number, as the finance design draws it. */}
+              {stage === "finance" ? (
+                <PayeeFacts employee={employee} />
+              ) : (
+                <>
+                  <span>{longDate(draft.requestDate)}</span>
+                  <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+                  <span className="rounded-md bg-primary/10 px-3 py-1.5 text-base font-bold text-primary">
+                    {shortRequestNo(requestNo, draft.requestDate)}
+                  </span>
+                </>
+              )}
             </div>
             <DialogClose className="absolute end-5 top-5 rounded-md p-1 text-primary transition-colors hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <X className="size-7" aria-hidden="true" />
@@ -1161,25 +1418,7 @@ export default function EntitlementTab({
             </DialogClose>
           </div>
 
-          <AdvanceSteps
-            active={stage}
-            onChange={setStage}
-            steps={[
-              {
-                key: "request",
-                title: sheet.title,
-                note: sheet.note,
-                done: Boolean(open),
-              },
-              {
-                key: "decision",
-                title: sheet.decisionTitle,
-                note: sheet.decisionNote,
-                done: settled || refused,
-                disabled: !canSubmit,
-              },
-            ]}
-          />
+          <AdvanceSteps active={stage} onChange={setStage} steps={sheetSteps} />
         </>
       ) : (
       <RequestSteps
@@ -1209,10 +1448,56 @@ export default function EntitlementTab({
       />
       )}
 
-      {stage === "decision" && assisting ? (
+      {stage === "invoice" && sheet ? (
+        <InvoiceIntake
+          invoice={shownInvoice}
+          risk={risk}
+          analyzing={analyzing}
+          onPick={pickInvoice}
+          onClear={open ? undefined : () => setInvoice(null)}
+        />
+      ) : stage === "decision" && assisting ? (
         assistanceDecision
-      ) : stage === "decision" ? (
+      ) : stage === "decision" || stage === "finance" ? (
         <>
+          {/* What the invoice says and what the AI found, before anything is
+              decided - a duplicate or a repeated claim is read first. */}
+          {stage === "decision" && shownInvoice && (
+            <InvoiceAnalysis invoice={shownInvoice} risk={risk} title="Invoice Analysis" />
+          )}
+
+          {/* What the financial department pays out against, on one row. */}
+          {stage === "finance" && (
+            <section className="space-y-3 rounded-xl border bg-blue-50/30 p-4 sm:p-5">
+              <h3 className={HEADING}>Request Summary</h3>
+              <dl className="grid gap-4 rounded-lg bg-white px-4 py-3 *:min-w-0 sm:grid-cols-2 lg:grid-cols-[auto_auto_minmax(0,1fr)_auto] lg:gap-x-0 lg:divide-x lg:divide-container-border lg:[&>*:not(:first-child)]:ps-6 lg:[&>*:not(:last-child)]:pe-6">
+                <div className="flex flex-col gap-1">
+                  <dt className="whitespace-nowrap text-sm text-primary">Requested Amount</dt>
+                  <dd className="mt-auto whitespace-nowrap text-xl font-bold text-red-600">
+                    {amountValue(amount)} <span className="text-sm font-normal text-primary/75">OMR</span>
+                  </dd>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <dt className="whitespace-nowrap text-sm text-primary">Approved Amount</dt>
+                  <dd className="mt-auto w-fit whitespace-nowrap rounded-md bg-green-50 px-3 py-1 text-xl font-bold text-green-700">
+                    {amountValue(approvedAmount)} <span className="text-sm font-normal text-primary/75">OMR</span>
+                  </dd>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <dt className="text-sm text-primary">Management Comment</dt>
+                  <dd className="mt-auto rounded-md border bg-blue-50/40 px-3 py-2 text-sm text-primary">
+                    {reason || open?.managementComment || "No comment."}
+                  </dd>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <dt className="whitespace-nowrap text-sm text-primary">Decision Date</dt>
+                  <dd className="mt-auto whitespace-nowrap pt-1 text-base font-bold text-primary">
+                    {formatDate(decidedOn)}
+                  </dd>
+                </div>
+              </dl>
+            </section>
+          )}
           {/* The request is not read back here. What it was for is on
               the stage behind this one, and the four facts a decision
               actually needs - who, when, what kind, which account - are
@@ -1223,10 +1508,12 @@ export default function EntitlementTab({
               decided - "approve the leave encashment", not "approve" - so the
               three cards cannot be told apart only by their colour. Built
               from the tab's own label rather than written out nine times. */}
+          {stage === "decision" && (
+          <>
           <DecisionChoice
             value={decision}
             onChange={setDecision}
-            disabled={!canDecide || settled || refused}
+            disabled={!canDecide || settled || refused || awaiting}
             offers={["full", "partial", "completion", "rejected"]}
             notes={
               mode === "hours"
@@ -1249,20 +1536,23 @@ export default function EntitlementTab({
           >
             {medicalLayout && decisionFields}
           </DecisionChoice>
+          {/* A partial approval names what it grants, beside the answer. */}
+          {!medicalLayout && amending && <div className="form-grid">{grantField}</div>}
+          </>
+          )}
 
 
           {/* Where the case stands now. Only a trip made for a case has a
               file to bring up to date, and only an approved one gets it. */}
-          {courtLinked && decision && !refusing && (
+          {courtLinked && stage === "finance" && (
             <div className="space-y-4">
               <h3 className={HEADING}>File Update</h3>
               <div className="form-grid">
                 <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
                   <FieldLabel htmlFor="ent-update-date">Update Date</FieldLabel>
-                  <Input
+                  <DateField
                     required
                     id="ent-update-date"
-                    type="date"
                     value={payment.updateDate}
                     onChange={(e) => setPay("updateDate", e.target.value)}
                     disabled={settled}
@@ -1290,8 +1580,9 @@ export default function EntitlementTab({
               system settles it in: where it is booked and when it goes, then
               how much goes and by what route. No heading over it - it is what
               the answer above it carries out. */}
-          {decision && !refusing && !returning && (
+          {stage === "finance" && (
             <div className="space-y-4 sm:space-y-6">
+              <h3 className={HEADING}>Financial Department Actions</h3>
               <div className="form-grid">
                 <Settled
                   id="ent-type"
@@ -1309,9 +1600,8 @@ export default function EntitlementTab({
                   <FieldLabel htmlFor="ent-payment-date" required>
                     Payment Date
                   </FieldLabel>
-                  <Input
+                  <DateField
                     id="ent-payment-date"
-                    type="date"
                     value={payment.paymentDate}
                     onChange={(e) => setPay("paymentDate", e.target.value)}
                   />
@@ -1319,76 +1609,14 @@ export default function EntitlementTab({
               </div>
 
               <div className="form-grid">
-                {/* What is being granted. A full approval grants what was
-                    asked for and has nothing to type; a partial one cuts it,
-                    and cuts it in whatever the request is counted in - days
-                    off a balance, hours worked, or a sum. */}
-                {amending && approvedDays !== null ? (
-                  <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
-                    <FieldLabel htmlFor="ent-approved-days" required>
-                      Approved Days
-                    </FieldLabel>
-                    <Input
-                      id="ent-approved-days"
-                      inputMode="numeric"
-                      value={payment.approvedDays}
-                      onChange={(e) =>
-                        setPay("approvedDays", e.target.value.replace(/\D/g, ""))
-                      }
-                      placeholder="0"
-                      className={cn(!grantIsSound && "border-destructive")}
-                    />
-                    {!grantIsSound && (
-                      <p role="alert" className="text-xs font-semibold text-destructive">
-                        {"Between 1 and " + days + " days"}
-                      </p>
-                    )}
-                  </div>
-                ) : amending && approvedHours !== null ? (
-                  <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
-                    <FieldLabel htmlFor="ent-approved-hours" required>
-                      Approved Overtime Hours
-                    </FieldLabel>
-                    <Input
-                      id="ent-approved-hours"
-                      inputMode="decimal"
-                      value={payment.approvedHours}
-                      onChange={(e) =>
-                        setPay("approvedHours", e.target.value.replace(/[^\d.]/g, ""))
-                      }
-                      placeholder="0"
-                      className={cn(!grantIsSound && "border-destructive")}
-                    />
-                    {!grantIsSound && (
-                      <p role="alert" className="text-xs font-semibold text-destructive">
-                        {"Between 0 and " + workedHours + " hours"}
-                      </p>
-                    )}
-                  </div>
-                ) : amending ? (
-                  <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
-                    <FieldLabel htmlFor="ent-approved" required>
-                      Approved Amount (OMR)
-                    </FieldLabel>
-                    <Input
-                      id="ent-approved"
-                      inputMode="decimal"
-                      value={payment.approved}
-                      onChange={(e) =>
-                        setPay("approved", e.target.value.replace(/[^\d.]/g, ""))
-                      }
-                      placeholder="0.000"
-                      className={cn(!grantIsSound && "border-destructive")}
-                    />
-                  </div>
-                ) : (
-                  <Settled
-                    id="ent-approved"
-                    label="Approved Amount (OMR)"
-                    value={amountValue(approvedAmount)}
-                    payable
-                  />
-                )}
+                {/* What was granted, as management decided it - read here,
+                    not changed: the financial department pays it. */}
+                <Settled
+                  id="ent-approved"
+                  label="Approved Amount (OMR)"
+                  value={amountValue(approvedAmount)}
+                  payable
+                />
 
                 <Choice
                   id="ent-method"
@@ -1453,7 +1681,7 @@ export default function EntitlementTab({
           {/* Directly below what the approval settles, and never required:
               a decision is made by the answer above it, and holding one back
               for want of a sentence only stops the work. */}
-          {decision && (
+          {stage === "decision" && decision && !medicalLayout && (
             <div className="relative space-y-2 pb-5">
               <FieldLabel htmlFor="ent-comment">
                 {returning
@@ -1468,7 +1696,7 @@ export default function EntitlementTab({
                 maxLength={NOTES_LIMIT}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                disabled={!canDecide || settled || refused}
+                disabled={!canDecide || settled || refused || awaiting}
                 placeholder={
                   returning
                     ? "Say what the employee still has to supply"
@@ -1702,6 +1930,12 @@ export default function EntitlementTab({
           </div>
         </section>
       ) : sheet?.shared ? (
+        <>
+        {/* Made on an invoice: what the AI read, to be checked and
+            confirmed - nothing is typed again. */}
+        {invoiceKind && shownInvoice && (
+          <InvoiceAnalysis invoice={shownInvoice} risk={risk} title="Review the extracted details" />
+        )}
         <SheetCard title={label + " Request Details"}>
           {/* General or for a case. The choice decides what else is asked,
               so it comes first and the fields follow it. */}
@@ -1748,13 +1982,12 @@ export default function EntitlementTab({
           {/* Each field sits in a cell of its own - the form's fields bring
               their twelve-column spans, which mean nothing outside that grid. */}
           <div className="grid items-start gap-4 md:grid-cols-3">
-            {ownDate && (
+            {ownDate && !invoiceKind && (
               <div>
                 <Field id="ent-request-date" label="Request Date" required>
-                  <Input
+                  <DateField
                     required
                     id="ent-request-date"
-                    type="date"
                     value={draft.requestDate}
                     max={todayIso()}
                     onChange={(e) => set("requestDate", e.target.value)}
@@ -1777,10 +2010,9 @@ export default function EntitlementTab({
                 </div>
                 <div>
                   <Field id="ent-travel-date" label="Travel Date" required>
-                    <Input
+                    <DateField
                       required
                       id="ent-travel-date"
-                      type="date"
                       value={draft.travelDate}
                       max={todayIso()}
                       onChange={(e) => set("travelDate", e.target.value)}
@@ -1789,6 +2021,36 @@ export default function EntitlementTab({
                 </div>
               </>
             )}
+            {invoiceKind && shownInvoice ? (
+              <>
+                {/* A medical claim is what insurance did not pay. */}
+                {kind === "medical" && (
+                  <div>
+                    <Field id="ent-insurance" label="Insurance Covered Amount (OMR)">
+                      <Input
+                        id="ent-insurance"
+                        inputMode="decimal"
+                        value={draft.insurance}
+                        onChange={(e) => set("insurance", e.target.value.replace(/[^\d.]/g, ""))}
+                        placeholder="0.000"
+                        disabled={Boolean(open)}
+                      />
+                    </Field>
+                  </div>
+                )}
+                <div>
+                  <Field id="ent-amount" label="Requested Amount (OMR)">
+                    <Input
+                      id="ent-amount"
+                      readOnly
+                      tabIndex={-1}
+                      value={amountValue(amount)}
+                      className="cursor-default bg-locked font-semibold text-primary"
+                    />
+                  </Field>
+                </div>
+              </>
+            ) : (
             <div>
               <Field id="ent-amount" label="Requested Amount (OMR)" required>
                 <div className="flex items-end gap-3">
@@ -1811,6 +2073,7 @@ export default function EntitlementTab({
                 </div>
               </Field>
             </div>
+            )}
           </div>
           {(receipt || attachedName) && (
             <p className="flex items-center gap-1.5 text-sm text-primary">
@@ -1836,7 +2099,21 @@ export default function EntitlementTab({
               {draft.reason.length}/{notesLimit}
             </p>
           </Field>
+
+          {/* The employee says the reading is right before it is sent. */}
+          {invoiceKind && !open && (
+            <label className="flex items-start gap-3 rounded-lg border bg-blue-50/40 px-4 py-3 text-sm text-primary">
+              <input
+                type="checkbox"
+                className="mt-0.5 size-4 accent-[var(--primary)]"
+                checked={confirmed}
+                onChange={(e) => setConfirmed(e.target.checked)}
+              />
+              I have reviewed the details read from the invoice and confirm they are accurate.
+            </label>
+          )}
         </SheetCard>
+        </>
       ) : (
         <>
           {/* Who is asking, and under what number. None of it is asked for:
@@ -1893,7 +2170,7 @@ export default function EntitlementTab({
                   )}
                   {/* Hung below the box, so the row's boxes stay in line. */}
                   {assisting && (receipt || attachedName) && (
-                    <p className="absolute start-0 top-full mt-1 text-xs text-record-link underline">
+                    <p className="absolute start-0 top-full mt-1 text-xs text-record-link">
                       {receipt?.name || attachedName}
                     </p>
                   )}
@@ -1902,10 +2179,9 @@ export default function EntitlementTab({
               {ownDate ? (
                 <div className="form-field span-3 flex h-full flex-col justify-end gap-2">
                   <FieldLabel htmlFor="ent-request-date">Request Date</FieldLabel>
-                  <Input
+                  <DateField
                     required
                     id="ent-request-date"
-                    type="date"
                     value={draft.requestDate}
                     max={todayIso()}
                     onChange={(e) => set("requestDate", e.target.value)}
@@ -2158,10 +2434,9 @@ export default function EntitlementTab({
                     </div>
                     <div className="form-field flex h-full flex-col justify-end gap-2">
                       <FieldLabel htmlFor="ent-travel-date">Travel Date</FieldLabel>
-                      <Input
+                      <DateField
                         required
                         id="ent-travel-date"
-                        type="date"
                         value={draft.travelDate}
                         max={todayIso()}
                         onChange={(e) => set("travelDate", e.target.value)}
@@ -2225,7 +2500,24 @@ export default function EntitlementTab({
 
       {/* Assistance keeps its history at the foot of both stages, beside a
           plain Cancel and Save. */}
-      {sheet && stage !== "decision" ? (
+      {sheet && stage === "invoice" ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-6">
+          <HistoryCard onClick={() => setShowHistory(true)} />
+          <div className="ms-auto flex flex-wrap gap-3">
+            <Button type="button" variant="outline" className="min-w-36" onClick={close}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="min-w-48"
+              disabled={!shownInvoice || analyzing}
+              onClick={() => setStage("request")}
+            >
+              Continue to Review
+            </Button>
+          </div>
+        </div>
+      ) : sheet && stage === "request" ? (
         <div className="flex flex-wrap items-center justify-between gap-3 pt-6">
           {sheet.shared && <HistoryCard onClick={() => setShowHistory(true)} />}
           <div className="ms-auto flex flex-wrap gap-3">
@@ -2242,7 +2534,7 @@ export default function EntitlementTab({
           <button
             type="button"
             onClick={() => setShowHistory(true)}
-            className="flex items-center gap-2 rounded font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-ring"
+            className="flex items-center gap-2 rounded font-medium text-primary hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <History className="h-5 w-5" />
             History
@@ -2273,45 +2565,49 @@ export default function EntitlementTab({
           </div>
         </div>
       ) : (
-      <div className="flex flex-wrap justify-end gap-2 pt-6">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={stage === "decision" ? () => setStage("request") : close}
-        >
-          Back
-        </Button>
-        {stage === "decision" ? (
-          refusing ? (
-            !refused && (
+      // Management decides, then the financial department pays: each stage
+      // has its own button, and nothing on it once its part is done.
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-6">
+        <HistoryCard onClick={() => setShowHistory(true)} />
+        <div className="ms-auto flex flex-wrap gap-3">
+          <Button type="button" variant="outline" className="min-w-36" onClick={close}>
+            Cancel
+          </Button>
+          {stage === "decision" &&
+            canDecide &&
+            !settled &&
+            !refused &&
+            !awaiting &&
+            (refusing ? (
               <Button
                 type="button"
                 variant={returning ? "outline" : "destructive"}
                 className={cn(
-                  returning &&
-                    "border-frame-alt text-frame-alt hover:bg-decision-partial/40"
+                  "min-w-48",
+                  returning && "border-frame-alt text-frame-alt hover:bg-decision-partial/40"
                 )}
                 onClick={reject}
                 disabled={!reason.trim()}
               >
-                <Save className="me-2 h-4 w-4" />
                 {returning ? "Return to Employee" : "Confirm Rejection"}
               </Button>
-            )
-          ) : (
-            !settled && (
-              <Button type="button" onClick={disburse}>
-                <Save className="me-2 h-4 w-4" />
-                Approve &amp; Pay
+            ) : (
+              <Button
+                type="button"
+                className="min-w-48"
+                onClick={confirmDecision}
+                disabled={!decision || !grantIsSound}
+              >
+                Confirm Decision
               </Button>
-            )
-          )
-        ) : (
-          <Button type="button" onClick={submit}>
-            <Save className="me-2 h-4 w-4" />
-            Save
-          </Button>
-        )}
+            ))}
+          {stage === "finance" && canDecide && !settled && (
+            <Button type="button" className="min-w-48" onClick={disburse} disabled={!canDisburse}>
+              <Send className="me-2 size-4" aria-hidden="true" />
+              Process Payment
+            </Button>
+          )}
+        </div>
       </div>
       )}
     </div>

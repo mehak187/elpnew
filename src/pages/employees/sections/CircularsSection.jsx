@@ -144,8 +144,7 @@ export default function EmployeeCircularsSection({ employee, self = false }) {
           <Button
             variant="outline"
             size="icon"
-            className="h-[42px] w-[42px] [&_svg]:size-6"
-            className="shrink-0"
+            className="h-[42px] w-[42px] shrink-0 [&_svg]:size-6"
             title="Export to CSV"
             onClick={exportCirculars}
           >

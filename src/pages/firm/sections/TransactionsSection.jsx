@@ -33,6 +33,7 @@ import {
 import { checkRequired } from "@/components/shared/formFields";
 
 
+import DateField from "@/components/shared/DateField";
 // An outgoing payment and an office expense both leave the account, so they
 // are recorded the same way and only differ by the kind stamped on the row.
 const RECORD_MODES = [
@@ -304,10 +305,9 @@ export default function TransactionsSection({
 
               <div className="form-field space-y-2">
                 <Label htmlFor="txDate">Date</Label>
-                <Input
+                <DateField
                   required
                   id="txDate"
-                  type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                 />

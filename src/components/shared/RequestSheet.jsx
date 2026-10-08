@@ -1,4 +1,5 @@
-import { ChevronRight, CloudUpload, History, X } from "lucide-react";
+import { useState } from "react";
+import { Check, ChevronRight, CloudUpload, Copy, History, X } from "lucide-react";
 import {
   DialogClose,
   DialogDescription,
@@ -28,7 +29,7 @@ export function shortRequestNo(requestNo, on) {
  * its number - the close button beyond them. It titles the dialog it sits in,
  * so the dialog needs no header of its own.
  */
-export function SheetHead({ icon, title, intro, employee, date, requestNo }) {
+export function SheetHead({ icon, title, intro, employee, date, requestNo, paying }) {
   const Icon = icon;
   return (
     <div className="flex flex-wrap items-start gap-4 pe-16">
@@ -47,17 +48,68 @@ export function SheetHead({ icon, title, intro, employee, date, requestNo }) {
         <span aria-hidden="true" className="h-5 w-px bg-container-border" />
         <span>{employee?.name || ""}</span>
         <span aria-hidden="true" className="h-5 w-px bg-container-border" />
-        <span>{longDate(date)}</span>
-        <span aria-hidden="true" className="h-5 w-px bg-container-border" />
-        <span className="rounded-md bg-primary/10 px-3 py-1.5 text-base font-bold text-primary">
-          {shortRequestNo(requestNo, date)}
-        </span>
+        {paying ? (
+          <PayeeFacts employee={employee} />
+        ) : (
+          <>
+            <span>{longDate(date)}</span>
+            <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+            <span className="rounded-md bg-primary/10 px-3 py-1.5 text-base font-bold text-primary">
+              {shortRequestNo(requestNo, date)}
+            </span>
+          </>
+        )}
       </div>
       <DialogClose className="absolute end-5 top-5 rounded-md p-1 text-primary transition-colors hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
         <X className="size-7" aria-hidden="true" />
         <span className="sr-only">Close</span>
       </DialogClose>
     </div>
+  );
+}
+
+/**
+ * Where the money goes, as the head of a payment step reads it: "Bank: Bank
+ * Muscat | Account No: 0312…". Read off the employee's record so the
+ * accountant never has to look it up, and the account can be copied straight
+ * into the bank's own screen.
+ */
+export function PayeeFacts({ employee }) {
+  const [copied, setCopied] = useState(false);
+  const account = employee?.accountNumber || "";
+  return (
+    <>
+      <span>
+        Bank: <span className="font-bold">{employee?.bankName || "-"}</span>
+      </span>
+      <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+      <span className="flex items-center gap-1.5">
+        Account No: <span className="font-bold">{account || "-"}</span>
+        {account && (
+          <button
+            type="button"
+            onClick={() =>
+              navigator.clipboard?.writeText(account.replace(/\s/g, "")).then(
+                () => {
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
+                },
+                () => {}
+              )
+            }
+            className="rounded p-0.5 text-primary/60 hover:bg-menu-hover hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            title={copied ? "Copied" : "Copy account number"}
+          >
+            {copied ? (
+              <Check className="size-3.5 text-green-600" aria-hidden="true" />
+            ) : (
+              <Copy className="size-3.5" aria-hidden="true" />
+            )}
+            <span className="sr-only">{copied ? "Copied" : "Copy account number"}</span>
+          </button>
+        )}
+      </span>
+    </>
   );
 }
 

@@ -18,6 +18,7 @@ import { Hammer, ArrowLeft, Save, Plus } from "lucide-react";
 import { Rial } from "@/components/shared/Rial";
 import { withRial } from "@/lib/money";
 
+import DateField from "@/components/shared/DateField";
 const executionActions = [
   { id: 1, date: "2024-12-05", action: "Execution Order Filed", status: "Completed", amount: "15,000.000", notes: "Filed with execution court" },
   { id: 2, date: "2024-12-10", action: "Bank Account Freeze", status: "In Progress", amount: "-", notes: "Awaiting bank response" },
@@ -166,10 +167,9 @@ export default function Execution() {
               <div className="form-grid">
                 <div className="form-field space-y-2">
                   <Label htmlFor="date">Date</Label>
-                  <Input
+                  <DateField
                     id="date"
                     name="date"
-                    type="date"
                     value={formData.date}
                     onChange={handleChange}
                     required

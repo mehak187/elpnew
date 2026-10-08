@@ -35,6 +35,8 @@ export const LOAN_PENDING = "Pending";
 export const LOAN_APPROVED = "Approved";
 export const LOAN_REJECTED = "Rejected";
 export const LOAN_CANCELLED = "Cancelled";
+/** Handed back to the employee to complete; it waits on them, not on management. */
+export const LOAN_RETURNED = "Returned";
 
 /**
  * How management answered a request.
@@ -49,6 +51,7 @@ export const LOAN_PARTIAL_APPROVAL = "Partial Approval";
 export const LOAN_DECISION_STATUS = {
   full: LOAN_FULL_APPROVAL,
   partial: LOAN_PARTIAL_APPROVAL,
+  completion: LOAN_RETURNED,
   rejected: LOAN_REJECTED,
 };
 
@@ -58,6 +61,7 @@ export const LOAN_STATUS_TONE = {
   [LOAN_FULL_APPROVAL]: "text-green-700",
   [LOAN_PARTIAL_APPROVAL]: "text-blue-700",
   [LOAN_REJECTED]: "text-destructive",
+  [LOAN_RETURNED]: "text-orange-600",
   [LOAN_CANCELLED]: "text-muted-foreground",
 };
 
@@ -68,6 +72,7 @@ export const LOAN_STATUS_CHIP = {
   [LOAN_FULL_APPROVAL]: "bg-green-100 text-green-800",
   [LOAN_PARTIAL_APPROVAL]: "bg-blue-100 text-blue-800",
   [LOAN_REJECTED]: "bg-red-100 text-red-800",
+  [LOAN_RETURNED]: "bg-orange-100 text-orange-800",
   [LOAN_CANCELLED]: "bg-muted text-muted-foreground",
 };
 
@@ -105,7 +110,7 @@ export const outstandingTotal = (records) =>
 
 /** The request still waiting for a decision, if there is one. */
 export const pendingRequest = (records) =>
-  records.find((record) => record.status === LOAN_PENDING) || null;
+  records.find((record) => record.status === LOAN_PENDING || record.status === LOAN_RETURNED) || null;
 
 /**
  * Which of the two categories a new request falls under.

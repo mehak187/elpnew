@@ -14,6 +14,7 @@ import {
 import { useFirm } from "@/lib/firm/context";
 import { daysUntil, EXPIRY_WARNING_DAYS } from "../firmData";
 
+import DateField from "@/components/shared/DateField";
 /**
  * What the company is, on paper.
  *
@@ -110,9 +111,8 @@ export default function FirmInformationSection({ canEdit }) {
 
       <div className="space-y-2">
         <Label htmlFor="crExpiryDate">CR Expiry Date</Label>
-        <Input
+        <DateField
           id="crExpiryDate"
-          type="date"
           value={firmInfo.crExpiryDate}
           onChange={set("crExpiryDate")}
         />

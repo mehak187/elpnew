@@ -47,6 +47,10 @@ export default function DateField({
   value = "",
   onChange,
   className,
+  min,
+  max,
+  disabled,
+  readOnly,
   ...props
 }) {
   const pickerRef = useRef(null);
@@ -81,6 +85,8 @@ export default function DateField({
           if (iso || next === "") report(iso);
         }}
         onBlur={() => setTyping(null)}
+        disabled={disabled}
+        readOnly={readOnly}
         className="pe-10"
         {...props}
       />
@@ -89,8 +95,9 @@ export default function DateField({
         type="button"
         tabIndex={-1}
         aria-hidden="true"
+        disabled={disabled || readOnly}
         onClick={() => pickerRef.current?.showPicker?.()}
-        className="absolute end-3 top-1/2 -translate-y-1/2 text-menu-icon transition-colors hover:text-primary"
+        className="absolute end-3 top-1/2 -translate-y-1/2 text-menu-icon transition-colors hover:text-primary disabled:pointer-events-none disabled:opacity-50"
       >
         <CalendarDays strokeWidth={1.5} className="size-[18px]" />
       </button>
@@ -101,6 +108,9 @@ export default function DateField({
         tabIndex={-1}
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 h-0 w-0 opacity-0"
+        // The limits live on the picker: a typed text field has none.
+        min={min}
+        max={max}
         value={value || ""}
         onChange={(e) => {
           setTyping(null);

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PayeeFacts } from "@/components/shared/RequestSheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -68,7 +69,6 @@ import {
   ADVANCE_STATUS_CHIP,
   ADVANCE_STATUS_TONE,
   advanceStatusOf,
-  DECISION_STATUS,
   DISBURSEMENT_CATEGORIES,
   DISBURSEMENT_SUBCATEGORIES,
   DISBURSEMENT_TYPES,
@@ -537,11 +537,20 @@ export function AdvanceSalaryForm({
           <span aria-hidden="true" className="h-5 w-px bg-container-border" />
           <span>{employee?.name || ""}</span>
           <span aria-hidden="true" className="h-5 w-px bg-container-border" />
-          <span>{longDate(requestedOn)}</span>
-          <span aria-hidden="true" className="h-5 w-px bg-container-border" />
-          <span className="rounded-md bg-primary/10 px-3 py-1.5 text-base font-bold text-primary">
-            {shortRequestNo(requestNo)}
-          </span>
+          {/* On the step that pays, the head says where the money goes -
+              the employee's bank and account - in place of the date and
+              the number, as the finance design draws it. */}
+          {stage === "finance" ? (
+            <PayeeFacts employee={employee} />
+          ) : (
+            <>
+              <span>{longDate(requestedOn)}</span>
+              <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+              <span className="rounded-md bg-primary/10 px-3 py-1.5 text-base font-bold text-primary">
+                {shortRequestNo(requestNo)}
+              </span>
+            </>
+          )}
         </div>
         {/* The window's own close, at the size the design draws it. */}
         <DialogClose className="absolute end-5 top-5 rounded-md p-1 text-primary transition-colors hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
@@ -907,27 +916,54 @@ export function AdvanceSalaryForm({
               </span>
               Request Summary
             </h3>
-            <dl className="grid gap-4 lg:gap-x-0 *:min-w-0 rounded-lg bg-white px-4 py-3 sm:grid-cols-2 lg:grid-cols-5 lg:divide-x lg:divide-container-border lg:[&>*:not(:first-child)]:ps-6 lg:[&>*:not(:last-child)]:pe-6">
+            {stage === "finance" ? (
+              // What the financial department pays out against, on one row:
+              // what was asked, what was granted, management's word on it,
+              // and the salary it comes out of.
+              <dl className="grid gap-4 rounded-lg bg-white px-4 py-3 *:min-w-0 sm:grid-cols-2 lg:grid-cols-[auto_auto_minmax(0,1fr)_auto] lg:gap-x-0 lg:divide-x lg:divide-container-border lg:[&>*:not(:first-child)]:ps-6 lg:[&>*:not(:last-child)]:pe-6">
+                <div className="flex flex-col gap-1">
+                  <dt className="whitespace-nowrap text-sm text-primary">Advance Amount (Requested)</dt>
+                  <dd className="mt-auto whitespace-nowrap text-xl font-bold text-red-600">
+                    {amountValue(requested)}
+                    <Rial className="ms-2 text-sm font-normal text-primary/75" />
+                  </dd>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <dt className="whitespace-nowrap text-sm text-primary">Approved Amount</dt>
+                  <dd className="mt-auto w-fit whitespace-nowrap rounded-md bg-green-50 px-3 py-1 text-xl font-bold text-green-700">
+                    {amountValue(approvedAmount)}
+                    <Rial className="ms-2 text-sm font-normal text-primary/75" />
+                  </dd>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <dt className="text-sm text-primary">Comment</dt>
+                  <dd className="mt-auto rounded-md border bg-blue-50/40 px-3 py-2 text-sm text-primary">
+                    {openRequest?.managementComment || "No comment."}
+                  </dd>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <dt className="whitespace-nowrap text-sm text-primary">Deduct From Salary Of</dt>
+                  <dd className="mt-auto whitespace-nowrap pt-1 text-base font-bold text-primary">
+                    {deductedFrom(draft)}
+                  </dd>
+                </div>
+              </dl>
+            ) : (
+            <dl className="grid gap-4 lg:gap-x-0 *:min-w-0 rounded-lg bg-white px-4 py-3 sm:grid-cols-2 lg:grid-cols-[auto_auto_auto_minmax(0,1fr)_auto] lg:divide-x lg:divide-container-border lg:[&>*:not(:first-child)]:ps-6 lg:[&>*:not(:last-child)]:pe-6">
               {[
                 [draft.deductMonth + " " + draft.deductYear + " Salary", amountValue(net), "money"],
                 ["Advance Amount (Requested)", amountValue(requested), "held"],
-                [
-                  stage === "finance"
-                    ? "Remaining Salary After Approved Amount"
-                    : "Remaining Salary After Deduction",
-                  amountValue(afterDeduction),
-                  "money",
-                ],
+                ["Remaining Salary After Deduction", amountValue(afterDeduction), "money"],
                 ["Purpose", draft.purpose || "-"],
                 ["Deduct From Salary Of", deductedFrom(draft)],
               ].map(([label, value, kind]) => (
-                // A label that runs to two lines pushes nothing down: every
-                // figure sits on the same line at the foot of its column.
+                // Each label on one line, as the design asks; every figure
+                // sits at the foot of its column.
                 <div key={label} className="flex flex-col gap-1">
-                  <dt className="text-sm text-primary">{label}</dt>
+                  <dt className="text-sm text-primary lg:whitespace-nowrap">{label}</dt>
                   <dd
                     className={cn(
-                      "mt-auto font-bold",
+                      "mt-auto font-bold lg:whitespace-nowrap",
                       kind ? "text-xl" : "pt-1 text-sm",
                       kind === "held" ? "text-red-600" : "text-primary"
                     )}
@@ -938,7 +974,8 @@ export function AdvanceSalaryForm({
                 </div>
               ))}
             </dl>
-            {(draft.reason || attachedName) && (
+            )}
+            {stage !== "finance" && (draft.reason || attachedName) && (
               <div className="space-y-2 rounded-lg border bg-blue-50/50 px-4 py-3 text-sm">
                 <p className="font-semibold text-primary">Employee Remarks</p>
                 {draft.reason && (
@@ -1084,57 +1121,6 @@ export function AdvanceSalaryForm({
 
           {stage === "finance" && (
             <>
-              {/* Management's answer, as it was saved: read here, not
-                  changed - the financial department acts on it. */}
-              <section className="space-y-4 rounded-xl border bg-blue-50/30 p-4 sm:p-5">
-                <div className="flex flex-wrap items-center gap-3">
-                  <h3 className="flex items-center gap-3 text-xl font-bold text-primary">
-                    <MessageCircle className="size-6" strokeWidth={1.5} aria-hidden="true" />
-                    Management Comment
-                  </h3>
-                  <span className="flex items-center gap-1.5 rounded-md bg-green-50 px-3 py-1 text-sm font-semibold text-green-800">
-                    <CircleCheck className="size-4" aria-hidden="true" />
-                    Status: {DECISION_STATUS[openRequest?.decision] || "Approved"}
-                  </span>
-                  <div className="ms-auto flex flex-wrap items-center gap-4 text-sm text-primary">
-                    <span className="flex items-center gap-2">
-                      <CalendarDays className="size-4" aria-hidden="true" />
-                      Decision Date:
-                      <span className="font-semibold">
-                        {openRequest?.decidedOn ? longDate(openRequest.decidedOn) : "-"}
-                      </span>
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <User className="size-4" aria-hidden="true" />
-                      Approved By:
-                      <span className="font-semibold">{openRequest?.decidedBy || "-"}</span>
-                    </span>
-                  </div>
-                </div>
-                <div className="grid gap-4 rounded-lg bg-white px-4 py-3 *:min-w-0 md:grid-cols-[1fr_1fr_2fr] md:gap-x-0 md:divide-x md:divide-container-border md:[&>*:not(:first-child)]:ps-6 md:[&>*:not(:last-child)]:pe-6">
-                  <div className="space-y-1">
-                    <p className="text-sm text-primary">Approved Amount</p>
-                    <p className="w-fit rounded-md bg-green-50 px-3 py-1.5 text-xl font-bold text-green-700">
-                      {amountValue(approvedAmount)}
-                      <Rial className="ms-2 text-sm font-normal text-primary/75" />
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-primary">Remaining Salary After Approved Amount</p>
-                    <p className="py-1.5 text-xl font-bold text-primary">
-                      {amountValue(afterDeduction)}
-                      <Rial className="ms-2 text-sm font-normal text-primary/75" />
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-primary">Comment</p>
-                    <p className="rounded-md border bg-blue-50/40 px-3 py-2 text-sm text-primary">
-                      {openRequest?.managementComment || "No comment."}
-                    </p>
-                  </div>
-                </div>
-              </section>
-
               {/* What the financial department does with it: how it is
                   booked, when and how it goes out, and what traces it. */}
               <section className="space-y-4 rounded-xl border p-4 sm:p-5">

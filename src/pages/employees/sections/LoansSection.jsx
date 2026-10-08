@@ -1,6 +1,7 @@
 import {
   Fragment,
   useState } from "react";
+import { PayeeFacts, HistoryCard } from "@/components/shared/RequestSheet";
 import LoanLedger, { ExistingLoans } from "./LoanLedger";
 import { AdvanceSteps, longDate } from "./AdvanceSalarySection";
 import DateField from "@/components/shared/DateField";
@@ -65,6 +66,8 @@ import {
   LOAN_INCREASE,
   LOAN_PENDING,
   LOAN_REJECTED,
+  LOAN_RETURNED,
+  isApprovedLoan,
   LOAN_DECISION_STATUS,
   LOAN_STATUS_CHIP,
   loanCategoryFor,
@@ -205,6 +208,8 @@ export default function LoansSection({
   const [receipt, setReceipt] = useState(null);
 
   const [attachment, setAttachment] = useState(null);
+  // Everything borrowed before, open over the request.
+  const [showHistory, setShowHistory] = useState(false);
 
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
 
@@ -248,7 +253,9 @@ export default function LoansSection({
 
   const requestNo = openId
     ? records.find((record) => record.id === openId)?.requestNo || ""
-    : nextLoanNo(records);
+    : // Counted across the firm's loans, not only this person's, so two
+      // people's requests can never share a number.
+      nextLoanNo([...loanRecords, ...records]);
 
   // Only a partial approval may amend the terms; a full one grants what was
   // asked for, and a refusal grants nothing.
@@ -258,17 +265,24 @@ export default function LoansSection({
   const setPayoutField = (name, value) =>
     setPayout((prev) => ({ ...prev, [name]: value }));
   const refusing = decision === "rejected";
+  // Handed back to the employee to complete: nothing granted, nothing refused.
+  const returning = decision === "completion";
+  const openRecord = records.find((record) => record.id === openId) || null;
+  // Granted and waiting to be paid out, or paid out.
+  const granted = Boolean(openRecord) && isApprovedLoan(openRecord);
+  const paidOut = granted && Boolean(openRecord.disbursementDate);
+  // Management decides on the terms; the financial department then pays.
   const canConfirm =
+    Boolean(openId) &&
     Boolean(decision) &&
-    (refusing
+    canDecide &&
+    (refusing || returning
       ? Boolean(review.notes.trim())
       : num(review.approved) > 0 &&
         num(review.monthly) > 0 &&
-        review.startMonth &&
-        payout.method &&
-        payout.bankAccount &&
-        payout.paymentDate &&
-        payout.reference.trim());
+        // A full approval keeps the start the request already has.
+        Boolean(review.startMonth || (!amending && openRecord?.firstDue)));
+  const canPay = payout.method && payout.bankAccount && payout.paymentDate && payout.reference.trim();
 
   const canSave =
     !waiting &&
@@ -299,10 +313,11 @@ export default function LoansSection({
         status: LOAN_PENDING,
         loanAmount: requested,
         merged: isIncrease ? outstanding : 0,
-        // The office fills these in when it actually pays the loan out.
+        // The day is filled in when the loan is actually paid out; the bank
+        // and account are the employee's own, read off their record.
         disbursementDate: "",
-        bankName: "",
-        accountNumber: "",
+        bankName: employee?.bankName || "",
+        accountNumber: employee?.accountNumber || "",
         monthly: num(draft.monthly),
         firstDue: firstDate,
         payments: [],
@@ -326,8 +341,9 @@ export default function LoansSection({
    * request is left as it was asked for and marked refused.
    */
   const confirmDecision = () => {
-    if (!checkRequired() || !canConfirm || !decision || !openId) return;
+    if (!checkRequired() || !canConfirm) return;
     const amended = decision === "partial";
+    const grantedNow = !refusing && !returning;
     setRecords((prev) =>
       prev.map((record) =>
         record.id === openId
@@ -339,15 +355,31 @@ export default function LoansSection({
               startMonth: amended ? review.startMonth : record.startMonth,
               firstDue: amended ? monthEnd(review.startMonth) : record.firstDue,
               managementNotes: review.notes.trim(),
-              ...(refusing
-                ? {}
-                : {
-                    method: payout.method,
-                    bankAccount: payout.bankAccount,
-                    disbursementDate: payout.paymentDate,
-                    reference: payout.reference.trim(),
-                    receipt: receipt?.name || "",
-                  }),
+              decidedOn: new Date().toISOString().slice(0, 10),
+            }
+          : record
+      )
+    );
+    if (grantedNow) {
+      setStage("finance");
+      return;
+    }
+    closeAdd();
+  };
+
+  /** Paid out by the financial department: the loan starts running. */
+  const processPayout = () => {
+    if (!checkRequired() || !canPay || !granted || !canDecide) return;
+    setRecords((prev) =>
+      prev.map((record) =>
+        record.id === openId
+          ? {
+              ...record,
+              method: payout.method,
+              bankAccount: payout.bankAccount,
+              disbursementDate: payout.paymentDate,
+              reference: payout.reference.trim(),
+              receipt: receipt?.name || "",
             }
           : record
       )
@@ -364,13 +396,14 @@ export default function LoansSection({
     setReview({ approved: "", monthly: "", startMonth: "", notes: "" });
     setPayout({ method: "", bankAccount: "", paymentDate: "", reference: "" });
     setReceipt(null);
+    setShowHistory(false);
     onCloseAdd();
   };
 
   /** A request opened back off the list, to be followed or decided. */
   const track = (record) => {
     setOpenId(record.id);
-    setStage("decision");
+    setStage(isApprovedLoan(record) ? "finance" : "decision");
     setDecision(
       Object.keys(LOAN_DECISION_STATUS).find(
         (key) => LOAN_DECISION_STATUS[key] === record.status
@@ -461,11 +494,20 @@ export default function LoansSection({
               <span aria-hidden="true" className="h-5 w-px bg-container-border" />
               <span>{borrower}</span>
               <span aria-hidden="true" className="h-5 w-px bg-container-border" />
-              <span>{longDate(requestedOn)}</span>
-              <span aria-hidden="true" className="h-5 w-px bg-container-border" />
-              <span className="rounded-md bg-primary/10 px-3 py-1.5 text-base font-bold text-primary">
-                {shortLoanNo(requestNo, requestedOn)}
-              </span>
+              {/* On the step that pays, the head says where the money goes -
+                  the employee's bank and account - in place of the date and
+                  the number, as the finance design draws it. */}
+              {stage === "finance" ? (
+                <PayeeFacts employee={employee} />
+              ) : (
+                <>
+                  <span>{longDate(requestedOn)}</span>
+                  <span aria-hidden="true" className="h-5 w-px bg-container-border" />
+                  <span className="rounded-md bg-primary/10 px-3 py-1.5 text-base font-bold text-primary">
+                    {shortLoanNo(requestNo, requestedOn)}
+                  </span>
+                </>
+              )}
             </div>
             <DialogClose className="absolute end-5 top-5 rounded-md p-1 text-primary transition-colors hover:bg-menu-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <X className="size-7" aria-hidden="true" />
@@ -478,33 +520,35 @@ export default function LoansSection({
               designed, so the third opens the second. */}
           <AdvanceSteps
             active={stage}
-            onChange={(key) => setStage(key === "finance" ? "decision" : key)}
+            onChange={setStage}
             steps={[
               { key: "request", title: "Submit Request", done: Boolean(openId) },
               {
                 key: "decision",
                 title: "Management Comment",
-                done: Boolean(decision),
+                done: granted || openRecord?.status === LOAN_REJECTED || openRecord?.status === LOAN_RETURNED,
                 // Nothing can be decided until there is a request to decide.
                 disabled: !openId,
               },
               {
                 key: "finance",
                 title: "Financial Department Actions",
-                done: Boolean(payout.reference),
-                disabled: !openId || !decision || refusing,
+                done: paidOut,
+                disabled: !openId || !granted,
               },
             ]}
           />
 
-          {stage === "decision" ? (
+          {stage === "decision" || stage === "finance" ? (
             <>
               {/* The request is not read back here: what it was for is on the
                   stage behind this one, and the facts a decision needs are on
                   the card at the foot of the page. */}
+              {stage === "decision" && (
               <DecisionChoice
                 value={decision}
                 onChange={setDecision}
+                disabled={!canDecide || granted || openRecord?.status === LOAN_REJECTED}
                 // A loan is granted on terms, not only on an amount.
                 notes={{
                   full: "Approve the loan as requested",
@@ -513,10 +557,11 @@ export default function LoansSection({
                   rejected: "Reject the loan request",
                 }}
               />
+              )}
 
               {/* Nothing is granted and nothing leaves the firm on a refusal,
                   so both are asked about only once something is approved. */}
-              {decision && !refusing && (
+              {decision && !refusing && !returning && (
                 <>
                   {/* The terms the loan runs on. They are what was asked for
                       unless management is amending them, which only a partial
@@ -581,8 +626,10 @@ export default function LoansSection({
                     </div>
                   </Bordered>
 
-                  {/* Where the loan is booked, and how it actually leaves. */}
-                  <Bordered title="Expense & Disbursement Details">
+                  {/* Where the loan is booked, and how it actually leaves -
+                      the financial department's step. */}
+                  {stage === "finance" && (
+                  <Bordered title="Financial Department Actions">
                     <div className="form-grid">
                       <Settled
                         id="decision-expense-type"
@@ -624,9 +671,8 @@ export default function LoansSection({
                         <FieldLabel htmlFor="decision-pay-date" required>
                           Payment Date
                         </FieldLabel>
-                        <Input
+                        <DateField
                           id="decision-pay-date"
-                          type="date"
                           value={payout.paymentDate}
                           onChange={(e) => setPayoutField("paymentDate", e.target.value)}
                         />
@@ -661,15 +707,17 @@ export default function LoansSection({
                       />
                     </div>
                   </Bordered>
+                  )}
                 </>
               )}
 
               {/* A refusal is only as good as its reason, so there the
                   comment is required; on an approval it is a note. */}
+              {stage === "decision" && (
               <Bordered
                 title={
                   <>
-                    Management Comment
+                    {refusing ? "Reason for Rejection" : returning ? "What is Missing" : "Management Comment"}
                   </>
                 }
               >
@@ -683,18 +731,22 @@ export default function LoansSection({
                     placeholder={
                       refusing
                         ? "Enter the reason for rejection"
-                        : "Add management comment (optional)"
+                        : returning
+                          ? "Say what the employee still has to supply"
+                          : "Add management comment (optional)"
                     }
+                    disabled={!canDecide || granted || openRecord?.status === LOAN_REJECTED}
                   />
                   <p className="text-end text-xs text-muted-foreground">
                     {review.notes.length} / {COMMENT_LIMIT}
                   </p>
                 </div>
               </Bordered>
+              )}
 
               {/* What was granted and what leaves, in one line to be read
                   against the terms above before it is confirmed. */}
-              {decision && !refusing && (
+              {stage === "finance" && (
                 <div className="rounded-lg border border-green-600/40 bg-green-50/50 p-4">
                   <p className="mb-3 flex items-center gap-2 font-semibold text-green-700">
                     <span
@@ -705,6 +757,8 @@ export default function LoansSection({
                   </p>
                   <div className="form-grid lg:[&>*+*]:border-s">
                     <Said label="Employee Name" value={borrower} />
+                    <Said label="Bank Name" value={employee?.bankName || "-"} />
+                    <Said label="Account Number" value={employee?.accountNumber || "-"} />
                     <Said
                       label="Approved Loan Amount"
                       value={amount(num(review.approved))}
@@ -824,11 +878,8 @@ export default function LoansSection({
                 </div>
               </div>
             ) : (
-              // What has been borrowed before is the list behind this form.
-              <Button type="button" variant="ghost" onClick={closeAdd}>
-                <History className="me-2 h-4 w-4" />
-                History
-              </Button>
+              // Everything borrowed before, opened over this window.
+              <HistoryCard onClick={() => setShowHistory(true)} />
             )}
 
             <div className="ms-auto flex flex-wrap items-center gap-2">
@@ -836,16 +887,27 @@ export default function LoansSection({
                 Cancel
               </Button>
               {stage === "decision" ? (
-                <Button
-                  type="button"
-                  onClick={confirmDecision}
-                  // Not a completeness check: somebody without the permission
-                  // to decide a loan may not press this at all. What the form
-                  // is missing is said by the fields when it is pressed.
-                  disabled={!canDecide}
-                >
-                  Save
-                </Button>
+                canDecide &&
+                !granted &&
+                openRecord?.status !== LOAN_REJECTED && (
+                  <Button
+                    type="button"
+                    className="min-w-48"
+                    variant={refusing ? "destructive" : "default"}
+                    onClick={confirmDecision}
+                    disabled={!canConfirm}
+                  >
+                    {refusing ? "Confirm Rejection" : returning ? "Return to Employee" : "Confirm Decision"}
+                  </Button>
+                )
+              ) : stage === "finance" ? (
+                canDecide &&
+                granted &&
+                !paidOut && (
+                  <Button type="button" className="min-w-48" onClick={processPayout} disabled={!canPay}>
+                    Process Payment
+                  </Button>
+                )
               ) : (
                 <Button type="button" className="min-w-48" onClick={save}>
                   Submit Request
@@ -862,6 +924,13 @@ export default function LoansSection({
       <Dialog open={Boolean(adding)} onOpenChange={(o) => !o && closeAdd()}>
         <DialogContent hideClose className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
           {form}
+          <Dialog open={showHistory} onOpenChange={setShowHistory}>
+            <DialogContent className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
+              <DialogTitle className="text-xl font-bold text-primary">Loan History · {employee?.name}</DialogTitle>
+              <DialogDescription>Every loan and loan request on this employee's record.</DialogDescription>
+              <LoanLedger records={records} employee={employee} />
+            </DialogContent>
+          </Dialog>
         </DialogContent>
       </Dialog>
 

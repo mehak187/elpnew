@@ -18,6 +18,7 @@ export const SUPPLIER_CATEGORIES = [
   "IT & Software",
   "Government",
   "Banking",
+  "Medical",
   "Other",
 ];
 
@@ -82,6 +83,9 @@ export const initialSuppliers = [
   s(12, "Blue Ocean Media", "Marketing", "1609900", "TIN-8842199", "OM1609900", "Sohar International", "OM31 20864194", "+968 2465 1200", "Active"),
   s(13, "Nizwa Print House", "Marketing", "1701133", "TIN-8842200", "OM1701133", "Ahli Bank", "OM32 21851848", "+968 2541 1300", "Inactive"),
   s(14, "Falcon IT Solutions", "IT & Software", "1802244", "TIN-8842311", "OM1802244", "Bank Nizwa", "OM33 22839502", "+968 2456 1400", "Active"),
+  // Where employees' medical claims come from; read off their invoices.
+  s(15, "Muscat Pharmacy LLC", "Medical", "1458812", "TIN-8842422", "OM1100458812", "Bank Muscat", "OM34 23827156", "+968 2412 5566", "Active"),
+  s(16, "Starcare Hospital", "Medical", "1223344", "TIN-8842533", "OM1100223344", "National Bank of Oman", "OM35 24814810", "+968 2455 7000", "Active"),
 ];
 
 /** The three papers a supplier is asked for, and no others. */

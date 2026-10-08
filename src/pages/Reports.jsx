@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   FileBarChart,
@@ -16,6 +15,7 @@ import {
   Filter,
 } from "lucide-react";
 
+import DateField from "@/components/shared/DateField";
 const reportTypes = [
   {
     id: 1,
@@ -134,18 +134,16 @@ export default function Reports() {
           <div className="form-grid">
             <div className="space-y-2">
               <Label htmlFor="dateFrom" className="text-xs">From Date</Label>
-              <Input
+              <DateField
                 id="dateFrom"
-                type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="dateTo" className="text-xs">To Date</Label>
-              <Input
+              <DateField
                 id="dateTo"
-                type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
               />

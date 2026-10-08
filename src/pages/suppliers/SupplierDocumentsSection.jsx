@@ -22,6 +22,7 @@ import {
 } from "./supplierData";
 import { checkRequired } from "@/components/shared/formFields";
 
+import DateField from "@/components/shared/DateField";
 /** Today as a plain YYYY-MM-DD in the user's own timezone. */
 const todayIso = () => {
   const now = new Date();
@@ -294,10 +295,9 @@ export default function SupplierDocumentsSection({ supplier }) {
               {/* The date on the paper, not the day it reached the office. */}
               <div className="form-field space-y-2">
                 <Label htmlFor="supplierDocDate">Document Date</Label>
-                <Input
+                <DateField
                   required
                   id="supplierDocDate"
-                  type="date"
                   max={todayIso()}
                   value={draft.documentDate}
                   onChange={(e) => setField("documentDate", e.target.value)}
@@ -306,9 +306,8 @@ export default function SupplierDocumentsSection({ supplier }) {
 
               <div className="space-y-2">
                 <Label htmlFor="supplierDocExpiry">Expiry Date</Label>
-                <Input
+                <DateField
                   id="supplierDocExpiry"
-                  type="date"
                   value={draft.expiryDate}
                   onChange={(e) => setField("expiryDate", e.target.value)}
                 />

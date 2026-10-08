@@ -6,6 +6,7 @@ import { FieldLabel, Settled, Choice } from "@/components/shared/formFields";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
 import { PAYING_ACCOUNTS } from "@/pages/firm/firmData";
 
+import DateField from "@/components/shared/DateField";
 export const COMMENT_LIMIT = 500;
 
 /**
@@ -54,9 +55,8 @@ export function DecisionFields({
           <FieldLabel htmlFor={id("payment-date")} required>
             Payment Date
           </FieldLabel>
-          <Input
+          <DateField
             id={id("payment-date")}
-            type="date"
             value={payment.paymentDate}
             onChange={(e) => onPayment("paymentDate", e.target.value)}
             disabled={disabled}

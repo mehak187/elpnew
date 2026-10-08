@@ -39,7 +39,7 @@ import { amountValue } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import {
   INSTALLMENT_STATUS_TONE,
-  LOAN_APPROVED,
+  isApprovedLoan,
   formatDate,
   loanTotal,
   scheduleRows,
@@ -73,22 +73,26 @@ const LOAN_DOT = {
  * can disagree about the same loan.
  */
 export function describeLoans(records) {
-  // Oldest first is how they are numbered.
+  // Oldest first is how they are numbered. Only a granted loan takes a place
+  // in the run - one still waiting, sent back or refused is a request, and
+  // counting it would leave the loans with gaps.
+  let grantedSoFar = 0;
   return [...records]
     .sort((a, b) =>
       String(a.disbursementDate || a.firstDue).localeCompare(String(b.disbursementDate || b.firstDue)) ||
       a.id - b.id
     )
-    .map((record, index) => {
+    .map((record) => {
       const total = loanTotal(record);
       const rows = scheduleRows(total, record.monthly, record.firstDue, record.payments);
       const paid = rows.reduce((sum, row) => sum + row.paid, 0);
-      const granted = record.status === LOAN_APPROVED;
+      const granted = isApprovedLoan(record);
       const remaining = Math.max(total - paid, 0);
+      if (granted) grantedSoFar += 1;
       return {
         record,
         id: record.id,
-        name: "Loan " + (index + 1),
+        name: granted ? "Loan " + grantedSoFar : "Loan Request",
         number: record.requestNo || "LNR-" + String(record.id).padStart(3, "0"),
         total,
         paid,
@@ -552,11 +556,24 @@ export default function LoanLedger({
                             aria-hidden="true"
                           />
                           {loan.name}
-                          <span className="font-normal text-primary/70">| {loan.number}</span>
                           <span className={cn("rounded-md px-2 py-0.5 text-xs font-semibold", LOAN_CHIP[loan.status])}>
                             {loan.status}
                           </span>
                         </button>
+                        {/* The number opens the request back up. */}
+                        <span className="ms-6 flex items-center gap-2">
+                          {onOpen ? (
+                            <button
+                              type="button"
+                              onClick={() => onOpen(loan.record)}
+                              className="rounded text-sm text-record-link hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              {loan.number}
+                            </button>
+                          ) : (
+                            <span className="text-sm text-primary/70">{loan.number}</span>
+                          )}
+                        </span>
                       </td>
                       <td className="px-4 py-3 text-end font-semibold text-primary">{amountValue(loan.total)}</td>
                       <td className="px-4 py-3 text-end text-primary">{amountValue(loan.paid)}</td>

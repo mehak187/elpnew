@@ -42,6 +42,7 @@ import {
 } from "../firmData";
 import { checkRequired } from "@/components/shared/formFields";
 
+import DateField from "@/components/shared/DateField";
 const ALL_BANKS = "all";
 
 const emptyAccount = {
@@ -805,9 +806,8 @@ export default function BankAccountsSection({ canEdit, canRecord }) {
                 <div className="form-grid form-grid-3">
                   <div className="space-y-2">
                     <Label htmlFor="transferDate">Transfer Date</Label>
-                    <Input
+                    <DateField
                       id="transferDate"
-                      type="date"
                       value={transfer.date}
                       onChange={(e) => setMove("date", e.target.value)}
                     />

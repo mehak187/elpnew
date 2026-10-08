@@ -24,6 +24,7 @@ import SearchableSelect from "@/components/shared/SearchableSelect";
 import NewSupplierDialog from "@/pages/suppliers/NewSupplierDialog";
 import { Rial } from "@/components/shared/Rial";
 
+import DateField from "@/components/shared/DateField";
 /** A titled block of fields, with an optional action in its header. */
 function FormSection({ icon: Icon, title, action, children }) {
   return (
@@ -167,10 +168,9 @@ export default function InvoiceForm({ onCancel, onSubmit, forSupplier }) {
         >
           <div className="form-field space-y-2">
             <Label htmlFor="invoiceDate">Invoice Date</Label>
-            <Input
+            <DateField
               required
               id="invoiceDate"
-              type="date"
               value={invoiceDate}
               onChange={(e) => setInvoiceDate(e.target.value)}
             />

@@ -43,6 +43,7 @@ import {
 } from "./assetData";
 import { RecordLink } from "@/components/shared/RecordTable";
 
+import DateField from "@/components/shared/DateField";
 const emptyDraft = {
   purchaseDate: "",
   invoiceNo: "",
@@ -352,9 +353,8 @@ export default function AssetsPage() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1.25fr)_minmax(0,1fr)]">
                 <Field>
                   <FieldLabel htmlFor="assetInvoiceDate">Invoice Date</FieldLabel>
-                  <Input
+                  <DateField
                     id="assetInvoiceDate"
-                    type="date"
                     max={todayIso()}
                     value={draft.purchaseDate}
                     onChange={(e) => set("purchaseDate", e.target.value)}

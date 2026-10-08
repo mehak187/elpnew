@@ -122,7 +122,10 @@ function Fact({ label, children }) {
   );
 }
 
-export default function InvoicesSection() {
+export default function InvoicesSection({ clientNo }) {
+  // Only this client's invoices - the tiles, the table and the oldest debt
+  // are all about the client whose record this is.
+  const invoices = clientInvoices.filter((invoice) => !clientNo || invoice.clientNo === String(clientNo));
   const [view, setView] = useState("all");
   // The invoice being read, if any. Opened from its number in the table.
   const [openInvoice, setOpenInvoice] = useState(null);
@@ -131,7 +134,7 @@ export default function InvoicesSection() {
 
   const active = VIEWS.find((v) => v.key === view);
 
-  let rows = clientInvoices.filter(active.match);
+  let rows = invoices.filter(active.match);
   // Chasing money starts with whatever has been owed the longest.
   if (view === "unpaid") {
     rows = [...rows].sort((a, b) => a.dueDate.localeCompare(b.dueDate));
@@ -139,7 +142,7 @@ export default function InvoicesSection() {
 
   // How long the oldest debt has been standing, which is what decides whether
   // this client needs chasing at all.
-  const oldestDue = clientInvoices
+  const oldestDue = invoices
     .filter(isOwed)
     .map((invoice) => invoice.dueDate)
     .sort()[0];
@@ -257,7 +260,7 @@ export default function InvoicesSection() {
       <SummaryStrip
         items={[
           ...VIEWS.map((option) => {
-            const matching = clientInvoices.filter(option.match);
+            const matching = invoices.filter(option.match);
             return {
               key: option.key,
               label: option.label,

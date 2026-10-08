@@ -50,9 +50,15 @@ export const ASSISTANCE_TYPES = [
 export const ENTITLEMENT_PENDING = "Pending";
 export const ENTITLEMENT_APPROVED = "Approved";
 export const ENTITLEMENT_REJECTED = "Rejected";
+/**
+ * Approved by management and waiting on the financial department to pay it:
+ * the decision and the payment are two stages, made by two departments.
+ */
+export const ENTITLEMENT_AWAITING = "Awaiting Payment";
 
 export const ENTITLEMENT_STATUS_CHIP = {
   [ENTITLEMENT_PENDING]: "bg-amber-100 text-amber-800",
+  [ENTITLEMENT_AWAITING]: "bg-blue-100 text-blue-800",
   [ENTITLEMENT_APPROVED]: "bg-green-100 text-green-800",
   [ENTITLEMENT_REJECTED]: "bg-red-100 text-red-800",
 };
@@ -279,6 +285,61 @@ export const initialEntitlements = [
     status: ENTITLEMENT_PENDING,
     attachment: "medical-receipt.pdf",
     rejectionReason: "",
+    // What the invoice analysis read off the uploaded invoice.
+    invoice: {
+      invoiceNo: "SC-INV-30544",
+      invoiceDate: "2026-09-23",
+      supplierName: "Starcare Hospital",
+      supplierVat: "OM1100223344",
+      purpose: "Consultation and prescription",
+      items: [
+        { name: "General consultation", quantity: 1, amount: 25 },
+        { name: "Augmentin 625mg (14 tablets)", quantity: 1, amount: 7.4 },
+        { name: "Physiotherapy session", quantity: 1, amount: 87.6 },
+      ],
+      subtotal: 120,
+      vat: 0,
+      total: 120,
+      insuranceCovered: 0,
+      risk: { level: "low", reasons: [] },
+    },
+  },
+  {
+    // An earlier medical claim, paid - what a new one is checked against.
+    id: 8,
+    kind: "medical",
+    employee: "Aisha Al Kindi",
+    requestNo: "MAR-008",
+    entitlementNo: "ENT-008",
+    requestDate: "2026-06-14",
+    amount: 9.8,
+    approvedAmount: 9.8,
+    reason: "Antibiotics prescribed after a throat infection.",
+    status: ENTITLEMENT_APPROVED,
+    decisionDate: "2026-06-16",
+    decidedBy: "Khalid Al Hinai",
+    managementComment: "Approved as claimed.",
+    method: "Bank Transfer",
+    bankAccount: "Bank Muscat — •••• 6789",
+    paymentDate: "2026-06-18",
+    reference: "TRX-2026-00211",
+    rejectionReason: "",
+    invoice: {
+      invoiceNo: "MP-2026-07310",
+      invoiceDate: "2026-06-12",
+      supplierName: "Muscat Pharmacy LLC",
+      supplierVat: "OM1100458812",
+      purpose: "Prescription medication",
+      items: [
+        { name: "Augmentin 625mg (14 tablets)", quantity: 1, amount: 7.4 },
+        { name: "Panadol Extra (24 tablets)", quantity: 1, amount: 2.4 },
+      ],
+      subtotal: 9.8,
+      vat: 0,
+      total: 9.8,
+      insuranceCovered: 0,
+      risk: { level: "low", reasons: [] },
+    },
   },
   {
     id: 7,

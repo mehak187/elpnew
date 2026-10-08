@@ -45,6 +45,7 @@ import {
   isFullyPaid,
 } from "../commissionData";
 
+import DateField from "@/components/shared/DateField";
 const OTHER_STAFF = "Other Staff";
 
 /**
@@ -753,9 +754,12 @@ export default function CommissionForm({
               ? "Review the commission and record the management decision."
               : "Submit a new commission request with the calculation and eligibility details."
           }
-          employee={employee}
+          // On the payment step the head names whoever is paid - the
+          // beneficiary chosen on the form - and their bank and account.
+          employee={stage === "payment" ? beneficiary || employee : employee}
           date={requestDate}
           requestNo={commissionNo}
+          paying={stage === "payment"}
         />
 
         {/* The two halves of a commission: what is being asked for, and then
@@ -979,9 +983,8 @@ export default function CommissionForm({
                 required
                 note="The period applies to paid invoices, not issued ones - whenever the client's payment was confirmed."
               >
-                <Input
+                <DateField
                   id="periodFrom"
-                  type="date"
                   value={draft.periodFrom}
                   max={draft.periodTo || undefined}
                   onChange={(e) => setField("periodFrom", e.target.value)}
@@ -1041,9 +1044,8 @@ export default function CommissionForm({
                 required
                 note="The period applies to paid invoices, not issued ones - whenever the client's payment was confirmed."
               >
-                <Input
+                <DateField
                   id="periodTo"
-                  type="date"
                   value={draft.periodTo}
                   min={draft.periodFrom || undefined}
                   onChange={(e) => setField("periodTo", e.target.value)}

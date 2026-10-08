@@ -471,7 +471,7 @@ export default function ClientDetails() {
                 )}
                 {activeSection === "contracts" && <ClientContractsSection />}
                 {activeSection === "cases" && <LinkedCasesSection />}
-                {activeSection === "invoices" && <InvoicesSection />}
+                {activeSection === "invoices" && <InvoicesSection clientNo={record?.clientNo} />}
                 {activeSection === "management" && record && (
                   <ClientManagementSection />
                 )}

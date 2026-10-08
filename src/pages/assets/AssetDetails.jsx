@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import BackButton from "@/components/shared/BackButton";
+import DateField from "@/components/shared/DateField";
 import FormHeading from "@/components/shared/FormHeading";
 import Panel from "@/components/shared/Panel";
 import { EmptyState } from "@/components/shared/panels";
@@ -88,6 +89,8 @@ const years = (count) => count + (count === 1 ? " Year" : " Years");
 
 /** A typed field, with anything that belongs beside the input (an upload) after it. */
 function TextField({ id, label, required, value, onChange, placeholder, type, inputMode, max, hint, children }) {
+  // Dates are typed DD/MM/YYYY, never in the browser's own order.
+  const Control = type === "date" ? DateField : Input;
   return (
     <Field>
       <FieldLabel htmlFor={id}>
@@ -99,10 +102,10 @@ function TextField({ id, label, required, value, onChange, placeholder, type, in
           room is kept for it so it cannot run into the next one. */}
       <div className={cn("relative", hint && "mb-5 sm:mb-0")}>
         <div className="flex gap-2">
-          <Input
+          <Control
             required={required}
             id={id}
-            type={type}
+            type={type === "date" ? undefined : type}
             inputMode={inputMode}
             max={max}
             value={value}

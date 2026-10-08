@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { LeavesContext } from "./context";
-import { initialLeaves, nextLeaveNo } from "@/pages/employees/leaveData";
+import { initialLeaves, nextLeaveNo, ENCASHED_PAID } from "@/pages/employees/leaveData";
 
 /**
  * Every leave request in the firm, in one place.
@@ -40,6 +40,22 @@ export default function LeavesProvider({ children }) {
             status: "Pending",
             decidedAt: "",
             comments: "",
+          },
+        ]),
+
+      /**
+       * Days of annual leave paid out by an approved leave encashment: on
+       * the list as Encashed – Paid, and off the year's balance.
+       */
+      recordEncashment: (record) =>
+        setLeaves((prev) => [
+          ...prev,
+          {
+            ...record,
+            id: prev.reduce((max, leave) => Math.max(max, leave.id), 0) + 1,
+            leaveNo: nextLeaveNo(prev),
+            stage: "management",
+            status: ENCASHED_PAID,
           },
         ]),
 

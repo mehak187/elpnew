@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Scale, Save, ArrowLeft } from "lucide-react";
 
+import DateField from "@/components/shared/DateField";
 export default function Registration() {
   const navigate = useNavigate();
 
@@ -175,10 +176,9 @@ export default function Registration() {
 
               <div className="form-field space-y-2">
                 <Label htmlFor="filing_date">Filing Date</Label>
-                <Input
+                <DateField
                   id="filing_date"
                   name="filing_date"
-                  type="date"
                   value={formData.filing_date}
                   onChange={handleChange}
                   required

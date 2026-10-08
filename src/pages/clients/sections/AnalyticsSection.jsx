@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Layers, Scale, Briefcase, TrendingUp, Inbox } from "lucide-react";
 import BarTrendChart from "@/components/shared/BarTrendChart";
@@ -22,6 +21,7 @@ import {
 } from "../clientCases";
 import { withRial } from "@/lib/money";
 
+import DateField from "@/components/shared/DateField";
 const formatDate = (date) =>
   date ? new Date(date).toLocaleDateString("en-GB") : "-";
 
@@ -193,9 +193,8 @@ export default function AnalyticsSection() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="space-y-2">
               <Label htmlFor="activityFrom">From</Label>
-              <Input
+              <DateField
                 id="activityFrom"
-                type="date"
                 value={fromDate}
                 max={toDate}
                 onChange={(e) => setFromDate(e.target.value)}
@@ -204,9 +203,8 @@ export default function AnalyticsSection() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="activityTo">To</Label>
-              <Input
+              <DateField
                 id="activityTo"
-                type="date"
                 value={toDate}
                 min={fromDate}
                 onChange={(e) => setToDate(e.target.value)}

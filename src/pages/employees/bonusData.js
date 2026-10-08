@@ -41,6 +41,8 @@ export const BONUS_BOOKING = {
  * being paid it, so the list says which of the three has happened.
  */
 export const BONUS_PENDING = "Pending";
+/** Approved by management, waiting on the financial department to pay it. */
+export const BONUS_APPROVED = "Approved";
 export const BONUS_DISBURSED = "Disbursed";
 
 /** "BON-001", counted across the firm so a number is never reused. */
@@ -56,6 +58,7 @@ export const nextBonusNo = (bonuses) =>
 
 export const BONUS_STATUS_CHIP = {
   [BONUS_PENDING]: "bg-amber-100 text-amber-800",
+  [BONUS_APPROVED]: "bg-blue-100 text-blue-800",
   [BONUS_DISBURSED]: "bg-green-100 text-green-800",
 };
 

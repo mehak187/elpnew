@@ -27,7 +27,7 @@ const buttonVariants = cva(
         // thing it offers, so it is outlined rather than filled.
         add:
           "border border-primary bg-card font-semibold text-primary shadow-none hover:bg-menu-hover",
-        link: "text-primary underline-offset-4 hover:underline",
+        link: "text-primary hover:opacity-80",
       },
       size: {
         default: "h-9 px-4 py-2",

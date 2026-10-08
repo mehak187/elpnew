@@ -15,6 +15,7 @@ import { findType } from "./links";
 import { dayOffset } from "./expenseData";
 import { Rial } from "@/components/shared/Rial";
 
+import DateField from "@/components/shared/DateField";
 const emptyDraft = {
   typeKey: "",
   path: [],
@@ -104,10 +105,9 @@ export default function ExpenseForm() {
               {classified && (
                 <div className="form-field space-y-2">
                   <Label htmlFor="expenseDate">Date</Label>
-                  <Input
+                  <DateField
                     required
                     id="expenseDate"
-                    type="date"
                     value={draft.date}
                     onChange={(e) => setDraft({ ...draft, date: e.target.value })}
                   />

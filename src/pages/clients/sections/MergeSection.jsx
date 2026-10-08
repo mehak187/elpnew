@@ -34,6 +34,7 @@ import { clientDisplayName, mergedInto } from "../clientRecords";
 import { MERGE_TRANSFER_ITEMS } from "../clientMockData";
 import { checkRequired } from "@/components/shared/formFields";
 
+import DateField from "@/components/shared/DateField";
 /** Which name the two clients are to carry once they are one. */
 const KEEP_MAIN = "main";
 const KEEP_MERGED = "merged";
@@ -182,9 +183,8 @@ export default function MergeSection({ client }) {
               <FieldLabel htmlFor="mergeDate" required>
                 Merge Date
               </FieldLabel>
-              <Input
+              <DateField
                 id="mergeDate"
-                type="date"
                 value={mergeDate}
                 onChange={(e) => setMergeDate(e.target.value)}
               />

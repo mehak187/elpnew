@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import UploadIcon from "@/components/shared/UploadIcon";
+import DateField from "@/components/shared/DateField";
 import { FileCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -83,16 +84,18 @@ export function Worked({ id, label, value }) {
 
 /** A typed field, with anything that belongs beside the input (an upload) after it. */
 export function TextField({ id, label, required, value, onChange, placeholder, type, inputMode, max, children }) {
+  // Dates are typed DD/MM/YYYY, never in the browser's own order.
+  const Control = type === "date" ? DateField : Input;
   return (
     <Field>
       <FieldLabel htmlFor={id}>
         {label}
       </FieldLabel>
       <div className="flex gap-2">
-        <Input
+        <Control
           required={required}
           id={id}
-          type={type}
+          type={type === "date" ? undefined : type}
           inputMode={inputMode}
           max={max}
           value={value}

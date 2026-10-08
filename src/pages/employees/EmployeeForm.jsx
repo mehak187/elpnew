@@ -1221,11 +1221,20 @@ export default function EmployeeForm({ self }) {
   const opensOn = (state) =>
     state?.section || (record && !self ? "profile" : "information");
   const [activeSection, setActiveSection] = useState(() => opensOn(location.state));
+  // A link that names a section (Activity Review in the account menu) opens
+  // it even when this page is already showing.
+  const [seenState, setSeenState] = useState(location.state);
+  if (location.state !== seenState) {
+    setSeenState(location.state);
+    if (location.state?.section) setActiveSection(location.state.section);
+  }
   // Which tab of Employee Information, and of Requests, is open.
   const [profileTab, setProfileTab] = useState(() => location.state?.tab || "personal");
   // On the Requests page: the kind whose cards are showing, and the request
   // opened below them, if one has been.
-  const [requestCategory, setRequestCategory] = useState(REQUEST_CATEGORIES[0].key);
+  // Nothing is chosen when Requests opens: the page shows its categories and
+  // waits for one to be clicked.
+  const [requestCategory, setRequestCategory] = useState(null);
   const [requestsTab, setRequestsTab] = useState(null);
   // What is open under Employee Management: nothing until a card is chosen.
   const [managementTab, setManagementTab] = useState(null);
@@ -1814,8 +1823,10 @@ export default function EmployeeForm({ self }) {
     // Requests opens on the request last chosen there, at its own tab - or,
     // the first time, on the first request of the kind showing.
     if (key === "requests") {
-      if (requestItem) chooseRequest(requestItem);
-      else openRequestCategory(requestCategory);
+      // Requests opens closed every time: the strip of categories, and
+      // nothing under it until one is chosen.
+      setRequestCategory(null);
+      setRequestsTab(null);
     }
     setActiveSection(key);
   };
@@ -1871,10 +1882,18 @@ export default function EmployeeForm({ self }) {
       if (step !== "intake") saveStep();
       return;
     }
-    console.log(isEditMode ? "Updating employee:" : "Creating employee:", {
-      ...toRecord(formData),
-      empNo: employeeNo,
-    });
+    // Saved onto the record itself, the one My Profile reads, so a change
+    // made here shows there too.
+    if (isEditMode && record && !readOnly) {
+      if (!fieldsOnScreenValid({ requireAll: false })) return;
+      Object.assign(record, toRecord(formData), {
+        designation: formData.occupation || record.designation,
+        role: formData.occupation || record.role,
+      });
+      setSaved(formData);
+      setProfileSaved(true);
+      return;
+    }
     navigate("/employees");
   };
 
@@ -2113,6 +2132,7 @@ export default function EmployeeForm({ self }) {
               it - so nothing here says them a second time. */}
           {isRequests && (() => {
             const category = REQUEST_CATEGORIES.find((c) => c.key === requestCategory);
+            if (!category) return null;
             return (
               <div role="tablist" aria-label={category.label} className="flex flex-wrap gap-2">
                 {category.items.map((item) => {
@@ -3882,7 +3902,12 @@ export default function EmployeeForm({ self }) {
                     leaves off. A section that saves its own records has
                     nothing here: there is no draft on the page to save. */}
                 {!isAdding && !savesFor.noSave && !readOnly && (
-                  <div className="flex justify-end">
+                  <div className="flex flex-wrap items-center justify-end gap-3">
+                    {profileSaved && (
+                      <p role="status" className="text-sm font-semibold text-green-700">
+                        Changes saved.
+                      </p>
+                    )}
                     <Button type="submit">
                       <Save className="me-2 h-4 w-4" />
                       {savesFor.save || "Save"}
