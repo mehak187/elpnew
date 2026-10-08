@@ -111,16 +111,42 @@ function readAdvances(advances, employee, net, today = new Date()) {
  * it uses them everywhere else: green for what is in the employee's favour,
  * amber for a date to wait for, the primary blue for a plain figure.
  */
-const TILE_TINT = {
+export const TILE_TINT = {
   good: { box: "border-green-200 bg-green-50/60", mark: "bg-green-100 text-green-700" },
   wait: { box: "border-amber-200 bg-amber-50/70", mark: "bg-amber-100 text-amber-700" },
+  bad: { box: "border-red-200 bg-red-50/70", mark: "bg-red-100 text-red-700" },
   plain: { box: "border-blue-100 bg-white", mark: "bg-blue-50 text-primary" },
 };
 
-/** One reading in the overview: what it is, the figure, and why. */
-function Tile({ icon, label, value, note, tone = "text-primary", tint = "plain", children }) {
+/**
+ * One reading in the overview: what it is, the figure, and why.
+ *
+ * `compact` is for a row of many narrow tiles: the mark and the name share
+ * the top line, so the figure below has the tile's whole width and never
+ * runs out of it.
+ */
+export function Tile({ icon, label, value, note, tone = "text-primary", tint = "plain", compact, dense, children }) {
   const Icon = icon;
   const look = TILE_TINT[tint];
+  if (compact) {
+    return (
+      <div className={cn("min-w-0 rounded-xl border p-3", look.box)}>
+        <div className="flex items-center gap-2">
+          <span
+            aria-hidden="true"
+            className={cn("flex size-8 shrink-0 items-center justify-center rounded-full", look.mark)}
+          >
+            <Icon className="size-4" />
+          </span>
+          <p className="min-w-0 text-xs font-semibold leading-tight text-primary">{label}</p>
+        </div>
+        <p className={cn("mt-2 text-sm font-bold leading-tight wrap-anywhere 2xl:text-base", tone)}>
+          {value}
+        </p>
+        {note && <p className="mt-1 text-xs leading-snug text-primary/70">{note}</p>}
+      </div>
+    );
+  }
   return (
     <div className={cn("flex min-w-0 gap-2.5 rounded-xl border p-3", look.box)}>
       <span
@@ -131,16 +157,27 @@ function Tile({ icon, label, value, note, tone = "text-primary", tint = "plain",
       </span>
       <div className="min-w-0">
         <p className="text-xs font-semibold text-primary">{label}</p>
-        <p className={cn("mt-1 text-base font-bold leading-tight xl:text-lg", tone)}>{value}</p>
+        {/* `dense`: a row of five or more, where the figure stays one size. */}
+        <p className={cn("mt-1 text-base font-bold leading-tight", !dense && "xl:text-lg", tone)}>{value}</p>
         {children}
-        {note && <p className="mt-1 text-xs leading-snug text-primary/70">{note}</p>}
+        {note && (
+          <p className={cn("mt-1 leading-snug text-primary/70", dense ? "text-[11px]" : "text-xs")}>{note}</p>
+        )}
       </div>
     </div>
   );
 }
 
+/** How a probability reads, and the colour it is shown in. */
+export const chanceOf = (percent) =>
+  percent >= 75
+    ? { word: "High chance", ink: "text-green-700", ring: "stroke-green-600" }
+    : percent >= 50
+      ? { word: "Medium chance", ink: "text-amber-700", ring: "stroke-amber-500" }
+      : { word: "Low chance", ink: "text-red-700", ring: "stroke-red-600" };
+
 /** The chance a request is granted, as a ring filled that far round. */
-function Ring({ percent, tone }) {
+export function Ring({ percent, tone }) {
   const radius = 26;
   const round = 2 * Math.PI * radius;
   return (
@@ -183,12 +220,7 @@ export default function AdvanceOverview({
   const [showAll, setShowAll] = useState(false);
   const read = readAdvances(advances, employee, net);
   const eligible = read.remaining > 0;
-  const chance =
-    read.probability >= 75
-      ? { word: "High chance", ink: "text-green-700", ring: "stroke-green-600" }
-      : read.probability >= 50
-        ? { word: "Medium chance", ink: "text-amber-700", ring: "stroke-amber-500" }
-        : { word: "Low chance", ink: "text-red-700", ring: "stroke-red-600" };
+  const chance = chanceOf(read.probability);
   const lastStatus = read.last ? advanceStatusOf(read.last) : "";
 
   const stats = [

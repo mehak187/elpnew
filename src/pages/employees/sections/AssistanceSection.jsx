@@ -25,6 +25,7 @@ import {
 import { nextAssistanceNo } from "../assistanceData";
 import { DecisionChoice } from "@/components/shared/RequestSteps";
 import { AdvanceSteps, longDate } from "./AdvanceSalarySection";
+import AssistanceOverview from "./AssistanceOverview";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   RecordTable,
@@ -126,6 +127,8 @@ export default function AssistanceSection({
   const [receipt, setReceipt] = useState(null);
   // History, open over the form.
   const [showHistory, setShowHistory] = useState(false);
+  // Every request, opened from the head of the list.
+  const [showAll, setShowAll] = useState(false);
 
   const open = records.find((record) => record.id === openId) || null;
 
@@ -874,6 +877,27 @@ export default function AssistanceSection({
         </DialogContent>
       </Dialog>
 
+      {/* Who may ask for how much, a reading of the past requests, and the
+          way to ask - over the list itself. */}
+      <AssistanceOverview
+        rows={rows}
+        employee={employee}
+        onNew={addLabel && !adding ? onOpenAdd : null}
+        // The suggested sum, written into a new request for the employee to
+        // confirm or change - never submitted on its own.
+        onApply={
+          addLabel && !adding
+            ? (suggested) => {
+                setDraft({ ...emptyDraft, amount: String(suggested) });
+                onOpenAdd?.();
+              }
+            : null
+        }
+        onOpen={adding ? null : track}
+        onViewAll={() => setShowAll(true)}
+      />
+
+      {/* The asking is done from the head of the view above, not from here. */}
       <RequestTable
         rows={rows}
         columns={columns}
@@ -884,9 +908,28 @@ export default function AssistanceSection({
           { key: "status", label: "Status" },
           { key: "subcategory", label: "Assistance Type" },
         ]}
-        onAdd={addLabel && !adding ? onOpenAdd : null}
-        addLabel={addLabel}
       />
+
+      {/* Every request, over the page. */}
+      <Dialog open={showAll} onOpenChange={setShowAll}>
+        <DialogContent className="max-h-[90vh] w-[92vw] max-w-7xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Assistance History · {employee?.name}</DialogTitle>
+            <DialogDescription>Every assistance request this employee has made.</DialogDescription>
+          </DialogHeader>
+          <RequestTable
+            rows={rows}
+            columns={columns}
+            searchPlaceholder="Search by request no., type or purpose..."
+            itemLabel="assistance requests"
+            exportFileName="assistance.csv"
+            filterBy={[
+              { key: "status", label: "Status" },
+              { key: "subcategory", label: "Assistance Type" },
+            ]}
+          />
+        </DialogContent>
+      </Dialog>
       </CardContent>
     </Card>
   );

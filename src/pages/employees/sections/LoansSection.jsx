@@ -869,9 +869,26 @@ export default function LoansSection({
           installments folded under each. */}
       <LoanLedger
         records={records}
+        employee={employee}
         onOpen={track}
         onAdd={addLabel && !adding ? onOpenAdd : null}
-        addLabel="Request New Loan"
+        addLabel="New Loan Request"
+        // The suggested sum, written into a new request for the employee to
+        // confirm or change - never submitted on its own.
+        onApply={
+          addLabel && !adding
+            ? (suggested) => {
+                // Both fields: the form asks for one or the other, depending
+                // on whether a loan is already running.
+                setDraft((prev) => ({
+                  ...prev,
+                  requested: String(suggested),
+                  extraRequested: String(suggested),
+                }));
+                onOpenAdd?.();
+              }
+            : null
+        }
       />
     </div>
   );

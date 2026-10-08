@@ -396,7 +396,7 @@ const REQUEST_CATEGORIES = [
     items: [
       { key: "salaryAdvance", label: "Salary Advance", icon: Banknote, section: "benefits", tab: "salaries" },
       { key: "loan", label: "Loan", icon: Coins, section: "benefits", tab: "loans" },
-      { key: "assistance", label: "Assistance", icon: HandCoins, section: "benefits", tab: "assistance" },
+      { key: "assistance", label: "Assistance", tabLabel: "Financial Assistance", icon: HandCoins, section: "benefits", tab: "assistance" },
     ],
   },
   {
@@ -2229,6 +2229,35 @@ export default function EmployeeForm({ self }) {
               requests below. */}
           {isRequests && (() => {
             const category = REQUEST_CATEGORIES.find((c) => c.key === requestCategory);
+            // Financing's kinds each open on an overview of their own - the
+            // counts and the AI's reading are in it - so the kinds are picked
+            // from plain tabs here rather than cards that would say it twice.
+            if (category.key === "financing") {
+              return (
+                <div role="tablist" aria-label={category.label} className="flex flex-wrap gap-2">
+                  {category.items.map((item) => {
+                    const opened = item.key === requestsTab;
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        role="tab"
+                        aria-selected={opened}
+                        onClick={() => chooseRequest({ ...item, category: category.key })}
+                        className={cn(
+                          "min-w-36 rounded-lg border px-5 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          opened
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "bg-white text-primary hover:bg-menu-hover"
+                        )}
+                      >
+                        {item.tabLabel || item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            }
             return (
               // Every card in the row as tall as the tallest, so a longer
               // reading in one does not leave the rest short of it.
