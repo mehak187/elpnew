@@ -64,7 +64,6 @@ import {
   LOAN_EXPENSE_TYPE,
   LOAN_CATEGORY,
   LOAN_INCREASE,
-  LOAN_PENDING,
   LOAN_REJECTED,
   LOAN_RETURNED,
   isApprovedLoan,
@@ -84,6 +83,9 @@ import {
   amount,
   formatDate,
 } from "../loanData";
+import { loansApi } from "@/lib/api/modules/loans";
+import { attempt } from "@/lib/api/notice";
+import { upsert, upserted } from "@/lib/api/store";
 
 // Three figures are asked for and everything else is counted from them:
 // how much is wanted, what comes off each month, and when the first one
@@ -211,6 +213,24 @@ export default function LoansSection({
   // Everything borrowed before, open over the request.
   const [showHistory, setShowHistory] = useState(false);
 
+  // While a call to the server is out, its button waits rather than sending twice.
+  const [busy, setBusy] = useState(false);
+  const send = async (call) => {
+    if (busy) return null;
+    setBusy(true);
+    try {
+      return await attempt(call);
+    } finally {
+      setBusy(false);
+    }
+  };
+  /** The loan the server returned, in place of the one on screen. */
+  const keep = (record) => {
+    upsert(loanRecords, record);
+    setRecords((prev) => upserted(prev, record));
+    return record;
+  };
+
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
 
   const num = (value) => Number(value || 0);
@@ -295,36 +315,25 @@ export default function LoansSection({
    * The request submitted. It is on record straight away, waiting for a
    * decision, and the form moves on to the stage that gives one.
    */
-  const save = () => {
+  const save = async () => {
     if (!checkRequired() || !canSave) return;
-    const id = records.reduce((max, r) => Math.max(max, r.id), 0) + 1;
-    setRecords((prev) => [
-      {
-        id,
-        employee: borrower,
-        kind: category,
-        // On the list straight away, under a temporary number, waiting on a
-        // decision. Asked for, not granted.
-        requestNo,
-        requestedOn,
-        startMonth: draft.startMonth,
-        employeeComment: draft.comment.trim(),
-        attachment: attachment?.name || "",
-        status: LOAN_PENDING,
-        loanAmount: requested,
-        merged: isIncrease ? outstanding : 0,
-        // The day is filled in when the loan is actually paid out; the bank
-        // and account are the employee's own, read off their record.
-        disbursementDate: "",
-        bankName: employee?.bankName || "",
-        accountNumber: employee?.accountNumber || "",
-        monthly: num(draft.monthly),
-        firstDue: firstDate,
-        payments: [],
-      },
-      ...prev,
-    ]);
-    setOpenId(id);
+    // The server numbers it, settles whether it is a new loan or an increase,
+    // and checks the limit and the one-at-a-time rule again.
+    const saved = await send(() =>
+      loansApi.submit(
+        {
+          loanAmount: requested,
+          monthly: num(draft.monthly),
+          startMonth: draft.startMonth,
+          comment: draft.comment.trim(),
+          attachment,
+        },
+        employee?.id
+      )
+    );
+    if (!saved) return;
+    keep(saved);
+    setOpenId(saved.id);
     // Management decides on what was asked for, until it amends it.
     setReview({
       approved: String(requested),
@@ -340,26 +349,21 @@ export default function LoansSection({
    * partial one grants the amended terms; a rejection grants nothing, so the
    * request is left as it was asked for and marked refused.
    */
-  const confirmDecision = () => {
+  const confirmDecision = async () => {
     if (!checkRequired() || !canConfirm) return;
-    const amended = decision === "partial";
     const grantedNow = !refusing && !returning;
-    setRecords((prev) =>
-      prev.map((record) =>
-        record.id === openId
-          ? {
-              ...record,
-              status: LOAN_DECISION_STATUS[decision],
-              loanAmount: amended ? num(review.approved) : record.loanAmount,
-              monthly: amended ? num(review.monthly) : record.monthly,
-              startMonth: amended ? review.startMonth : record.startMonth,
-              firstDue: amended ? monthEnd(review.startMonth) : record.firstDue,
-              managementNotes: review.notes.trim(),
-              decidedOn: new Date().toISOString().slice(0, 10),
-            }
-          : record
-      )
+    // The server records who decided and when; a partial approval carries
+    // its amount and installment.
+    const saved = await send(() =>
+      loansApi.decide(openId, {
+        decision,
+        approvedAmount: num(review.approved),
+        approvedMonthly: num(review.monthly),
+        comment: review.notes.trim(),
+      })
     );
+    if (!saved) return;
+    keep(saved);
     if (grantedNow) {
       setStage("finance");
       return;
@@ -368,22 +372,13 @@ export default function LoansSection({
   };
 
   /** Paid out by the financial department: the loan starts running. */
-  const processPayout = () => {
+  const processPayout = async () => {
     if (!checkRequired() || !canPay || !granted || !canDecide) return;
-    setRecords((prev) =>
-      prev.map((record) =>
-        record.id === openId
-          ? {
-              ...record,
-              method: payout.method,
-              bankAccount: payout.bankAccount,
-              disbursementDate: payout.paymentDate,
-              reference: payout.reference.trim(),
-              receipt: receipt?.name || "",
-            }
-          : record
-      )
+    const saved = await send(() =>
+      loansApi.pay(openId, { ...payout, reference: payout.reference.trim() })
     );
+    if (!saved) return;
+    keep(saved);
     closeAdd();
   };
 

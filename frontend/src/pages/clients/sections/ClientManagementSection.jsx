@@ -31,20 +31,7 @@ import { checkRequired } from "@/components/shared/formFields";
  * people. A branch therefore has one team, and only one - a second assignment
  * against the same branch would be two answers to the same question.
  */
-const INITIAL_TEAMS = {
-  1: {
-    "General Supervisor": "1",
-    "Legal Consultant": "3",
-    Lawyer: "14",
-    "Enforcement Officer": "6",
-  },
-  2: {
-    "General Supervisor": "7",
-    "Legal Consultant": "8",
-    Lawyer: "16",
-    "Enforcement Officer": "10",
-  },
-};
+const INITIAL_TEAMS = {};
 
 /** The person filling one role at one branch, or nothing. */
 const personIn = (branchId, role, teams) => {

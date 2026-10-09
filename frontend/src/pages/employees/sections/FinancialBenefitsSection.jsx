@@ -23,12 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  nextRequestNo,
-  REQUEST_PENDING,
-  REQUEST_REJECTED,
-  REQUEST_STATUS_CHIP,
-} from "../requestFlow";
+import { REQUEST_STATUS_CHIP } from "../requestFlow";
 import { formatDate } from "@/pages/firm/firmData";
 import {
   commissionRecords,
@@ -39,6 +34,9 @@ import {
 } from "@/pages/firm/commissionData";
 import CommissionForm from "@/pages/firm/sections/CommissionForm";
 import { useClients } from "@/lib/clients/context";
+import { commissionsApi } from "@/lib/api/modules/commissions";
+import { attempt } from "@/lib/api/notice";
+import { employeeRecords } from "../employeeData";
 
 import SalariesSection from "./SalariesSection";
 import BonusSection from "./BonusSection";
@@ -49,8 +47,12 @@ import { BENEFIT_TABS } from "./benefitTabs";
 /** A commission that has been paid is settled; anything else is a request. */
 const COMMISSION_PAID = "Paid";
 
+/** Agreed by management and waiting on the payment. */
+const COMMISSION_APPROVED = "Approved";
+
 const COMMISSION_STATUS_CHIP = {
   ...REQUEST_STATUS_CHIP,
+  [COMMISSION_APPROVED]: "bg-blue-100 text-blue-800",
   [COMMISSION_PAID]: "bg-green-100 text-green-800",
 };
 
@@ -112,63 +114,88 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd, canDecide = tr
     onCloseAdd();
   };
 
+  // While a call to the server is out, a second click sends nothing.
+  const [busy, setBusy] = useState(false);
   /**
-   * What was agreed, on the list straight away under a temporary number and
-   * waiting on the payment that settles it.
+   * Sends one or more calls in turn. Each saved commission is already back in
+   * the firm's list (commissionRecords), so this list is read again from it;
+   * a refusal is shown as a notice and stops the rest.
    */
-  const submit = (record) => {
-    if (openId) {
-      setRecords((prev) =>
-        prev.map((row) => (row.id === openId ? { ...row, ...record } : row))
-      );
-      return;
+  const send = async (...calls) => {
+    if (busy) return null;
+    setBusy(true);
+    try {
+      let saved = null;
+      for (const call of calls) {
+        saved = await attempt(call);
+        if (!saved) break;
+      }
+      setRecords(commissionsFor(employee.name));
+      return saved;
+    } finally {
+      setBusy(false);
     }
-    const id = records.reduce((max, r) => Math.max(max, r.id), 0) + 1;
-    setRecords((prev) => [
-      {
-        ...record,
-        id,
-        requestNo: nextRequestNo(prev),
-        commissionNo: "",
-        status: REQUEST_PENDING,
-        date: new Date().toISOString().slice(0, 10),
-      },
-      ...prev,
-    ]);
-    setOpenId(id);
   };
 
-  /** Paid: the commission takes the list's own number and is settled. */
-  const save = (record) => {
-    if (!canDecide) return;
-    setRecords((prev) =>
-      prev.map((row) =>
-        row.id === openId
-          ? {
-              ...row,
-              ...record,
-              commissionNo:
-                row.commissionNo || nextCommissionNo(commissionRecords.concat(prev)),
-              status: COMMISSION_PAID,
-              rejectionReason: "",
-            }
-          : row
-      )
+  /** Whose commission it is, by the id the API files it under. */
+  const payeeId = (record) =>
+    employeeRecords.find((person) => person.name === record.paidTo)?.id ?? employee.id;
+
+  /**
+   * What was agreed, on the list straight away under the number the server
+   * gave it, and waiting on the decision and payment that settle it.
+   */
+  const submit = async (record) => {
+    const saved = await send(() =>
+      openId
+        ? commissionsApi.update(openId, record, payeeId(record))
+        : commissionsApi.submit(
+            { ...record, amount: Number(commissionOn(record).toFixed(3)) },
+            payeeId(record)
+          )
     );
-    close();
+    if (saved) setOpenId(saved.id);
+    return saved;
   };
 
-  /** Refused: the commission keeps its temporary number and says why. */
-  const reject = (why) => {
-    if (!canDecide) return;
-    setRecords((prev) =>
-      prev.map((row) =>
-        row.id === openId
-          ? { ...row, status: REQUEST_REJECTED, rejectionReason: why }
-          : row
-      )
+  /**
+   * Approved and paid: management's answer, then the payment. One already
+   * approved is only paid.
+   */
+  const save = async (record) => {
+    if (!canDecide || !open) return;
+    const pay = () =>
+      commissionsApi.pay(open.id, {
+        method: record.method,
+        paymentDate: record.paymentDate,
+        bankAccount: [record.bank, String(record.payingAccountNo || "").slice(-4)]
+          .filter(Boolean)
+          .join(" "),
+        reference: record.reference,
+        financeComment: record.paymentNotes,
+      });
+    const saved =
+      open.status === COMMISSION_APPROVED
+        ? await send(pay)
+        : await send(
+            () =>
+              commissionsApi.decide(open.id, {
+                decision: record.decision,
+                approvedAmount: record.approvedAmount,
+                comment: record.paymentNotes,
+              }),
+            pay
+          );
+    if (saved) close();
+  };
+
+  /** Refused: the commission keeps its number and says why. */
+  const reject = async (why) => {
+    if (!canDecide || !open) return;
+    const saved = await send(() =>
+      commissionsApi.decide(open.id, { decision: "Rejection", comment: why })
     );
-    close();
+    if (saved) close();
   };
 
   /** A commission opened back off the list, to be followed or decided. */
@@ -186,7 +213,7 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd, canDecide = tr
       header: "Commission No.",
       width: "13%",
       render: (value, record) =>
-        record.commissionNo ? (
+        record.status === COMMISSION_PAID ? (
           <span className="font-medium text-primary">{value}</span>
         ) : (
           <button
@@ -261,7 +288,15 @@ function CommissionTab({ employee, adding, onCloseAdd, onOpenAdd, canDecide = tr
             canAnswer={canDecide}
             key={openId || "new"}
             employee={employee}
-            initial={open}
+            // The kind of client is not kept on the commission; it is the
+            // client's own, read back off the directory.
+            initial={
+              open && {
+                ...open,
+                clientType:
+                  clients.find((client) => client.clientNo === open.clientNo)?.type || "",
+              }
+            }
             commissionNo={
               open?.commissionNo ||
               nextCommissionNo(commissionRecords.concat(records))

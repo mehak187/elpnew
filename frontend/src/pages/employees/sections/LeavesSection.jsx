@@ -44,7 +44,6 @@ import {
   daysOf,
   ENCASHED_PAID,
 } from "../leaveData";
-import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 
 /** Today, as the review date starts from. */
 const thisDay = () => new Date().toISOString().slice(0, 10);
@@ -77,7 +76,18 @@ const emptyDraft = () => ({
 export default function LeavesSection({ employee, canReview = true }) {
   // Shared with every other page that reads leave, so a request asked for here
   // is still there after the page moves away and back.
-  const { leaves, addLeave, updateLeave } = useLeaves();
+  const { leaves, addLeave, departmentDecision, managementDecision } = useLeaves();
+  // While a call to the server is out, its button waits rather than sending twice.
+  const [busy, setBusy] = useState(false);
+  const send = async (call) => {
+    if (busy) return null;
+    setBusy(true);
+    try {
+      return await call();
+    } finally {
+      setBusy(false);
+    }
+  };
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState(emptyDraft);
   // A request opened from the list to be reviewed, and the stage of it shown.
@@ -177,25 +187,18 @@ export default function LeavesSection({ employee, canReview = true }) {
   /**
    * A department that approves passes the request up to management; one that
    * refuses ends it there. Management's answer is the final one either way.
+   * The server records who answered and when, and refuses an answer the
+   * request is not waiting for.
    */
-  const decide = () => {
+  const decide = async () => {
     // Nobody approves their own leave: on the employee's own page the
     // decision is read once it has been given, and never written.
     if (!canReview || !open || !review.decision || !review.reviewDate) return;
     const approved = review.decision === "Approve";
 
     if (stage === "department") {
-      updateLeave(open.id, {
-        department: employee.department || "",
-        reviewedBy: CURRENT_USER.name,
-        reviewDate: review.reviewDate,
-        departmentDecision: review.decision,
-        departmentComments: review.comments.trim(),
-        comments: review.comments.trim(),
-        stage: approved ? "management" : "department",
-        status: approved ? "Pending" : "Rejected",
-        decidedAt: approved ? "" : review.reviewDate,
-      });
+      const saved = await send(() => departmentDecision(open.id, review));
+      if (!saved) return;
       if (approved) {
         setStage("management");
         setReview({ reviewDate: thisDay(), decision: "", comments: "" });
@@ -205,23 +208,17 @@ export default function LeavesSection({ employee, canReview = true }) {
       return;
     }
 
-    updateLeave(open.id, {
-      managementDecidedBy: CURRENT_USER.name,
-      managementDecisionDate: review.reviewDate,
-      managementDecision: review.decision,
-      managementComments: review.comments.trim(),
-      comments: review.comments.trim(),
-      status: approved ? "Approved" : "Rejected",
-      decidedAt: review.reviewDate,
-    });
+    const saved = await send(() => managementDecision(open.id, review));
+    if (!saved) return;
     close();
   };
 
-  const save = () => {
-    // A new request has not been decided on: the store says so, and nothing
-    // here suggests otherwise.
-    addLeave({ ...draft, employee: employee.name, requestedOn: thisDay() });
-    setYear(draft.year);
+  const save = async () => {
+    // Numbered and checked against the balance by the server; a refusal is
+    // shown as a notice and the form stays as it was.
+    const saved = await send(() => addLeave(draft, employee.id));
+    if (!saved) return;
+    setYear(saved.year);
     close();
   };
 

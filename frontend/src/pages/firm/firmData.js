@@ -167,15 +167,7 @@ export function nextBranchNumber(branches) {
  * so the cards fall back to the bank's initials - dropping the files in is
  * all that is needed to replace them.
  */
-export const initialBankAccounts = [
-  { id: 1, bankName: "Bank Muscat", logo: "", bankBranch: "Muscat Branch", branchArea: "Shatti Al Qurum", location: "Muscat, Oman", accountName: "Operating Account", accountType: "Current Account", accountNumber: "0123456789", iban: "OM81 BMUS 0123 4567 8901", swift: "BMUSOMRX", branchId: 1, openingBalance: 5000, openedAt: dayOffset(-232), active: true },
-  { id: 2, bankName: "National Bank of Oman", logo: "", bankBranch: "Ruwi Branch", branchArea: "Ruwi", location: "Muscat, Oman", accountName: "Corporate Account", accountType: "Current Account", accountNumber: "9876543210", iban: "OM45 NBOM 9876 5432 1098", swift: "NBOMOMRX", branchId: null, openingBalance: 12000, openedAt: dayOffset(-232), active: true },
-  { id: 3, bankName: "Bank Dhofar", logo: "", bankBranch: "Salalah Branch", branchArea: "Salalah Main", location: "Dhofar, Oman", accountName: "Salalah Office Account", accountType: "Current Account", accountNumber: "4455667788", iban: "OM12 BDOF 4455 6677 8899", swift: "BDOFOMRU", branchId: 2, openingBalance: 3000, openedAt: dayOffset(-120), active: false },
-  { id: 4, bankName: "Sohar International", logo: "", bankBranch: "Sohar Branch", branchArea: "Sohar", location: "Al Batinah, Oman", accountName: "Sohar Office Account", accountType: "Current Account", accountNumber: "1122334455", iban: "OM68 SIIB 1122 3344 5566", swift: "SIIBOMRX", branchId: 3, openingBalance: 8000, openedAt: dayOffset(-180), active: true },
-  { id: 5, bankName: "Oman Arab Bank", logo: "", bankBranch: "Azaiba Branch", branchArea: "Azaiba", location: "Muscat, Oman", accountName: "Client Funds Account", accountType: "Call Account", accountNumber: "4455667899", iban: "OM96 OABB 4455 6677 8899", swift: "OABOOMRX", branchId: 1, openingBalance: 6500, openedAt: dayOffset(-150), active: true },
-  { id: 6, bankName: "Ahli Bank", logo: "", bankBranch: "Qurum Branch", branchArea: "Qurum", location: "Muscat, Oman", accountName: "Payroll Account", accountType: "Current Account", accountNumber: "9988776655", iban: "OM94 AHLI 9988 7766 5544", swift: "AHLIOMRX", branchId: 1, openingBalance: 7000, openedAt: dayOffset(-95), active: true },
-  { id: 7, bankName: "First Abu Dhabi Bank", logo: "", bankBranch: "Al Khuwair Branch", branchArea: "Al Khuwair", location: "Muscat, Oman", accountName: "Reserve Account", accountType: "Fixed Deposit", accountNumber: "2233445566", iban: "OM11 FAB 2233 4455 6677", swift: "FABOOMRX", branchId: 1, openingBalance: 4650, openedAt: dayOffset(-60), active: true },
-];
+export const initialBankAccounts = [];
 
 /**
  * The initials a bank is drawn by until its own mark is available.
@@ -197,48 +189,14 @@ export function bankInitials(name) {
 
 /* ------------------------- 8. Clients, cases and invoices (the relation chain) */
 
-export const clients = [
-  { id: 1, name: "ABC Holdings LLC", branchId: 1, active: true },
-  { id: 2, name: "XYZ Investments", branchId: 1, active: true },
-  { id: 3, name: "Gulf Construction Co", branchId: 2, active: true },
-  { id: 4, name: "Al Madina Trading", branchId: 1, active: true },
-  { id: 5, name: "Salalah Port Services", branchId: 2, active: true },
-  { id: 6, name: "Nizwa Cement Factory", branchId: 3, active: true },
-  { id: 7, name: "Fatima Rashid", branchId: 1, active: false },
-];
+export const clients = [];
 
-export const cases = [
-  { id: 1, caseNo: "126001", clientId: 1, branchId: 1, status: "Active", openedAt: dayOffset(-210) },
-  { id: 2, caseNo: "126005", clientId: 1, branchId: 1, status: "Active", openedAt: dayOffset(-150) },
-  { id: 3, caseNo: "126009", clientId: 1, branchId: 1, status: "Closed", openedAt: dayOffset(-320) },
-  { id: 4, caseNo: "126012", clientId: 2, branchId: 1, status: "Active", openedAt: dayOffset(-95) },
-  { id: 5, caseNo: "226004", clientId: 3, branchId: 2, status: "Active", openedAt: dayOffset(-60) },
-  { id: 6, caseNo: "126018", clientId: 4, branchId: 1, status: "Closed", openedAt: dayOffset(-280) },
-  { id: 7, caseNo: "226011", clientId: 5, branchId: 2, status: "Active", openedAt: dayOffset(-40) },
-  { id: 8, caseNo: "326002", clientId: 6, branchId: 3, status: "Active", openedAt: dayOffset(-18) },
-  { id: 9, caseNo: "126022", clientId: 7, branchId: 1, status: "Closed", openedAt: dayOffset(-400) },
-  { id: 10, caseNo: "126027", clientId: 2, branchId: 1, status: "Active", openedAt: dayOffset(-12) },
-];
+export const cases = [];
 
-export const invoices = [
-  { id: 1, invoiceNo: "INV-001", caseId: 1, clientId: 1, amount: 1000, date: dayOffset(-200) },
-  { id: 2, invoiceNo: "INV-002", caseId: 2, clientId: 1, amount: 750, date: dayOffset(-140) },
-  { id: 3, invoiceNo: "INV-003", caseId: 3, clientId: 1, amount: 500, date: dayOffset(-300) },
-  { id: 4, invoiceNo: "INV-004", caseId: 4, clientId: 2, amount: 2200, date: dayOffset(-90) },
-  { id: 5, invoiceNo: "INV-005", caseId: 5, clientId: 3, amount: 1800, date: dayOffset(-55) },
-  { id: 6, invoiceNo: "INV-006", caseId: 7, clientId: 5, amount: 1350, date: dayOffset(-35) },
-  { id: 7, invoiceNo: "INV-007", caseId: 8, clientId: 6, amount: 900, date: dayOffset(-15) },
-  { id: 8, invoiceNo: "INV-008", caseId: 10, clientId: 2, amount: 1600, date: dayOffset(-8) },
-];
+export const invoices = [];
 
 // A payment settles an invoice and lands in one bank account.
-export const initialPayments = [
-  { id: 1, invoiceId: 1, amount: 1000, date: dayOffset(-195), bankAccountId: 1 },
-  { id: 2, invoiceId: 2, amount: 500, date: dayOffset(-120), bankAccountId: 1 },
-  { id: 4, invoiceId: 4, amount: 2200, date: dayOffset(-70), bankAccountId: 2 },
-  { id: 5, invoiceId: 5, amount: 900, date: dayOffset(-30), bankAccountId: 1 },
-  { id: 6, invoiceId: 7, amount: 900, date: dayOffset(-6), bankAccountId: 1 },
-];
+export const initialPayments = [];
 
 /**
  * Money leaving an account.
@@ -247,17 +205,9 @@ export const initialPayments = [
  * and what the document beside it is called. An office invoice names its
  * supplier; a court fee names the case it was paid on.
  */
-export const initialExpenses = [
-  { id: 1, kind: "Office", supplier: "Muscat Office Supplies", expenseType: "Office Supplies", description: "Office Expense", reference: "EXP-001", amount: 500, date: dayOffset(-190), bankAccountId: 1 },
-  { id: 2, kind: "Court", caseNo: "261001", description: "Court Fees", reference: "RCP-2026-002", amount: 320, date: dayOffset(-100), bankAccountId: 1 },
-  { id: 3, kind: "Salary", period: "Payroll", description: "Staff Salaries", reference: "PV-2026-003", amount: 2400, date: dayOffset(-40), bankAccountId: 2 },
-  { id: 4, kind: "Office", supplier: "Yands Software LLC", expenseType: "Software Subscription", description: "Software Subscription", reference: "EXP-004", amount: 180, date: dayOffset(-20), bankAccountId: 1 },
-];
+export const initialExpenses = [];
 
-export const initialTransfers = [
-  { id: 1, transferNo: "TRF-2026-0001", fromAccountId: 3, toAccountId: 1, amount: 3000, date: dayOffset(-95), time: "02:15 PM", reference: "REF-2026-039", receipt: "receipt_2026_039.pdf", byName: "Fatima Al Riyami", byRole: "Accountant", description: "Internal transfer" },
-  { id: 2, transferNo: "TRF-2026-0002", fromAccountId: 1, toAccountId: 2, amount: 5000, date: dayOffset(-50), time: "10:30 AM", reference: "REF-2026-045", receipt: "receipt_2026_045.pdf", byName: "Ahmed Al Balushi", byRole: "Finance Manager", description: "Internal transfer" },
-];
+export const initialTransfers = [];
 
 /**
  * "Bank Muscat - **** 6789", the way an account is named on a transfer.
@@ -268,10 +218,24 @@ export const initialTransfers = [
 export const accountLabel = (account) =>
   account.bankName + " — •••• " + String(account.accountNumber).slice(-4);
 
-/** The accounts money can actually leave from, as a transfer names them. */
-export const PAYING_ACCOUNTS = initialBankAccounts
-  .filter((account) => account.active)
-  .map(accountLabel);
+/**
+ * The accounts money can actually leave from, as a transfer names them.
+ *
+ * Read by payment forms across the app, so it is kept in step with the
+ * firm's bank accounts by FirmProvider (syncBankAccounts) - an account added
+ * on the firm's page is offered everywhere straight away.
+ */
+export const PAYING_ACCOUNTS = [];
+
+/** Puts the firm's current accounts in the lists other screens read. */
+export function syncBankAccounts(accounts) {
+  initialBankAccounts.splice(0, initialBankAccounts.length, ...accounts);
+  PAYING_ACCOUNTS.splice(
+    0,
+    PAYING_ACCOUNTS.length,
+    ...accounts.filter((account) => account.active).map(accountLabel)
+  );
+}
 
 /**
  * An account number is shown masked wherever the account is only being
@@ -296,15 +260,7 @@ export function nextTransferNo(transfers, date = dayOffset(0)) {
 
 /* -------------------------------------------------------- 2. Documents */
 
-export const initialDocuments = [
-  { id: 1, docId: "DOC-001", branchId: null, type: "Commercial Registration", expiryDate: dayOffset(120), fileName: "cr-certificate.pdf", fileUrl: "/documents/sample-reference.pdf", notes: "" },
-  { id: 2, docId: "DOC-002", branchId: null, type: "Ministry of Justice License", expiryDate: dayOffset(210), fileName: "moj-license.pdf", fileUrl: "/documents/sample-reference.pdf", notes: "" },
-  { id: 3, docId: "DOC-003", branchId: null, type: "Membership Certificate", expiryDate: dayOffset(45), fileName: "bar-membership.pdf", fileUrl: "/documents/sample-reference.pdf", notes: "Renewal quote requested." },
-  { id: 4, docId: "DOC-004", branchId: 1, type: "Office Lease Contract", expiryDate: dayOffset(300), fileName: "lease-muscat.pdf", fileUrl: "/documents/sample-reference.pdf", notes: "Shatti Al Qurum office." },
-  { id: 5, docId: "DOC-005", branchId: 2, type: "Office Lease Contract", expiryDate: dayOffset(-12), fileName: "lease-salalah.pdf", fileUrl: "/documents/sample-reference.pdf", notes: "Renewal overdue." },
-  { id: 6, docId: "DOC-006", branchId: 3, type: "Apartment Lease Contract", expiryDate: dayOffset(160), fileName: "apartment-sohar.pdf", fileUrl: "/documents/sample-reference.pdf", notes: "Staff accommodation." },
-  { id: 7, docId: "DOC-007", branchId: null, type: "Other", expiryDate: "", fileName: "accounts-2025.pdf", fileUrl: "/documents/sample-reference.pdf", notes: "Audited annual accounts." },
-];
+export const initialDocuments = [];
 
 /* --------------------------------------------------- 5 & 7. Derived money */
 
@@ -573,27 +529,7 @@ export const BRANCH_ROLES = [
  * ever offer that branch's staff. Case tasks will later be assigned from the
  * same list.
  */
-export const firmStaff = [
-  { id: 1, name: "Mohammed Al Yahyaei", branchId: 1, role: "General Supervisor" },
-  { id: 2, name: "Hamad Al Riyami", branchId: 1, role: "General Supervisor" },
-  { id: 3, name: "Layla Al Balushi", branchId: 1, role: "Legal Consultant" },
-  { id: 4, name: "Aisha Al Saadi", branchId: 1, role: "Legal Consultant" },
-  { id: 5, name: "Khalid Al Hinai", branchId: 1, role: "Enforcement Officer" },
-  { id: 6, name: "Nasser Al Amri", branchId: 1, role: "Enforcement Officer" },
-  { id: 14, name: "Fatma Al Zadjali", branchId: 1, role: "Lawyer" },
-  { id: 15, name: "Omar Al Harthy", branchId: 1, role: "Lawyer" },
-
-  { id: 7, name: "Salim Al Rawahi", branchId: 2, role: "General Supervisor" },
-  { id: 8, name: "Maryam Al Ghafri", branchId: 2, role: "Legal Consultant" },
-  { id: 9, name: "Yusuf Al Kindi", branchId: 2, role: "Legal Consultant" },
-  { id: 10, name: "Talal Al Mahrouqi", branchId: 2, role: "Enforcement Officer" },
-  { id: 16, name: "Huda Al Balushi", branchId: 2, role: "Lawyer" },
-
-  { id: 11, name: "Noura Al Habsi", branchId: 3, role: "General Supervisor" },
-  { id: 12, name: "Badar Al Shukaili", branchId: 3, role: "Legal Consultant" },
-  { id: 13, name: "Zahra Al Jabri", branchId: 3, role: "Enforcement Officer" },
-  { id: 17, name: "Saif Al Rashdi", branchId: 3, role: "Lawyer" },
-];
+export const firmStaff = [];
 
 /** Staff of one branch who hold a given role. */
 export const staffFor = (branchId, role) =>

@@ -12,6 +12,7 @@ import {
   nextDocumentId,
   nextTransferNo,
   dayOffset,
+  syncBankAccounts,
 } from "@/pages/firm/firmData";
 
 const nextId = (rows) => rows.reduce((max, r) => Math.max(max, r.id), 0) + 1;
@@ -20,7 +21,12 @@ export default function FirmProvider({ children }) {
   const [firmInfo, setFirmInfo] = useState(initialFirmInfo);
   const [branches, setBranches] = useState(initialBranches);
   const [documents, setDocuments] = useState(initialDocuments);
-  const [bankAccounts, setBankAccounts] = useState(initialBankAccounts);
+  // A copy of the list, so keeping the shared lists in step (below) never
+  // empties the very array this state holds.
+  const [bankAccounts, setBankAccounts] = useState(() => [...initialBankAccounts]);
+  // Payment forms read the accounts from firmData rather than from here;
+  // kept in step on every change so a new account is offered at once.
+  syncBankAccounts(bankAccounts);
   const [payments, setPayments] = useState(initialPayments);
   const [expenses, setExpenses] = useState(initialExpenses);
   const [transfers, setTransfers] = useState(initialTransfers);

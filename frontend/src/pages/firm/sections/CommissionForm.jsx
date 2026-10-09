@@ -81,7 +81,7 @@ const classificationOf = (role) =>
  * a decision, so it is read off whoever is chosen instead of asked for and
  * then having to agree.
  */
-const beneficiaryOptions = employeeRecords.map((person) => ({
+const beneficiaryOptionsOf = (people) => people.map((person) => ({
   value: person.name,
   label: person.name + " \u2014 " + classificationOf(person.role),
 }));
@@ -676,9 +676,10 @@ export default function CommissionForm({
    * The commission agreed. It goes on the list straight away, waiting on the
    * payment that settles it, and the form moves on to that payment.
    */
-  const saveAndContinue = () => {
+  const saveAndContinue = async () => {
     if (!asked.check()) return;
-    onSubmit?.(agreed());
+    // A refusal from the server leaves the request open to be put right.
+    if ((await onSubmit?.(agreed())) === null) return;
     setStage("payment");
   };
 
@@ -841,7 +842,7 @@ export default function CommissionForm({
                 id="paidTo"
                 value={draft.paidTo}
                 onValueChange={choosePaidTo}
-                options={beneficiaryOptions}
+                options={beneficiaryOptionsOf(employeeRecords)}
                 placeholder="Select Employee"
                 searchPlaceholder="Search employees..."
               />

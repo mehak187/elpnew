@@ -8,18 +8,22 @@ import { Separator } from "@/components/ui/separator";
 import { Save, User, Mail, Phone, Building, Calendar, BadgeCheck } from "lucide-react";
 
 import DateField from "@/components/shared/DateField";
+import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
+import { employeeRecords } from "@/pages/employees/employeeData";
 export default function ProfileInfo() {
   const [saved, setSaved] = useState(false);
+  // Whoever is signed in, and their employee record if they have one.
+  const me = employeeRecords.find((e) => e.id === CURRENT_USER.employeeId) || {};
   const [formData, setFormData] = useState({
-    name_en: "Mohammed Al Yahyaei",
-    name_ar: "محمد اليحيائي",
-    email: "mohammed@yands.com",
-    mobile: "+968 91234567",
-    designation: "Senior Lawyer",
-    department: "Litigation",
-    branch: "Muscat",
-    joining_date: "2020-01-15",
-    employee_id: "EMP001",
+    name_en: CURRENT_USER.name || "",
+    name_ar: me.nameAr || "",
+    email: CURRENT_USER.email || me.workEmail || "",
+    mobile: me.phone ? (me.dialCode || "+968") + " " + me.phone : "",
+    designation: me.occupation || "",
+    department: me.department || "",
+    branch: me.branch || "",
+    joining_date: me.dateOfJoining || "",
+    employee_id: me.empNo || "",
   });
 
   const handleChange = (e) => {

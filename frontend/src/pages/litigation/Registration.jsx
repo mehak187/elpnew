@@ -16,7 +16,15 @@ import {
 import { Scale, Save, ArrowLeft } from "lucide-react";
 
 import DateField from "@/components/shared/DateField";
+import { useClients } from "@/lib/clients/context";
+import { clientDisplayName } from "@/pages/clients/clientRecords";
+import { employeeRecords } from "@/pages/employees/employeeData";
 export default function Registration() {
+  const { clients } = useClients();
+  // The firm's lawyers, from the employee list.
+  const lawyers = employeeRecords.filter(
+    (person) => person.status !== "Inactive" && (person.occupation === "Lawyer" || person.practiceLevel)
+  );
   const navigate = useNavigate();
 
   const goBack = useGoBack("/litigation");
@@ -89,10 +97,11 @@ export default function Registration() {
                     <SelectValue placeholder="Select client" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ABC Holdings LLC">ABC Holdings LLC</SelectItem>
-                    <SelectItem value="XYZ Investments">XYZ Investments</SelectItem>
-                    <SelectItem value="Ali Mohammed">Ali Mohammed</SelectItem>
-                    <SelectItem value="Global Trade Co">Global Trade Co</SelectItem>
+                    {clients.map((client) => (
+                      <SelectItem key={client.clientNo || client.id} value={clientDisplayName(client)}>
+                        {clientDisplayName(client)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -197,9 +206,11 @@ export default function Registration() {
                     <SelectValue placeholder="Select lawyer" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Mohammed Al Yahyaei">Mohammed Al Yahyaei</SelectItem>
-                    <SelectItem value="Fatima Al Rashdi">Fatima Al Rashdi</SelectItem>
-                    <SelectItem value="Khalid Al Hinai">Khalid Al Hinai</SelectItem>
+                    {lawyers.map((person) => (
+                      <SelectItem key={person.id} value={person.name}>
+                        {person.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

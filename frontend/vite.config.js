@@ -20,4 +20,14 @@ export default defineConfig({
   optimizeDeps: {
     include: ['react', 'react-dom'],
   },
+  // The Laravel API (backend/, `php artisan serve`) answers /api in
+  // development, so the app calls it on its own origin.
+  server: {
+    proxy: {
+      '/api': {
+        target: process.env.API_PROXY_TARGET || 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+    },
+  },
 })

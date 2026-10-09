@@ -14,6 +14,7 @@ import LeavesProvider from "@/lib/leaves/LeavesProvider";
 import BonusesProvider from "@/lib/bonuses/BonusesProvider";
 import AdvancesProvider from "@/lib/advances/AdvancesProvider";
 import ViolationsProvider from "@/lib/violations/ViolationsProvider";
+import SessionGate from "@/lib/api/SessionGate";
 
 // Root Pages
 import Dashboard from "@/pages/Dashboard";
@@ -33,7 +34,6 @@ import LawFirmProfile from "@/pages/firm/LawFirmProfile";
 import BankEdit from "@/pages/firm/BankEdit";
 import ChangePassword from "@/pages/settings/ChangePassword";
 import SystemSettings from "@/pages/settings/SystemSettings";
-import SignIn from "@/pages/settings/SignIn";
 
 // Expenses
 import ExpensesPage from "@/pages/expenses/ExpensesPage";
@@ -79,12 +79,16 @@ import Execution from "@/pages/litigation/Execution";
 
 function App() {
   return (
+    <BrowserRouter>
     <LanguageProvider>
+    <FirmProvider>
+    {/* Nobody gets past here without signing in, and the providers below
+        start from the records the API has just loaded. */}
+    <SessionGate>
     <CircularsProvider>
       {/* Nothing can be done until every circular addressed to the signed-in
           person has been acknowledged. */}
       <CircularGate />
-    <FirmProvider>
       <ExpensesProvider>
         <SuppliersProvider>
           <ClientsProvider>
@@ -95,7 +99,6 @@ function App() {
           <BonusesProvider>
           <AdvancesProvider>
           <ViolationsProvider>
-        <BrowserRouter>
           <Routes>
             <Route path="/" element={<MainLayout />}>
               {/* Default redirect to dashboard */}
@@ -106,7 +109,6 @@ function App() {
               <Route path="settings/bank/:id" element={<BankEdit />} />
               <Route path="settings/password" element={<ChangePassword />} />
               <Route path="settings/system" element={<SystemSettings />} />
-              <Route path="sign-in" element={<SignIn />} />
 
               {/* Expenses */}
               <Route path="suppliers" element={<SuppliersPage />} />
@@ -191,7 +193,6 @@ function App() {
               <Route path="archive" element={<Dashboard />} />
             </Route>
           </Routes>
-        </BrowserRouter>
           </ViolationsProvider>
           </AdvancesProvider>
           </BonusesProvider>
@@ -202,9 +203,11 @@ function App() {
           </ClientsProvider>
         </SuppliersProvider>
       </ExpensesProvider>
-    </FirmProvider>
     </CircularsProvider>
+    </SessionGate>
+    </FirmProvider>
     </LanguageProvider>
+    </BrowserRouter>
   );
 }
 

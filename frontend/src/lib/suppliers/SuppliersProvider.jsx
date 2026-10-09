@@ -1,7 +1,17 @@
 import { useMemo, useState } from "react";
 import { SuppliersContext } from "./context";
 import { initialSuppliers } from "@/pages/suppliers/supplierData";
+import { loadSuppliers } from "@/lib/api/modules/suppliers";
+import { attempt } from "@/lib/api/notice";
 
+/**
+ * The supplier directory, loaded from the API at sign-in.
+ *
+ * The server registers a supplier when an invoice claim names a new one, so
+ * after such a claim the directory is read again rather than added to here.
+ * Adding and editing on the Suppliers page stay on this screen until the API
+ * takes them.
+ */
 export default function SuppliersProvider({ children }) {
   const [suppliers, setSuppliers] = useState(initialSuppliers);
 
@@ -22,6 +32,12 @@ export default function SuppliersProvider({ children }) {
         ),
       removeSupplier: (id) =>
         setSuppliers((prev) => prev.filter((s) => s.id !== id)),
+      /** The directory read back from the server, keeping what only this screen holds. */
+      refreshSuppliers: async () => {
+        const rows = await attempt(() => loadSuppliers(suppliers));
+        if (rows) setSuppliers(rows);
+        return rows;
+      },
     }),
     [suppliers]
   );

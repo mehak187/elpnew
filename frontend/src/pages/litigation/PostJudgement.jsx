@@ -26,13 +26,13 @@ export default function PostJudgement() {
   const { id } = useParams();
   const [judgementFile, setJudgementFile] = useState(null);
   const [formData, setFormData] = useState({
-    judgement_date: "2024-12-10",
-    judgement_type: "In Favor",
-    judgement_summary: "The court ruled in favor of the plaintiff...",
-    appeal_deadline: "2025-01-10",
-    appeal_status: "Not Filed",
-    awarded_amount: "15,000.000",
-    court_costs: "500.000",
+    judgement_date: "",
+    judgement_type: "",
+    judgement_summary: "",
+    appeal_deadline: "",
+    appeal_status: "",
+    awarded_amount: "",
+    court_costs: "",
   });
 
   const handleChange = (e) => {

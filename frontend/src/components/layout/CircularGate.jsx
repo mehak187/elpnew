@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -8,12 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Megaphone } from "lucide-react";
-import {
-  useCirculars,
-  pendingFor,
-  formatDate,
-} from "@/lib/circulars/context";
-import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
+import { useCirculars, formatDate } from "@/lib/circulars/context";
 
 /**
  * The circulars a person has to read before they can do anything else.
@@ -25,16 +21,26 @@ import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
  *
  * The dialog is modal, so everything behind it is inert while it is open: no
  * navigation, no typing, no saving.
+ *
+ * Which circulars are waiting is the server's answer - it knows who each was
+ * issued to - and the acknowledgement is recorded there, against whoever is
+ * signed in. Until the server has it, the prompt stays.
  */
 export default function CircularGate() {
-  const { circulars, acknowledge } = useCirculars();
-
-  const outstanding = pendingFor(
-    circulars,
-    CURRENT_USER.group,
-    CURRENT_USER.name
-  );
+  const { pending: outstanding, acknowledge } = useCirculars();
+  // One acknowledgement at a time: the button waits for the server.
+  const [busy, setBusy] = useState(false);
   const circular = outstanding[0];
+
+  const confirm = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await acknowledge(circular.id);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   if (!circular) return null;
 
@@ -73,7 +79,7 @@ export default function CircularGate() {
         </p>
 
         <DialogFooter>
-          <Button onClick={() => acknowledge(circular.id, CURRENT_USER.name)}>
+          <Button onClick={confirm} disabled={busy}>
             I acknowledge this circular
           </Button>
         </DialogFooter>

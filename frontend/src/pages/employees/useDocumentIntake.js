@@ -41,6 +41,8 @@ export function useDocumentIntake(formData, setFormData) {
       id: nextId.current,
       fileName: file.name,
       fileUrl: URL.createObjectURL(file),
+      // The copy itself, sent to the API when the paper is filed.
+      file,
       size: file.size,
       // Chosen from a tile, or left for classification to decide.
       typeKey: typeKey || null,

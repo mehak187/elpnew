@@ -51,10 +51,35 @@ export const STATUS_TONE = {
   [CANCELLED]: "bg-red-100 text-red-700",
 };
 
+/* --------------------------------------------------------------- the stores */
+
+/**
+ * Circulars already issued, who has acknowledged them, and what has happened
+ * to them - filled from the API at sign-in (src/lib/api/modules/circulars.js).
+ *
+ * `acknowledgements` is a list rather than a flag because a circular is issued
+ * to a group: it is read by many people, and the firm has to be able to say
+ * which of them have read it and when. `branch` is the office it applies to -
+ * "general" when it covers the whole company. `supersedes` and `supersededBy`
+ * link the versions of one instruction: a correction never edits what went
+ * out, it issues a new circular and points the two at each other.
+ */
+export const initialCirculars = [];
+
+/** What has happened to the circulars, in the order it happened. */
+export const initialAudit = [];
+
+/**
+ * The circulars the signed-in person still has to acknowledge, as the server
+ * counts them - it knows who each circular was issued to.
+ */
+export const pendingCirculars = [];
+
 /* ------------------------------------------------------- what the app reads */
 
 export const CircularsContext = createContext({
   circulars: [],
+  pending: [],
   audit: [],
   issueCircular: () => {},
   reviseCircular: () => {},

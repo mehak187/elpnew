@@ -24,6 +24,7 @@ import {
   STATUS_TONE,
   formatDate,
 } from "@/lib/circulars/context";
+import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 
 /**
  * The circulars this one employee is addressed by.
@@ -39,6 +40,10 @@ export default function EmployeeCircularsSection({ employee, self = false }) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  // An acknowledgement is recorded against whoever is signed in, so it can
+  // only be given from their own record.
+  const own = employee?.id != null && employee.id === CURRENT_USER.employeeId;
 
   const group = groupOf(employee);
   const mine = circularsFor(circulars, group);
@@ -228,13 +233,11 @@ export default function EmployeeCircularsSection({ employee, self = false }) {
                               </span>
                             </span>
                           </span>
-                        ) : circular.status === ACTIVE ? (
+                        ) : circular.status === ACTIVE && own ? (
                           <Button
                             type="button"
                             size="sm"
-                            onClick={() =>
-                              acknowledge(circular.id, employee.name)
-                            }
+                            onClick={() => acknowledge(circular.id)}
                           >
                             I Acknowledge
                           </Button>

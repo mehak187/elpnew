@@ -55,12 +55,13 @@ import {
   shortDate,
   todayIso,
 } from "../generalRequestData";
+import { generalRequestsApi } from "@/lib/api/modules/generalRequests";
+import { attempt } from "@/lib/api/notice";
+import { upsert, upserted } from "@/lib/api/store";
 
 const emptyDraft = { requestType: "", comment: "" };
 const emptyDecision = { answer: "", comment: "" };
 
-/** Who answers an administrative request, written on it so the trail says who did. */
-const DECIDED_BY = "Admin Department";
 
 /** The mark at the head of each kind's sheet - the one its card carries. */
 const KIND_ICON = {
@@ -101,6 +102,25 @@ export default function GeneralRequestSection({
   const [adding, setAdding] = useState(false);
   // What this employee has raised before, open over the request.
   const [showHistory, setShowHistory] = useState(false);
+  // While a call to the server is out, its button waits rather than sending twice.
+  const [busy, setBusy] = useState(false);
+  const send = async (call) => {
+    if (busy) return null;
+    setBusy(true);
+    try {
+      return await call();
+    } finally {
+      setBusy(false);
+    }
+  };
+  /**
+   * The record the server returned, in place of the one on screen - and in
+   * the shared list too, so the request counts and the next visit see it.
+   */
+  const keep = (record) => {
+    upsert(initialGeneralRequests, record);
+    setRequests((prev) => upserted(prev, record));
+  };
 
   const mine = requestsFor(requests, employee.name, kind).map((request, index) => ({
     ...request,
@@ -153,50 +173,26 @@ export default function GeneralRequestSection({
    * The request, on the list straight away under its own number and waiting
    * on the answer. The form moves on to that answer.
    */
-  const submit = () => {
+  const submit = async () => {
     if (!asked.check()) return;
-    const date = todayIso();
-    const id = requests.reduce((max, r) => Math.max(max, r.id), 0) + 1;
-    setRequests((prev) => [
-      ...prev,
-      {
-        id,
-        kind,
-        employee: employee.name,
-        requestNo: nextRequestNo(prev, date, sort.prefix),
-        requestType: draft.requestType,
-        comment: draft.comment.trim(),
-        document: document?.name || "",
-        date,
-        // Not decided yet, so it says so and nothing more.
-        status: "Pending",
-        decisionDate: "",
-        remarks: "",
-        reviewedBy: "",
-      },
-    ]);
-    setOpenId(id);
+    // Numbered and dated by the server; a refusal leaves the form as it was.
+    const saved = await send(() =>
+      attempt(() => generalRequestsApi.submit(kind, draft, employee.id, document))
+    );
+    if (!saved) return;
+    keep(saved);
+    setOpenId(saved.id);
     setStage("decision");
   };
 
   /** The answer, against the request it was given on. */
-  const decide = () => {
+  const decide = async () => {
     // Nobody answers their own request: on the employee's own page the
     // decision is read once it has been given, and never written.
     if (!open || settled || !canDecide || !answered.check()) return;
-    setRequests((prev) =>
-      prev.map((request) =>
-        request.id === openId
-          ? {
-              ...request,
-              status: decision.answer,
-              decisionDate: todayIso(),
-              remarks: decision.comment.trim(),
-              reviewedBy: DECIDED_BY,
-            }
-          : request
-      )
-    );
+    const saved = await send(() => attempt(() => generalRequestsApi.decide(open.id, decision)));
+    if (!saved) return;
+    keep(saved);
     clear();
   };
 

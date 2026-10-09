@@ -160,11 +160,7 @@ export const DEFAULT_COMMISSION_BOOKING = {
  * is shown their own arrangements on their own record - one list, so the two
  * screens cannot disagree about what was agreed.
  */
-export const commissionRecords = [
-  { id: 1, commissionNo: "COM-2024-001", classification: "Partners", paidTo: "Mohammed Al Yahyaei", clientNo: "1", clientName: "ABC Holdings LLC", type: FIXED_COMMISSION, caseFileNo: "", rate: 10, periodFrom: "2024-01-01", periodTo: "", notes: "" },
-  { id: 2, commissionNo: "COM-2024-002", classification: "Lawyers", paidTo: "Fatima Al Rashdi", clientNo: "1", clientName: "ABC Holdings LLC", type: INVOICE_LINKED_COMMISSION, caseFileNo: "21", invoiceNo: "INV-2024-011", rate: 5, periodFrom: "2024-05-01", periodTo: "2024-12-31", notes: "" },
-  { id: 3, commissionNo: "COM-2024-003", classification: "Consultants", paidTo: "Amina Al Farsi", clientNo: "3", clientName: "Al Madina Trading", type: FIXED_COMMISSION, caseFileNo: "", rate: 7.5, periodFrom: "2024-07-01", periodTo: "", notes: "" },
-];
+export const commissionRecords = [];
 
 /**
  * The next number in the year's run: COM-2026-004.

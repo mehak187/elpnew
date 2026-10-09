@@ -19,11 +19,7 @@ import { Rial } from "@/components/shared/Rial";
 import { withRial } from "@/lib/money";
 
 import DateField from "@/components/shared/DateField";
-const executionActions = [
-  { id: 1, date: "2024-12-05", action: "Execution Order Filed", status: "Completed", amount: "15,000.000", notes: "Filed with execution court" },
-  { id: 2, date: "2024-12-10", action: "Bank Account Freeze", status: "In Progress", amount: "-", notes: "Awaiting bank response" },
-  { id: 3, date: "2024-12-15", action: "Asset Seizure Notice", status: "Pending", amount: "-", notes: "Scheduled for next week" },
-];
+const executionActions = [];
 
 const columns = [
   { key: "date", header: "Date", width: "12%", cellClassName: "font-medium" },

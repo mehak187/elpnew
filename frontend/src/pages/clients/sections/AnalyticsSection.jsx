@@ -38,13 +38,15 @@ const money = (amount) =>
 const toRows = (counts) =>
   Object.entries(counts).map(([label, count]) => ({ label, count }));
 
+// With no cases yet, the range is today's.
+const TODAY = new Date().toISOString().slice(0, 10);
 const EARLIEST = clientCases.reduce(
   (min, k) => (k.receivedAt < min ? k.receivedAt : min),
-  clientCases[0].receivedAt
+  clientCases[0]?.receivedAt ?? TODAY
 );
 const LATEST = liveCases.reduce(
   (max, k) => (k.receivedAt > max ? k.receivedAt : max),
-  liveCases[0].receivedAt
+  liveCases[0]?.receivedAt ?? TODAY
 );
 
 /**

@@ -61,6 +61,9 @@ import {
 } from "../assistanceData";
 
 import DateField from "@/components/shared/DateField";
+import { assistanceApi } from "@/lib/api/modules/assistance";
+import { attempt } from "@/lib/api/notice";
+import { upsert, upserted } from "@/lib/api/store";
 const NOTES_LIMIT = 300;
 // The employee says why at more length than the decision answers.
 const COMMENT_LIMIT = 500;
@@ -117,6 +120,27 @@ export default function AssistanceSection({
   canDecide = true,
 }) {
   const [records, setRecords] = useState(assistanceRecords);
+  // While a call to the server is out, its button waits rather than sending twice.
+  const [busy, setBusy] = useState(false);
+  /**
+   * Sends one action. The record the server returns goes into the shared
+   * list as well as this one, so it is still there when the section opens
+   * again; a refusal is shown as a notice and comes back as null.
+   */
+  const send = async (call) => {
+    if (busy) return null;
+    setBusy(true);
+    try {
+      const saved = await attempt(call);
+      if (saved) {
+        upsert(assistanceRecords, saved);
+        setRecords((prev) => upserted(prev, saved));
+      }
+      return saved;
+    } finally {
+      setBusy(false);
+    }
+  };
   const [draft, setDraft] = useState(emptyDraft);
   const [proof, setProof] = useState(null);
   // Which stage of the request is open, and what management decided.
@@ -186,34 +210,24 @@ export default function AssistanceSection({
    * The request submitted. It is on record straight away, waiting for a
    * decision, and the form moves on to the stage that gives one.
    */
-  const saveRecord = () => {
+  // Handed back to the employee: corrected on the first stage and sent again.
+  const correcting = Boolean(open) && openStatus === "Returned";
+
+  const saveRecord = async () => {
     if (!checkRequired() || !canSave) return;
-    const id = records.reduce((max, r) => Math.max(max, r.id), 0) + 1;
-    setRecords((prev) => [
-      {
-        id,
-        // On the list straight away, under a temporary number, waiting on a
-        // decision.
-        requestNo,
-        requestDate: new Date().toISOString().slice(0, 10),
-        decision: "Pending",
-        paymentDate: "",
-        expenseType: draft.expenseType,
-        category: draft.category,
-        subcategory: draft.subcategory,
-        // Whose record it was asked from.
-        employee: employee?.name || "",
-        purpose: draft.notes.trim(),
-        amount: Number(draft.amount),
-        method: "",
-        account: "",
-        proof: proof ? proof.name : "",
-        proofUrl: proof ? URL.createObjectURL(proof) : "",
-        notes: draft.notes,
-      },
-      ...prev,
-    ]);
-    setOpenId(id);
+    // The server numbers it, and refuses a second open request or one over
+    // the year's limit; a refusal leaves the form as it was.
+    const saved = await send(() =>
+      correcting
+        ? assistanceApi.resubmit(open.id, draft, proof, employee?.id)
+        : assistanceApi.submit(draft, proof, employee?.id)
+    );
+    if (!saved) return;
+    if (correcting) {
+      closeForm();
+      return;
+    }
+    setOpenId(saved.id);
     // Management decides on what was asked for, until it grants something else.
     setReview({ ...emptyReview, approved: draft.amount });
     setStage("decision");
@@ -224,25 +238,18 @@ export default function AssistanceSection({
    * the money itself has not moved, so the request reads Approved rather than
    * Paid until a payment is actually recorded against it.
    */
-  const confirmDecision = () => {
+  const confirmDecision = async () => {
     if (!checkRequired() || !canConfirm) return;
     const granted = !refusing && !returning;
-    setRecords((prev) =>
-      prev.map((record) =>
-        record.id === openId
-          ? {
-              ...record,
-              decision: refusing ? "Rejected" : returning ? "Returned" : "Approved",
-              decisionChoice: decision,
-              rejectionReason: refusing ? review.notes.trim() : "",
-              requestedAmount: record.requestedAmount ?? record.amount,
-              amount: granted ? approvedAmount : record.amount,
-              decisionDate: decidedOn,
-              managementComment: review.notes.trim(),
-            }
-          : record
-      )
+    // The server records who decided and when.
+    const saved = await send(() =>
+      assistanceApi.decide(openId, {
+        decision,
+        approvedAmount,
+        comment: review.notes.trim(),
+      })
     );
+    if (!saved) return;
     if (granted) {
       setStage("finance");
       return;
@@ -251,34 +258,36 @@ export default function AssistanceSection({
   };
 
   /** Paid out by the financial department: the request reads Paid. */
-  const processPayment = () => {
+  const processPayment = async () => {
     if (!checkRequired() || !canPay || !openId || !canDecide) return;
-    const granted = true;
-    setRecords((prev) =>
-      prev.map((record) =>
-        record.id === openId
-          ? {
-              ...record,
-              paymentDate: review.paymentDate,
-              method: granted ? review.method : "",
-              bankAccount: granted ? review.bankAccount : "",
-              account: granted ? review.bankAccount : "",
-              reference: granted ? review.reference.trim() : "",
-              receipt: granted ? receipt?.name || "" : "",
-              disbursementDate: granted ? review.paymentDate : "",
-              paymentNotes: review.notes.trim(),
-            }
-          : record
-      )
+    const saved = await send(() =>
+      assistanceApi.pay(openId, {
+        method: review.method,
+        paymentDate: review.paymentDate,
+        bankAccount: review.bankAccount,
+        reference: review.reference.trim(),
+        expenseType: open?.expenseType,
+        category: open?.category,
+        subcategory: open?.subcategory,
+      })
     );
-    closeForm();
+    if (saved) closeForm();
   };
 
   /** A request opened back off the list, to be followed or decided. */
   const track = (record) => {
     setOpenId(record.id);
     const status = statusOf(record);
-    setStage(status === "Approved" || status === "Paid" ? "finance" : "decision");
+    // One handed back opens where it is corrected, with what is missing a
+    // step along.
+    setStage(
+      status === "Approved" || status === "Paid"
+        ? "finance"
+        : status === "Returned"
+          ? "request"
+          : "decision"
+    );
+    setProof(null);
     setDecision(
       record.decisionChoice ||
         (status === "Rejected"
@@ -293,7 +302,9 @@ export default function AssistanceSection({
       ...emptyDraft,
       subcategory: record.subcategory,
       amount: String(record.amount),
-      notes: record.purpose || record.notes || "",
+      notes: record.notes || record.purpose || "",
+      // Kept as it was asked, so a correction changes only what is corrected.
+      purpose: record.purpose || "",
     });
     setReview({
       approved: String(record.amount),
@@ -899,7 +910,7 @@ export default function AssistanceSection({
                   className="min-w-48"
                   variant={refusing ? "destructive" : "default"}
                   onClick={confirmDecision}
-                  disabled={!canConfirm}
+                  disabled={!canConfirm || busy}
                 >
                   {refusing ? "Confirm Rejection" : returning ? "Return to Employee" : "Confirm Decision"}
                 </Button>
@@ -907,12 +918,12 @@ export default function AssistanceSection({
             ) : stage === "finance" ? (
               canDecide &&
               openStatus === "Approved" && (
-                <Button type="button" className="min-w-48" onClick={processPayment} disabled={!canPay}>
+                <Button type="button" className="min-w-48" onClick={processPayment} disabled={!canPay || busy}>
                   Process Payment
                 </Button>
               )
             ) : (
-              <Button type="button" className="min-w-48" onClick={saveRecord}>
+              <Button type="button" className="min-w-48" onClick={saveRecord} disabled={busy}>
                 Submit Request
               </Button>
             )}

@@ -15,13 +15,6 @@ const pad = (n) => String(n).padStart(2, "0");
 const round3 = (value) => Math.round(value * 1000) / 1000;
 const sum = (list, pick) => round3(list.reduce((total, item) => total + Number(pick(item) || 0), 0));
 
-/** A YYYY-MM-DD date moved by a number of days. */
-const shiftDays = (iso, days) => {
-  const [year, month, day] = iso.split("-").map(Number);
-  const date = new Date(year, month - 1, day + days);
-  return date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate());
-};
-
 const lastDayOf = (year, month) => new Date(year, month, 0).getDate();
 
 /* -------------------------------------------------------------------- VAT */
@@ -177,23 +170,7 @@ export function vatReturnStatus(year, quarter, filing, today) {
 
 // Every return from 2023 up to the first quarter of 2026 was filed and paid a
 // few days before it was due; the second quarter of 2026 has not been filed.
-export const initialVatFilings = Object.fromEntries(
-  [2023, 2024, 2025, 2026].flatMap((year) =>
-    VAT_QUARTERS.filter((quarter) => year < 2026 || quarter === 1).map((quarter) => {
-      const filedOn = shiftDays(vatDueDate(year, quarter), -6);
-      return [
-        periodKey(year, quarter),
-        {
-          filedOn,
-          returnNo: "VAT-" + year + "-Q" + quarter,
-          paidOn: filedOn,
-          paymentRef: "TRF-VAT-" + year + quarter,
-          file: "VAT-" + year + "-Q" + quarter + ".pdf",
-        },
-      ];
-    })
-  )
-);
+export const initialVatFilings = {};
 
 /* ------------------------------------------------------------- income tax */
 
@@ -231,9 +208,4 @@ export function incomeTaxStatus(record, today) {
   return today > incomeTaxDueDate(record.year) ? "overdue" : "due";
 }
 
-export const initialIncomeTaxReturns = [
-  { id: 1, year: 2022, revenue: 412500, expenses: 318400, filedOn: "2023-04-18", returnNo: "CIT-2022-0417", paidAmount: 14115, paidOn: "2023-04-25", paymentRef: "TRF-CIT-2022", file: "CIT-2022.pdf" },
-  { id: 2, year: 2023, revenue: 468900, expenses: 352750, filedOn: "2024-04-22", returnNo: "CIT-2023-0422", paidAmount: 17422.5, paidOn: "2024-04-29", paymentRef: "TRF-CIT-2023", file: "CIT-2023.pdf" },
-  { id: 3, year: 2024, revenue: 521300, expenses: 389600, filedOn: "2025-04-28", returnNo: "CIT-2024-0428", paidAmount: 12000, paidOn: "2025-04-30", paymentRef: "TRF-CIT-2024", file: "CIT-2024.pdf" },
-  { id: 4, year: 2025, revenue: 548200, expenses: 401900, filedOn: "", returnNo: "", paidAmount: 0, paidOn: "", paymentRef: "", file: "" },
-];
+export const initialIncomeTaxReturns = [];

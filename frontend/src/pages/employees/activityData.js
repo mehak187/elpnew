@@ -120,74 +120,14 @@ export const longDate = (value) => {
 /* ------------------------------------------------------- the recorded days */
 
 /**
- * A settled figure that varies from day to day without ever varying between
- * two readings of the same day. Real days come from the database; these have to
- * be repeatable, or every render would report different performance.
- */
-const wobble = (seed) => {
-  const x = Math.sin(seed * 12.9898) * 43758.5453;
-  return x - Math.floor(x);
-};
-
-/**
- * One made-up working day.
- *
- * System active time is deliberately less than office time - an hour at the
- * desk is not an hour in the system, and the whole point of measuring both is
- * to see the difference.
- */
-function buildDay(date, seed) {
-  const startMinutes = 8 * 60 + Math.round(wobble(seed) * 45);
-  const officeMinutes = 7 * 60 + Math.round(wobble(seed + 1) * 150);
-  const endMinutes = startMinutes + officeMinutes;
-
-  const court = Math.round(wobble(seed + 2) * 2.4);
-  const client = Math.round(wobble(seed + 3) * 2.2);
-  const expert = Math.round(wobble(seed + 4) * 1.4);
-  const other = Math.round(wobble(seed + 5) * 1.6);
-  const memos = Math.round(wobble(seed + 6) * 3.4);
-
-  const minutes = {
-    court: court * (45 + Math.round(wobble(seed + 7) * 60)),
-    client: client * (30 + Math.round(wobble(seed + 8) * 45)),
-    expert: expert * (30 + Math.round(wobble(seed + 9) * 50)),
-    other: other * (20 + Math.round(wobble(seed + 10) * 40)),
-  };
-
-  const booked = minutes.court + minutes.client + minutes.expert + minutes.other;
-  // Time in the system is what is left of the day once the diary is taken out,
-  // less the part of it nobody was really working.
-  const atDesk = Math.max(0, officeMinutes - booked);
-  const activeMinutes = Math.round(atDesk * (0.62 + wobble(seed + 11) * 0.24));
-
-  return {
-    date,
-    startTime: pad(Math.floor(startMinutes / 60)) + ":" + pad(startMinutes % 60),
-    endTime: pad(Math.floor(endMinutes / 60)) + ":" + pad(endMinutes % 60),
-    officeMinutes,
-    activeMinutes,
-    counts: { court, client, expert, other, memos },
-    minutes,
-  };
-}
-
-/**
  * The last two years of working days, weekends left out.
  *
  * Two years rather than one, because the twelve-month view is compared against
  * the twelve months before it and both windows have to be there.
  */
-export function recordedDays(from = new Date()) {
-  const days = [];
-  for (let back = 0; back < 730; back += 1) {
-    const date = new Date(from);
-    date.setDate(date.getDate() - back);
-    const weekday = date.getDay();
-    // The working week here runs Sunday to Thursday.
-    if (weekday === 5 || weekday === 6) continue;
-    days.push(buildDay(isoDate(date), back + 1));
-  }
-  return days;
+// No activity is recorded yet: real days will come from the database.
+export function recordedDays() {
+  return [];
 }
 
 /* --------------------------------------------------------- the periods shown */

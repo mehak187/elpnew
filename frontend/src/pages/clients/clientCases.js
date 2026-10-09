@@ -9,8 +9,6 @@
  */
 
 const DAY = 24 * 60 * 60 * 1000;
-const iso = (days) =>
-  new Date(Date.now() + days * DAY).toISOString().slice(0, 10);
 
 /** The case types the client works in. */
 export const CASE_TYPES = [
@@ -54,43 +52,8 @@ export const CASE_STAGES = [
   "Close file",
 ];
 
-const c = (id, type, level, stage, receivedDays, closedDays, claimAmount, deleted) => ({
-  id,
-  caseNo: "26" + String(1000 + id),
-  type,
-  level,
-  stage,
-  receivedAt: iso(receivedDays),
-  closedAt: closedDays === null ? null : iso(closedDays),
-  claimAmount,
-  // Deleted cases are kept so they can still be counted and accounted for.
-  deletedAt: deleted ? iso(deleted) : null,
-});
 
-export const clientCases = [
-  c(1, "Commercial Cases", "Execution", "Close file", -410, -60, 18500, null),
-  c(2, "Civil Cases", "Primary", "Post Judgement", -395, null, 42000, null),
-  c(3, "Commercial Cases", "Appeal", "Case Registration", -370, null, 7300, null),
-  c(4, "Labor Cases", "Primary", "Close file", -350, -300, 3200, -290),
-  c(5, "Civil Cases", "Primary (Dispute)", "Close file", -330, -240, 15750, null),
-  c(6, "Real Estate Cases", "Primary", "Close file", -300, -150, 96000, null),
-  c(7, "Commercial Cases", "Supreme", "Running Cases", -280, null, 54000, null),
-  c(8, "Criminal Cases", "Primary", "Close file", -255, -120, 8800, null),
-  c(9, "Administrative Cases", "Primary", "Close file", -240, -180, 12400, -170),
-  c(10, "Commercial Cases", "Primary (Different Panel)", "Running Cases", -210, null, 31000, null),
-  c(11, "Family/Personal Status Cases", "Primary", "Close file", -195, -140, 4600, -130),
-  c(12, "Civil Cases", "Appeal (Dispute)", "Close file", -175, -40, 27500, null),
-  c(13, "Labor Cases", "Primary", "Running Cases", -150, null, 9100, null),
-  c(14, "Commercial Cases", "Execution", "Close file", -130, -35, 63000, null),
-  c(15, "Real Estate Cases", "Appeal (Different Panel)", "Case Registration", -110, null, 38000, null),
-  c(16, "Civil Cases", "Primary", "Close file", -95, -20, 11200, -15),
-  c(17, "Criminal Cases", "Supreme (Dispute)", "Close file", -80, -25, 5400, null),
-  c(18, "Commercial Cases", "Primary", "Case Registration", -62, null, 72000, null),
-  c(19, "Administrative Cases", "Primary", "Close file", -45, -10, 6800, null),
-  c(20, "Labor Cases", "Supreme (Different Panel)", "Post Judgement", -30, null, 19500, null),
-  c(21, "Commercial Cases", "Primary", "Case Registration", -14, null, 45000, null),
-  c(22, "Civil Cases", "Primary", "Running Cases", -5, null, 13600, null),
-];
+export const clientCases = [];
 
 /**
  * A deleted case is struck off but not thrown away.

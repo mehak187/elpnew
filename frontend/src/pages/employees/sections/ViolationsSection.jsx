@@ -42,7 +42,6 @@ import {
   DEDUCTION_PENALTY,
   NO_PENALTY,
   APPEAL_OUTCOMES,
-  CANCELLING_OUTCOME,
   VIOLATION_STATUS_TONE,
   stagesDone,
   nextStage,
@@ -141,7 +140,7 @@ function DateEntry({ id, label, required, value, onChange }) {
   );
 }
 
-/** A file picked for a stage: the name is what the record keeps. */
+/** A file picked for a stage: the name is shown, the file itself is sent. */
 function FileField({ id, label, value, onChange }) {
   return (
     <div className="space-y-2">
@@ -164,7 +163,7 @@ function FileField({ id, label, value, onChange }) {
         id={id}
         type="file"
         className="hidden"
-        onChange={(e) => e.target.files[0] && onChange(e.target.files[0].name)}
+        onChange={(e) => e.target.files[0] && onChange(e.target.files[0])}
       />
     </div>
   );
@@ -209,15 +208,45 @@ function Pair({ first, second }) {
  * opened from the Employees page; on My Profile the history is only read.
  */
 export default function ViolationsSection({ employee, canEdit = true }) {
-  const { violations, nextId, addViolation, updateViolation } = useViolations();
+  const {
+    violations,
+    addViolation,
+    acknowledgeViolation,
+    respondToViolation,
+    decideViolation,
+    appealViolation,
+    settleAppeal,
+  } = useViolations();
 
   // The record being worked on: "new" while it is being added, then its id.
   const [openId, setOpenId] = useState(null);
   const [stage, setStage] = useState("violation");
   const [draft, setDraft] = useState(() => draftFrom(null));
+  // The files picked at each stage, sent with it; the draft keeps their names.
+  const [files, setFiles] = useState({});
   const [query, setQuery] = useState("");
+  // While a call to the server is out, its button waits rather than sending twice.
+  const [busy, setBusy] = useState(false);
+  const send = async (call) => {
+    if (busy) return null;
+    setBusy(true);
+    try {
+      return await call();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // The employee's own violations: theirs to read, answer and appeal, though
+  // recording and deciding them stays with the firm.
+  const own = employee?.id != null && employee.id === CURRENT_USER.employeeId;
+  const canOpen = canEdit || own;
 
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
+  const pickFile = (name) => (file) => {
+    set(name, file.name);
+    setFiles((prev) => ({ ...prev, [name]: file }));
+  };
 
   const record = typeof openId === "number" ? violations.find((v) => v.id === openId) : null;
   const done = stagesDone(record);
@@ -237,58 +266,53 @@ export default function ViolationsSection({ employee, canEdit = true }) {
     setOpenId("new");
     setStage("violation");
     setDraft(draftFrom(null));
+    setFiles({});
   };
 
-  /** An existing violation opens at the first stage it has not been through. */
+  /**
+   * An existing violation opens at the first stage it has not been through.
+   * The employee opening their own for the first time has read it, and the
+   * firm is told so.
+   */
   const openRecord = (violation) => {
     setOpenId(violation.id);
     setStage(nextStage(violation));
     setDraft(draftFrom(violation));
+    setFiles({});
+    if (own && !violation.acknowledgedAt) acknowledgeViolation(violation.id);
   };
 
   const close = () => {
     setOpenId(null);
     setStage("violation");
     setDraft(draftFrom(null));
+    setFiles({});
   };
 
   /* ------------------------------------------------ each stage's save */
 
   const canStart = draft.date && draft.type && draft.description.trim() && draft.investigationStart;
 
-  const saveViolation = () => {
+  const saveViolation = async () => {
     if (!checkRequired() || !canStart) return;
-    const part = {
-      date: draft.date,
-      type: draft.type,
-      description: draft.description.trim(),
-      documentName: draft.documentName,
-      investigationStart: draft.investigationStart,
-    };
+    // Once recorded, a violation stands as it was written: the later stages
+    // answer it rather than rewrite it.
     if (record) {
-      updateViolation(record.id, part);
+      setStage(nextStage(record));
       return;
     }
     // Saving the violation starts the investigation, and the case moves on
     // to the employee's side of it.
-    addViolation({
-      ...part,
-      violationNo: "",
-      employee: employee.name,
-      investigationStatus: "Under Investigation",
-      investigator: CURRENT_USER.name,
-      status: "Under Investigation",
-    });
-    setOpenId(nextId);
+    const saved = await send(() => addViolation(employee.id, draft, files.documentName));
+    if (!saved) return;
+    setOpenId(saved.id);
     setStage("response");
   };
 
-  const saveResponse = () => {
+  const saveResponse = async () => {
     if (!record || !draft.response.trim()) return;
-    updateViolation(record.id, {
-      response: draft.response.trim(),
-      responseDocument: draft.responseDocument,
-    });
+    const saved = await send(() => respondToViolation(record.id, draft, files.responseDocument));
+    if (!saved) return;
     setStage("decision");
   };
 
@@ -302,39 +326,21 @@ export default function ViolationsSection({ employee, canEdit = true }) {
     draft.decisionReasons.trim() &&
     (draft.penaltyType !== DEDUCTION_PENALTY || Number(draft.deductionAmount) > 0);
 
-  const saveDecision = () => {
+  const saveDecision = async () => {
     if (!record || !canDecide) return;
-    // The penalty is issued here, which is when the violation is numbered -
-    // unless the decision was that no penalty follows, which issues nothing.
-    updateViolation(
-      record.id,
-      {
-        investigationResult: draft.investigationResult,
-        penaltyType: draft.penaltyType,
-        deductionAmount: draft.penaltyType === DEDUCTION_PENALTY ? draft.deductionAmount : "",
-        decisionReasons: draft.decisionReasons.trim(),
-        decisionDocument: draft.decisionDocument,
-        penaltyDate: draft.penaltyDate,
-        investigationStatus: "Investigation Completed",
-        approvedBy: CURRENT_USER.name,
-        // The employee is notified the day the decision is sent.
-        approvalDate: today(),
-        status: noPenalty ? "Closed" : "Penalty Issued",
-      },
-      { number: !noPenalty }
-    );
+    // The penalty is issued here, which is when the server numbers the
+    // violation - unless the decision was that no penalty follows, which
+    // issues nothing.
+    const saved = await send(() => decideViolation(record.id, draft, files.decisionDocument));
+    if (!saved) return;
     if (noPenalty) close();
     else setStage("appeal");
   };
 
-  const saveAppeal = () => {
+  const saveAppeal = async () => {
     if (!record || !draft.appealGrounds.trim() || !draft.appealDate) return;
-    updateViolation(record.id, {
-      appealDate: draft.appealDate,
-      appealGrounds: draft.appealGrounds.trim(),
-      appealDocument: draft.appealDocument,
-      status: "Under Appeal",
-    });
+    const saved = await send(() => appealViolation(record.id, draft, files.appealDocument));
+    if (!saved) return;
     setStage("outcome");
   };
 
@@ -342,17 +348,12 @@ export default function ViolationsSection({ employee, canEdit = true }) {
     draft.appealOutcome && draft.outcomeDate && draft.outcomeReasons.trim()
   );
 
-  const saveOutcome = () => {
+  const saveOutcome = async () => {
     if (!record || !canApproveOutcome) return;
     // Approving the outcome settles the case: the penalty either stands, is
-    // modified, or is taken away - and the status follows from that.
-    updateViolation(record.id, {
-      appealOutcome: draft.appealOutcome,
-      outcomeReasons: draft.outcomeReasons.trim(),
-      outcomeApprovedBy: CURRENT_USER.name,
-      outcomeDate: draft.outcomeDate,
-      status: draft.appealOutcome === CANCELLING_OUTCOME ? "Cancelled" : "Closed",
-    });
+    // modified, or is taken away - and the server sets the status from that.
+    const saved = await send(() => settleAppeal(record.id, draft));
+    if (!saved) return;
     close();
   };
 
@@ -371,6 +372,9 @@ export default function ViolationsSection({ employee, canEdit = true }) {
    * The first stage has nothing behind it, so its way back leaves the form;
    * every stage after it steps back to the one before.
    */
+  // The employee answers and appeals; recording, deciding and settling are
+  // the firm's, so on the employee's own page those stages are only read.
+  const theirs = { response: true, appeal: true };
   const footer = (label, onSave, enabled, previous) => (
     <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-4">
       {/* Plain buttons: this form sits inside the employee form. */}
@@ -381,9 +385,11 @@ export default function ViolationsSection({ employee, canEdit = true }) {
       >
         {previous ? "Previous" : "Cancel"}
       </Button>
-      <Button type="button" onClick={onSave} disabled={!enabled}>
-        {label}
-      </Button>
+      {(canEdit || theirs[stage]) && (
+        <Button type="button" onClick={onSave} disabled={!enabled}>
+          {label}
+        </Button>
+      )}
     </div>
   );
 
@@ -412,7 +418,7 @@ export default function ViolationsSection({ employee, canEdit = true }) {
             placeholder="Select violation type"
             options={VIOLATION_TYPES}
           />
-          <FileField id="violation-document" label="Supporting Document" value={draft.documentName} onChange={(v) => set("documentName", v)} />
+          <FileField id="violation-document" label="Supporting Document" value={draft.documentName} onChange={pickFile("documentName")} />
           <LongText
             id="violation-description"
             label="Violation Description"
@@ -446,7 +452,7 @@ export default function ViolationsSection({ employee, canEdit = true }) {
             onChange={(v) => set("response", v)}
             placeholder="Enter the employee's response to the violation"
           />
-          <FileField id="violation-response-document" label="Supporting Documents" value={draft.responseDocument} onChange={(v) => set("responseDocument", v)} />
+          <FileField id="violation-response-document" label="Supporting Documents" value={draft.responseDocument} onChange={pickFile("responseDocument")} />
         </div>
         {footer("Save", saveResponse, Boolean(draft.response.trim()), "violation")}
       </>
@@ -509,7 +515,7 @@ export default function ViolationsSection({ employee, canEdit = true }) {
             id="violation-decision-document"
             label="Decision Document"
             value={draft.decisionDocument}
-            onChange={(v) => set("decisionDocument", v)}
+            onChange={pickFile("decisionDocument")}
           />
         </div>
         {footer("Save & Send Decision", saveDecision, canDecide, "response")}
@@ -548,7 +554,7 @@ export default function ViolationsSection({ employee, canEdit = true }) {
             id="violation-appeal-document"
             label="Supporting Documents"
             value={draft.appealDocument}
-            onChange={(v) => set("appealDocument", v)}
+            onChange={pickFile("appealDocument")}
           />
         </div>
         {footer(
@@ -670,7 +676,7 @@ export default function ViolationsSection({ employee, canEdit = true }) {
                     <Row key={violation.id}>
                       {/* The number opens the case at the stage it has reached. */}
                       <Td className="whitespace-nowrap">
-                        {canEdit ? (
+                        {canOpen ? (
                           <button
                             type="button"
                             onClick={() => openRecord(violation)}

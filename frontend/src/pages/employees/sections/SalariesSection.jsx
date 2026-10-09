@@ -75,13 +75,13 @@ import {
   DEFAULT_BOOKING,
   salaryHistory,
   nextSalaryNo,
-  nextRequestNo,
-  SALARY_PENDING,
   SALARY_REJECTED,
-  SALARY_TRANSFERRED,
   totalEarnings,
   amount,
 } from "../payrollData";
+import { salariesApi } from "@/lib/api/modules/salaries";
+import { attempt } from "@/lib/api/notice";
+import { upsert, upserted } from "@/lib/api/store";
 
 import DateField from "@/components/shared/DateField";
 /** The allowances the salary card asks for. */
@@ -383,7 +383,28 @@ export default function SalariesSection({
   // history below it rather than somewhere of its own.
   const { violations } = useViolations();
   const { advances } = useAdvances();
-  const [history, setHistory] = useState(salaryHistory);
+  // The salaries loaded at sign-in are everyone's the user may see; this
+  // record shows its own employee's.
+  const [history, setHistory] = useState(() =>
+    salaryHistory.filter((row) => row.employee === employee?.name)
+  );
+  // While a call to the server is out, its button waits rather than sending twice.
+  const [busy, setBusy] = useState(false);
+  const send = async (call) => {
+    if (busy) return null;
+    setBusy(true);
+    try {
+      return await attempt(call);
+    } finally {
+      setBusy(false);
+    }
+  };
+  /** The record the server returned, in place of the one on screen. */
+  const keep = (row) => {
+    upsert(salaryHistory, row);
+    setHistory((prev) => upserted(prev, row));
+    return row;
+  };
   // Everything paid before, open over the salary payment.
   const [showLedger, setShowLedger] = useState(false);
   const [payslip, setPayslip] = useState(() => fromEmployee(employee));
@@ -563,68 +584,50 @@ export default function SalariesSection({
    * temporary number and waiting on a decision, and the form moves on to the
    * transfer that settles it.
    */
-  const saveSalary = () => {
+  const saveSalary = async () => {
     if (!checkRequired() || !canSaveSalary) return;
-    if (openRequest) {
-      setHistory((prev) =>
-        prev.map((row) => (row.id === openId ? { ...row, ...figures() } : row))
+    // A request already prepared keeps the figures the server worked out for
+    // it; there is nothing to send again.
+    if (!openRequest) {
+      // The server works the month out from the employee's pay and what is
+      // due from it, and numbers the request.
+      const { month, year, administrative } = figures();
+      const saved = await send(() =>
+        salariesApi.prepare({
+          employeeId: employee?.id,
+          month,
+          year,
+          administrative,
+          administrativeReason: "Disciplinary deductions",
+        })
       );
-    } else {
-      const id = history.reduce((max, r) => Math.max(max, r.id), 0) + 1;
-      setHistory((prev) => [
-        ...prev,
-        {
-          id,
-          requestNo: nextRequestNo(prev),
-          salaryNo: "",
-          status: SALARY_PENDING,
-          ...figures(),
-          method: "",
-          bankAccount: "",
-          reference: "",
-          receipt: "",
-          paymentDate: "",
-        },
-      ]);
-      setOpenId(id);
+      if (!saved) return;
+      keep(saved);
+      setOpenId(saved.id);
     }
     setPayStage("transfer");
   };
 
   /** Approved: the request takes the next salary number and is transferred. */
-  const savePayment = () => {
+  const savePayment = async () => {
     if (!checkRequired() || !canPay || !openId) return;
-    setHistory((prev) =>
-      prev.map((row) =>
-        row.id === openId
-          ? {
-              ...row,
-              ...figures(),
-              salaryNo: row.salaryNo || nextSalaryNo(prev),
-              status: SALARY_TRANSFERRED,
-              rejectionReason: "",
-              method: payment.method,
-              bankAccount: payment.bankAccount,
-              reference: payment.reference.trim(),
-              receipt: receipt?.name || "",
-              paymentDate: payment.paymentDate,
-            }
-          : row
-      )
-    );
+    // One already transferred is only being looked at.
+    if (!settled) {
+      const saved = await send(() =>
+        salariesApi.transfer(openId, { ...payment, reference: payment.reference.trim() })
+      );
+      if (!saved) return;
+      keep(saved);
+    }
     closeAdd();
   };
 
   /** Refused: the request keeps its temporary number and says why. */
-  const rejectRequest = () => {
+  const rejectRequest = async () => {
     if (!openId || !reason.trim()) return;
-    setHistory((prev) =>
-      prev.map((row) =>
-        row.id === openId
-          ? { ...row, status: SALARY_REJECTED, rejectionReason: reason.trim() }
-          : row
-      )
-    );
+    const saved = await send(() => salariesApi.reject(openId, reason.trim()));
+    if (!saved) return;
+    keep(saved);
     closeAdd();
   };
 

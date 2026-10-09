@@ -60,9 +60,7 @@ import {
 import { useAdvances } from "@/lib/advances/context";
 import { amount, formatDate } from "../loanData";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
-import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 import { advanceSummaryPdf } from "../advanceSummaryPdf";
-import { employeeRecords } from "../employeeData";
 import {
   ADVANCE_BOOKING,
   ADVANCE_PURPOSES,
@@ -279,7 +277,18 @@ export function AdvanceSalaryForm({
   // the system, which is where this stage is answered from.
   canDecide = true,
 }) {
-  const { advances, addAdvance, decideAdvance } = useAdvances();
+  const { advances, submitAdvance, resubmitAdvance, decideAdvance, payAdvance } = useAdvances();
+  // While a call to the server is out, its button waits rather than sending twice.
+  const [busy, setBusy] = useState(false);
+  const send = async (call) => {
+    if (busy) return null;
+    setBusy(true);
+    try {
+      return await call();
+    } finally {
+      setBusy(false);
+    }
+  };
   // The form is mounted afresh each time it opens, so what it opens on is
   // settled once here rather than kept in step with a prop.
   // The request the form is on: the one it was opened on, or - once a new one
@@ -394,23 +403,17 @@ export function AdvanceSalaryForm({
     pay.paymentDate &&
     (pay.method === "Cash" || pay.reference.trim());
 
-  const submit = () => {
+  const submit = async () => {
     if (!checkRequired() || !canSubmit) return;
-    addAdvance({
-      requestNo,
-      employee: employee?.name || "",
-      requestedOn,
-      amount: requested,
-      deductMonth: draft.deductMonth,
-      deductYear: draft.deductYear,
-      purpose: draft.purpose,
-      reason: draft.reason.trim(),
-    });
+    // The server numbers it and checks the limit again.
+    const saved = await send(() =>
+      submitAdvance({ ...draft, reason: draft.reason.trim() }, employee?.id)
+    );
+    if (!saved) return;
     if (stayOpen) {
       // From the employee's record the transaction goes on: the request just
-      // sent, under its number, open at Management Comment. The store gives
-      // it the next id, worked out the same way.
-      setCurrentId(advances.reduce((max, advance) => Math.max(max, advance.id), 0) + 1);
+      // sent, under its number, open at Management Comment.
+      setCurrentId(saved.id);
       setStage("decision");
       return;
     }
@@ -422,21 +425,14 @@ export function AdvanceSalaryForm({
    * Management's answer, saved as it is given. A refusal or a hand-back ends
    * here; a grant goes on to the financial department, which pays it.
    */
-  const confirmDecision = () => {
+  const confirmDecision = async () => {
     if (!canConfirm || !openRequest) return;
-    decideAdvance(openRequest.id, {
-      decision,
-      // A hand-back leaves the request where it was: still waiting, with
-      // what is missing written on it.
-      status: rejected ? "Rejected" : returning ? "Pending" : "Approved",
-      approvedAmount: granted ? approvedAmount : 0,
-      managementComment: comment.trim(),
-      decidedOn: firmToday(),
-      decidedBy: CURRENT_USER.name,
-      // Said under the name wherever the decision is shown.
-      decidedByTitle:
-        employeeRecords.find((record) => record.name === CURRENT_USER.name)?.designation || "",
-    });
+    // A hand-back leaves the request waiting on the employee, with what is
+    // missing written on it; the server records who decided and when.
+    const saved = await send(() =>
+      decideAdvance(openRequest.id, { decision, approvedAmount, comment: comment.trim() })
+    );
+    if (!saved) return;
     if (granted) setStage("finance");
     else onClose();
   };
@@ -451,50 +447,27 @@ export function AdvanceSalaryForm({
    * returned for is kept on it, so its history shows each round; the decision
    * is cleared, so management decides it afresh.
    */
-  const resubmit = () => {
+  const resubmit = async () => {
     if (!checkRequired() || !canSubmit || !openRequest) return;
-    decideAdvance(openRequest.id, {
-      amount: requested,
-      deductMonth: draft.deductMonth,
-      deductYear: draft.deductYear,
-      purpose: draft.purpose,
-      reason: draft.reason.trim(),
-      returns: [
-        ...(openRequest.returns || []),
-        {
-          returnedOn: openRequest.decidedOn,
-          returnedBy: openRequest.decidedBy,
-          comment: openRequest.managementComment,
-        },
-      ],
-      resubmittedOn: firmToday(),
-      status: "Pending",
-      decision: "",
-      managementComment: "",
-      decidedOn: "",
-      decidedBy: "",
-      decidedByTitle: "",
-    });
-    onClose();
+    // The return stays in the request's history on the server; the decision
+    // is cleared there, so management decides it afresh.
+    const saved = await send(() =>
+      resubmitAdvance(openRequest.id, { ...draft, reason: draft.reason.trim() }, employee?.id)
+    );
+    if (saved) onClose();
   };
 
   const processPayment = async () => {
     if (!canProcess || !openRequest) return;
-    const payment = {
-      ...pay,
-      reference: pay.reference.trim(),
-      financeComment: pay.financeComment.trim(),
-      paidOn: firmToday(),
-      paidBy: CURRENT_USER.name,
-    };
-    decideAdvance(openRequest.id, payment);
-    setPdfUrl(
-      await advanceSummaryPdf({
-        advance: { ...openRequest, ...payment },
-        employee,
-        net,
+    const saved = await send(() =>
+      payAdvance(openRequest.id, {
+        ...pay,
+        reference: pay.reference.trim(),
+        financeComment: pay.financeComment.trim(),
       })
     );
+    if (!saved) return;
+    setPdfUrl(await advanceSummaryPdf({ advance: saved, employee, net }));
   };
 
   // The first stage of a new request is the one being written; every other

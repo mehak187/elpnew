@@ -8,13 +8,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import RecordDialog from "@/components/shared/RecordDialog";
 import { Briefcase, Eye, Edit } from "lucide-react";
 
-const corporateMatters = [
-  { id: 1, ref_no: "CORP/2024/001", client: "ABC Holdings LLC", matter_type: "Company Formation", status: "In Progress", created_date: "2024-12-01" },
-  { id: 2, ref_no: "CORP/2024/002", client: "XYZ Investments", matter_type: "Contract Review", status: "Completed", created_date: "2024-11-15" },
-  { id: 3, ref_no: "CORP/2024/003", client: "Global Trade Co", matter_type: "Merger & Acquisition", status: "Pending", created_date: "2024-12-10" },
-  { id: 4, ref_no: "CORP/2024/004", client: "Tech Ventures Ltd", matter_type: "Due Diligence", status: "In Progress", created_date: "2024-12-05" },
-  { id: 5, ref_no: "CORP/2024/005", client: "ABC Holdings LLC", matter_type: "License Renewal", status: "Completed", created_date: "2024-10-20" },
-];
+const corporateMatters = [];
 
 const buildColumns = (openRecord) => [
   { key: "ref_no", header: "Reference No.", width: "15%", cellClassName: "text-start font-medium" },

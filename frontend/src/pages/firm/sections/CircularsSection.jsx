@@ -28,7 +28,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toCsv, downloadCsv } from "@/lib/csv";
-import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 import {
   useCirculars,
   TARGET_GROUPS,
@@ -67,7 +66,10 @@ const emptyDraft = {
 /** The office a circular is for, as it reads on the page. */
 const branchLabelFor = (circular, branches) => {
   if (!circular.branch || circular.branch === GENERAL_BRANCH) return "General";
-  const branch = branches.find((b) => String(b.id) === String(circular.branch));
+  // Saved under the office's name, which is how the server matches people.
+  const branch = branches.find(
+    (b) => String(b.id) === String(circular.branch) || b.name === circular.branch
+  );
   return branch ? branch.name : "General";
 };
 
@@ -106,6 +108,17 @@ export default function CircularsSection({ canEdit }) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [showAudit, setShowAudit] = useState(false);
+  // While a call to the server is out, its button waits rather than sending twice.
+  const [busy, setBusy] = useState(false);
+  const send = async (call) => {
+    if (busy) return null;
+    setBusy(true);
+    try {
+      return await call();
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const set = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
   const circularNo = nextCircularNo(circulars);
@@ -126,7 +139,10 @@ export default function CircularsSection({ canEdit }) {
       // date the original went out.
       date: today(),
       targetGroup: circular.targetGroup,
-      branch: circular.branch || GENERAL_BRANCH,
+      branch:
+        branches.find((b) => b.name === circular.branch)?.id.toString() ||
+        circular.branch ||
+        GENERAL_BRANCH,
       content: circular.content,
     });
     setFile(null);
@@ -144,22 +160,28 @@ export default function CircularsSection({ canEdit }) {
   const canSave =
     canEdit && draft.date && draft.targetGroup && draft.content.trim();
 
-  const save = () => {
+  const save = async () => {
     if (!checkRequired() || !canSave) return;
+    // The server numbers the circular and records who issued it.
     const circular = {
-      circularNo,
       date: draft.date,
       targetGroup: draft.targetGroup,
-      branch: draft.branch,
+      branch:
+        draft.branch === GENERAL_BRANCH
+          ? GENERAL_BRANCH
+          : branches.find((b) => String(b.id) === String(draft.branch))?.name || GENERAL_BRANCH,
       content: draft.content.trim(),
-      issuedBy: CURRENT_USER.name,
       // A correction that attaches no new paper keeps the old one: the
       // wording changed, the signed document behind it did not.
       fileName: file ? file.name : editing?.fileName || "",
       fileUrl: file ? URL.createObjectURL(file) : editing?.fileUrl || "",
     };
-    if (editing) reviseCircular(editing.id, circular);
-    else issueCircular(circular);
+    const saved = await send(() =>
+      editing
+        ? reviseCircular(editing.id, circular, file)
+        : issueCircular(circular, file)
+    );
+    if (!saved) return;
     close();
   };
 
@@ -563,7 +585,7 @@ export default function CircularsSection({ canEdit }) {
                           <button
                             type="button"
                             onClick={() =>
-                              cancelCircular(circular.id, CURRENT_USER.name)
+                              send(() => cancelCircular(circular.id))
                             }
                             className="mt-1 flex items-center gap-1 rounded text-xs text-muted-foreground hover:text-destructive focus:outline-none focus:ring-2 focus:ring-ring"
                           >

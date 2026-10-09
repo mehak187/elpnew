@@ -25,44 +25,7 @@ const FILTERS = {
 import { Calendar, ListTodo } from "lucide-react";
 
 // Sample data
-const tasks = [
-  {
-    id: 1,
-    task: "Prepare documents for case 2024/001",
-    case_no: "2024/001",
-    due_date: "2025-01-15",
-    priority: "High",
-    status: "Pending",
-    completed: false,
-  },
-  {
-    id: 2,
-    task: "Review contract for ABC Corporation",
-    case_no: "CORP/2024/001",
-    due_date: "2025-01-10",
-    priority: "Medium",
-    status: "In Progress",
-    completed: false,
-  },
-  {
-    id: 3,
-    task: "File appeal documents",
-    case_no: "2024/002",
-    due_date: "2025-01-20",
-    priority: "High",
-    status: "Pending",
-    completed: false,
-  },
-  {
-    id: 4,
-    task: "Client meeting preparation",
-    case_no: "2024/003",
-    due_date: "2024-12-28",
-    priority: "Low",
-    status: "Completed",
-    completed: true,
-  },
-];
+const tasks = [];
 
 const columns = [
   {

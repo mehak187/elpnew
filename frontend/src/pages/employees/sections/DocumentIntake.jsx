@@ -406,10 +406,13 @@ export default function DocumentIntake({
                       </td>
                       <td className="px-4 py-2.5">
                         <div className="flex justify-end gap-1">
-                          {doc.fileUrl && (
+                          {(doc.fileUrl || doc.onView) && (
                             <RowAction
                               label={"View " + doc.fileName}
-                              onClick={() => window.open(doc.fileUrl, "_blank", "noopener,noreferrer")}
+                              onClick={() =>
+                                // A filed paper is fetched from the API; a new one is still in the browser.
+                                doc.onView ? doc.onView() : window.open(doc.fileUrl, "_blank", "noopener,noreferrer")
+                              }
                             >
                               <Eye className="size-4" aria-hidden="true" />
                             </RowAction>

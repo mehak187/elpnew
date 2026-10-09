@@ -40,8 +40,11 @@ import { AdvanceSteps, longDate } from "./AdvanceSalarySection";
 import MonthPicker from "@/components/shared/MonthPicker";
 import { SheetCard, HistoryCard, UploadButton, PayeeFacts } from "@/components/shared/RequestSheet";
 import InvoiceIntake, { InvoiceAnalysis } from "./InvoiceIntake";
-import { needsInvoice, readInvoice, checkInvoice } from "../invoiceAI";
+import { needsInvoice } from "../invoiceAI";
 import { useSuppliers } from "@/lib/suppliers/context";
+import { entitlementsApi } from "@/lib/api/modules/entitlements";
+import { attempt } from "@/lib/api/notice";
+import { upserted } from "@/lib/api/store";
 import {
   Lock,
   Save,
@@ -86,6 +89,7 @@ import {
   ENTITLEMENT_REJECTED,
   ENTITLEMENT_AWAITING,
   ENTITLEMENT_STATUS_CHIP,
+  DAYS_IN_MONTH,
   encashmentAmount,
   overtimeAmount,
   hourlyRate,
@@ -347,9 +351,31 @@ export default function EntitlementTab({
   // What the AI read off the invoice uploaded for a new request, while it
   // is being read, and whether the employee confirmed the reading.
   const [invoice, setInvoice] = useState(null);
+  // What the server's checks found on that invoice, and the file itself -
+  // filed with the request as the paper it was made on.
+  const [invoiceRisk, setInvoiceRisk] = useState(null);
+  const [invoiceFile, setInvoiceFile] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
-  const { suppliers, addSupplier } = useSuppliers();
+  // The server registers a new supplier when the claim is filed; the
+  // directory is read again afterwards.
+  const { refreshSuppliers } = useSuppliers();
+  // While a call to the server is out, its button waits rather than sending twice.
+  const [busy, setBusy] = useState(false);
+  const send = async (call) => {
+    if (busy) return null;
+    setBusy(true);
+    try {
+      return await attempt(call);
+    } finally {
+      setBusy(false);
+    }
+  };
+  // The record the server returned, in place of the one on the list.
+  const keepRecord = (row) => {
+    if (row) onRecords((prev) => upserted(prev, row));
+    return row;
+  };
   const [decision, setDecision] = useState("");
   const [openId, setOpenId] = useState(null);
   const [reason, setReason] = useState("");
@@ -391,16 +417,9 @@ export default function EntitlementTab({
   // the claim. A request already made carries the reading with it.
   const invoiceKind = needsInvoice(kind) && Boolean(sheet);
   const shownInvoice = invoice || open?.invoice || null;
-  // The checks run against everything else on record - never against the
-  // request itself.
-  const risk = shownInvoice
-    ? checkInvoice(shownInvoice, {
-        kind,
-        records: records.filter((row) => row.id !== openId),
-        employeeName: employee?.name,
-        suppliers,
-      })
-    : null;
+  // The server's checks: on an invoice just read, what the analysis found;
+  // on a request already filed, what was found when it was filed.
+  const risk = invoice ? invoiceRisk : open?.risk || null;
 
   const mine = entitlementsFor(records, employee?.name, kind).map((record, index) => ({
     ...record,
@@ -581,6 +600,8 @@ export default function EntitlementTab({
     setOpenId(null);
     setReason("");
     setInvoice(null);
+    setInvoiceRisk(null);
+    setInvoiceFile(null);
     setAnalyzing(false);
     setConfirmed(false);
     onCloseAdd();
@@ -590,50 +611,52 @@ export default function EntitlementTab({
    * The request made. It is on the list straight away, under a temporary
    * number and waiting on a decision.
    */
-  const submit = () => {
+  const submit = async () => {
     if (!checkRequired() || !canSubmit) return;
+    // Assistance is not filed under /entitlements: its tab keeps its own list.
+    if (assisting) {
+      submitAssistance();
+      return;
+    }
+    // The server numbers it, works out the amount, runs the invoice checks
+    // again and registers a supplier it does not know.
+    const options = {
+      employeeId: employee?.id,
+      invoice: invoiceKind ? shownInvoice : null,
+      file: invoiceFile || receipt || null,
+    };
+    const filed = { ...draft, reason: draft.reason.trim(), fileNo: draft.fileNo.trim() };
+    const saved = keepRecord(
+      await send(() =>
+        open
+          ? entitlementsApi.resubmit(open.id, kind, filed, options)
+          : entitlementsApi.submit(kind, filed, options)
+      )
+    );
+    if (!saved) return;
+    if (invoiceKind && risk && !risk.supplier) refreshSuppliers();
+    // From here the request shows what was filed: its invoice and its checks.
+    setOpenId(saved.id);
+    setInvoice(null);
+    setInvoiceRisk(null);
+    setInvoiceFile(null);
+    setDecision(saved.decision || "");
+    setPay("approved", String(saved.amount));
+    // The upload beside the transfer is a different paper from the request's.
+    setReceipt(null);
+    setStage("decision");
+  };
+
+  /** Assistance, filed on this tab's own list as before. */
+  const submitAssistance = () => {
     const details = {
       requestDate: draft.requestDate,
-      year: draft.year,
-      month: draft.month,
-      leaveType: draft.leaveType,
-      days,
-      hours: workedHours,
       amount,
       reason: draft.reason.trim(),
-      transportType: kind === "transport" ? draft.transportType : undefined,
-      fileNo: courtLinked ? draft.fileNo.trim() : "",
-      travelDate: courtLinked ? draft.travelDate : "",
-      assistanceType: assisting ? draft.assistanceType : undefined,
+      assistanceType: draft.assistanceType,
       // The paper the request was made on, kept by name with the request.
-      attachment: shownInvoice?.fileName || receipt?.name || open?.attachment || "",
-      // The invoice as the AI read it, with what insurance paid and the
-      // risk it was given - read back to management with the request.
-      invoice: shownInvoice
-        ? {
-            ...shownInvoice,
-            insuranceCovered: Number(draft.insurance || 0),
-            risk: { level: risk.level, reasons: risk.reasons },
-          }
-        : undefined,
+      attachment: receipt?.name || open?.attachment || "",
     };
-
-    // A supplier the firm did not know is registered from the invoice,
-    // with its VAT number, so the next invoice from it is recognised.
-    if (shownInvoice && risk && !risk.supplier) {
-      addSupplier({
-        name: shownInvoice.supplierName,
-        category: shownInvoice.supplierCategory || "Other",
-        commercialRegistration: shownInvoice.supplierCr || "",
-        taxIdentificationNumber: "",
-        vatNumber: shownInvoice.supplierVat || "",
-        bank: "",
-        accountNumber: "",
-        phone: shownInvoice.supplierPhone || "",
-        status: "Active",
-        source: "AI invoice analysis",
-      });
-    }
 
     if (open) {
       onRecords((prev) =>
@@ -662,11 +685,37 @@ export default function EntitlementTab({
     setStage("decision");
   };
 
-  /** Approved and paid: the request takes the list's own number. */
-  const disburse = () => {
+  /**
+   * The financial department's payment. The server gives the request the
+   * list's own number when it is approved, and files paid-out leave days on
+   * the leave record.
+   */
+  const disburse = async () => {
     if (!openId || !canDisburse) return;
+    if (assisting) {
+      disburseAssistance();
+      return;
+    }
+    const saved = keepRecord(
+      await send(() =>
+        entitlementsApi.pay(openId, {
+          method: payment.method,
+          bankAccount: payment.bankAccount,
+          paymentDate: payment.paymentDate,
+          reference: payment.reference.trim(),
+          // What happened on the case the trip was for goes with the payment.
+          financeComment: courtLinked
+            ? ("File update " + payment.updateDate + ": " + payment.updateText.trim()).slice(0, 300)
+            : null,
+          expenseType: ENTITLEMENT_EXPENSE_TYPE,
+          category,
+          subcategory,
+        })
+      )
+    );
+    if (!saved) return;
     // Encashed days are days of leave used: they go on the Leaves list as
-    // Encashed – Paid and come off the year's balance.
+    // Encashed – Paid and come off the year's balance on this screen too.
     if (mode === "leaveDays" && approvedDays > 0) {
       recordEncashment({
         employee: employee?.name || "",
@@ -677,11 +726,16 @@ export default function EntitlementTab({
         to: "",
         days: approvedDays,
         reason: "Leave encashment",
-        encashmentNo: open?.requestNo || "",
+        encashmentNo: saved.entitlementNo || saved.requestNo,
         decidedAt: payment.paymentDate,
         comments: "Paid out as leave encashment.",
       });
     }
+    close();
+  };
+
+  /** Assistance, approved and paid on this tab's own list. */
+  const disburseAssistance = () => {
     onRecords((prev) =>
       prev.map((row) =>
         row.id === openId
@@ -692,8 +746,6 @@ export default function EntitlementTab({
               rejectionReason: "",
               amount: approvedAmount,
               approvedAmount,
-              approvedDays: approvedDays ?? undefined,
-              approvedHours: approvedHours ?? undefined,
               decisionDate: decidedOn,
               decidedBy: CURRENT_USER.name,
               managementComment: reason.trim(),
@@ -702,8 +754,6 @@ export default function EntitlementTab({
               paymentDate: payment.paymentDate,
               reference: payment.reference.trim(),
               receipt: receipt?.name || "",
-              fileUpdateDate: courtLinked ? payment.updateDate : undefined,
-              fileUpdate: courtLinked ? payment.updateText.trim() : undefined,
             }
           : row
       )
@@ -715,72 +765,73 @@ export default function EntitlementTab({
    * Management's answer, saved on its own. An approval waits for the
    * financial department to pay it; a refusal or a return ends here.
    */
-  const confirmDecision = () => {
+  const confirmDecision = async () => {
     if (!openId || !decision || !canDecide) return;
     if (refusing) {
       reject();
       return;
     }
     if (!grantIsSound || approvedAmount <= 0) return;
-    onRecords((prev) =>
-      prev.map((row) =>
-        row.id === openId
-          ? {
-              ...row,
-              status: ENTITLEMENT_AWAITING,
-              decision,
-              approvedAmount,
-              approvedDays: approvedDays ?? undefined,
-              approvedHours: approvedHours ?? undefined,
-              decisionDate: decidedOn,
-              decidedBy: CURRENT_USER.name,
-              managementComment: reason.trim(),
-            }
-          : row
+    // A cut in days or hours is granted as the money it comes to.
+    const saved = keepRecord(
+      await send(() =>
+        entitlementsApi.decide(openId, { decision, approvedAmount, comment: reason.trim() })
       )
     );
-    setStage("finance");
+    if (saved) setStage("finance");
   };
 
-  /** The invoice in: the AI reads it, and the claim is filled in from it. */
-  const pickInvoice = (file) => {
+  /** The invoice in: the server reads and checks it, and the claim is filled in from it. */
+  const pickInvoice = async (file) => {
     setAnalyzing(true);
     setConfirmed(false);
-    const previous = records
-      .filter((row) => row.employee === employee?.name && row.kind === kind && row.invoice)
-      .sort((a, b) => String(b.requestDate).localeCompare(String(a.requestDate)));
-    // DEMO: the reading is immediate; the pause is the AI's working time.
-    setTimeout(() => {
-      const read = readInvoice(file, kind, previous);
-      setInvoice(read);
-      setDraft((prev) => ({
-        ...prev,
-        insurance: "",
-        requestDate: read.invoiceDate || prev.requestDate,
-        amount: String(read.total),
-      }));
-      setAnalyzing(false);
-    }, 1400);
+    const read = await attempt(() => entitlementsApi.analyze(file, kind, employee?.id));
+    setAnalyzing(false);
+    if (!read) return;
+    setInvoice(read.invoice);
+    setInvoiceRisk(read.risk);
+    setInvoiceFile(file);
+    setDraft((prev) => ({
+      ...prev,
+      insurance: "",
+      requestDate: read.invoice.invoiceDate || prev.requestDate,
+      amount: String(read.invoice.total),
+    }));
   };
 
-  /** Refused: the request keeps its temporary number and says why. */
-  const reject = () => {
+  /**
+   * Refused, or handed back for what is missing: either way the comment says
+   * why. The request keeps its temporary number.
+   */
+  const reject = async () => {
     if (!openId || !reason.trim()) return;
-    onRecords((prev) =>
-      prev.map((row) =>
-        row.id === openId
-          ? {
-              ...row,
-              status: ENTITLEMENT_REJECTED,
-              decisionDate: decidedOn,
-              decidedBy: CURRENT_USER.name,
-              managementComment: reason.trim(),
-              rejectionReason: reason.trim(),
-            }
-          : row
+    if (assisting) {
+      onRecords((prev) =>
+        prev.map((row) =>
+          row.id === openId
+            ? {
+                ...row,
+                status: ENTITLEMENT_REJECTED,
+                decisionDate: decidedOn,
+                decidedBy: CURRENT_USER.name,
+                managementComment: reason.trim(),
+                rejectionReason: reason.trim(),
+              }
+            : row
+        )
+      );
+      close();
+      return;
+    }
+    const saved = keepRecord(
+      await send(() =>
+        entitlementsApi.decide(openId, {
+          decision: returning ? "completion" : "rejected",
+          comment: reason.trim(),
+        })
       )
     );
-    close();
+    if (saved) close();
   };
 
   /** A request opened back off the list, to be followed or decided. */
@@ -798,6 +849,8 @@ export default function EntitlementTab({
     );
     setReason(record.managementComment || "");
     setInvoice(null);
+    setInvoiceRisk(null);
+    setInvoiceFile(null);
     setConfirmed(true);
     setDraft({
       ...emptyDraft(kind),
@@ -818,8 +871,20 @@ export default function EntitlementTab({
     setPayment({
       ...emptyPayment(),
       approved: String(record.approvedAmount ?? record.amount ?? ""),
-      approvedDays: String(record.approvedDays ?? ""),
-      approvedHours: String(record.approvedHours ?? ""),
+      // The server keeps a partial grant as money; the days or hours it
+      // stands for are read back off the salary they were worked out from.
+      approvedDays: String(
+        record.approvedDays ??
+          (record.decision === "partial" && mode === "leaveDays" && Number(employee?.salary)
+            ? Math.round(record.approvedAmount / (Number(employee.salary) / DAYS_IN_MONTH))
+            : "")
+      ),
+      approvedHours: String(
+        record.approvedHours ??
+          (record.decision === "partial" && mode === "hours" && hourlyRate(employee?.salary)
+            ? Number((record.approvedAmount / hourlyRate(employee?.salary)).toFixed(2))
+            : "")
+      ),
       method: record.method || "",
       bankAccount: record.bankAccount || "",
       paymentDate: record.paymentDate || todayIso(),

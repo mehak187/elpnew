@@ -1,4 +1,6 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
+import { signOut } from "@/lib/api/session";
 import {
   ChevronDown,
   Clock,
@@ -68,7 +70,8 @@ function Logo({ name, className }) {
  * to the firm's records, and they do not change with whichever employee
  * record happens to be on screen.
  */
-const SIGNED_IN_USER = "Mohammed Al Yahyaei";
+// Whoever signed in (filled by lib/api/session.js on sign-in).
+const signedInName = () => CURRENT_USER.name || "";
 
 /** First letter of the first name and of the last, for the avatar. */
 function initials(name) {
@@ -90,7 +93,6 @@ const ACCOUNT_LINKS = [
 
 
 export default function Header({ onNavClick, activeNav }) {
-  const navigate = useNavigate();
   const location = useLocation();
   const { firmInfo } = useFirm();
   const { language, setLanguage } = useLanguage();
@@ -177,7 +179,7 @@ export default function Header({ onNavClick, activeNav }) {
                 Change Password
               </Link>
               <button
-                onClick={() => navigate("/sign-in")}
+                onClick={() => signOut()}
                 className="flex items-center gap-3 px-4 py-3 rounded-md text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
               >
                 <LogOut className="h-4 w-4" />
@@ -345,10 +347,10 @@ export default function Header({ onNavClick, activeNav }) {
               {/* Fixed fill on purpose: the avatar stands for one person, so
                   it keeps its colour whatever the page around it is doing. */}
               <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-[#DCE6EB] text-[12px]/[1] font-semibold text-primary">
-                {initials(SIGNED_IN_USER)}
+                {initials(signedInName() || "?")}
               </span>
               <span className="hidden text-[14px]/[20px] font-semibold text-primary sm:inline-block">
-                {SIGNED_IN_USER}
+                {signedInName()}
               </span>
               <ChevronDown
                 strokeWidth={1.5}
@@ -408,7 +410,7 @@ export default function Header({ onNavClick, activeNav }) {
             {/* Navy like every other row: signing out is the way out, not a
                 destructive act that needs a warning colour. */}
             <DropdownMenuItem
-              onClick={() => navigate("/sign-in")}
+              onClick={() => signOut()}
               className="flex h-[44px] cursor-pointer items-center gap-2.5 rounded-[6px] px-2.5 text-[15px]/[20px] font-semibold text-primary transition-colors hover:bg-menu-hover focus:bg-menu-hover"
             >
               <LogOut strokeWidth={1.5} className="size-[18px] shrink-0 text-menu-icon" />

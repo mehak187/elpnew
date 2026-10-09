@@ -4,22 +4,39 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, LogIn } from "lucide-react";
+import { Eye, EyeOff, Loader2, LogIn } from "lucide-react";
 import { useFirm } from "@/lib/firm/context";
+import { signIn } from "@/lib/api/session";
 import logo from "@/assets/logonew.jpeg";
 
 /**
- * Where Sign Out lands. There is no auth layer yet, so any details are accepted
- * and the button simply returns to the dashboard - it exists so signing out is
- * a real journey rather than a button that does nothing.
+ * Signing in to the SADEED API. Shown by the session gate whenever nobody is
+ * signed in - on first visit, after Sign Out, or when a session has expired.
  */
-export default function SignIn() {
+export default function SignIn({ onSignedIn }) {
   const navigate = useNavigate();
   const { firmInfo } = useFirm();
 
-  const [email, setEmail] = useState("mohammed@yands.om");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [visible, setVisible] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      await signIn(email.trim(), password);
+      navigate("/dashboard");
+      onSignedIn?.();
+    } catch (failure) {
+      setError(failure.field?.("email") || failure.message);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div className="flex min-h-[70vh] items-center justify-center">
@@ -36,13 +53,7 @@ export default function SignIn() {
             </p>
           </div>
 
-          <form
-            className="space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              navigate("/dashboard");
-            }}
-          >
+          <form className="space-y-4" onSubmit={submit} noValidate>
             <div className="space-y-2">
               <Label htmlFor="signInEmail">Email</Label>
               <Input
@@ -51,6 +62,7 @@ export default function SignIn() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="username"
+                aria-invalid={Boolean(error)}
                 required
               />
             </div>
@@ -65,6 +77,7 @@ export default function SignIn() {
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"
                   className="pe-10"
+                  aria-invalid={Boolean(error)}
                   required
                 />
                 <button
@@ -84,8 +97,18 @@ export default function SignIn() {
               </div>
             </div>
 
-            <Button type="submit" className="w-full">
-              <LogIn className="me-2 h-4 w-4" />
+            {error && (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            )}
+
+            <Button type="submit" className="w-full" disabled={busy || !email || !password}>
+              {busy ? (
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
+              ) : (
+                <LogIn className="me-2 h-4 w-4" />
+              )}
               Sign In
             </Button>
           </form>

@@ -105,7 +105,8 @@ export default function LeaveForm({
   const afterRequest = balance ? balance.remaining - Math.max(asked, 0) : null;
   // A type counted in days cannot be asked for beyond what is left. One whose
   // length depends on the case (Sick, Bereavement, Widowhood) has no count to
-  // exceed, so nothing is blocked there.
+  // exceed, so nothing is flagged there. The figure here is a warning; the
+  // server holds the balance and refuses the request itself, saying why.
   const exceeded = afterRequest !== null && afterRequest < 0;
 
   const canSave =
@@ -115,8 +116,7 @@ export default function LeaveForm({
     draft.to &&
     draft.year &&
     draft.reason.trim() &&
-    asked > 0 &&
-    !exceeded;
+    asked > 0;
 
   const colleagues = employeeRecords
     .filter((person) => person.name !== employee.name)

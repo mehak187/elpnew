@@ -8,7 +8,7 @@ import ActiveFilters from "@/components/shared/ActiveFilters";
 import { IdStatusDot, isEndedStatus } from "@/components/shared/panels";
 import { Scale, Plus, Eye, Edit } from "lucide-react";
 import { useListFilter } from "@/lib/useListFilter";
-import { dayOffset, daysUntil } from "@/pages/dashboard/dashboardData";
+import { daysUntil } from "@/pages/dashboard/dashboardData";
 
 const FILTERS = {
   status: { label: "Status", match: (row, value) => row.status === value },
@@ -24,24 +24,7 @@ const FILTERS = {
   },
 };
 
-const cases = [
-  { id: 1, case_no: "2024/001", client: "ABC Holdings LLC", case_type: "Civil", court: "Primary Court - Muscat", branch: "Muscat", stage: "Under Litigation", status: "Active", opened_at: dayOffset(-8) },
-  { id: 2, case_no: "2024/002", client: "XYZ Investments", case_type: "Commercial", court: "Commercial Court", branch: "Muscat", stage: "Registration", status: "Active", opened_at: dayOffset(-3) },
-  { id: 3, case_no: "2024/003", client: "Ali Mohammed", case_type: "Labor", court: "Primary Court - Salalah", branch: "Salalah", stage: "Judgment Issued", status: "Active", opened_at: dayOffset(-120) },
-  { id: 4, case_no: "2024/004", client: "Global Trade Co", case_type: "Civil", court: "Appeal Court", branch: "Muscat", stage: "Execution", status: "Active", opened_at: dayOffset(-200) },
-  { id: 5, case_no: "2023/015", client: "Tech Ventures Ltd", case_type: "Commercial", court: "Supreme Court", branch: "Muscat", stage: "Closed", status: "Closed", opened_at: dayOffset(-410) },
-  { id: 6, case_no: "2024/006", client: "Gulf Construction Co", case_type: "Commercial", court: "Primary Court - Salalah", branch: "Salalah", stage: "Under Litigation", status: "Active", opened_at: dayOffset(-45) },
-  { id: 7, case_no: "2024/007", client: "Salalah Port Services", case_type: "Civil", court: "Primary Court - Salalah", branch: "Salalah", stage: "Registration", status: "Active", opened_at: dayOffset(-12) },
-  { id: 8, case_no: "2024/008", client: "Nizwa Cement Factory", case_type: "Labor", court: "Labour Court", branch: "Sohar", stage: "Under Litigation", status: "Active", opened_at: dayOffset(-18) },
-  { id: 9, case_no: "2024/009", client: "Al Madina Trading", case_type: "Commercial", court: "Appeal Court", branch: "Muscat", stage: "Appeal", status: "Active", opened_at: dayOffset(-95) },
-  { id: 10, case_no: "2024/010", client: "Muscat Finance LLC", case_type: "Civil", court: "Primary Court - Muscat", branch: "Muscat", stage: "Execution", status: "Active", opened_at: dayOffset(-150) },
-  { id: 11, case_no: "2023/022", client: "Fatima Rashid", case_type: "Personal Status", court: "Family Court", branch: "Muscat", stage: "Closed", status: "Closed", opened_at: dayOffset(-380) },
-  { id: 12, case_no: "2023/031", client: "Ahmed Al Lawati", case_type: "Civil", court: "Primary Court - Muscat", branch: "Muscat", stage: "Closed", status: "Closed", opened_at: dayOffset(-300) },
-  { id: 13, case_no: "2024/013", client: "Sohar Aluminium Co", case_type: "Commercial", court: "Commercial Court", branch: "Sohar", stage: "Registration", status: "Active", opened_at: dayOffset(-9) },
-  { id: 14, case_no: "2023/044", client: "Global Trade Co", case_type: "Commercial", court: "Supreme Court", branch: "Sohar", stage: "Closed", status: "Closed", opened_at: dayOffset(-260) },
-  { id: 15, case_no: "2024/015", client: "ABC Holdings LLC", case_type: "Commercial", court: "Primary Court - Muscat", branch: "Muscat", stage: "Reserved for Judgment", status: "Active", opened_at: dayOffset(-70) },
-  { id: 16, case_no: "2023/052", client: "XYZ Investments", case_type: "Commercial", court: "Supreme Court", branch: "Muscat", stage: "Supreme Court", status: "Active", opened_at: dayOffset(-330) },
-];
+const cases = [];
 
 // The eight stages the client specified, in order.
 const STAGE_VARIANT = {

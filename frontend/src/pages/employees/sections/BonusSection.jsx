@@ -48,7 +48,6 @@ import {
 } from "@/components/ui/dialog";
 import { REQUEST_REJECTED, REQUEST_STATUS_CHIP } from "../requestFlow";
 import { DecisionChoice } from "@/components/shared/RequestSteps";
-import { CURRENT_USER } from "@/pages/dashboard/dashboardData";
 import { useBonuses } from "@/lib/bonuses/context";
 import { formatDate } from "../loanData";
 import { PAYMENT_METHODS } from "@/pages/expenses/expenseData";
@@ -120,7 +119,18 @@ export default function BonusSection({
   // read and never recorded.
   canDecide = true,
 }) {
-  const { bonuses, addBonus, updateBonus } = useBonuses();
+  const { bonuses, addBonus, updateBonus, decideBonus, payBonus } = useBonuses();
+  // While a call to the server is out, its button waits rather than sending twice.
+  const [busy, setBusy] = useState(false);
+  const send = async (call) => {
+    if (busy) return null;
+    setBusy(true);
+    try {
+      return await call();
+    } finally {
+      setBusy(false);
+    }
+  };
   const [draft, setDraft] = useState(emptyDraft);
   // Which half of the bonus is open - what is being asked for, and then how
   // it was paid out - and the request the form is open on.
@@ -197,64 +207,53 @@ export default function BonusSection({
    * The bonus asked for. It goes on the list straight away, under its own
    * number and waiting on a decision.
    */
-  const submit = () => {
+  const submit = async () => {
     if (!checkRequired() || !canSubmit) return;
     const details = {
       subcategory: draft.subcategory,
       bonusType: isOther ? draft.bonusType.trim() : "",
       amount: requested,
       notes: draft.comment.trim(),
-      attachment: attachment?.name || "",
     };
 
-    if (open) {
-      updateBonus(open.id, details);
-    } else {
-      addBonus({
-        employee: employee?.name || "",
-        ...BONUS_BOOKING,
-        requestNo,
-        recordedOn: requestedOn,
-        paidOn: "",
-        ...details,
-      });
-    }
-    close();
+    // The server numbers it and dates it; a refusal leaves the form as it was.
+    const saved = await send(() =>
+      open
+        ? updateBonus(open.id, details, attachment, employee?.id)
+        : addBonus(details, attachment, employee?.id)
+    );
+    if (saved) close();
   };
 
   /** Paid out: the bonus is disbursed, and the record says how. */
-  const disburse = () => {
+  const disburse = async () => {
     if (!checkRequired() || !canPay || !canDecide || !open || !awaiting) return;
-    updateBonus(open.id, {
-      status: BONUS_DISBURSED,
-      rejectionReason: "",
-      method: payment.method,
-      bankAccount: payment.bankAccount,
-      paidOn: payment.paidOn,
-      reference: payment.reference.trim(),
-      receipt: receipt?.name || "",
-    });
-    close();
+    const saved = await send(() =>
+      payBonus(open.id, {
+        method: payment.method,
+        bankAccount: payment.bankAccount,
+        paidOn: payment.paidOn,
+        reference: payment.reference.trim(),
+      })
+    );
+    if (saved) close();
   };
 
   /**
    * Management's answer, saved before anything is paid. An approval moves on
    * to the financial department; a refusal ends the request with its reason.
    */
-  const confirmDecision = () => {
+  const confirmDecision = async () => {
     if (!canConfirm) return;
-    const decided = {
-      decision,
-      decidedOn: todayIso(),
-      decidedBy: CURRENT_USER.name,
-      managementComment: comment.trim(),
-    };
+    // The server records who decided and when.
+    const saved = await send(() =>
+      decideBonus(open.id, { decision, approvedAmount, comment: comment.trim() })
+    );
+    if (!saved) return;
     if (refusing) {
-      updateBonus(open.id, { ...decided, status: REQUEST_REJECTED, rejectionReason: comment.trim() });
       close();
       return;
     }
-    updateBonus(open.id, { ...decided, status: BONUS_APPROVED, approvedAmount });
     setStage("disbursement");
   };
 
@@ -767,7 +766,7 @@ export default function BonusSection({
                 className="min-w-48"
                 variant={refusing ? "destructive" : "default"}
                 onClick={confirmDecision}
-                disabled={!canConfirm}
+                disabled={!canConfirm || busy}
               >
                 {refusing ? "Confirm Rejection" : "Confirm Decision"}
               </Button>
@@ -775,12 +774,12 @@ export default function BonusSection({
           ) : stage === "disbursement" ? (
             canDecide &&
             awaiting && (
-              <Button type="button" className="min-w-48" onClick={disburse} disabled={!canPay}>
+              <Button type="button" className="min-w-48" onClick={disburse} disabled={!canPay || busy}>
                 Process Payment
               </Button>
             )
           ) : (
-            <Button type="button" className="min-w-48" onClick={submit}>
+            <Button type="button" className="min-w-48" onClick={submit} disabled={busy}>
               Submit Request
             </Button>
           )}

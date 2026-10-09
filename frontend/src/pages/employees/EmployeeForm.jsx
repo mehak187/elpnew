@@ -1,4 +1,4 @@
-import { Fragment, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -149,7 +149,6 @@ import {
 import { formatDate } from "@/pages/firm/firmData";
 import {
   employeeRecords,
-  employeeDocuments,
   nextEmployeeNo,
   documentsFor,
   documentTypesFor,
@@ -163,6 +162,10 @@ import {
   relatedNumber,
 } from "./employeeData";
 import { checkRequired, clearRequiredCheck } from "@/components/shared/formFields";
+import { employeesApi } from "@/lib/api/modules/employees";
+import { documentsApi, viewDocument } from "@/lib/api/modules/documents";
+import { attempt, fieldLabel, notifyError } from "@/lib/api/notice";
+import { upsert } from "@/lib/api/store";
 
 /**
  * The employee record, section by section.
@@ -677,23 +680,51 @@ const FIELD_RULES = {
   workPermitNo: { allowed: /^[A-Za-z0-9-]*$/, message: "English letters and numbers only." },
   lawyerCardNo: { allowed: /^[A-Za-z0-9-]*$/, message: "English letters and numbers only." },
   spRegistrationNo: { allowed: /^[A-Za-z0-9-]*$/, message: "English letters and numbers only." },
-  accountNumber: { allowed: /^[0-9\s]*$/, message: "Numbers only." },
-  iban: { allowed: /^[A-Za-z0-9\s]*$/, message: "English letters and numbers only." },
-  swiftCode: { allowed: /^[A-Za-z0-9]*$/, message: "English letters and numbers only." },
+  // The bank's numbers have a whole shape as well, checked when the step is
+  // saved (not while typing, when every number is still too short): the same
+  // shape the server checks, so a wrong one is caught here, on its own step.
+  accountNumber: {
+    allowed: /^[0-9\s]*$/,
+    message: "Numbers only.",
+    shape: /^[0-9 ]{6,40}$/,
+    shapeMessage: "Enter a valid account number: digits only, at least 6.",
+  },
+  iban: {
+    allowed: /^[A-Za-z0-9\s]*$/,
+    message: "English letters and numbers only.",
+    shape: /^[A-Za-z]{2}[0-9A-Za-z ]{10,32}$/,
+    shapeMessage: "Enter a valid IBAN: two letters, then 10 to 32 letters or digits.",
+  },
+  swiftCode: {
+    allowed: /^[A-Za-z0-9]*$/,
+    message: "English letters and numbers only.",
+    shape: /^[A-Za-z0-9]{8}([A-Za-z0-9]{3})?$/,
+    shapeMessage: "Enter a valid SWIFT code: 8 or 11 letters or digits.",
+  },
 };
 
-/** Whether a field holds something its rule does not allow. */
-const ruleBroken = (name, value) => {
+/**
+ * Whether a field holds something its rule does not allow - or, once the
+ * step has been saved (`whole`), a value in the wrong overall shape.
+ */
+const shapeBroken = (name, value) => {
   const rule = FIELD_RULES[name];
-  return Boolean(rule && value && !rule.allowed.test(value));
+  return Boolean(rule?.shape && value && !rule.shape.test(value.trim()));
+};
+
+const ruleBroken = (name, value, whole = false) => {
+  const rule = FIELD_RULES[name];
+  if (!rule || !value) return false;
+  return !rule.allowed.test(value) || (whole && shapeBroken(name, value));
 };
 
 /** What is wrong with a field, said under it the moment it is wrong. */
-function RuleNote({ name, value }) {
-  if (!ruleBroken(name, value)) return null;
+function RuleNote({ name, value, whole = false }) {
+  if (!ruleBroken(name, value, whole)) return null;
+  const rule = FIELD_RULES[name];
   return (
     <p role="alert" className="field-error">
-      {FIELD_RULES[name].message}
+      {rule.allowed.test(value) ? rule.shapeMessage : rule.message}
     </p>
   );
 }
@@ -1174,15 +1205,6 @@ const toFormData = (record) =>
       }
     : emptyFormData;
 
-/** And back again, so what is saved is what the list reads. */
-const toRecord = (formData) => ({
-  ...formData,
-  name: formData.employeeName,
-  nameAr: formData.arabicName,
-  // The lists still read `email`, and the work address is the one they mean.
-  email: formData.workEmail || formData.email,
-});
-
 /**
  * One employee, however they were reached.
  *
@@ -1194,8 +1216,11 @@ export default function EmployeeForm({ self }) {
   const navigate = useNavigate();
   const { id } = useParams();
 
+  // My Profile is the record the signed-in account belongs to.
   const record = self
-    ? employeeRecords.find((e) => e.name === CURRENT_USER.name) || null
+    ? employeeRecords.find((e) => e.id === CURRENT_USER.employeeId) ||
+      employeeRecords.find((e) => e.name === CURRENT_USER.name) ||
+      null
     : id
       ? employeeRecords.find((e) => e.id === Number(id)) || null
       : null;
@@ -1246,6 +1271,12 @@ export default function EmployeeForm({ self }) {
   // The section whose add form is open, if any. Held here because the button
   // that opens it lives in the page header, above the section itself.
   // A new employee's pay takes effect from today unless somebody says when.
+  // Once a step's Save has found a value in the wrong shape, the banking
+  // fields say so under them until it is put right.
+  const [shapeChecked, setShapeChecked] = useState(false);
+  // What the server refused when the record was made: each field with its
+  // message and the value it refused, so the mark goes once it is changed.
+  const [serverErrors, setServerErrors] = useState({});
   const [formData, setFormData] = useState(() =>
     record ? toFormData(record) : { ...emptyFormData, salaryEffectiveDate: todayIso() }
   );
@@ -1327,43 +1358,54 @@ export default function EmployeeForm({ self }) {
   const canSaveDocument =
     docDraft.type && docFile && (!documentExpires(docDraft.type) || docDraft.expiry);
 
-  const addDocument = () => {
-    setDocTried(true);
-    if (!checkRequired(docFormRef.current) || !canSaveDocument) return;
-    const now = new Date();
-    const pad = (n) => String(n).padStart(2, "0");
-    const uploadedAt =
-      now.getFullYear() +
-      "-" +
-      pad(now.getMonth() + 1) +
-      "-" +
-      pad(now.getDate()) +
-      "T" +
-      pad(now.getHours()) +
-      ":" +
-      pad(now.getMinutes());
-    const file = docFile
-      ? { fileName: docFile.name, fileUrl: URL.createObjectURL(docFile) }
-      : {};
+  // Set while a save is with the server, so a second press sends nothing.
+  const [saving, setSaving] = useState(false);
 
-    setDocuments((prev) => [
-      {
-        id: prev.reduce((max, d) => Math.max(max, d.id), 0) + 1,
-        employeeId: record?.id,
-        uploadedAt,
+  /**
+   * Files the paper on the API with its copy. The server stamps when it was
+   * filed; a refusal (a passport filed before its number is on the record)
+   * is shown and the form stays as it was.
+   */
+  const addDocument = async () => {
+    setDocTried(true);
+    if (!checkRequired(docFormRef.current) || !canSaveDocument || saving || !record) return;
+    setSaving(true);
+    const filed = await attempt(() =>
+      documentsApi.upload(record.id, {
         type: docDraft.type,
+        file: docFile,
         number: docDraft.number,
         expiry: docDraft.expiry,
-        ...file,
         notes: docDraft.notes,
-      },
-      ...prev,
-    ]);
+      })
+    );
+    setSaving(false);
+    if (!filed) return;
+    setDocuments(documentsFor(record.id));
     closeDocForm();
   };
 
   const openDocument = (doc) => {
-    if (doc.fileUrl) window.open(doc.fileUrl, "_blank", "noopener,noreferrer");
+    if (doc.fileUrl || doc.downloadPath) viewDocument(doc);
+  };
+
+  /**
+   * Files the papers read on Document Intake against a saved record, each
+   * under what its kind is kept as. One refused is reported and the rest
+   * still go.
+   */
+  const fileIntakePapers = async (employeeId, papers) => {
+    for (const doc of papers) {
+      if (!doc.file) continue;
+      await attempt(() =>
+        documentsApi.upload(employeeId, {
+          type: intakeType(doc.typeKey)?.fileAs || "Other",
+          file: doc.file,
+          number: doc.number,
+          expiry: doc.expiry,
+        })
+      );
+    }
   };
 
   // Newest paper first.
@@ -1542,66 +1584,67 @@ export default function EmployeeForm({ self }) {
   const readOnly = Boolean(self);
   // Nothing is being asked for on a page that only shows the record.
   const asksFor = !readOnly;
-  const employeeNo = record?.empNo || nextEmployeeNo(employeeRecords);
+  // While adding, the number the server will give - a preview only; the
+  // record carries the one it was actually given once saved.
+  const [serverNextNo, setServerNextNo] = useState("");
+  useEffect(() => {
+    if (!isAdding) return;
+    let live = true;
+    employeesApi.nextNumber().then(
+      (empNo) => live && setServerNextNo(empNo),
+      () => {}
+    );
+    return () => {
+      live = false;
+    };
+  }, [isAdding]);
+  const employeeNo = record?.empNo || serverNextNo || nextEmployeeNo(employeeRecords);
   const hasLeft = HAS_LEFT.includes(formData.status);
 
   // The section saves itself lower down, so the header brings the form to the
   // top of the screen rather than pretending to save from up here.
 
   /**
-   * The finished employee, filed with the others and opened as a record.
+   * The finished employee, created on the API and opened as a record.
    *
-   * Held in the session's lists until there is a server to send it to - so
-   * the record page, the list and the papers all find it - along with any
-   * papers filed while it was being added.
+   * The server numbers it (EMP-xxxx) and checks every field; a refusal is
+   * shown and the last step stays open as it was. Once the record exists,
+   * the papers read on Document Intake are filed on it.
    */
-  const finishEmployee = () => {
-    const newId = employeeRecords.reduce((max, e) => Math.max(max, e.id), 0) + 1;
-    employeeRecords.push({
-      ...toRecord(formData),
-      id: newId,
-      empNo: employeeNo,
-      // What the list shows a person as doing.
-      designation: formData.occupation,
-      role: formData.occupation,
-      // Where each value came from: Value | Source Document | Confidence |
-      // Review Status.
-      fieldSources: Object.fromEntries(
-        Object.entries(intake.meta).map(([key, entry]) => [
+  const finishEmployee = async () => {
+    let created;
+    try {
+      created = await employeesApi.create(formData);
+    } catch (error) {
+      const fields = Object.keys(error?.errors || {});
+      // Each refused field named with the step it is on, so it can be found.
+      const labels = Object.fromEntries(
+        fields.map((key) => [
           key,
-          {
-            value: formData[key],
-            source: entry.source,
-            confidence: entry.confidence,
-            status: entry.status,
-          },
+          (INTAKE_FIELDS[key]?.label || fieldLabel(key)) +
+            " (" + (ADD_STEPS.find((s) => s.key === fieldStep(key))?.label || "") + ")",
         ])
-      ),
-    });
-    let docId = employeeDocuments.reduce((max, d) => Math.max(max, d.id), 0);
-    documents.forEach((document) => {
-      docId += 1;
-      employeeDocuments.push({ ...document, id: docId, employeeId: newId });
-    });
-    // The papers from Document Intake, filed under what each kind is kept as.
-    intake.docs
-      .filter((doc) => doc.status !== "failed")
-      .forEach((doc) => {
-      docId += 1;
-      employeeDocuments.push({
-        id: docId,
-        employeeId: newId,
-        uploadedAt: todayIso() + "T00:00",
-        type: intakeType(doc.typeKey)?.fileAs || "Other",
-        number: doc.number,
-        expiry: doc.expiry,
-        fileName: doc.fileName,
-        fileUrl: doc.fileUrl,
-        notes: "",
-      });
-    });
+      );
+      notifyError(error, labels);
+      if (fields.length) {
+        setServerErrors(
+          Object.fromEntries(
+            fields.map((key) => [key, { message: [].concat(error.errors[key])[0], value: formData[key] }])
+          )
+        );
+        setStep(fieldStep(fields[0]));
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+      return;
+    }
+    setServerErrors({});
+    upsert(employeeRecords, created);
+    await fileIntakePapers(
+      created.id,
+      intake.docs.filter((doc) => doc.status !== "failed")
+    );
     // Opened on Documents: the details are in, and the papers are next.
-    navigate("/employees/" + newId, { state: { section: "profile", tab: "documents" } });
+    navigate("/employees/" + created.id, { state: { section: "profile", tab: "documents" } });
   };
 
   /**
@@ -1625,9 +1668,10 @@ export default function EmployeeForm({ self }) {
       (input) =>
         !input.disabled &&
         input.value &&
-        (!input.checkValidity() || ruleBroken(input.name || input.id, input.value))
+        (!input.checkValidity() || ruleBroken(input.name || input.id, input.value, true))
     );
     if (misshapen) {
+      setShapeChecked(true);
       misshapen.scrollIntoView({ block: "center", behavior: "smooth" });
       misshapen.focus({ preventScroll: true });
       return false;
@@ -1644,9 +1688,8 @@ export default function EmployeeForm({ self }) {
    * any is missing it opens the first step with a gap, and every step with
    * one is marked on the bar.
    */
-  const saveStep = () => {
-    if (!fieldsOnScreenValid({ requireAll: false })) return;
-    console.log("Saving " + step + ":", { ...toRecord(formData), empNo: employeeNo });
+  const saveStep = async () => {
+    if (saving || !fieldsOnScreenValid({ requireAll: false })) return;
     setSavedSteps((prev) => (prev.includes(step) ? prev : [...prev, step]));
     setSaved(formData);
 
@@ -1660,7 +1703,9 @@ export default function EmployeeForm({ self }) {
         return;
       }
       // Complete: the record is made, with its papers, and opened.
-      finishEmployee();
+      setSaving(true);
+      await finishEmployee();
+      setSaving(false);
       return;
     }
     setStep(next.key);
@@ -1708,9 +1753,17 @@ export default function EmployeeForm({ self }) {
         );
       })
       .join("");
+  // Refused by the server and not changed since.
+  const refusedKeys = Object.keys(serverErrors).filter(
+    (key) => formData[key] === serverErrors[key].value
+  );
+  refusedKeys.forEach((key) => (stepFlags[fieldStep(key)] = "missing"));
   const fieldMarkCss =
     markRule(missingMarks, "#dc2626", "Required information missing") +
-    markRule(reviewMarks, "#d97706", "Review required");
+    markRule(reviewMarks, "#d97706", "Review required") +
+    refusedKeys
+      .map((key) => markRule([key], "#dc2626", serverErrors[key].message.replace(/["\\]/g, "")))
+      .join("");
   // The values on the open step that still wait on a person.
   const reviewHere = marking
     ? reviewMarks
@@ -1741,6 +1794,19 @@ export default function EmployeeForm({ self }) {
 
   /* ------------------------------------------- editing Employee Information */
 
+  /**
+   * Sends the record as it is on screen to the API (PATCH) and puts the
+   * server's copy in its place - on the list, and back into the form. A
+   * refusal (an IBAN in the wrong shape) is shown, and what was typed stays.
+   */
+  const saveRecord = async () => {
+    const updated = await attempt(() => employeesApi.update(record.id, formData));
+    if (!updated) return null;
+    upsert(employeeRecords, updated);
+    setFormData(toFormData(updated));
+    return updated;
+  };
+
   /** Puts every field back as the record last saved it. */
   const cancelProfileEdit = () => {
     setFormData(toFormData(record));
@@ -1757,33 +1823,21 @@ export default function EmployeeForm({ self }) {
    * demanded - many records predate fields the form now asks for, and a change
    * to one of them should not have to complete all the others.
    */
-  const saveProfile = () => {
-    if (!fieldsOnScreenValid({ requireAll: false })) return;
-    Object.assign(record, toRecord(formData), {
-      designation: formData.occupation || record.designation,
-      role: formData.occupation || record.role,
-    });
-    // Papers uploaded on Document Intake are filed on the record.
-    let docId = employeeDocuments.reduce((max, d) => Math.max(max, d.id), 0);
-    intake.docs
-      .filter((doc) => doc.status !== "failed" && doc.status !== "processing")
-      .forEach((doc) => {
-        docId += 1;
-        employeeDocuments.push({
-          id: docId,
-          employeeId: record.id,
-          uploadedAt: todayIso() + "T00:00",
-          type: intakeType(doc.typeKey)?.fileAs || "Other",
-          number: doc.number,
-          expiry: doc.expiry,
-          fileName: doc.fileName,
-          fileUrl: doc.fileUrl,
-          notes: "",
-        });
-      });
-    setDocuments(documentsFor(record.id));
-    intake.reset();
-    setProfileSaved(true);
+  const saveProfile = async () => {
+    if (saving || !fieldsOnScreenValid({ requireAll: false })) return;
+    setSaving(true);
+    const updated = await saveRecord();
+    if (updated) {
+      // Papers uploaded on Document Intake are filed on the record.
+      await fileIntakePapers(
+        updated.id,
+        intake.docs.filter((doc) => doc.status !== "failed" && doc.status !== "processing")
+      );
+      setDocuments(documentsFor(updated.id));
+      intake.reset();
+      setProfileSaved(true);
+    }
+    setSaving(false);
   };
 
   /** Moving to another tab keeps what was typed; the save note goes. */
@@ -1842,7 +1896,7 @@ export default function EmployeeForm({ self }) {
       <Button type="button" variant="ghost" onClick={cancelProfileEdit}>
         Cancel
       </Button>
-      <Button type="button" onClick={saveProfile}>
+      <Button type="button" onClick={saveProfile} disabled={saving}>
         <Save className="me-2 h-4 w-4" />
         Save
       </Button>
@@ -1862,7 +1916,7 @@ export default function EmployeeForm({ self }) {
         <Button type="button" variant="ghost" onClick={() => navigate("/employees")}>
           Cancel
         </Button>
-        <Button type="submit">
+        <Button type="submit" disabled={saving}>
           <Save className="me-2 h-4 w-4" />
           Save
         </Button>
@@ -1885,13 +1939,14 @@ export default function EmployeeForm({ self }) {
     // Saved onto the record itself, the one My Profile reads, so a change
     // made here shows there too.
     if (isEditMode && record && !readOnly) {
-      if (!fieldsOnScreenValid({ requireAll: false })) return;
-      Object.assign(record, toRecord(formData), {
-        designation: formData.occupation || record.designation,
-        role: formData.occupation || record.role,
+      if (saving || !fieldsOnScreenValid({ requireAll: false })) return;
+      setSaving(true);
+      saveRecord().then((updated) => {
+        setSaving(false);
+        if (!updated) return;
+        setSaved(toFormData(updated));
+        setProfileSaved(true);
       });
-      setSaved(formData);
-      setProfileSaved(true);
       return;
     }
     navigate("/employees");
@@ -3426,10 +3481,10 @@ export default function EmployeeForm({ self }) {
                             onChange={onChange}
                             placeholder="Enter account number"
                             inputMode="numeric"
-                            aria-invalid={ruleBroken("accountNumber", formData.accountNumber) || undefined}
+                            aria-invalid={ruleBroken("accountNumber", formData.accountNumber, shapeChecked) || undefined}
                             required
                           />
-                          <RuleNote name="accountNumber" value={formData.accountNumber} />
+                          <RuleNote name="accountNumber" value={formData.accountNumber} whole={shapeChecked} />
                         </div>
                         <div className="form-field space-y-2">
                           <Label htmlFor="iban">
@@ -3442,10 +3497,10 @@ export default function EmployeeForm({ self }) {
                             value={formData.iban}
                             onChange={onChange}
                             placeholder="Enter IBAN"
-                            aria-invalid={ruleBroken("iban", formData.iban) || undefined}
+                            aria-invalid={ruleBroken("iban", formData.iban, shapeChecked) || undefined}
                             required
                           />
-                          <RuleNote name="iban" value={formData.iban} />
+                          <RuleNote name="iban" value={formData.iban} whole={shapeChecked} />
                         </div>
                         <div className="form-field space-y-2">
                           <Label htmlFor="swiftCode">
@@ -3458,10 +3513,10 @@ export default function EmployeeForm({ self }) {
                             value={formData.swiftCode}
                             onChange={onChange}
                             placeholder="Enter SWIFT code"
-                            aria-invalid={ruleBroken("swiftCode", formData.swiftCode) || undefined}
+                            aria-invalid={ruleBroken("swiftCode", formData.swiftCode, shapeChecked) || undefined}
                             required
                           />
-                          <RuleNote name="swiftCode" value={formData.swiftCode} />
+                          <RuleNote name="swiftCode" value={formData.swiftCode} whole={shapeChecked} />
                         </div>
                       </div>
                     </SectionCard>
@@ -3558,6 +3613,7 @@ export default function EmployeeForm({ self }) {
                       number: paper.number,
                       expiry: paper.expiry,
                       fileUrl: paper.fileUrl,
+                      onView: paper.downloadPath ? () => viewDocument(paper) : undefined,
                     }))}
                     footer={profileActions}
                   />
@@ -3774,7 +3830,7 @@ export default function EmployeeForm({ self }) {
                             <Button type="button" variant="ghost" onClick={closeDocForm}>
                               Cancel
                             </Button>
-                            <Button type="button" onClick={addDocument}>
+                            <Button type="button" onClick={addDocument} disabled={saving}>
                               <Save className="me-2 h-4 w-4" />
                               Save
                             </Button>
@@ -3908,7 +3964,7 @@ export default function EmployeeForm({ self }) {
                         Changes saved.
                       </p>
                     )}
-                    <Button type="submit">
+                    <Button type="submit" disabled={saving}>
                       <Save className="me-2 h-4 w-4" />
                       {savesFor.save || "Save"}
                     </Button>

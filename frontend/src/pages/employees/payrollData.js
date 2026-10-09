@@ -119,16 +119,7 @@ export const formatDate = (value) => {
  * a payslip is a record of what happened - if the housing allowance changes
  * next year, last year's payslip must not change with it.
  */
-export const salaryRecords = [
-  { id: 1, paymentDate: "2026-08-26", month: "Aug", year: "2026", basic: 800, allowances: 150, deductions: 50, method: "Bank Transfer", source: "Bank Muscat", notes: "Monthly salary for August 2026" },
-  { id: 2, paymentDate: "2026-07-26", month: "Jul", year: "2026", basic: 800, allowances: 150, deductions: 50, method: "Bank Transfer", source: "Bank Muscat", notes: "Monthly salary for July 2026" },
-  { id: 3, paymentDate: "2026-06-26", month: "Jun", year: "2026", basic: 800, allowances: 150, deductions: 50, method: "Bank Transfer", source: "Bank Muscat", notes: "Monthly salary for June 2026" },
-  { id: 4, paymentDate: "2026-06-10", month: "Q2", year: "2026", basic: 0, allowances: 500, deductions: 0, method: "Bank Transfer", source: "National Bank of Oman", notes: "Q2 performance bonus" },
-  { id: 5, paymentDate: "2026-05-26", month: "May", year: "2026", basic: 800, allowances: 150, deductions: 50, method: "Bank Transfer", source: "Bank Muscat", notes: "Monthly salary for May 2026" },
-  { id: 6, paymentDate: "2026-04-26", month: "Apr", year: "2026", basic: 780, allowances: 150, deductions: 50, method: "Bank Transfer", source: "Bank Muscat", notes: "Monthly salary for April 2026" },
-  { id: 7, paymentDate: "2026-03-26", month: "Mar", year: "2026", basic: 780, allowances: 150, deductions: 50, method: "Bank Transfer", source: "Bank Muscat", notes: "Monthly salary for March 2026" },
-  { id: 8, paymentDate: "2026-02-26", month: "Feb", year: "2026", basic: 780, allowances: 150, deductions: 50, method: "Cash", source: "Cash", notes: "Monthly salary for February 2026" },
-];
+export const salaryRecords = [];
 
 /** What was actually paid on a past payment. */
 export const netAmount = (record) =>
@@ -232,7 +223,7 @@ export const DEFAULT_BOOKING = {
  * out from this and from what was actually deducted, so no row can claim a
  * balance the deductions do not support.
  */
-export const SALARY_LOAN = { principal: 7560, installment: 120, count: 63 };
+export const SALARY_LOAN = { principal: 0, installment: 0, count: 0 };
 
 /**
  * What was paid each month, oldest first.
@@ -242,14 +233,7 @@ export const SALARY_LOAN = { principal: 7560, installment: 120, count: 63 };
  * and the account the rest went to. The net is not here - it is those figures,
  * and a stored total could disagree with them.
  */
-export const salaryHistory = [
-  { id: 1, salaryNo: "SAL-001", month: 4, year: 2026, basic: 2500, allowances: 580, loanDeducted: 0, administrative: 175, administrativeReason: "Social insurance contribution", method: "Bank Transfer", bankAccount: "Bank Muscat — •••• 6789", reference: "TRX-2026-00412", status: "Transferred", paymentDate: "2026-04-30" },
-  { id: 2, salaryNo: "SAL-002", month: 5, year: 2026, basic: 2500, allowances: 580, loanDeducted: 80, administrative: 175, administrativeReason: "Social insurance contribution", method: "Bank Transfer", bankAccount: "Bank Muscat — •••• 6789", reference: "TRX-2026-00537", status: "Transferred", paymentDate: "2026-05-31" },
-  { id: 3, salaryNo: "SAL-003", month: 6, year: 2026, basic: 2500, allowances: 580, loanDeducted: 120, administrative: 175, administrativeReason: "Social insurance contribution", method: "Bank Transfer", bankAccount: "Bank Muscat — •••• 6789", reference: "TRX-2026-00648", status: "Transferred", paymentDate: "2026-06-30" },
-  { id: 4, salaryNo: "SAL-004", month: 7, year: 2026, basic: 2500, allowances: 580, loanDeducted: 120, administrative: 175, administrativeReason: "Social insurance contribution", method: "Bank Transfer", bankAccount: "Bank Muscat — •••• 6789", reference: "TRX-2026-00759", status: "Transferred", paymentDate: "2026-07-30" },
-  { id: 5, salaryNo: "SAL-005", month: 8, year: 2026, basic: 2500, allowances: 580, loanDeducted: 120, administrative: 175, administrativeReason: "Social insurance and unpaid leave (1 day)", method: "Bank Transfer", bankAccount: "Bank Muscat — •••• 6789", reference: "TRX-2026-00870", status: "Transferred", paymentDate: "2026-08-31" },
-  { id: 6, salaryNo: "SAL-006", month: 9, year: 2026, basic: 2500, allowances: 580, loanDeducted: 120, administrative: 175, administrativeReason: "Social insurance contribution", method: "Bank Transfer", bankAccount: "Bank Muscat — •••• 6789", reference: "TRX-2026-00981", status: "Transferred", paymentDate: "2026-09-28" },
-];
+export const salaryHistory = [];
 
 /** "SAL-001", counted across the record so a number is never reused. */
 export const nextSalaryNo = (history) =>

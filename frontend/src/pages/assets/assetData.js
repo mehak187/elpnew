@@ -117,36 +117,5 @@ export function nextAssetNo(assets) {
   return "A" + String(highest + 1).padStart(3, "0");
 }
 
-// branchId points at the firm's branches (1 Muscat, 2 Salalah, 3 Sohar) and
-// bankAccountId at the firm account the asset was paid from. The purchase date
-// is the invoice date, and the purchase invoice is the asset's first expense.
-const a = (id, assetNo, branchId, name, brandModel, serialNo, purchaseDate, supplier, invoiceNo, subcategory, cost, rate, usefulLife, method, bankAccountId, transactionNo, status, laterExpenses = []) => ({
-  id, assetNo, branchId, name, brandModel, serialNo, purchaseDate, supplier, invoiceNo, subcategory, rate, usefulLife, method, bankAccountId, transactionNo, status,
-  expenseType: ASSET_EXPENSE_TYPE,
-  category: "Fixed Asset Purchase",
-  depreciationMethod: "Straight-Line",
-  invoiceFile: invoiceNo + ".pdf",
-  invoiceLater: false,
-  guaranteeNo: "GN-" + serialNo,
-  guaranteeFile: "Guarantee-" + serialNo + ".pdf",
-  receiptFile: transactionNo + ".pdf",
-  documents: [{ id: 1, name: "Delivery Note", file: "DN-" + invoiceNo + ".pdf", uploadedOn: purchaseDate }],
-  expenses: [
-    { id: 1, category: "Fixed Asset Purchase", subcategory, invoiceNo, invoiceDate: purchaseDate, amount: cost, vatApplied: true, payee: supplier, invoiceFile: invoiceNo + ".pdf" },
-    ...laterExpenses.map((expense, index) => ({ id: index + 2, vatApplied: true, invoiceFile: "", ...expense })),
-  ],
-});
 
-export const initialAssets = [
-  a(1, "A001", 1, "Laptop", "Dell Latitude 5440", "DL5440-9823", "2025-01-15", "Bahwan Computers", "INV-4587", "Computers & Laptops", 420, 20, 5, "Bank Transfer", 1, "TRX-20250115-001", "active", [
-    { category: "Asset Maintenance & Repairs", subcategory: "Computer & Printer Maintenance", invoiceNo: "INV-5120", invoiceDate: "2026-02-10", amount: 12, payee: "Bahwan Computers" },
-  ]),
-  a(2, "A002", 2, "Printer", "HP LaserJet Pro", "HP-774321", "2024-03-10", "Tech World LLC", "INV-2210", "Printers & Photocopiers", 126, 15, 7, "Bank Transfer", 2, "TRX-20240310-002", "active"),
-  a(3, "A003", 1, "Office Desk", "IKEA", "IK-3301", "2023-06-05", "Oman Office Supplies", "INV-7781", "Office Furniture", 84, 10, 10, "Standing Order", 1, "TRX-20230605-003", "maintenance", [
-    { category: "Asset Maintenance & Repairs", subcategory: "Furniture Maintenance", invoiceNo: "INV-8120", invoiceDate: "2026-08-20", amount: 18, payee: "Oman Office Supplies" },
-  ]),
-  a(4, "A004", 1, "Projector", "Epson EB-X06", "EP-660921", "2022-11-22", "Al Hinai Trading", "INV-6623", "IT & Network Equipment", 315, 25, 4, "Bank Transfer", 4, "TRX-20221122-004", "disposed", [
-    { category: "Asset Maintenance & Repairs", subcategory: "Equipment Maintenance", invoiceNo: "INV-7002", invoiceDate: "2025-03-02", amount: 25, payee: "Al Hinai Trading" },
-  ]),
-  a(5, "A005", 2, "Office Chair", "Herman Miller", "HM-8831", "2024-02-17", "Muscat Furnishings", "INV-3090", "Office Furniture", 63, 10, 10, "Bank Transfer", 3, "TRX-20240217-005", "active"),
-];
+export const initialAssets = [];

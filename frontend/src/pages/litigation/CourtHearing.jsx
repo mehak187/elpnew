@@ -17,10 +17,7 @@ import DataTable from "@/components/shared/DataTable";
 import { Gavel, Plus, ArrowLeft, Calendar, Save } from "lucide-react";
 
 import DateField from "@/components/shared/DateField";
-const hearings = [
-  { id: 1, date: "2024-12-15", type: "First Hearing", outcome: "Adjourned", next_date: "2025-01-10", notes: "Documents submitted" },
-  { id: 2, date: "2025-01-10", type: "Evidence Submission", outcome: "Pending", next_date: "-", notes: "Awaiting expert report" },
-];
+const hearings = [];
 
 const columns = [
   { key: "date", header: "Hearing Date", width: "15%", cellClassName: "font-medium" },
